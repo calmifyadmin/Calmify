@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "23546263069",
+    "project_id": "calmify-388723",
+    "storage_bucket": "calmify-388723.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:23546263069:android:baf6ebaa1e863653b5b8f4",
+        "android_client_info": {
+          "package_name": "com.lifo.calmifyapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "23546263069-ebs5hpm9ro3bqfh098djneoeont669bi.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBgJFCdhq-ZIqHFoLavo7C4wEKUsBer0V4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "23546263069-ebs5hpm9ro3bqfh098djneoeont669bi.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
