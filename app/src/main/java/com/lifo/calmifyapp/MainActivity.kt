@@ -5,26 +5,29 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
+import androidx.core.net.toUri
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
 import com.google.firebase.FirebaseApp
-import com.lifo.calmifyapp.data.database.ImageToDeleteDao
-import com.lifo.calmifyapp.data.database.ImageToUploadDao
-import com.lifo.calmifyapp.navigation.Screen
+import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.ktx.storageMetadata
 import com.lifo.calmifyapp.navigation.SetupNavGraph
-import com.lifo.calmifyapp.ui.theme.CalmifyAppTheme
-import com.lifo.calmifyapp.util.Constants.APP_ID
-import com.lifo.calmifyapp.util.retryDeletingImageFromFirebase
-import com.lifo.calmifyapp.util.retryUploadingImageToFirebase
+import com.lifo.mongo.database.ImageToDeleteDao
+import com.lifo.mongo.database.ImageToUploadDao
+import com.lifo.mongo.database.entity.ImageToDelete
+import com.lifo.mongo.database.entity.ImageToUpload
+import com.lifo.ui.theme.CalmifyAppTheme
+import com.lifo.util.Constants.APP_ID
+import com.lifo.util.Screen
 import dagger.hilt.android.AndroidEntryPoint
 import io.realm.kotlin.mongodb.App
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-@RequiresApi(Build.VERSION_CODES.N)
+
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
@@ -34,6 +37,7 @@ class MainActivity : ComponentActivity() {
     lateinit var imageToDeleteDao: ImageToDeleteDao
     private var keepSplashOpened = true
 
+    @RequiresApi(Build.VERSION_CODES.N)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         installSplashScreen().setKeepOnScreenCondition {
@@ -42,7 +46,7 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         FirebaseApp.initializeApp(this)
         setContent {
-            CalmifyAppTheme(dynamicColor = true) {
+            CalmifyAppTheme(dynamicColor = false) {
                 val navController = rememberNavController()
                 SetupNavGraph(
                     startDestination = getStartDestination(),
@@ -60,6 +64,12 @@ class MainActivity : ComponentActivity() {
             imageToDeleteDao = imageToDeleteDao
         )
     }
+}
+
+private fun getStartDestination(): String {
+    val user = App.create(APP_ID).currentUser
+    return if (user != null && user.loggedIn) Screen.Home.route
+    else Screen.Authentication.route
 }
 
 private fun cleanupCheck(
@@ -93,9 +103,23 @@ private fun cleanupCheck(
     }
 }
 
-private fun getStartDestination(): String {
-    val user = App.create(APP_ID).currentUser
-    return if (user != null && user.loggedIn) Screen.Home.route
-    else Screen.Authentication.route
+fun retryUploadingImageToFirebase(
+    imageToUpload: ImageToUpload,
+    onSuccess: () -> Unit
+) {
+    val storage = FirebaseStorage.getInstance().reference
+    storage.child(imageToUpload.remoteImagePath).putFile(
+        imageToUpload.imageUri.toUri(),
+        storageMetadata { },
+        imageToUpload.sessionUri.toUri()
+    ).addOnSuccessListener { onSuccess() }
 }
 
+fun retryDeletingImageFromFirebase(
+    imageToDelete: ImageToDelete,
+    onSuccess: () -> Unit
+) {
+    val storage = FirebaseStorage.getInstance().reference
+    storage.child(imageToDelete.remoteImagePath).delete()
+        .addOnSuccessListener { onSuccess() }
+}

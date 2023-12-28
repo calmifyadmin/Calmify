@@ -2,9 +2,9 @@ package com.lifo.calmifyapp.di
 
 import android.content.Context
 import androidx.room.Room
-import com.lifo.calmifyapp.connectivity.NetworkConnectivityObserver
-import com.lifo.calmifyapp.data.database.ImagesDatabase
-import com.lifo.calmifyapp.util.Constants.IMAGES_DATABASE
+import com.lifo.util.connectivity.NetworkConnectivityObserver
+import com.lifo.mongo.database.ImagesDatabase
+import com.lifo.util.Constants.IMAGES_DATABASE
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

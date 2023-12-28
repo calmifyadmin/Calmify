@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <style name="Theme.CalmifyApp.Splash" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">#001F25</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/logo_calmify</item>
-        <item name="postSplashScreenTheme">@style/Theme.CalmifyApp</item>
-    </style>
-</resources>
