@@ -1,0 +1,60 @@
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+    id 'io.realm.kotlin'
+}
+
+android {
+    namespace 'com.lifo.util'
+    compileSdk ProjectConfig.compileSdk
+
+    defaultConfig {
+        minSdk ProjectConfig.minSdk
+        targetSdk ProjectConfig.targetSdk
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles "consumer-rules.pro"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+    buildFeatures {
+        compose true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion ProjectConfig.extensionVersion
+    }
+    packagingOptions {
+        resources.excludes.add("META-INF/*")
+    }
+}
+
+dependencies {
+    implementation("androidx.compose.ui:ui-tooling:1.0.0-beta09")
+    implementation libs.core.ktx
+    implementation libs.firebase.storage
+    implementation libs.realm.sync
+    implementation libs.coroutines.core
+    implementation libs.activity.compose
+    implementation libs.material3.compose
+    implementation libs.coil
+    implementation libs.coil
+
+    //TEST
+    implementation libs.junit.ext
+    implementation libs.junit
+    implementation libs.compose.ui.test
+    implementation(project(":core:ui"))
+
+}
