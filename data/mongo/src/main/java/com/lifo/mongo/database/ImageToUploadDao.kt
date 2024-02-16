@@ -14,7 +14,8 @@ interface ImageToUploadDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addImageToUpload(imageToUpload: ImageToUpload)
-
+    @Query("DELETE FROM image_to_upload_table WHERE remoteImagePath = :remoteImagePath")
+    suspend fun deleteImageToUpload(remoteImagePath: String)
     @Query("DELETE FROM image_to_upload_table WHERE id=:imageId")
     suspend fun cleanupImage(imageId: Int)
 
