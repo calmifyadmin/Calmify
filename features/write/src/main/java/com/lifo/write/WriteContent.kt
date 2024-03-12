@@ -13,8 +13,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,14 +46,13 @@ internal fun WriteContent(
     paddingValues: PaddingValues,
     onSaveClicked: (Diary) -> Unit,
     onImageSelect: (Uri) -> Unit,
-    onImageClicked: (GalleryImage) -> Unit,
-    viewModel: WriteViewModel
+    onImageClicked: (GalleryImage) -> Unit
 ) {
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
-    val areImagesUploaded = remember { derivedStateOf { viewModel.areAllImagesUploaded() } }
+
     LaunchedEffect(key1 = scrollState.maxValue) {
         scrollState.scrollTo(scrollState.maxValue)
     }
@@ -88,7 +85,6 @@ internal fun WriteContent(
                             .data(Mood.values()[page].icon)
                             .crossfade(true)
                             .build(),
-
                         contentDescription = "Mood Image"
                     )
                 }
@@ -162,40 +158,27 @@ internal fun WriteContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp),
-                enabled = viewModel.areAllImagesUploaded(),
                 onClick = {
-                    if (galleryState.images.size < 6) {
-                        if (uiState.title.isNotEmpty() && uiState.description.isNotEmpty()) {
-                                onSaveClicked(
-                                    Diary().apply {
-                                        this.title = uiState.title
-                                        this.description = uiState.description
-                                        this.images = //uiState.selectedDiary.images.toRealmList()
-                                            galleryState.images.map { it.remoteImagePath }.toRealmList()
-                                    }
-                                )
-                        } else {
-                            Toast.makeText(
-                                context,
-                                "Fields cannot be empty.",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
+                    if (uiState.title.isNotEmpty() && uiState.description.isNotEmpty()) {
+                        onSaveClicked(
+                            Diary().apply {
+                                this.title = uiState.title
+                                this.description = uiState.description
+                                this.images =
+                                    galleryState.images.map { it.remoteImagePath }.toRealmList()
+                            }
+                        )
                     } else {
                         Toast.makeText(
                             context,
-                            "MAX IMAGE 6.",
+                            "Fields cannot be empty.",
                             Toast.LENGTH_SHORT
                         ).show()
                     }
-
-                }, // Disabilita il pulsante finché le immagini sono in caricamento
+                },
                 shape = Shapes().small
             ) {
                 Text(text = "Save")
-            }
-            if (viewModel.isUploadingImages.value) {
-                CircularProgressIndicator()
             }
         }
     }

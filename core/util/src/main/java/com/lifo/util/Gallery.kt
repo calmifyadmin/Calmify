@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -24,7 +23,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.lifo.ui.GalleryImage
 import com.lifo.ui.GalleryState
@@ -57,7 +55,7 @@ fun Gallery(
 
         Row {
             images.take(numberOfVisibleImages.value).forEach { image ->
-                SubcomposeAsyncImage(
+                AsyncImage(
                     modifier = Modifier
                         .clip(imageShape)
                         .size(imageSize),
@@ -65,7 +63,6 @@ fun Gallery(
                         .data(image)
                         .crossfade(true)
                         .build(),
-                    loading = { CircularProgressIndicator(modifier = Modifier.fillMaxSize().align(Alignment.Center).padding(8.dp)) },
                     contentScale = ContentScale.Crop,
                     contentDescription = "Gallery Image"
                 )
@@ -131,34 +128,21 @@ fun GalleryUploader(
                     )
                 }
             )
-
             Spacer(modifier = Modifier.width(spaceBetween))
             galleryState.images.take(numberOfVisibleImages.value).forEach { galleryImage ->
-                Box(modifier = Modifier
-                    .clip(imageShape)
-                    .size(imageSize)) {
-                    if (galleryImage.isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                    }else{
-                        SubcomposeAsyncImage(
-                            modifier = Modifier
-                                .clip(imageShape)
-                                .size(imageSize)
-                                .clickable { onImageClicked(galleryImage) },
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data(galleryImage.image)
-                                .crossfade(true)
-                                .build(),
-                            loading = { CircularProgressIndicator(modifier = Modifier.fillMaxSize().align(Alignment.Center).padding(8.dp)) },
-                            contentScale = ContentScale.Crop,
-                            contentDescription = "Gallery Image"
-                        )
-                    }
-                }
-
-            Spacer(modifier = Modifier.width(spaceBetween))
+                AsyncImage(
+                    modifier = Modifier
+                        .clip(imageShape)
+                        .size(imageSize)
+                        .clickable { onImageClicked(galleryImage) },
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(galleryImage.image)
+                        .crossfade(true)
+                        .build(),
+                    contentScale = ContentScale.Crop,
+                    contentDescription = "Gallery Image"
+                )
+                Spacer(modifier = Modifier.width(spaceBetween))
             }
             if (remainingImages.value > 0) {
                 LastImageOverlay(

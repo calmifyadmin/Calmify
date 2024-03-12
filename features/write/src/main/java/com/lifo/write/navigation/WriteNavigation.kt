@@ -80,11 +80,7 @@ fun NavGraphBuilder.writeRoute(navigateBack: () -> Unit) {
                 val type = context.contentResolver.getType(it)?.split("/")?.last() ?: "jpg"
                 viewModel.addImage(image = it, imageType = type)
             },
-            onImageDeleteClicked = { galleryState.removeImage(it) },
-            onImageClicked = { index ->
-                viewModel.onImageSelected(index)
-            },
-            viewModel = viewModel
+            onImageDeleteClicked = { galleryState.removeImage(it) }
         )
     }
 }
