@@ -5,6 +5,7 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
@@ -14,6 +15,7 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "Calmify"
+
 include ':app'
 include ':core:ui'
 include ':core:util'
@@ -21,3 +23,5 @@ include ':data:mongo'
 include ':features:auth'
 include ':features:home'
 include ':features:write'
+include ':feature:myreport'
+include ':features:report'

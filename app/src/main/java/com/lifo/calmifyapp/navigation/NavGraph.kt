@@ -8,6 +8,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import com.lifo.auth.navigation.authenticationRoute
 import com.lifo.home.navigation.homeRoute
+import com.lifo.home.navigation.reportRoute
 import com.lifo.util.Screen
 import com.lifo.write.navigation.writeRoute
 
@@ -32,6 +33,26 @@ fun SetupNavGraph(
         homeRoute(
             navigateToWrite = {
                 navController.navigate(Screen.Write.route)
+            },
+            navigateToWriteWithArgs = {
+                navController.navigate(Screen.Write.passDiaryId(diaryId = it))
+            },
+            navigateToAuth = {
+                navController.popBackStack()
+                navController.navigate(Screen.Authentication.route)
+            },
+            onDataLoaded = onDataLoaded,
+            navigateToReport = {
+                navController.navigate(Screen.Report.route)
+            }
+        )
+        reportRoute(
+            navigateToWrite = {
+                navController.navigate(Screen.Write.route)
+            },
+            navigateToHome = {
+                navController.popBackStack()
+                navController.navigate(Screen.Home.route)
             },
             navigateToWriteWithArgs = {
                 navController.navigate(Screen.Write.passDiaryId(diaryId = it))

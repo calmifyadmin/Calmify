@@ -11,7 +11,7 @@ fun rememberGalleryState(): GalleryState {
 }
 
 class GalleryState {
-    val images = mutableStateListOf<GalleryImage>()
+    var images = mutableStateListOf<GalleryImage>()
     val imagesToBeDeleted = mutableStateListOf<GalleryImage>()
 
     fun addImage(galleryImage: GalleryImage) {
@@ -35,5 +35,14 @@ class GalleryState {
  * */
 data class GalleryImage(
     val image: Uri,
-    val remoteImagePath: String = "",
-)
+    val remoteImagePath: String,
+    var isLoading: Boolean = false
+) {
+    fun copy(): GalleryImage {
+        return GalleryImage(
+            image = this.image,
+            remoteImagePath = this.remoteImagePath,
+            isLoading = this.isLoading
+        )
+    }
+}
