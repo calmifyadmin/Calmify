@@ -1,6 +1,5 @@
 package com.lifo.util
 
-import android.annotation.SuppressLint
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
@@ -29,6 +28,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.lifo.ui.theme.Elevation
 import com.lifo.util.model.Diary
 import com.lifo.util.model.Mood
+import com.lifo.util.fetchImagesFromFirebase
+import com.lifo.util.toInstant
 import io.realm.kotlin.ext.realmListOf
 import java.time.Instant
 import java.time.ZoneId
@@ -61,11 +62,12 @@ fun DiaryHolder(diary: Diary, onClick: (String) -> Unit) {
                     ).show()
                     galleryLoading = false
                     galleryOpened = false
+                },
+                onReadyToDisplay = {
+                    galleryLoading = false
+                    galleryOpened = true
                 }
-            ) {
-                galleryLoading = false
-                galleryOpened = true
-            }
+            )
         }
     }
     Row(modifier = Modifier
@@ -127,9 +129,8 @@ fun DiaryHolder(diary: Diary, onClick: (String) -> Unit) {
     }
 }
 
-@SuppressLint("NewApi")
 @Composable
-fun DiaryHeader(moodName: String, time: Instant?) {
+fun DiaryHeader(moodName: String, time: Instant) {
     val mood by remember { mutableStateOf(Mood.valueOf(moodName)) }
     val formatter = remember {
         DateTimeFormatter.ofPattern("hh:mm a", Locale.getDefault())
