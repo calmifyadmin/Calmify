@@ -1,9 +1,18 @@
 package com.lifo.write
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.util.Log
+import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.toMutableStateList
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -25,8 +34,11 @@ import com.lifo.util.model.Mood
 import com.lifo.util.model.RequestState
 import com.lifo.util.toRealmInstant
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.realm.kotlin.ext.toRealmList
 import io.realm.kotlin.types.RealmInstant
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -40,6 +52,10 @@ internal class WriteViewModel @Inject constructor(
     private val imageToUploadDao: ImageToUploadDao,
     private val imageToDeleteDao: ImageToDeleteDao
 ) : ViewModel() {
+    private val _selectedGalleryImageIndex = mutableStateOf<Int?>(null)
+    private val _isUploadingImages = mutableStateOf(false)
+    val isUploadingImages: State<Boolean> = _isUploadingImages
+
     val galleryState = GalleryState()
     var uiState by mutableStateOf(UiState())
         private set
@@ -47,6 +63,15 @@ internal class WriteViewModel @Inject constructor(
     init {
         getDiaryIdArgument()
         fetchSelectedDiary()
+    }
+
+    var selectedImageIndex by mutableStateOf<Int?>(null)
+        private set
+
+    fun onImageSelected(index: Int) {
+        selectedImageIndex = index
+        // Qui puoi fare qualcosa con l'indice dell'immagine selezionata,
+        // come mostrare l'immagine in una vista ingrandita o qualcosa del genere.
     }
 
     private fun getDiaryIdArgument() {
@@ -106,6 +131,7 @@ internal class WriteViewModel @Inject constructor(
         uiState = uiState.copy(mood = mood)
     }
 
+    @SuppressLint("NewApi")
     fun updateDateTime(zonedDateTime: ZonedDateTime) {
         uiState = uiState.copy(updatedDateTime = zonedDateTime.toInstant().toRealmInstant())
     }
@@ -198,19 +224,55 @@ internal class WriteViewModel @Inject constructor(
     fun addImage(image: Uri, imageType: String) {
         val remoteImagePath = "images/${FirebaseAuth.getInstance().currentUser?.uid}/" +
                 "${image.lastPathSegment}-${System.currentTimeMillis()}.$imageType"
+
         galleryState.addImage(
             GalleryImage(
                 image = image,
-                remoteImagePath = remoteImagePath
+                remoteImagePath = remoteImagePath,
+                isLoading = true // Imposta il caricamento a true
             )
         )
+        uploadImageToFirebase()
+    }
+
+    // Aggiungi una funzione per controllare se tutte le immagini sono state caricate
+    fun areAllImagesUploaded(): Boolean {
+        return galleryState.images.all { !it.isLoading }
     }
 
     private fun uploadImageToFirebase() {
+        _isUploadingImages.value = true
         val storage = FirebaseStorage.getInstance().reference
-        galleryState.images.forEach { galleryImage ->
+        val imagesCopy = galleryState.images.map { it.copy() }
+        imagesCopy.forEach { galleryImage ->
             val imagePath = storage.child(galleryImage.remoteImagePath)
             imagePath.putFile(galleryImage.image)
+                .addOnSuccessListener {
+                    // Caricamento riuscito, possibilmente aggiorna l'interfaccia utente o il database
+                    viewModelScope.launch(Dispatchers.IO) {
+                        // Assumi che questa sia la tua funzione per rimuovere l'immagine dalla coda di caricamento
+                        imageToUploadDao.deleteImageToUpload(galleryImage.remoteImagePath)
+                        updateImageLoadingState(galleryImage, false)
+                    }
+
+                    updateImageLoadingState(galleryImage, false)
+                }
+                .addOnFailureListener { exception ->
+                    // Caricamento fallito, gestisci l'errore qui
+                    viewModelScope.launch(Dispatchers.Main) {
+                        // Aggiorna lo stato dell'UI per mostrare un messaggio di errore
+                        // Aggiungi qui il codice per mostrare un messaggio di errore all'utente, es. tramite Toast
+
+                        updateImageLoadingState(galleryImage, false)
+                    }
+
+                    updateImageLoadingState(galleryImage, false)
+                }
+                .addOnCompleteListener {
+                    // Aggiorna lo stato dell'UI per mostrare un messaggio di errore
+                    // Aggiungi qui il codice per mostrare un messaggio di errore all'utente, es. tramite Toast
+                    updateImageLoadingState(galleryImage, false)
+                }
                 .addOnProgressListener {
                     val sessionUri = it.uploadSessionUri
                     if (sessionUri != null) {
@@ -221,15 +283,48 @@ internal class WriteViewModel @Inject constructor(
                                     imageUri = galleryImage.image.toString(),
                                     sessionUri = sessionUri.toString()
                                 )
+
                             )
+
+                            updateImageLoadingState(galleryImage, false)
                         }
+
+                        updateImageLoadingState(galleryImage, false)
+                        updateImageLoadingState(galleryImage, false)
                     }
                 }
+
+            updateImageLoadingState(galleryImage, false)
         }
+
+        _isUploadingImages.value = false
+    }
+
+    private fun handleUploadError(exception: Exception, galleryImage: GalleryImage) {
+        // Log the error
+        Log.e("UploadImageToFirebase", "Upload failed for image: ${galleryImage.image}", exception)
+
+        // Show a message to the user
+        // You can use any method to show the message, such as Toast or Snackbar
+        // For example: Toast.makeText(context, "Upload failed for image: ${galleryImage.image}", Toast.LENGTH_SHORT).show()
+
+        // Retry the upload if necessary
+        // For example: uploadImageToFirebase(galleryImage)
     }
 
     private fun deleteImagesFromFirebase(images: List<String>? = null) {
         val storage = FirebaseStorage.getInstance().reference
+        images?.forEach { remotePath ->
+            val imageRef = storage.child(remotePath)
+            imageRef.getDownloadUrl().addOnSuccessListener {
+                // File esiste, procedi con l'eliminazione
+                imageRef.delete().addOnFailureListener {
+                    // Gestisci il fallimento dell'eliminazione
+                }
+            }.addOnFailureListener {
+                // File non esiste, gestisci l'assenza del file
+            }
+        }
         if (images != null) {
             images.forEach { remotePath ->
                 storage.child(remotePath).delete()
@@ -260,8 +355,23 @@ internal class WriteViewModel @Inject constructor(
         val imageName = chunks[2].split("?").first()
         return "images/${Firebase.auth.currentUser?.uid}/$imageName"
     }
-}
 
+    private fun updateImageLoadingState(galleryImage: GalleryImage, isLoading: Boolean): Boolean {
+        val imageToUpdate = galleryState.images.find { it == galleryImage }
+
+        return if (imageToUpdate != null) {
+            // Aggiungi un controllo per verificare se lo stato di caricamento è già impostato sul valore desiderato
+            if (imageToUpdate.isLoading != isLoading) {
+                imageToUpdate.isLoading = isLoading
+            }
+            true
+        } else {
+            // Log a warning instead of throwing an exception
+            Log.w("UpdateImageLoadingState", "Image not found in galleryState.images")
+            false
+        }
+    }
+}
 internal data class UiState(
     val selectedDiaryId: String? = null,
     val selectedDiary: Diary? = null,
