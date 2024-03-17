@@ -1,5 +1,5 @@
 [versions]
-compose = "1.5.4"
+compose = "1.4.6"
 kotlin = "1.8.20"
 core-ktx = "1.12.0"
 lifecycle-runtime = "2.6.2"
@@ -29,13 +29,9 @@ agp = "8.1.1"
 org-jetbrains-kotlin-android = "1.9.0"
 appcompat = "1.6.1"
 material = "1.8.0"
-material-material = "1.4.0"
-pullRefresh = "1.0.0"
 
 [libraries]
-pullrefresh = { module = "eu.bambooapps:compose-material3-pullrefresh", version.ref = "pullRefresh"}
 core-ktx = { module = "androidx.core:core-ktx", version.ref = "core-ktx"}
-material-material = { module = "androidx.compose.material:material", version.ref = "material-material"}
 lifecycle-runtime = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle-runtime"}
 activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity-compose"}
 compose-ui = { module = "androidx.compose.ui:ui", version.ref = "compose"}
