@@ -19,8 +19,6 @@ import com.lifo.mongo.repository.MongoDB
 import com.lifo.util.model.RequestState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import java.time.ZonedDateTime
 import javax.inject.Inject
 
@@ -34,20 +32,6 @@ internal class HomeViewModel @Inject constructor(
     private lateinit var filteredDiariesJob: Job
     private var network by mutableStateOf(ConnectivityObserver.Status.Unavailable)
     var diaries: MutableState<Diaries> = mutableStateOf(RequestState.Idle)
-    private val _isLoading = MutableStateFlow(false)
-    var isLoading = _isLoading.asStateFlow()
-
-
-    fun loadStuff(){
-        viewModelScope.launch {
-            _isLoading.value = true
-            delay(2000L)
-            withContext(Dispatchers.IO){
-                getDiaries()
-            }
-            _isLoading.value = false
-        }
-    }
     var dateIsSelected by mutableStateOf(false)
         private set
 
@@ -57,13 +41,10 @@ internal class HomeViewModel @Inject constructor(
             connectivity.observe().collect { network = it }
         }
     }
-    fun reloadDiaries() {
-        refreshDiaries()
-    }
+
     fun getDiaries(zonedDateTime: ZonedDateTime? = null){
         dateIsSelected = zonedDateTime != null
         diaries.value = RequestState.Loading
-
         if(dateIsSelected && zonedDateTime != null ){
             observeFilteredDiaries(zonedDateTime = zonedDateTime)
         }else{
@@ -73,34 +54,26 @@ internal class HomeViewModel @Inject constructor(
 
     private fun observeAllDiaries() {
         allDiariesJob = viewModelScope.launch {
-            _isLoading.value = true
             if (::filteredDiariesJob.isInitialized) {
                 filteredDiariesJob.cancelAndJoin()
             }
             MongoDB.getAllDiaries().collect { result ->
                 diaries.value = result
-                _isLoading.value = false
             }
         }
     }
-    fun getUserPhotoUrl(): String? {
-        return FirebaseAuth.getInstance().currentUser?.photoUrl?.toString()
-    }
+
     private fun observeFilteredDiaries(zonedDateTime: ZonedDateTime){
         filteredDiariesJob = viewModelScope.launch {
-            _isLoading.value = true
             if (::allDiariesJob.isInitialized) {
                 allDiariesJob.cancelAndJoin()
             }
             MongoDB.getFilteredDiaries(zonedDateTime = zonedDateTime).collect{ result->
                  diaries.value = result
-                _isLoading.value = false
             }
         }
     }
-    fun refreshDiaries() {
-        getDiaries()
-    }
+
     fun deleteAllDiaries(
         onSuccess: () -> Unit,
         onError: (Throwable) -> Unit

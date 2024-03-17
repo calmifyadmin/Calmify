@@ -3,8 +3,6 @@ package com.lifo.util.connectivity
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
-import android.net.NetworkRequest
-import android.util.Log
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -39,20 +37,10 @@ class NetworkConnectivityObserver(context: Context): ConnectivityObserver {
                     launch { send(ConnectivityObserver.Status.Unavailable) }
                 }
             }
-// Registrazione del callback
-            val networkRequest = NetworkRequest.Builder().build()
-            connectivityManager.registerNetworkCallback(networkRequest, callback)
 
 
             awaitClose {
-                try {
-                    connectivityManager.unregisterNetworkCallback(callback)
-                } catch (e: IllegalArgumentException) {
-                    Log.w("NetworkConnectivityObserver", "Tentativo di deregistrare un callback non registrato", e)
-                    // Potresti voler aggiungere ulteriore logica qui se necessario.
-                    // Il callback potrebbe essere già stato deregistrato, quindi
-                    // questa eccezione può essere ignorata o gestita se necessario.
-                }
+                connectivityManager.unregisterNetworkCallback(callback)
             }
         }.distinctUntilChanged()
     }
