@@ -1,14 +1,22 @@
 package com.lifo.calmifyapp
 
+import android.app.Activity
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
+import androidx.compose.runtime.mutableStateListOf
 import androidx.core.net.toUri
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 import com.google.firebase.FirebaseApp
 import com.google.firebase.storage.FirebaseStorage
@@ -37,7 +45,6 @@ class MainActivity : ComponentActivity() {
     lateinit var imageToDeleteDao: ImageToDeleteDao
     private var keepSplashOpened = true
 
-    @RequiresApi(Build.VERSION_CODES.N)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         installSplashScreen().setKeepOnScreenCondition {
@@ -46,7 +53,10 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         FirebaseApp.initializeApp(this)
         setContent {
+
+
             CalmifyAppTheme(dynamicColor = false) {
+
                 val navController = rememberNavController()
                 SetupNavGraph(
                     startDestination = getStartDestination(),
@@ -122,4 +132,10 @@ fun retryDeletingImageFromFirebase(
     val storage = FirebaseStorage.getInstance().reference
     storage.child(imageToDelete.remoteImagePath).delete()
         .addOnSuccessListener { onSuccess() }
+}
+fun Activity.openAppSettings() {
+    Intent(
+        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+        Uri.fromParts("package", packageName, null)
+    ).also(::startActivity)
 }

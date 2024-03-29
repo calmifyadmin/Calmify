@@ -20,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -52,6 +53,7 @@ internal fun WriteTopBar(
     onDeleteConfirmed: () -> Unit,
     onBackPressed: () -> Unit
 ) {
+    var lastClickTime by remember { mutableLongStateOf(0L) }
     var currentDate by remember { mutableStateOf(LocalDate.now()) }
     var currentTime by remember { mutableStateOf(LocalTime.now()) }
     val dateDialog = rememberSheetState()
@@ -76,7 +78,13 @@ internal fun WriteTopBar(
     }
     CenterAlignedTopAppBar(
         navigationIcon = {
-            IconButton(onClick = onBackPressed) {
+            IconButton(onClick = {
+                val currentClickTime = System.currentTimeMillis()
+                if (currentClickTime - lastClickTime > 2500) { // Debouncing di 500ms
+                    lastClickTime = currentClickTime
+                    onBackPressed()
+                }
+            }) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back Arrow Icon"

@@ -1,1 +1,1 @@
-C:\Users\lifoe\AndroidStudioProjects\CalmifyApp\buildSrc\build\classes\kotlin\main\ProjectConfig.class
+C:\Users\lifoe\AndroidStudioProjects\CalmifyAppAndroid\buildSrc\build\classes\kotlin\main\ProjectConfig.class

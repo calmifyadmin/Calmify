@@ -40,7 +40,9 @@ fun SetupNavGraph(
                 navController.popBackStack()
                 navController.navigate(Screen.Authentication.route)
             },
-            onDataLoaded = onDataLoaded
+            onDataLoaded = onDataLoaded,
+            navigateToReport = {
+            }
         )
         writeRoute(
             navigateBack = {

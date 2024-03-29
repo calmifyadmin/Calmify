@@ -58,11 +58,18 @@ dependencies {
     implementation libs.date.dialog
     implementation libs.firebase.auth
     implementation libs.firebase.storage
+
+    implementation "com.google.accompanist:accompanist-permissions:$accompanist_version"
     //TEST
+    // Compose
+    implementation libs.compose.tooling.preview
+    implementation "com.google.accompanist:accompanist-swiperefresh:0.32.0"
+    implementation "io.coil-kt:coil-compose:2.5.0"
     implementation libs.junit.ext
     implementation libs.junit
     implementation libs.compose.ui.test
     implementation(project(":core:ui"))
     implementation(project(":core:util"))
     implementation(project(":data:mongo"))
+
 }
