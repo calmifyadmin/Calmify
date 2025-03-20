@@ -158,22 +158,23 @@ internal fun WriteContent(
                 onImageClicked = onImageClicked
             )
             Spacer(modifier = Modifier.height(12.dp))
+            // In the Button section, display the count correctly
             Button(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp),
                 enabled = viewModel.areAllImagesUploaded(),
                 onClick = {
-                    if (galleryState.images.size < 6) {
+                    // Use displayImageCount instead of direct size check
+                    if (viewModel.displayImageCount.value < 6) {
                         if (uiState.title.isNotEmpty() && uiState.description.isNotEmpty()) {
-                                onSaveClicked(
-                                    Diary().apply {
-                                        this.title = uiState.title
-                                        this.description = uiState.description
-                                        this.images = //uiState.selectedDiary.images.toRealmList()
-                                            galleryState.images.map { it.remoteImagePath }.toRealmList()
-                                    }
-                                )
+                            onSaveClicked(
+                                Diary().apply {
+                                    this.title = uiState.title
+                                    this.description = uiState.description
+                                    this.images = galleryState.images.map { it.remoteImagePath }.toRealmList()
+                                }
+                            )
                         } else {
                             Toast.makeText(
                                 context,
@@ -188,11 +189,10 @@ internal fun WriteContent(
                             Toast.LENGTH_SHORT
                         ).show()
                     }
-
-                }, // Disabilita il pulsante finché le immagini sono in caricamento
-                shape = Shapes().small
+                }
             ) {
-                Text(text = "Save")
+                // Show the correct count here
+                Text(text = "Save (${viewModel.displayImageCount.value} images)")
             }
             if (viewModel.isUploadingImages.value) {
                 CircularProgressIndicator()

@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -34,6 +35,7 @@ import io.realm.kotlin.mongodb.App
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.io.File
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -53,25 +55,25 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         FirebaseApp.initializeApp(this)
         setContent {
-
-
             CalmifyAppTheme(dynamicColor = false) {
-
                 val navController = rememberNavController()
                 SetupNavGraph(
                     startDestination = getStartDestination(),
                     navController = navController,
                     onDataLoaded = {
+                        Log.d("MainActivity", "Dati caricati, chiudo splash screen")
                         keepSplashOpened = false
                     }
                 )
             }
         }
 
+
         cleanupCheck(
             scope = lifecycleScope,
             imageToUploadDao = imageToUploadDao,
-            imageToDeleteDao = imageToDeleteDao
+            imageToDeleteDao = imageToDeleteDao,
+            activity = this,  // Passa l'activity
         )
     }
 }
@@ -83,6 +85,7 @@ private fun getStartDestination(): String {
 }
 
 private fun cleanupCheck(
+    activity: MainActivity, // Aggiungi questo parametro
     scope: CoroutineScope,
     imageToUploadDao: ImageToUploadDao,
     imageToDeleteDao: ImageToDeleteDao
@@ -117,12 +120,46 @@ fun retryUploadingImageToFirebase(
     imageToUpload: ImageToUpload,
     onSuccess: () -> Unit
 ) {
-    val storage = FirebaseStorage.getInstance().reference
-    storage.child(imageToUpload.remoteImagePath).putFile(
-        imageToUpload.imageUri.toUri(),
-        storageMetadata { },
-        imageToUpload.sessionUri.toUri()
-    ).addOnSuccessListener { onSuccess() }
+    try {
+        val storage = FirebaseStorage.getInstance().reference
+        val imageUri = Uri.parse(imageToUpload.imageUri)
+        val sessionUri = Uri.parse(imageToUpload.sessionUri)
+
+        Log.d("MainActivity", "Attempting to retry upload for: ${imageToUpload.remoteImagePath}")
+
+        try {
+            // Try to upload with original URI
+            storage.child(imageToUpload.remoteImagePath)
+                .putFile(imageUri, storageMetadata {}, sessionUri)
+                .addOnSuccessListener {
+                    Log.d("MainActivity", "Successfully uploaded: ${imageToUpload.remoteImagePath}")
+                    onSuccess()
+                }
+                .addOnFailureListener { e ->
+                    Log.e("MainActivity", "Failed to upload: ${imageToUpload.remoteImagePath}", e)
+
+                    // If we get a security exception, we can't do much without context
+                    if (e is SecurityException) {
+                        Log.e("MainActivity", "Security exception during upload, image permissions may have expired", e)
+                    }
+                }
+                .addOnProgressListener { taskSnapshot ->
+                    val progress = (100.0 * taskSnapshot.bytesTransferred / taskSnapshot.totalByteCount).toInt()
+                    if (progress % 25 == 0) { // Log at 0%, 25%, 50%, 75%, 100%
+                        Log.d("MainActivity", "Upload progress for ${imageToUpload.remoteImagePath}: $progress%")
+                    }
+                }
+        } catch (e: SecurityException) {
+            Log.e("MainActivity", "Security exception trying to access: ${imageToUpload.imageUri}", e)
+
+            // Since we don't have context here, we can't create a backup file
+            // We'll just have to log the error and continue
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Unexpected error during upload", e)
+        }
+    } catch (e: Exception) {
+        Log.e("MainActivity", "Critical error during retry upload", e)
+    }
 }
 
 fun retryDeletingImageFromFirebase(

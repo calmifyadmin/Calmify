@@ -1,6 +1,5 @@
 package com.lifo.home.navigation
 
-
 import android.widget.Toast
 import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerValue
@@ -18,21 +17,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.lifo.home.HomeContent
+import androidx.navigation.NavHostController
 import com.lifo.home.HomeViewModel
-import com.lifo.home.MissingPermissionsComponent
 import com.lifo.ui.components.DisplayAlertDialog
 import com.lifo.util.Constants.APP_ID
 import com.lifo.util.Screen
 import com.lifo.util.model.RequestState
 import io.realm.kotlin.mongodb.App
-import io.realm.kotlin.mongodb.ext.profile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-
 fun NavGraphBuilder.homeRoute(
+    navController: NavHostController,
     navigateToWrite: () -> Unit,
     navigateToWriteWithArgs: (String) -> Unit,
     navigateToAuth: () -> Unit,
@@ -48,36 +45,36 @@ fun NavGraphBuilder.homeRoute(
         var signOutDialogOpened by remember { mutableStateOf(false) }
         var deleteAllDialogOpened by remember { mutableStateOf(false) }
         var reloadTrigger by remember { mutableIntStateOf(0) }
+
         LaunchedEffect(key1 = reloadTrigger) {
             viewModel.reloadDiaries()
-
         }
 
-        // Gestione del caricamento dei dati e azioni post-caricamento
+        // Once data is loaded, run onDataLoaded
         if (diaries !is RequestState.Loading) {
             onDataLoaded()
         }
-            HomeScreen(
-                diaries = diaries,
-                drawerState = drawerState,
-                onMenuClicked = {
-                    scope.launch {
-                        drawerState.open()
-                    }
-                },
-                dateIsSelected = viewModel.dateIsSelected,
-                onDateSelected = { viewModel.getDiaries(zonedDateTime = it) },
-                onDateReset = { viewModel.getDiaries() },
-                onSignOutClicked = { signOutDialogOpened = true },
-                onDeleteAllClicked = { deleteAllDialogOpened = true },
-                navigateToWrite = navigateToWrite,
-                navigateToWriteWithArgs = navigateToWriteWithArgs,
-                viewModel = viewModel,
-                userProfileImageUrl = viewModel.getUserPhotoUrl(),
-                navigateToReport = navigateToReport
-            )
 
+        HomeScreen(
+            diaries = diaries,
+            navController = navController,
+            drawerState = drawerState,
+            onMenuClicked = {
+                scope.launch { drawerState.open() }
+            },
+            dateIsSelected = viewModel.dateIsSelected,
+            onDateSelected = { viewModel.getDiaries(zonedDateTime = it) },
+            onDateReset = { viewModel.getDiaries() },
+            onSignOutClicked = { signOutDialogOpened = true },
+            onDeleteAllClicked = { deleteAllDialogOpened = true },
+            navigateToWrite = navigateToWrite,
+            navigateToWriteWithArgs = navigateToWriteWithArgs,
+            viewModel = viewModel,
+            userProfileImageUrl = viewModel.getUserPhotoUrl(),
+            navigateToReport = navigateToReport
+        )
 
+        // Sign Out and Delete All dialog handling
         DisplayAlertDialog(
             title = "Sign Out",
             message = "Are you sure you want to Sign Out from your Google Account?",
@@ -109,9 +106,7 @@ fun NavGraphBuilder.homeRoute(
                             "All Diaries Deleted.",
                             Toast.LENGTH_SHORT
                         ).show()
-                        scope.launch {
-                            drawerState.close()
-                        }
+                        scope.launch { drawerState.close() }
                     },
                     onError = {
                         Toast.makeText(
@@ -121,9 +116,7 @@ fun NavGraphBuilder.homeRoute(
                             else it.message,
                             Toast.LENGTH_SHORT
                         ).show()
-                        scope.launch {
-                            drawerState.close()
-                        }
+                        scope.launch { drawerState.close() }
                     }
                 )
             }
