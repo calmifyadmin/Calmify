@@ -33,16 +33,19 @@ class GalleryState {
  * @param image The image URI inside a gallery.
  * @param remoteImagePath The path of the [image] where you plan to upload it.
  * */
+// In GalleryImage.kt
 data class GalleryImage(
     val image: Uri,
     val remoteImagePath: String,
-    var isLoading: Boolean = false
+    var isLoading: Boolean = false,
+    val localFilePath: String? = null // Add this field
 ) {
     fun copy(): GalleryImage {
         return GalleryImage(
             image = this.image,
             remoteImagePath = this.remoteImagePath,
-            isLoading = this.isLoading
+            isLoading = this.isLoading,
+            localFilePath = this.localFilePath
         )
     }
 }

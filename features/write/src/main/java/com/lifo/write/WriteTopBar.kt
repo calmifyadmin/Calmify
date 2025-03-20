@@ -80,7 +80,7 @@ internal fun WriteTopBar(
         navigationIcon = {
             IconButton(onClick = {
                 val currentClickTime = System.currentTimeMillis()
-                if (currentClickTime - lastClickTime > 2500) { // Debouncing di 500ms
+                if (currentClickTime - lastClickTime > 500) { // Debouncing di 500ms
                     lastClickTime = currentClickTime
                     onBackPressed()
                 }
