@@ -65,6 +65,7 @@ dependencies {
     implementation libs.compose.tooling.preview
     implementation "com.google.accompanist:accompanist-swiperefresh:0.32.0"
     implementation "io.coil-kt:coil-compose:2.5.0"
+    implementation libs.lifecycle.runtime.compose
     implementation libs.junit.ext
     implementation libs.junit
     implementation libs.compose.ui.test

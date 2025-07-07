@@ -87,6 +87,7 @@ dependencies {
     implementation libs.junit.ext
     implementation libs.junit
     implementation libs.compose.ui.test
+    implementation libs.lifecycle.runtime.compose
     implementation 'androidx.compose.material3:material3:1.0.0-alpha13'
     implementation(project(":core:ui"))
     implementation(project(":core:util"))
