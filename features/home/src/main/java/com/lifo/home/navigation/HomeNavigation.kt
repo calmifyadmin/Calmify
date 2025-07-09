@@ -30,6 +30,7 @@ fun NavGraphBuilder.homeRoute(
     navigateToWrite: () -> Unit,
     navigateToWriteWithArgs: (String) -> Unit,
     navigateToAuth: () -> Unit,
+    navigateToChat: () -> Unit,  // Add this parameter
     onDataLoaded: () -> Unit
 ) {
     composable(
@@ -130,7 +131,8 @@ fun NavGraphBuilder.homeRoute(
             navigateToWrite = navigateToWrite,
             navigateToWriteWithArgs = navigateToWriteWithArgs,
             viewModel = viewModel,
-            userProfileImageUrl = viewModel.getUserPhotoUrl()
+            userProfileImageUrl = viewModel.getUserPhotoUrl(),
+            navigateToChat = navigateToChat
         )
 
         // Enhanced Sign Out Dialog
