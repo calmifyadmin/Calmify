@@ -18,7 +18,7 @@ import com.lifo.mongo.repository.Diaries
 import com.lifo.mongo.repository.MongoDB
 import com.lifo.util.connectivity.ConnectivityObserver
 import com.lifo.util.connectivity.NetworkConnectivityObserver
-import com.lifo.util.model.RequestState
+import com.lifo.util.model.RequestState  // IMPORT CORRETTO
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -45,6 +45,7 @@ internal class HomeViewModel @Inject constructor(
 ) : ViewModel() {
 
     companion object {
+        private const val TAG = "HomeViewModel"
         private const val KEY_DATE_SELECTED = "date_is_selected"
         private const val KEY_SELECTED_DATE = "selected_date"
         private const val RETRY_DELAY = 1000L
@@ -54,6 +55,7 @@ internal class HomeViewModel @Inject constructor(
     // Jobs management
     private var diariesJob: Job? = null
     private var refreshJob: Job? = null
+    private var deleteJob: Job? = null
 
     // Network status
     private val _networkStatus = MutableStateFlow(ConnectivityObserver.Status.Unavailable)
@@ -82,7 +84,9 @@ internal class HomeViewModel @Inject constructor(
         // Start observing network connectivity
         viewModelScope.launch {
             connectivity.observe()
-                .catch { e -> Log.e("HomeViewModel", "Network observation error", e) }
+                .catch { e ->
+                    Log.e(TAG, "Network observation error", e)
+                }
                 .collect { status ->
                     _networkStatus.value = status
                     // Retry loading if we regain connectivity and had an error
@@ -108,7 +112,7 @@ internal class HomeViewModel @Inject constructor(
                 )}
                 dateIsSelected = true
             } catch (e: Exception) {
-                Log.e("HomeViewModel", "Error restoring date", e)
+                Log.e(TAG, "Error restoring date", e)
             }
         }
     }
@@ -161,15 +165,15 @@ internal class HomeViewModel @Inject constructor(
         diariesJob?.cancel()
 
         diariesJob = viewModelScope.launch {
-            retryWithBackoff(
-                times = MAX_RETRIES,
-                initialDelay = RETRY_DELAY
-            ) {
+            try {
                 if (dateIsSelected && zonedDateTime != null) {
                     observeFilteredDiaries(zonedDateTime)
                 } else {
                     observeAllDiaries()
                 }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in getDiaries", e)
+                handleError(e)
             }
         }
     }
@@ -177,8 +181,9 @@ internal class HomeViewModel @Inject constructor(
     private suspend fun observeAllDiaries() {
         MongoDB.getAllDiaries()
             .catch { e ->
+                Log.e(TAG, "Error observing all diaries", e)
                 handleError(e)
-                emit(RequestState.Error(e))
+                emit(RequestState.Error(e as Exception))
             }
             .collect { result ->
                 updateDiariesState(result)
@@ -188,8 +193,9 @@ internal class HomeViewModel @Inject constructor(
     private suspend fun observeFilteredDiaries(zonedDateTime: ZonedDateTime) {
         MongoDB.getFilteredDiaries(zonedDateTime = zonedDateTime)
             .catch { e ->
+                Log.e(TAG, "Error observing filtered diaries", e)
                 handleError(e)
-                emit(RequestState.Error(e))
+                emit(RequestState.Error(e as Exception))
             }
             .collect { result ->
                 updateDiariesState(result)
@@ -214,7 +220,7 @@ internal class HomeViewModel @Inject constructor(
     }
 
     private fun handleError(error: Throwable) {
-        Log.e("HomeViewModel", "Error loading diaries", error)
+        Log.e(TAG, "Error loading diaries", error)
         val errorMessage = when {
             _networkStatus.value != ConnectivityObserver.Status.Available ->
                 "No internet connection"
@@ -232,33 +238,11 @@ internal class HomeViewModel @Inject constructor(
         }
     }
 
-    // Retry mechanism with exponential backoff
-    private suspend fun <T> retryWithBackoff(
-        times: Int,
-        initialDelay: Long = 100,
-        maxDelay: Long = 5000,
-        factor: Double = 2.0,
-        block: suspend () -> T
-    ): T {
-        var currentDelay = initialDelay
-        repeat(times - 1) { attempt ->
-            try {
-                return block()
-            } catch (e: Exception) {
-                Log.w("HomeViewModel", "Retry attempt ${attempt + 1} failed", e)
-                if (attempt == times - 2) throw e
-            }
-            delay(currentDelay)
-            currentDelay = (currentDelay * factor).toLong().coerceAtMost(maxDelay)
-        }
-        return block()
-    }
-
     fun getUserPhotoUrl(): String? {
         return try {
             FirebaseAuth.getInstance().currentUser?.photoUrl?.toString()
         } catch (e: Exception) {
-            Log.e("HomeViewModel", "Error getting user photo", e)
+            Log.e(TAG, "Error getting user photo", e)
             null
         }
     }
@@ -272,7 +256,10 @@ internal class HomeViewModel @Inject constructor(
             return
         }
 
-        viewModelScope.launch {
+        // Cancel any existing delete job
+        deleteJob?.cancel()
+
+        deleteJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
             try {
@@ -281,6 +268,7 @@ internal class HomeViewModel @Inject constructor(
 
                 deleteAllDiariesInternal(userId, onSuccess, onError)
             } catch (e: Exception) {
+                Log.e(TAG, "Error in deleteAllDiaries", e)
                 onError(e)
             } finally {
                 _uiState.update { it.copy(isLoading = false) }
@@ -330,10 +318,13 @@ internal class HomeViewModel @Inject constructor(
                             onError(result.error)
                         }
                     }
-                    else -> {}
+                    else -> {
+                        Log.w(TAG, "Unexpected state during deleteAllDiaries")
+                    }
                 }
             }
         } catch (e: Exception) {
+            Log.e(TAG, "Error deleting all diaries", e)
             onError(e)
         }
     }
@@ -348,6 +339,10 @@ internal class HomeViewModel @Inject constructor(
         // Cancel all jobs
         diariesJob?.cancel()
         refreshJob?.cancel()
+        deleteJob?.cancel()
+
+        // Close MongoDB connection
+        MongoDB.close()
     }
 }
 

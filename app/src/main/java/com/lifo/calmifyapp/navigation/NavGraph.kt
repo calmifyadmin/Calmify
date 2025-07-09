@@ -22,6 +22,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.lifo.auth.navigation.authenticationRoute
+import com.lifo.chat.navigation.chatRoute
 import com.lifo.home.navigation.homeRoute
 import com.lifo.ui.components.navigation.GoogleStyleNavigationBar
 import com.lifo.ui.components.navigation.NavigationDestination
@@ -194,7 +195,15 @@ fun SetupNavGraph(
                             }
                         }
                     },
-                    onDataLoaded = safeOnDataLoaded
+                    onDataLoaded = safeOnDataLoaded,
+                    navigateToChat = {
+                        safeNavigate(Screen.Chat.route) {
+                            navController.navigate(Screen.Chat.route) {
+                                popUpTo(Screen.Chat.route) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
+                    },
                 )
 
                 writeRoute(
@@ -202,6 +211,19 @@ fun SetupNavGraph(
                         if (navController.currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
                             navController.popBackStack()
                         }
+                    }
+                )
+                // In the NavHost, after the writeRoute, add:
+                chatRoute(
+                    navigateBack = {
+                        if (navController.currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
+                            navController.popBackStack()
+                        }
+                    },
+                    navigateToWriteWithContent = { content ->
+                        // Navigate to write screen with pre-filled content
+                        // This would require updating the Write feature to accept initial content
+                        navController.navigate(Screen.Write.route)
                     }
                 )
             }

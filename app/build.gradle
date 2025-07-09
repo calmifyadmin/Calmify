@@ -1,11 +1,12 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
-    id 'kotlin-kapt'
     id 'com.google.devtools.ksp'
     id 'dagger.hilt.android.plugin'
     id 'io.realm.kotlin'
     id 'com.google.gms.google-services'
+    // id 'com.google.firebase.crashlytics' // Decommenta se vuoi crash reporting
+    // id 'com.google.firebase.firebase-perf' // Decommenta se vuoi performance monitoring
 }
 
 android {
@@ -13,86 +14,190 @@ android {
     compileSdk ProjectConfig.compileSdk
 
     defaultConfig {
-        applicationId "com.lifo.calmifyapp"
+        applicationId ProjectConfig.applicationId
         minSdk ProjectConfig.minSdk
         targetSdk ProjectConfig.targetSdk
+        versionCode ProjectConfig.versionCode
+        versionName ProjectConfig.versionName
 
-        versionCode 1
-        versionName "1.0"
+        testInstrumentationRunner ProjectConfig.testRunner
 
-        versionCode 1
-        versionName "1.0"
-
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary true
         }
-        signingConfig signingConfigs.debug
-        multiDexEnabled true
+
+        // ProGuard rules per Room
+        javaCompileOptions {
+            annotationProcessorOptions {
+                arguments += ["room.schemaLocation": "$projectDir/schemas"]
+            }
+        }
     }
 
     buildTypes {
-        release {
+        debug {
+            debuggable true
             minifyEnabled false
+            shrinkResources false
+        }
+
+        release {
+            debuggable false
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+
+            // Ottimizzazioni release
+            ndk {
+                debugSymbolLevel 'NONE'
+            }
+
+            // Split APKs per ABI
+            splits {
+                abi {
+                    enable true
+                    reset()
+                    include 'armeabi-v7a', 'arm64-v8a', 'x86_64'
+                    universalApk false
+                }
+            }
+            signingConfig signingConfigs.debug
+
         }
     }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
-        coreLibraryDesugaringEnabled true
     }
+
     kotlinOptions {
-        jvmTarget = '17'
+        jvmTarget = ProjectConfig.jvmTarget
+
+        // Ottimizzazioni Kotlin
+        freeCompilerArgs += [
+                "-opt-in=kotlin.RequiresOptIn",
+                "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
+                "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
+                "-opt-in=androidx.compose.animation.ExperimentalAnimationApi"
+        ]
     }
+
     buildFeatures {
         compose true
+        buildConfig true
+
+        // Disabilita features non usate
+        aidl false
+        renderScript false
+        shaders false
+        resValues false
     }
+
     composeOptions {
         kotlinCompilerExtensionVersion ProjectConfig.extensionVersion
     }
+
     packagingOptions {
         resources {
-            excludes += '/META-INF/{AL2.0,LGPL2.1}'
+            excludes += [
+                    '/META-INF/{AL2.0,LGPL2.1}',
+                    '/META-INF/DEPENDENCIES',
+                    '/META-INF/INDEX.LIST',
+                    '/META-INF/LICENSE*',
+                    '/META-INF/NOTICE*',
+                    '/META-INF/*.kotlin_module'
+            ]
         }
     }
+
+    lint {
+        checkDependencies true
+        checkReleaseBuilds false
+        abortOnError false
+        warningsAsErrors false
+    }
+
+    // Namespace per BuildConfig
+    buildFeatures.buildConfig = true
 }
 
 dependencies {
-    // Compose Navigation
+    // Firebase BOM - gestisce tutte le versioni Firebase
+    implementation platform(libs.firebase.bom)
+
+    // Compose BOM - gestisce tutte le versioni Compose
+    implementation platform(libs.compose.bom)
+
+    // Compose dependencies (senza versioni)
+    implementation libs.compose.ui
+    implementation libs.compose.ui.graphics
+    implementation libs.compose.ui.tooling.preview
+    implementation libs.compose.material3
+    implementation libs.compose.material.icons.extended
+    implementation libs.compose.animation
+    implementation libs.compose.foundation
+    debugImplementation libs.compose.ui.tooling
+    debugImplementation libs.compose.ui.test.manifest
+
+    // Core Android
+    implementation libs.core.ktx
+    implementation libs.lifecycle.runtime.ktx
+    implementation libs.lifecycle.runtime.compose
+    implementation libs.lifecycle.viewmodel.compose
+    implementation libs.activity.compose
+
+    // Navigation
     implementation libs.navigation.compose
 
-    // Firebase
+    // Firebase (versioni gestite dal BOM)
+    implementation libs.firebase.auth
     implementation libs.firebase.storage
+    implementation libs.firebase.analytics
+    // implementation libs.firebase.crashlytics // Decommenta se vuoi
 
-    // Room components
+    // Room
     implementation libs.room.runtime
-    ksp libs.room.compiler
     implementation libs.room.ktx
+    implementation libs.room.paging
+    ksp libs.room.compiler
 
-    // Splash API
+    // Splash Screen
     implementation libs.splash.api
 
-    // Mongo DB Realm
+    // Realm
     implementation libs.realm.sync
 
-    // Dagger Hilt
+    // Hilt
     implementation libs.hilt.android
     ksp libs.hilt.compiler
 
-    // Desugar JDK
-    coreLibraryDesugaring libs.desugar.jdk
+    // Coroutines
+    implementation libs.coroutines.core
+    implementation libs.coroutines.android
+    implementation libs.coroutines.play.services
 
-    //TEST
-    implementation libs.junit.ext
-    implementation libs.junit
-    implementation libs.compose.ui.test
-    implementation libs.lifecycle.runtime.compose
-    implementation 'androidx.compose.material3:material3:1.0.0-alpha13'
+    // Moduli interni
     implementation(project(":core:ui"))
     implementation(project(":core:util"))
     implementation(project(":data:mongo"))
     implementation(project(":features:auth"))
     implementation(project(":features:home"))
     implementation(project(":features:write"))
+    implementation(project(":features:chat"))
+
+    // Testing
+    testImplementation libs.junit
+    testImplementation libs.mockk
+    testImplementation libs.turbine
+    androidTestImplementation libs.junit.ext
+    androidTestImplementation libs.espresso.core
+    androidTestImplementation libs.compose.ui.test
+}
+
+// KSP configurations
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+    arg("room.incremental", "true")
+    arg("room.generateKotlin", "true")
 }

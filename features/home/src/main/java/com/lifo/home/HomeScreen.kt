@@ -54,7 +54,8 @@ internal fun HomeScreen(
     onDateSelected: (ZonedDateTime) -> Unit,
     onDateReset: () -> Unit,
     viewModel: HomeViewModel,
-    userProfileImageUrl: String?
+    userProfileImageUrl: String?,
+    navigateToChat: () -> Unit
 ) {
     // Collect states
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
@@ -149,24 +150,52 @@ internal fun HomeScreen(
                 }
             )
 
-            // FAB posizionato sopra lo Scaffold per evitare clipping dell'ombra
-            AnimatedVisibility(
-                visible = screenState is HomeScreenState.Ready,
-                enter = scaleIn(
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessLow
-                    )
-                ) + fadeIn(),
-                exit = scaleOut() + fadeOut(),
+// Multiple FABs
+            Column(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(24.dp) // Padding generoso per l'ombra
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                AnimatedFAB(
-                    onClick = navigateToWrite,
-                    expanded = fabExpanded && !isLoading
-                )
+                // Chat FAB
+                AnimatedVisibility(
+                    visible = screenState is HomeScreenState.Ready,
+                    enter = scaleIn(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        )
+                    ) + fadeIn(),
+                    exit = scaleOut() + fadeOut()
+                ) {
+                    SmallFloatingActionButton(
+                        onClick = navigateToChat,
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Star,
+                            contentDescription = "AI Chat"
+                        )
+                    }
+                }
+
+                // Write FAB (existing)
+                AnimatedVisibility(
+                    visible = screenState is HomeScreenState.Ready,
+                    enter = scaleIn(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        )
+                    ) + fadeIn(),
+                    exit = scaleOut() + fadeOut()
+                ) {
+                    AnimatedFAB(
+                        onClick = navigateToWrite,
+                        expanded = fabExpanded && !isLoading
+                    )
+                }
             }
         }
     }
