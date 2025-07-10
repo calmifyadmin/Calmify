@@ -2,8 +2,11 @@ package com.lifo.chat.presentation.components
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,22 +17,24 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -38,223 +43,285 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun ChatInput(
     value: String,
     onValueChange: (String) -> Unit,
     onSend: () -> Unit,
-    isEnabled: Boolean = true,
-    isStreaming: Boolean = false,
     modifier: Modifier = Modifier,
-    onVoiceInput: (() -> Unit)? = null,
-    onAttachment: (() -> Unit)? = null
+    isEnabled: Boolean = true,
+    isStreaming: Boolean = false
 ) {
+    val haptics = LocalHapticFeedback.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
-    val haptics = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
 
-    var isFocused by remember { mutableStateOf(false) }
-    val hasText = value.isNotEmpty()
+    // Animation states
+    val sendButtonScale = remember { Animatable(1f) }
+    val micButtonScale = remember { Animatable(1f) }
 
-    Box(
+    // Auto-focus when enabled changes
+    LaunchedEffect(isEnabled) {
+        if (isEnabled && value.isEmpty()) {
+            delay(300)
+            try {
+                focusRequester.requestFocus()
+            } catch (e: Exception) {
+                // Ignore focus errors
+            }
+        }
+    }
+
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .navigationBarsPadding()
-            .imePadding()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .background(MaterialTheme.colorScheme.surface)
+            .navigationBarsPadding() // Rispetta la navigation bar del sistema
+            .imePadding(),
     ) {
-        // Main input container - Gemini style
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-            tonalElevation = 0.dp
+        // Main container matching Gemini's exact layout
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
+                .padding(bottom = 8.dp, top = 8.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 56.dp)
-                    .padding(horizontal = 20.dp),
-                verticalAlignment = Alignment.CenterVertically
+            // Input field container with very rounded corners like Gemini
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                tonalElevation = 0.dp,
+                border = BorderStroke(
+                    width = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                )
             ) {
-                // Left side content
-                AnimatedContent(
-                    targetState = hasText,
-                    transitionSpec = {
-                        fadeIn(animationSpec = tween(150)) with
-                                fadeOut(animationSpec = tween(150))
-                    },
-                    label = "LeftContent"
-                ) { showAddButton ->
-                    if (!showAddButton) {
-                        // + button when no text
-                        Icon(
-                            imageVector = Icons.Outlined.Add,
-                            contentDescription = "Add",
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clip(CircleShape)
-                                .clickable {
-                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    // Handle add action
-                                },
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
-                // Input field
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 16.dp)
-                ) {
-                    BasicTextField(
-                        value = value,
-                        onValueChange = onValueChange,
+                Column {
+                    // Input row
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .focusRequester(focusRequester)
-                            .onFocusChanged { isFocused = it.isFocused },
-                        textStyle = TextStyle(
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.onSurface
-                        ),
-                        enabled = isEnabled && !isStreaming,
-                        keyboardOptions = KeyboardOptions(
-                            capitalization = KeyboardCapitalization.Sentences,
-                            imeAction = if (hasText) ImeAction.Send else ImeAction.Default
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onSend = {
-                                if (hasText) {
-                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    onSend()
-                                    keyboardController?.hide()
+                            .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Input field
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            BasicTextField(
+                                value = value,
+                                onValueChange = onValueChange,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(focusRequester),
+                                textStyle = TextStyle(
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Normal
+                                ),
+                                enabled = isEnabled && !isStreaming,
+                                keyboardOptions = KeyboardOptions(
+                                    capitalization = KeyboardCapitalization.Sentences,
+                                    imeAction = ImeAction.Send
+                                ),
+                                keyboardActions = KeyboardActions(
+                                    onSend = {
+                                        if (value.isNotBlank() && isEnabled && !isStreaming) {
+                                            onSend()
+                                            keyboardController?.hide()
+                                        }
+                                    }
+                                ),
+                                singleLine = true,
+                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                decorationBox = { innerTextField ->
+                                    Box {
+                                        if (value.isEmpty()) {
+                                            Text(
+                                                text = "Chiedi a EN!MA",
+                                                style = TextStyle(
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                                    fontSize = 16.sp,
+                                                    fontWeight = FontWeight.Normal,
+                                                    letterSpacing = 0.15.sp
+                                                )
+                                            )
+                                        }
+                                        innerTextField()
+                                    }
                                 }
-                            }
-                        ),
-                        singleLine = false,
-                        maxLines = 5,
-                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary)
-                    )
-
-                    // Placeholder
-                    if (value.isEmpty() && !isFocused) {
-                        Text(
-                            text = "Chiedi a Calmify",
-                            style = TextStyle(
-                                fontSize = 16.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                             )
-                        )
+                        }
+
+
                     }
-                }
 
-                // Right side content
-                AnimatedContent(
-                    targetState = when {
-                        isStreaming -> "streaming"
-                        hasText -> "send"
-                        else -> "actions"
-                    },
-                    transitionSpec = {
-                        (fadeIn(animationSpec = tween(150)) +
-                                scaleIn(animationSpec = tween(150))) with
-                                (fadeOut(animationSpec = tween(150)) +
-                                        scaleOut(animationSpec = tween(150)))
-                    },
-                    label = "RightContent"
-                ) { state ->
-                    when (state) {
-                        "streaming" -> {
-                            // Stop button durante lo streaming
-                            IconButton(
-                                onClick = {
-                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    // Handle stop streaming
-                                },
-                                modifier = Modifier.size(40.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Stop,
-                                    contentDescription = "Stop",
-                                    modifier = Modifier.size(24.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                    // Bottom action buttons row
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 8.dp, end = 8.dp, bottom = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Plus button
+                        IconButton(
+                            onClick = {
+                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Add",
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                            )
                         }
-                        "send" -> {
-                            // Send button
-                            IconButton(
-                                onClick = {
-                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    onSend()
-                                    keyboardController?.hide()
-                                },
-                                modifier = Modifier.size(40.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.Send,
-                                    contentDescription = "Send",
-                                    modifier = Modifier.size(24.dp),
-                                    tint = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
+
+                        // Research text button
+                        TextButton(
+                            onClick = {
+                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            },
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                            modifier = Modifier.height(32.dp)
+                        ) {
+                            Text(
+                                text = "Research",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Medium
+                                ),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                            )
                         }
-                        "actions" -> {
-                            // Voice and waveform buttons
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                // Research button (al posto di Canvas)
-                                TextButton(
-                                    onClick = {
-                                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        // Handle research
-                                    },
-                                    modifier = Modifier.height(36.dp),
-                                    contentPadding = PaddingValues(horizontal = 12.dp)
-                                ) {
-                                    Text(
-                                        text = "Research",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.Medium
-                                    )
+
+                        // Canvas text button
+                        TextButton(
+                            onClick = {
+                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            },
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                            modifier = Modifier.height(32.dp)
+                        ) {
+                            Text(
+                                text = "Canvas",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Medium
+                                ),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                            )
+                        }
+
+                        // Spacer
+                        Spacer(modifier = Modifier.weight(1f))
+
+
+                        // Analytics/Stats button (bar chart icon)
+                        IconButton(
+                            onClick = {
+                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.BarChart,
+                                contentDescription = "Stats",
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                            )
+                        }
+
+                        // Send/Mic button with animated swap
+                        AnimatedContent(
+                            targetState = value.isNotBlank() || isStreaming,
+                            transitionSpec = {
+                                if (targetState) {
+                                    // Entering send button
+                                    (fadeIn(animationSpec = tween(150)) +
+                                            scaleIn(animationSpec = tween(150))) with
+                                            (fadeOut(animationSpec = tween(150)) +
+                                                    scaleOut(animationSpec = tween(150)))
+                                } else {
+                                    // Entering mic button
+                                    (fadeIn(animationSpec = tween(150)) +
+                                            scaleIn(animationSpec = tween(150))) with
+                                            (fadeOut(animationSpec = tween(150)) +
+                                                    scaleOut(animationSpec = tween(150)))
                                 }
-
-                                // Voice button
+                            },
+                            label = "SendMicSwap"
+                        ) { showSend ->
+                            if (showSend) {
+                                // Send button
                                 IconButton(
                                     onClick = {
-                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        onVoiceInput?.invoke()
+                                        if (!isStreaming && value.isNotBlank()) {
+                                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            scope.launch {
+                                                sendButtonScale.animateTo(0.85f, tween(80))
+                                                sendButtonScale.animateTo(1f, spring(dampingRatio = 0.3f))
+                                            }
+                                            onSend()
+                                            keyboardController?.hide()
+                                        }
                                     },
-                                    modifier = Modifier.size(40.dp)
+                                    enabled = !isStreaming && value.isNotBlank(),
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .scale(sendButtonScale.value)
+                                ) {
+                                    if (isStreaming) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(20.dp),
+                                            strokeWidth = 2.dp,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    } else {
+                                        // Play arrow icon in circle
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.AutoMirrored.Filled.Send,
+                                                    contentDescription = "Send",
+                                                    modifier = Modifier.size(18.dp),
+                                                    tint = MaterialTheme.colorScheme.surface
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                // Mic button
+                                IconButton(
+                                    onClick = {
+                                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        scope.launch {
+                                            micButtonScale.animateTo(0.85f, tween(80))
+                                            micButtonScale.animateTo(1f, spring(dampingRatio = 0.3f))
+                                        }
+                                        // Handle voice input
+                                    },
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .scale(micButtonScale.value)
                                 ) {
                                     Icon(
                                         imageVector = Icons.Outlined.Mic,
                                         contentDescription = "Voice",
-                                        modifier = Modifier.size(24.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-
-                                // Waveform/Audio visualization button
-                                IconButton(
-                                    onClick = {
-                                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        // Handle waveform
-                                    },
-                                    modifier = Modifier.size(40.dp)
-                                ) {
-                                    Icon(
-                                        painter = rememberWaveformIcon(),
-                                        contentDescription = "Audio",
-                                        modifier = Modifier.size(24.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        modifier = Modifier.size(20.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                                     )
                                 }
                             }
@@ -264,15 +331,4 @@ fun ChatInput(
             }
         }
     }
-
-    // Auto-focus on mount
-    LaunchedEffect(Unit) {
-        delay(300)
-        focusRequester.requestFocus()
-    }
 }
-
-@Composable
-private fun rememberWaveformIcon() = rememberVectorPainter(
-    Icons.Outlined.GraphicEq // Placeholder per l'icona waveform
-)
