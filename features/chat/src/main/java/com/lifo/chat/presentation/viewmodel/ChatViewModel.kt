@@ -97,7 +97,8 @@ class ChatViewModel @Inject constructor(
                             _uiState.update { currentState ->
                                 currentState.copy(
                                     messages = messages,
-                                    isLoading = false
+                                    isLoading = false,
+                                    sessionStarted = messages.isNotEmpty() // Set sessionStarted based on messages
                                 )
                             }
                         }
@@ -129,6 +130,9 @@ class ChatViewModel @Inject constructor(
             Log.d(TAG, "Empty message, not sending")
             return
         }
+
+        // Mark session as started
+        _uiState.update { it.copy(sessionStarted = true) }
 
         Log.d(TAG, "Sending message: $trimmedContent")
         val currentSession = _uiState.value.currentSession
@@ -210,7 +214,8 @@ class ChatViewModel @Inject constructor(
                         it.copy(
                             currentSession = result.data,
                             messages = emptyList(),
-                            showNewSessionDialog = false
+                            showNewSessionDialog = false,
+                            sessionStarted = false // Reset session started flag
                         )
                     }
                     // Important: Start observing messages for the new session
@@ -237,7 +242,8 @@ class ChatViewModel @Inject constructor(
                         _uiState.update {
                             it.copy(
                                 currentSession = null,
-                                messages = emptyList()
+                                messages = emptyList(),
+                                sessionStarted = false
                             )
                         }
                     }
@@ -256,7 +262,10 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch {
             when (val result = repository.deleteMessage(messageId)) {
                 is ChatResult.Success -> {
-                    // Message will be removed from UI via Flow collection
+                    // Check if all messages are deleted
+                    if (_uiState.value.messages.size <= 1) {
+                        _uiState.update { it.copy(sessionStarted = false) }
+                    }
                 }
                 is ChatResult.Error -> {
                     _uiState.update {
