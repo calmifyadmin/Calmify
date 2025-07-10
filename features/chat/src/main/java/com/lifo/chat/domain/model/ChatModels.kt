@@ -49,7 +49,8 @@ data class ChatUiState(
     val isStreamingResponse: Boolean = false,
     val error: String? = null,
     val inputText: String = "",
-    val showNewSessionDialog: Boolean = false
+    val showNewSessionDialog: Boolean = false,
+    val sessionStarted: Boolean = false  // Nuovo flag per tracciare se la chat è iniziata
 )
 
 /**

@@ -4,7 +4,6 @@ import android.util.Log
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.content
 import com.google.ai.client.generativeai.type.generationConfig
-import com.lifo.chat.BuildConfig
 import com.lifo.chat.data.local.ChatDao
 import com.lifo.chat.data.local.entities.ChatMessageEntity
 import com.lifo.chat.data.local.entities.ChatSessionEntity
@@ -34,7 +33,7 @@ class ChatRepositoryImpl @Inject constructor(
 
     private val generativeModel = GenerativeModel(
         modelName = "gemini-2.0-flash", // Usa il modello flash che è più stabile
-        apiKey = BuildConfig.GEMINI_API_KEY,
+        apiKey = "AIzaSyBWCfLj-x7bZiYiHz1mj4b4dGSX8wBewko" ,
         generationConfig = generationConfig {
             temperature = 0.7f
             topK = 1
