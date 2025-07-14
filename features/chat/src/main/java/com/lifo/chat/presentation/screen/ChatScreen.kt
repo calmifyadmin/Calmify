@@ -4,17 +4,18 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.util.Log
+import android.view.animation.OvershootInterpolator
 import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -24,6 +25,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -36,12 +38,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.rememberAsyncImagePainter
 import com.lifo.chat.domain.model.ChatEvent
 import com.lifo.chat.domain.model.ChatMessage
 import com.lifo.chat.presentation.components.ChatBubble
@@ -49,6 +50,49 @@ import com.lifo.chat.presentation.components.ChatInput
 import com.lifo.chat.presentation.viewmodel.ChatViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+// Import necessari
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.Image
+import androidx.compose.ui.geometry.Offset
+// Import necessari:
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
+import kotlin.math.PI
+import kotlin.math.sin
+
+
+// Import necessari:
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.asComposeRenderEffect
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
+import kotlin.math.PI
+import kotlin.math.sin
+import kotlin.math.cos
+
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
@@ -65,21 +109,32 @@ fun ChatScreen(
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
-    // Smooth auto-scroll to bottom
-    LaunchedEffect(uiState.messages.size) {
-        if (uiState.messages.isNotEmpty()) {
-            delay(100) // Small delay for better UX
-            listState.animateScrollToItem(
-                index = uiState.messages.size - 1,
-                scrollOffset = 0
-            )
+    // Get user info
+    val userDisplayName = viewModel.getUserDisplayName()
+    val userPhotoUrl = viewModel.getUserPhotoUrl()
+
+    // Auto-scroll ottimizzato
+    LaunchedEffect(uiState.messages.size, uiState.streamingMessage) {
+        val totalItems = uiState.messages.size + (if (uiState.streamingMessage != null) 1 else 0)
+        if (totalItems > 0) {
+            delay(100)
+            try {
+                listState.animateScrollToItem(
+                    index = totalItems - 1,
+                    scrollOffset = 0
+                )
+            } catch (e: Exception) {
+                Log.e("ChatScreen", "Error scrolling", e)
+            }
         }
     }
 
-    // Create or load session on startup
-    LaunchedEffect(Unit) {
-        if (uiState.currentSession == null && uiState.sessions.isEmpty()) {
-            viewModel.onEvent(ChatEvent.CreateNewSession())
+    // Previeni navigazione durante operazioni
+    DisposableEffect(uiState.isNavigating) {
+        onDispose {
+            if (uiState.isNavigating) {
+                Log.w("ChatScreen", "Navigation interrupted")
+            }
         }
     }
 
@@ -91,9 +146,12 @@ fun ChatScreen(
             ChatTopBar(
                 title = uiState.currentSession?.title ?: "AI Chat",
                 scrollBehavior = scrollBehavior,
+                userPhotoUrl = userPhotoUrl,
                 onNavigateBack = {
-                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    navigateBack()
+                    if (!uiState.isNavigating) {
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        navigateBack()
+                    }
                 },
                 onNewChat = {
                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -109,9 +167,11 @@ fun ChatScreen(
         },
         bottomBar = {
             Column {
-                // Suggestion buttons sopra l'input bar
+                // Suggestion buttons
                 AnimatedVisibility(
-                    visible = !uiState.sessionStarted && uiState.messages.isEmpty() && !uiState.isStreamingResponse,
+                    visible = !uiState.sessionStarted &&
+                            uiState.messages.isEmpty() &&
+                            uiState.streamingMessage == null,
                     enter = expandVertically() + fadeIn(),
                     exit = shrinkVertically() + fadeOut()
                 ) {
@@ -148,8 +208,8 @@ fun ChatScreen(
                     onSend = {
                         viewModel.onEvent(ChatEvent.SendMessage(uiState.inputText))
                     },
-                    isEnabled = !uiState.isLoading,
-                    isStreaming = uiState.isStreamingResponse
+                    isEnabled = !uiState.isLoading && uiState.streamingMessage == null,
+                    isStreaming = uiState.streamingMessage != null
                 )
             }
         }
@@ -160,50 +220,51 @@ fun ChatScreen(
                 .padding(paddingValues)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            AnimatedContent(
-                targetState = uiState.sessionStarted || uiState.messages.isNotEmpty() || uiState.isStreamingResponse,
-                transitionSpec = {
-                    if (targetState) {
-                        fadeIn(animationSpec = tween(300)) with
-                                fadeOut(animationSpec = tween(300))
-                    } else {
-                        fadeIn(animationSpec = tween(500)) with
-                                fadeOut(animationSpec = tween(200))
+            // MAIN CONTENT - sempre mostra la lista se ci sono messaggi o streaming
+            if (uiState.messages.isNotEmpty() || uiState.streamingMessage != null) {
+                ChatMessagesList(
+                    messages = uiState.messages,
+                    streamingMessage = uiState.streamingMessage,
+                    listState = listState,
+                    onRetry = { message ->
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        viewModel.onEvent(ChatEvent.RetryMessage(message.id))
+                    },
+                    onDelete = { message ->
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        viewModel.onEvent(ChatEvent.DeleteMessage(message.id))
+                    },
+                    onCopy = { message ->
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        copyToClipboard(context, message.content)
                     }
-                },
-                label = "ChatContent"
-            ) { hasMessages ->
-                if (hasMessages) {
-                    // Messages list with performance optimizations
-                    ChatMessagesList(
-                        messages = uiState.messages,
-                        listState = listState,
-                        isStreaming = uiState.isStreamingResponse,
-                        onRetry = { message ->
-                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            viewModel.onEvent(ChatEvent.RetryMessage(message.id))
-                        },
-                        onDelete = { message ->
-                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            viewModel.onEvent(ChatEvent.DeleteMessage(message.id))
-                        },
-                        onCopy = { message ->
-                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            copyToClipboard(context, message.content)
-                        }
-                    )
-                } else {
-                    // Empty state with animations
-                    EmptyStateContent(
-                        onStartChat = {
-                            // Focus is handled by ChatInput
-                        },
-                        modifier = Modifier.fillMaxSize()
-                    )
+                )
+            } else if (!uiState.isLoading) {
+                // Empty state with user name
+                EmptyStateContent(
+                    userName = userDisplayName,
+                    onStartChat = { /* handled by input */ },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+
+            // Loading overlay
+            AnimatedVisibility(
+                visible = uiState.isLoading && uiState.messages.isEmpty(),
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background.copy(alpha = 0.9f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
                 }
             }
 
-            // Error snackbar with animation
+            // Error snackbar
             AnimatedVisibility(
                 visible = uiState.error != null,
                 enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
@@ -251,6 +312,7 @@ fun ChatScreen(
 private fun ChatTopBar(
     title: String,
     scrollBehavior: TopAppBarScrollBehavior,
+    userPhotoUrl: String?,
     onNavigateBack: () -> Unit,
     onNewChat: () -> Unit,
     onExportToDiary: () -> Unit
@@ -285,6 +347,23 @@ private fun ChatTopBar(
             }
         },
         actions = {
+            // User profile image
+            userPhotoUrl?.let {
+                Image(
+                    painter = rememberAsyncImagePainter(
+                        model = userPhotoUrl,
+                        error = painterResource(id = com.lifo.ui.R.drawable.google_logo_ic),
+                        placeholder = painterResource(id = com.lifo.ui.R.drawable.google_logo_ic)
+                    ),
+                    contentDescription = "User Profile Image",
+                    modifier = Modifier
+                        .padding(end = 8.dp)
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                )
+            }
+
             IconButton(onClick = onNewChat) {
                 Icon(
                     imageVector = Icons.Outlined.Add,
@@ -309,8 +388,8 @@ private fun ChatTopBar(
 @Composable
 private fun ChatMessagesList(
     messages: List<ChatMessage>,
+    streamingMessage: com.lifo.chat.domain.model.StreamingMessage?,
     listState: LazyListState,
-    isStreaming: Boolean,
     onRetry: (ChatMessage) -> Unit,
     onDelete: (ChatMessage) -> Unit,
     onCopy: (ChatMessage) -> Unit,
@@ -320,11 +399,13 @@ private fun ChatMessagesList(
         state = listState,
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp) // Più spazio tra messaggi
     ) {
+        // Messaggi esistenti con chiavi stabili
         items(
             items = messages,
-            key = { it.id }
+            key = { it.id },
+            contentType = { if (it.isUser) "user" else "ai" }
         ) { message ->
             ChatMessageItem(
                 message = message,
@@ -334,17 +415,15 @@ private fun ChatMessagesList(
             )
         }
 
-        // Loading indicator
-        if (isStreaming && messages.lastOrNull()?.isUser == true) {
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.Start
-                ) {
-                    AiTypingIndicator()
-                }
+        // Messaggio streaming (se presente)
+        streamingMessage?.let { streaming ->
+            item(
+                key = streaming.id,
+                contentType = "streaming"
+            ) {
+                StreamingMessageItem(
+                    content = streaming.content.toString()
+                )
             }
         }
     }
@@ -358,38 +437,9 @@ private fun ChatMessageItem(
     onCopy: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val animatedAlpha = remember { Animatable(0f) }
-    val animatedScale = remember { Animatable(0.8f) }
-
-    LaunchedEffect(message) {
-        launch {
-            animatedAlpha.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(
-                    durationMillis = 300,
-                    easing = FastOutSlowInEasing
-                )
-            )
-        }
-        launch {
-            animatedScale.animateTo(
-                targetValue = 1f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessLow
-                )
-            )
-        }
-    }
-
+    // RIMOSSO: Animazioni di scale e alpha che causavano l'effetto espansione
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .graphicsLayer {
-                alpha = animatedAlpha.value
-                scaleX = animatedScale.value
-                scaleY = animatedScale.value
-            }
+        modifier = modifier.fillMaxWidth()
     ) {
         ChatBubble(
             message = message,
@@ -401,7 +451,95 @@ private fun ChatMessageItem(
 }
 
 @Composable
+private fun StreamingMessageItem(
+    content: String,
+    modifier: Modifier = Modifier
+) {
+    // STILE GEMINI: Niente bubble, full width
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        // AI Avatar
+        AvatarBubble()
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        // Content - occupa tutto lo spazio
+        Column(modifier = Modifier.weight(1f)) {
+            // AI Name
+            Text(
+                text = "Lifo",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            if (content.isEmpty()) {
+                // Typing indicator
+                AiTypingIndicator()
+            } else {
+                // Streaming content
+                Row {
+                    Text(
+                        text = content,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    // Blinking cursor
+                    BlinkingCursor()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BlinkingCursor() {
+    val infiniteTransition = rememberInfiniteTransition(label = "cursor")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(500),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "cursorAlpha"
+    )
+
+    Text(
+        text = "▌",
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
+        modifier = Modifier.padding(start = 2.dp)
+    )
+}
+
+@Composable
+private fun AvatarBubble() {
+    // RIMOSSO: Animazione pulsante dell'avatar
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        modifier = Modifier.size(32.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = Icons.Outlined.AutoAwesome,
+                contentDescription = "AI",
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+    }
+}
+@Composable
 private fun EmptyStateContent(
+    userName: String?,
     onStartChat: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -409,19 +547,276 @@ private fun EmptyStateContent(
         modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
-        // Solo il testo "Ciao EN!MA" centrato
-        Text(
-            text = "Ciao EN!MA",
-            style = MaterialTheme.typography.displayMedium.copy(
-                fontSize = 48.sp,
-                letterSpacing = (-1).sp
+        // Stati per le animazioni
+        var isVisible by remember { mutableStateOf(false) }
+
+        // Trigger dell'animazione all'avvio
+        LaunchedEffect(Unit) {
+            delay(100) // Piccolo delay iniziale
+            isVisible = true
+        }
+
+        // Animazioni multiple combinate
+        val animationDuration = 1200
+
+        // Opacità animata
+        val alpha by animateFloatAsState(
+            targetValue = if (isVisible) 1f else 0f,
+            animationSpec = tween(
+                durationMillis = animationDuration,
+                easing = FastOutSlowInEasing
             ),
-            fontWeight = FontWeight.Normal,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .padding(horizontal = 48.dp)
-                .offset(y = (-80).dp)
+            label = "alpha"
         )
+
+        // Animazione infinita per il gradiente
+        val infiniteTransition = rememberInfiniteTransition(label = "gradient")
+        val gradientOffset by infiniteTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(3000, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "gradientOffset"
+        )
+
+        // Colori del gradiente animato
+        val gradientColors = listOf(
+            MaterialTheme.colorScheme.primary,
+            MaterialTheme.colorScheme.secondary,
+            MaterialTheme.colorScheme.tertiary,
+            MaterialTheme.colorScheme.primary
+        )
+
+        // Brush gradiente animato
+        val brush = Brush.linearGradient(
+            colors = gradientColors,
+            start = Offset(0f, 0f),
+            end = Offset(1000f * gradientOffset, 0f)
+        )
+
+        // Effetto stelline "pouf" - appare prima del testo
+        if (isVisible) {
+            SparklePoufEffect(
+                modifier = Modifier
+                    .fillMaxSize()
+            )
+        }
+
+        // Contenitore per il testo con animazione uniforme
+        Box(
+            modifier = Modifier
+                .offset(y = (-80).dp)
+                .alpha(alpha),
+            contentAlignment = Alignment.Center
+        ) {
+            val text = "Ciao ${userName ?: ""}"
+
+            // Animazione del blur/sfocatura
+            val blurRadius by animateFloatAsState(
+                targetValue = if (isVisible) 0f else 13f,
+                animationSpec = tween(
+                    durationMillis = 400,
+                    easing = FastOutSlowInEasing
+                ),
+                label = "blur"
+            )
+
+            // Animazione della scala uniforme
+            val textScale by animateFloatAsState(
+                targetValue = if (isVisible) 1f else 0.8f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessVeryLow
+                ),
+                label = "textScale"
+            )
+
+            // Testo principale con effetto di comparsa dalla sfocatura
+            Text(
+                text = text,
+                style = MaterialTheme.typography.displayMedium.copy(
+                    fontSize = 48.sp,
+                    letterSpacing = (-1).sp,
+                    brush = brush
+                ),
+                fontWeight = FontWeight.Normal,
+                modifier = Modifier
+                    .scale(textScale)
+                    .graphicsLayer {
+                        // Effetto blur custom (richiede API 31+)
+                        if (android.os.Build.VERSION.SDK_INT >= 31) {
+                            renderEffect = android.graphics.RenderEffect
+                                .createBlurEffect(
+                                    blurRadius,
+                                    blurRadius,
+                                    android.graphics.Shader.TileMode.DECAL
+                                ).asComposeRenderEffect()
+                        }
+                    }
+            )
+
+            // Overlay per effetto di dissolvenza aggiuntivo
+            if (blurRadius > 0) {
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.displayMedium.copy(
+                        fontSize = 48.sp,
+                        letterSpacing = (-1).sp,
+                        brush = brush
+                    ),
+                    fontWeight = FontWeight.Normal,
+                    modifier = Modifier
+                        .scale(textScale)
+                        .alpha((20f - blurRadius) / 20f * 0.3f) // Sovrapposizione leggera
+                )
+            }
+        }
+    }
+}
+
+// Effetto stelline "pouf" elegante che appare solo all'inizio
+@Composable
+private fun SparklePoufEffect(modifier: Modifier = Modifier) {
+    // Stato per controllare quando far partire l'animazione
+    var startAnimation by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        startAnimation = true
+    }
+
+    // Recupera i colori dal tema
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val secondaryColor = MaterialTheme.colorScheme.secondary
+    val tertiaryColor = MaterialTheme.colorScheme.tertiary
+
+    // Crea 5 stelline con animazioni individuali
+    val sparkles = remember {
+        List(5) { index ->
+            SparkleData(
+                id = index,
+                startX = 0.5f + (index - 2) * 0.15f, // Posizioni intorno al centro
+                startY = 0.45f,
+                targetX = when (index) {
+                    0 -> 0.2f
+                    1 -> 0.35f
+                    2 -> 0.5f
+                    3 -> 0.65f
+                    else -> 0.8f
+                },
+                targetY = when (index) {
+                    0 -> 0.3f
+                    1 -> 0.25f
+                    2 -> 0.2f
+                    3 -> 0.25f
+                    else -> 0.3f
+                },
+                delay = index * 100L, // Delay sequenziale
+                color = when (index % 3) {
+                    0 -> primaryColor
+                    1 -> secondaryColor
+                    else -> tertiaryColor
+                }
+            )
+        }
+    }
+
+    // Animazioni per ogni stellina - FUORI dal Canvas
+    val animationProgresses = sparkles.map { sparkle ->
+        val animationProgress = remember { Animatable(0f) }
+
+        LaunchedEffect(sparkle.id, startAnimation) {
+            if (startAnimation) {
+                delay(sparkle.delay)
+                animationProgress.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(
+                        durationMillis = 800,
+                        easing = FastOutSlowInEasing
+                    )
+                )
+            }
+        }
+
+        animationProgress.value
+    }
+
+    Canvas(modifier = modifier) {
+        if (startAnimation) {
+            sparkles.forEachIndexed { index, sparkle ->
+                val progress = animationProgresses[index]
+
+                // Calcola posizione interpolata
+                val currentX = size.width * (sparkle.startX + (sparkle.targetX - sparkle.startX) * progress)
+                val currentY = size.height * (sparkle.startY + (sparkle.targetY - sparkle.startY) * progress)
+
+                // Alpha che sfuma elegantemente
+                val alpha = when {
+                    progress < 0.7f -> 1f
+                    else -> 1f - ((progress - 0.7f) / 0.3f) // Sfuma negli ultimi 30%
+                }
+
+                // Scala che cresce e poi diminuisce
+                val scale = when {
+                    progress < 0.3f -> progress / 0.3f
+                    progress < 0.7f -> 1f
+                    else -> 1f - ((progress - 0.7f) / 0.3f) * 0.5f
+                }
+
+                // Disegna la stellina
+                drawPath(
+                    path = createStarPath(
+                        center = Offset(currentX, currentY),
+                        outerRadius = 4.dp.toPx() * scale,
+                        innerRadius = 2.dp.toPx() * scale
+                    ),
+                    color = sparkle.color.copy(alpha = alpha * 0.8f)
+                )
+
+                // Piccolo alone luminoso
+                drawCircle(
+                    color = sparkle.color.copy(alpha = alpha * 0.2f),
+                    radius = 6.dp.toPx() * scale,
+                    center = Offset(currentX, currentY),
+                    blendMode = BlendMode.Plus
+                )
+            }
+        }
+    }
+}
+
+// Data class per le stelline
+private data class SparkleData(
+    val id: Int,
+    val startX: Float,
+    val startY: Float,
+    val targetX: Float,
+    val targetY: Float,
+    val delay: Long,
+    val color: Color
+)
+
+// Funzione helper per creare una stella
+private fun createStarPath(center: Offset, outerRadius: Float, innerRadius: Float): Path {
+    return Path().apply {
+        val angleStep = PI.toFloat() / 2f
+        moveTo(center.x, center.y - outerRadius)
+
+        for (i in 0 until 4) {
+            val outerAngle = i * angleStep - PI.toFloat() / 2f
+            val innerAngle = outerAngle + angleStep / 2f
+
+            lineTo(
+                center.x + cos(innerAngle) * innerRadius,
+                center.y + sin(innerAngle) * innerRadius
+            )
+            lineTo(
+                center.x + cos(outerAngle + angleStep) * outerRadius,
+                center.y + sin(outerAngle + angleStep) * outerRadius
+            )
+        }
+        close()
     }
 }
 
@@ -468,43 +863,37 @@ private fun copyToClipboard(context: Context, text: String) {
 
 @Composable
 private fun AiTypingIndicator() {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        modifier = Modifier.padding(vertical = 4.dp)
+    // STILE GEMINI: Solo i puntini, senza sfondo
+    Row(
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            repeat(3) { index ->
-                val infiniteTransition = rememberInfiniteTransition(label = "typing")
-                val alpha by infiniteTransition.animateFloat(
-                    initialValue = 0.3f,
-                    targetValue = 1f,
-                    animationSpec = infiniteRepeatable(
-                        animation = keyframes {
-                            durationMillis = 1200
-                            0.3f at 0 + (index * 150)
-                            1f at 300 + (index * 150)
-                            0.3f at 600 + (index * 150)
-                        }
-                    ),
-                    label = "DotAlpha$index"
-                )
+        repeat(3) { index ->
+            val infiniteTransition = rememberInfiniteTransition(label = "typing")
+            val alpha by infiniteTransition.animateFloat(
+                initialValue = 0.3f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = keyframes {
+                        durationMillis = 1200
+                        0.3f at 0 + (index * 150)
+                        1f at 300 + (index * 150)
+                        0.3f at 600 + (index * 150)
+                    }
+                ),
+                label = "DotAlpha$index"
+            )
 
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .background(
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha),
-                            shape = MaterialTheme.shapes.small
-                        )
-                )
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .background(
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
+                        shape = MaterialTheme.shapes.small
+                    )
+            )
 
-                if (index < 2) {
-                    Spacer(modifier = Modifier.width(4.dp))
-                }
+            if (index < 2) {
+                Spacer(modifier = Modifier.width(4.dp))
             }
         }
     }

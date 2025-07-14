@@ -59,6 +59,7 @@ mockk = "1.13.9"
 turbine = "1.0.0"
 
 junit4 = "1.4.1"
+firebase-auth-version = "22.3.1"
 [libraries]
 # Core Android
 core-ktx = { module = "androidx.core:core-ktx", version.ref = "core-ktx" }
@@ -146,6 +147,7 @@ espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref =
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 compose-ui-test = { module = "androidx.compose.ui:ui-test-junit4", version.ref = "junit4" }
+google-firebase-auth = { group = "com.google.firebase", name = "firebase-auth", version.ref = "firebase-auth-version" }
 
 [plugins]
 com-android-application = { id = "com.android.application", version.ref = "agp" }

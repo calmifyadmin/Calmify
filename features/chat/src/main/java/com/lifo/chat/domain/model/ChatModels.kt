@@ -25,7 +25,8 @@ data class ChatMessage(
     val isUser: Boolean,
     val timestamp: Instant = Instant.now(),
     val status: MessageStatus = MessageStatus.SENT,
-    val error: String? = null
+    val error: String? = null,
+    val isStreaming: Boolean = false  // NUOVO: flag per messaggi in streaming
 )
 
 /**
@@ -39,18 +40,31 @@ enum class MessageStatus {
 }
 
 /**
+ * Streaming message temporaneo (non salvato in DB)
+ */
+data class StreamingMessage(
+    val id: String = "streaming_${System.currentTimeMillis()}",
+    val content: StringBuilder = StringBuilder(),
+    val isComplete: Boolean = false
+)
+
+/**
  * Chat UI state
  */
 data class ChatUiState(
+    // Stati esistenti
     val sessions: List<ChatSession> = emptyList(),
     val currentSession: ChatSession? = null,
     val messages: List<ChatMessage> = emptyList(),
     val isLoading: Boolean = false,
-    val isStreamingResponse: Boolean = false,
     val error: String? = null,
     val inputText: String = "",
     val showNewSessionDialog: Boolean = false,
-    val sessionStarted: Boolean = false  // Nuovo flag per tracciare se la chat è iniziata
+    val sessionStarted: Boolean = false,
+
+    // NUOVO: stato streaming separato
+    val streamingMessage: StreamingMessage? = null,
+    val isNavigating: Boolean = false  // NUOVO: previene navigazione durante operazioni
 )
 
 /**

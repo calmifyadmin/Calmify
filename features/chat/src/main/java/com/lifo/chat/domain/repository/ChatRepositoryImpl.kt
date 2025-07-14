@@ -26,14 +26,13 @@ class ChatRepositoryImpl @Inject constructor(
 
     companion object {
         private const val TAG = "ChatRepository"
-        // IMPORTANTE: Usa la tua API key qui temporaneamente per testare
-        // In produzione, questa dovrebbe venire da BuildConfig o essere iniettata
-        private const val GEMINI_API_KEY = "AIzaSyBWCfLj-x7bZiYiHz1mj4b4dGSX8wBewko" // Sostituisci con la tua API key
+        private const val GEMINI_API_KEY = "AIzaSyBWCfLj-x7bZiYiHz1mj4b4dGSX8wBewko"
+        private const val STREAMING_BUFFER_SIZE = 10
     }
 
     private val generativeModel = GenerativeModel(
-        modelName = "gemini-2.0-flash", // Usa il modello flash che è più stabile
-        apiKey = "AIzaSyBWCfLj-x7bZiYiHz1mj4b4dGSX8wBewko" ,
+        modelName = "gemini-2.0-flash",
+        apiKey = GEMINI_API_KEY,
         generationConfig = generationConfig {
             temperature = 0.7f
             topK = 1
@@ -44,6 +43,7 @@ class ChatRepositoryImpl @Inject constructor(
 
     override fun getAllSessions(): Flow<List<ChatSession>> {
         return chatDao.getAllSessions()
+            .distinctUntilChanged() // Evita emissioni duplicate
             .map { entities -> entities.map { it.toDomain() } }
             .flowOn(Dispatchers.IO)
     }
@@ -95,7 +95,11 @@ class ChatRepositoryImpl @Inject constructor(
 
     override fun getMessagesForSession(sessionId: String): Flow<List<ChatMessage>> {
         return chatDao.getMessagesForSession(sessionId)
-            .map { entities -> entities.map { it.toDomain() } }
+            .distinctUntilChanged() // CRITICO: evita re-emit degli stessi messaggi
+            .map { entities ->
+                entities.map { it.toDomain() }
+                    .filter { !it.isStreaming } // Filtra messaggi temporanei
+            }
             .flowOn(Dispatchers.IO)
     }
 
@@ -140,10 +144,7 @@ class ChatRepositoryImpl @Inject constructor(
                     return@withContext ChatResult.Error(Exception("Cannot retry AI messages"))
                 }
 
-                // Update status to sending
                 chatDao.updateMessageStatus(messageId, MessageStatus.SENDING.name)
-
-                // Mark as sent
                 chatDao.updateMessageStatus(messageId, MessageStatus.SENT.name)
 
                 ChatResult.Success(message.copy(status = MessageStatus.SENT))
@@ -154,6 +155,7 @@ class ChatRepositoryImpl @Inject constructor(
         }
     }
 
+    // OTTIMIZZATO: Non salva in DB durante streaming
     override suspend fun generateAiResponse(
         sessionId: String,
         userMessage: String,
@@ -161,78 +163,31 @@ class ChatRepositoryImpl @Inject constructor(
     ): Flow<ChatResult<String>> = flow {
         try {
             Log.d(TAG, "Starting AI response generation for message: $userMessage")
-            Log.d(TAG, "Session ID: $sessionId")
-            Log.d(TAG, "Context size: ${context.size}")
 
-            // Create AI message entity
-            val aiMessage = ChatMessage(
-                sessionId = sessionId,
-                content = "",
-                isUser = false,
-                status = MessageStatus.STREAMING
-            )
-
-            withContext(Dispatchers.IO) {
-                chatDao.insertMessage(aiMessage.toEntity())
-            }
-
-            // Build conversation context
+            // NON creare messaggio nel DB durante streaming!
             val prompt = buildConversationPrompt(userMessage, context)
-            Log.d(TAG, "Prompt built, starting generation...")
+            val responseBuffer = StringBuilder()
 
             try {
-                // Generate streaming response
-                val responseFlow = generativeModel.generateContentStream(prompt)
-                val fullResponse = StringBuilder()
+                generativeModel.generateContentStream(prompt)
+                    .buffer(STREAMING_BUFFER_SIZE) // Buffer per performance
+                    .collect { chunk ->
+                        chunk.text?.let { text ->
+                            responseBuffer.append(text)
+                            Log.d(TAG, "Streaming chunk: ${text.take(50)}...")
 
-                responseFlow.collect { chunk ->
-                    chunk.text?.let { text ->
-                        fullResponse.append(text)
-                        Log.d(TAG, "Received chunk: ${text.take(50)}...")
-
-                        // Emit the accumulated response
-                        emit(ChatResult.Success(fullResponse.toString()))
-
-                        // Update message in database
-                        withContext(Dispatchers.IO) {
-                            chatDao.updateMessage(
-                                aiMessage.copy(
-                                    content = fullResponse.toString(),
-                                    status = MessageStatus.STREAMING
-                                ).toEntity()
-                            )
+                            // Emetti solo il testo accumulato
+                            emit(ChatResult.Success(responseBuffer.toString()))
                         }
                     }
-                }
 
-                // Mark as complete
-                withContext(Dispatchers.IO) {
-                    chatDao.updateMessage(
-                        aiMessage.copy(
-                            content = fullResponse.toString(),
-                            status = MessageStatus.SENT
-                        ).toEntity()
-                    )
-                    chatDao.incrementMessageCount(sessionId, Instant.now().toEpochMilli())
+                // Emissione finale
+                if (responseBuffer.isNotEmpty()) {
+                    emit(ChatResult.Success(responseBuffer.toString()))
                 }
-
-                Log.d(TAG, "AI response completed: ${fullResponse.toString().take(100)}...")
-                emit(ChatResult.Success(fullResponse.toString()))
 
             } catch (e: Exception) {
                 Log.e(TAG, "Error during AI generation", e)
-
-                // Update AI message with error
-                withContext(Dispatchers.IO) {
-                    chatDao.updateMessage(
-                        aiMessage.copy(
-                            content = "Sorry, I encountered an error. Please try again.",
-                            status = MessageStatus.FAILED,
-                            error = e.message
-                        ).toEntity()
-                    )
-                }
-
                 emit(ChatResult.Error(e))
             }
 
@@ -241,6 +196,30 @@ class ChatRepositoryImpl @Inject constructor(
             emit(ChatResult.Error(e))
         }
     }.flowOn(Dispatchers.IO)
+
+    // NUOVO: Salva messaggio AI solo dopo streaming completo
+    override suspend fun saveAiMessage(sessionId: String, content: String): ChatResult<ChatMessage> {
+        return try {
+            withContext(Dispatchers.IO) {
+                val message = ChatMessage(
+                    sessionId = sessionId,
+                    content = content,
+                    isUser = false,
+                    status = MessageStatus.SENT
+                )
+
+                // Salva UNA SOLA VOLTA nel database
+                chatDao.insertMessage(message.toEntity())
+                chatDao.incrementMessageCount(sessionId, Instant.now().toEpochMilli())
+
+                Log.d(TAG, "AI message saved: ${content.take(50)}...")
+                ChatResult.Success(message)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving AI message", e)
+            ChatResult.Error(e)
+        }
+    }
 
     override suspend fun exportSessionToDiary(sessionId: String): ChatResult<String> {
         return try {
@@ -268,14 +247,14 @@ class ChatRepositoryImpl @Inject constructor(
     }
 
     private fun buildConversationPrompt(userMessage: String, context: List<ChatMessage>): String {
-        val contextMessages = context.takeLast(10) // Last 10 messages for context
+        val contextMessages = context.takeLast(10)
 
         val conversationHistory = contextMessages.joinToString("\n") { message ->
             if (message.isUser) "User: ${message.content}" else "Assistant: ${message.content}"
         }
 
         return """
-            You are Calmify AI, a supportive and empathetic companion in a personal diary app. 
+            You are Lifo, a supportive and empathetic AI companion in a personal diary app called Calmify. 
             Your role is to:
             - Provide emotional support and understanding
             - Help users reflect on their thoughts and feelings
@@ -285,6 +264,7 @@ class ChatRepositoryImpl @Inject constructor(
             
             Important guidelines:
             - Be warm, caring, and conversational
+            - Respond in Italian
             - Avoid giving medical advice
             - Encourage professional help for serious concerns
             - Keep responses concise but meaningful
@@ -295,7 +275,7 @@ class ChatRepositoryImpl @Inject constructor(
             
             User: $userMessage
             
-            Please respond with empathy and understanding.
+            Please respond with empathy and understanding in Italian.
         """.trimIndent()
     }
 
@@ -312,7 +292,7 @@ class ChatRepositoryImpl @Inject constructor(
         """.trimIndent()
 
         val conversation = messages.joinToString("\n\n") { message ->
-            val role = if (message.isUser) "**Me**" else "**Calmify AI**"
+            val role = if (message.isUser) "**Me**" else "**Lifo AI**"
             val time = DateTimeFormatter.ofPattern("h:mm a")
                 .withZone(ZoneId.systemDefault())
                 .format(message.timestamp)
