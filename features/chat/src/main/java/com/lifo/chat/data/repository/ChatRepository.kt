@@ -26,6 +26,9 @@ interface ChatRepository {
         context: List<ChatMessage>
     ): Flow<ChatResult<String>>
 
+    // NUOVO: Salva messaggio AI solo dopo streaming completo
+    suspend fun saveAiMessage(sessionId: String, content: String): ChatResult<ChatMessage>
+
     // Export operations
     suspend fun exportSessionToDiary(sessionId: String): ChatResult<String>
 }
