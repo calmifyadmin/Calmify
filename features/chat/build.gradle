@@ -1,0 +1,124 @@
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+    id 'com.google.devtools.ksp'
+    id 'dagger.hilt.android.plugin'
+}
+
+android {
+    namespace 'com.lifo.chat'
+    compileSdk ProjectConfig.compileSdk
+
+    defaultConfig {
+        minSdk ProjectConfig.minSdk  // 26 per Gemini AI
+        targetSdk ProjectConfig.targetSdk
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles "consumer-rules.pro"
+
+        // Add API key from local.properties
+        buildConfigField("String", "GEMINI_API_KEY", "\"${getGeminiApiKey()}\"")
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = ProjectConfig.jvmTarget
+    }
+
+    buildFeatures {
+        compose true
+        buildConfig true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion ProjectConfig.extensionVersion
+    }
+
+    packagingOptions {
+        resources.excludes.add("META-INF/*")
+    }
+}
+
+def getGeminiApiKey() {
+    def localProperties = new Properties()
+    def localPropertiesFile = rootProject.file('local.properties')
+    if (localPropertiesFile.exists()) {
+        localProperties.load(new FileInputStream(localPropertiesFile))
+    }
+    return localProperties.getProperty('GEMINI_API_KEY', '')
+}
+
+dependencies {
+    // Compose BOM
+    implementation platform(libs.compose.bom)
+
+    // Compose dependencies
+    implementation libs.compose.ui
+    implementation libs.compose.ui.graphics
+    implementation libs.compose.ui.tooling.preview
+    implementation libs.compose.material3
+    implementation libs.compose.material.icons.extended
+    implementation libs.google.firebase.auth
+    debugImplementation libs.compose.ui.tooling
+
+    // Core
+    implementation libs.core.ktx
+    implementation libs.activity.compose
+    implementation libs.navigation.compose
+    implementation libs.lifecycle.runtime.compose
+    implementation libs.lifecycle.viewmodel.compose
+
+    // Google AI
+    implementation libs.generative.ai
+
+    // Markdown rendering
+    implementation libs.richtext.ui
+    implementation libs.richtext.ui.material3
+    implementation libs.richtext.commonmark
+
+    // Room
+    implementation libs.room.runtime
+    implementation libs.room.ktx
+    ksp libs.room.compiler
+
+    // Hilt
+    implementation libs.hilt.android
+    ksp libs.hilt.compiler
+    implementation libs.hilt.navigation.compose
+
+    // Coroutines
+    implementation libs.coroutines.core
+    implementation libs.coroutines.android
+    implementation libs.firebase.auth
+    implementation libs.firebase.storage
+    // Testing
+    testImplementation libs.junit
+    androidTestImplementation libs.junit.ext
+    androidTestImplementation libs.compose.ui.test
+    implementation libs.coil
+// Per RichText markdown
+    implementation("com.halilibo.compose-richtext:richtext-ui:0.20.0")
+    implementation("com.halilibo.compose-richtext:richtext-ui-material3:0.20.0")
+    implementation("com.halilibo.compose-richtext:richtext-commonmark:0.20.0")
+
+// Per ottimizzazioni Coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    // Moduli interni
+    implementation(project(":core:ui"))
+    implementation(project(":core:util"))
+    implementation(project(":data:mongo"))
+}
