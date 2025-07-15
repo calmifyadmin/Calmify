@@ -28,8 +28,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.halilibo.richtext.markdown.Markdown
 import com.halilibo.richtext.ui.material3.RichText
-import com.lifo.chat.domain.model.ChatMessage
-import com.lifo.chat.domain.model.MessageStatus
+
+import com.lifo.mongo.repository.ChatMessage
+import com.lifo.mongo.repository.ChatSession
+import com.lifo.mongo.repository.MessageStatus
 import java.time.format.DateTimeFormatter
 import java.time.ZoneId
 import kotlin.math.abs

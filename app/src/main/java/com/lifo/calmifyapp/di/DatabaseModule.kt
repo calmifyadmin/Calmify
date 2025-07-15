@@ -1,10 +1,9 @@
 package com.lifo.calmifyapp.di
 
 import android.content.Context
-import androidx.room.Room
+import com.lifo.mongo.database.AppDatabase
+import com.lifo.mongo.di.MongoDatabaseProvider
 import com.lifo.util.connectivity.NetworkConnectivityObserver
-import com.lifo.mongo.database.ImagesDatabase
-import com.lifo.util.Constants.IMAGES_DATABASE
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -15,25 +14,22 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
+
     @Provides
     @Singleton
     fun provideDatabase(
         @ApplicationContext context: Context
-    ): ImagesDatabase {
-        return Room.databaseBuilder(
-            context = context,
-            klass = ImagesDatabase::class.java,
-            name = IMAGES_DATABASE
-        ).build()
+    ): AppDatabase {
+        return MongoDatabaseProvider.getDatabase(context)
     }
 
     @Singleton
     @Provides
-    fun provideFirstDao(database: ImagesDatabase) = database.imageToUploadDao()
+    fun provideFirstDao(database: AppDatabase) = database.imageToUploadDao()
 
     @Singleton
     @Provides
-    fun provideSecondDao(database: ImagesDatabase) = database.imageToDeleteDao()
+    fun provideSecondDao(database: AppDatabase) = database.imageToDeleteDao()
 
     @Singleton
     @Provides
@@ -41,4 +37,3 @@ object DatabaseModule {
         @ApplicationContext context: Context
     ) = NetworkConnectivityObserver(context = context)
 }
-

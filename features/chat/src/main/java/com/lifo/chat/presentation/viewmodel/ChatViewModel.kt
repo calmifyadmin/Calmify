@@ -5,8 +5,10 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
-import com.lifo.chat.data.repository.ChatRepository
 import com.lifo.chat.domain.model.*
+import com.lifo.mongo.repository.ChatRepository
+import com.lifo.mongo.repository.MessageStatus
+import com.lifo.util.model.RequestState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -26,20 +28,12 @@ class ChatViewModel @Inject constructor(
         private const val STREAMING_DEBOUNCE_MS = 100L
     }
 
-    // UI State
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
-    // Current session ID from navigation
     private val sessionId: String? = savedStateHandle.get<String>(KEY_SESSION_ID)
-
-    // Job per AI response streaming
     private var streamingJob: Job? = null
-
-    // Job per observing messages - IMPORTANTE: uno solo per evitare duplicati
     private var messagesJob: Job? = null
-
-    // Buffer per ottimizzare streaming
     private val streamingBuffer = StringBuilder()
     private var lastStreamingUpdate = 0L
 
@@ -49,7 +43,6 @@ class ChatViewModel @Inject constructor(
         if (sessionId != null) {
             loadSession(sessionId)
         } else {
-            // Create a default session if none provided
             viewModelScope.launch {
                 createNewSession()
             }
@@ -57,7 +50,6 @@ class ChatViewModel @Inject constructor(
     }
 
     fun onEvent(event: ChatEvent) {
-        // Previeni eventi durante navigazione
         if (_uiState.value.isNavigating) {
             Log.d(TAG, "Event ignored during navigation: $event")
             return
@@ -81,63 +73,77 @@ class ChatViewModel @Inject constructor(
     private fun loadSessions() {
         viewModelScope.launch {
             repository.getAllSessions()
-                .distinctUntilChanged() // Evita update duplicati
-                .collect { sessions ->
-                    _uiState.update { it.copy(sessions = sessions) }
+                .distinctUntilChanged()
+                .collect { result ->
+                    when (result) {
+                        is RequestState.Success -> {
+                            _uiState.update { it.copy(sessions = result.data) }
+                        }
+                        is RequestState.Error -> {
+                            _uiState.update {
+                                it.copy(error = result.error.message ?: "Failed to load sessions")
+                            }
+                        }
+                        else -> {}
+                    }
                 }
         }
     }
 
     private fun loadSession(sessionId: String) {
         Log.d(TAG, "Loading session: $sessionId")
-
-        // IMPORTANTE: Cancella job precedente per evitare duplicati
         messagesJob?.cancel()
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, isNavigating = true) }
 
-            try {
-                val session = repository.getSession(sessionId)
-                if (session != null) {
+            when (val result = repository.getSession(sessionId)) {
+                is RequestState.Success -> {
+                    val session = result.data
                     Log.d(TAG, "Session loaded: ${session.id}")
                     _uiState.update { it.copy(currentSession = session) }
 
-                    // UN SOLO JOB per osservare messaggi
                     messagesJob = viewModelScope.launch {
                         repository.getMessagesForSession(sessionId)
-                            .distinctUntilChanged() // CRITICO: evita re-emit degli stessi messaggi
-                            .collect { messages ->
-                                Log.d(TAG, "Messages updated: ${messages.size}")
-                                _uiState.update { currentState ->
-                                    currentState.copy(
-                                        messages = messages.filter { !it.isStreaming }, // Filtra messaggi streaming
-                                        isLoading = false,
-                                        isNavigating = false,
-                                        sessionStarted = messages.isNotEmpty()
-                                    )
+                            .distinctUntilChanged()
+                            .collect { messagesResult ->
+                                when (messagesResult) {
+                                    is RequestState.Success -> {
+                                        Log.d(TAG, "Messages updated: ${messagesResult.data.size}")
+                                        _uiState.update { currentState ->
+                                            currentState.copy(
+                                                messages = messagesResult.data,
+                                                isLoading = false,
+                                                isNavigating = false,
+                                                sessionStarted = messagesResult.data.isNotEmpty()
+                                            )
+                                        }
+                                    }
+                                    is RequestState.Error -> {
+                                        _uiState.update {
+                                            it.copy(
+                                                error = messagesResult.error.message ?: "Failed to load messages",
+                                                isLoading = false,
+                                                isNavigating = false
+                                            )
+                                        }
+                                    }
+                                    else -> {}
                                 }
                             }
                     }
-                } else {
+                }
+                is RequestState.Error -> {
                     Log.e(TAG, "Session not found: $sessionId")
                     _uiState.update {
                         it.copy(
-                            error = "Session not found",
+                            error = result.error.message ?: "Session not found",
                             isLoading = false,
                             isNavigating = false
                         )
                     }
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error loading session", e)
-                _uiState.update {
-                    it.copy(
-                        error = e.message ?: "Failed to load session",
-                        isLoading = false,
-                        isNavigating = false
-                    )
-                }
+                else -> {}
             }
         }
     }
@@ -149,7 +155,6 @@ class ChatViewModel @Inject constructor(
             return
         }
 
-        // Mark session as started
         _uiState.update { it.copy(sessionStarted = true) }
 
         Log.d(TAG, "Sending message: $trimmedContent")
@@ -169,20 +174,17 @@ class ChatViewModel @Inject constructor(
 
     private fun sendMessageToSession(sessionId: String, content: String) {
         viewModelScope.launch {
-            // Clear input immediately
             _uiState.update { it.copy(inputText = "") }
 
-            // Send user message
             when (val result = repository.sendMessage(sessionId, content)) {
-                is ChatResult.Success -> {
+                is RequestState.Success -> {
                     Log.d(TAG, "Message sent successfully")
-                    // Generate AI response con streaming ottimizzato
                     generateAiResponseOptimized(sessionId, content)
                 }
-                is ChatResult.Error -> {
-                    Log.e(TAG, "Failed to send message", result.exception)
+                is RequestState.Error -> {
+                    Log.e(TAG, "Failed to send message", result.error)
                     _uiState.update {
-                        it.copy(error = result.exception.message ?: "Failed to send message")
+                        it.copy(error = result.error.message ?: "Failed to send message")
                     }
                 }
                 else -> {}
@@ -190,16 +192,13 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    // NUOVO: Generazione AI ottimizzata senza salvare in DB durante streaming
     private fun generateAiResponseOptimized(sessionId: String, userMessage: String) {
         streamingJob?.cancel()
         streamingJob = viewModelScope.launch {
             try {
-                // Crea messaggio streaming temporaneo
                 val streamingMessage = StreamingMessage()
                 _uiState.update { it.copy(streamingMessage = streamingMessage) }
 
-                // Reset buffer
                 streamingBuffer.clear()
                 lastStreamingUpdate = System.currentTimeMillis()
 
@@ -208,11 +207,10 @@ class ChatViewModel @Inject constructor(
                 repository.generateAiResponse(sessionId, userMessage, context)
                     .collect { result ->
                         when (result) {
-                            is ChatResult.Success -> {
+                            is RequestState.Success -> {
                                 streamingBuffer.clear()
                                 streamingBuffer.append(result.data)
 
-                                // Aggiorna UI con debouncing
                                 val currentTime = System.currentTimeMillis()
                                 if (currentTime - lastStreamingUpdate > STREAMING_DEBOUNCE_MS ||
                                     result.data.endsWith(".") ||
@@ -229,11 +227,11 @@ class ChatViewModel @Inject constructor(
                                     lastStreamingUpdate = currentTime
                                 }
                             }
-                            is ChatResult.Error -> {
+                            is RequestState.Error -> {
                                 _uiState.update {
                                     it.copy(
                                         streamingMessage = null,
-                                        error = "Failed to generate response: ${result.exception.message}"
+                                        error = "Failed to generate response: ${result.error.message}"
                                     )
                                 }
                             }
@@ -241,7 +239,6 @@ class ChatViewModel @Inject constructor(
                         }
                     }
 
-                // Salva messaggio finale una sola volta
                 val finalContent = streamingBuffer.toString()
                 if (finalContent.isNotEmpty()) {
                     repository.saveAiMessage(sessionId, finalContent)
@@ -253,11 +250,12 @@ class ChatViewModel @Inject constructor(
             }
         }
     }
+
     fun getUserPhotoUrl(): String? {
         return try {
             FirebaseAuth.getInstance().currentUser?.photoUrl?.toString()
         } catch (e: Exception) {
-            Log.e(com.lifo.chat.presentation.viewmodel.ChatViewModel.TAG, "Error getting user photo", e)
+            Log.e(TAG, "Error getting user photo", e)
             null
         }
     }
@@ -266,17 +264,17 @@ class ChatViewModel @Inject constructor(
         return try {
             FirebaseAuth.getInstance().currentUser?.displayName?.toString()?.split(" ")?.firstOrNull()
         } catch (e: Exception) {
-            Log.e(com.lifo.chat.presentation.viewmodel.ChatViewModel.TAG, "Error getting user photo", e)
+            Log.e(TAG, "Error getting user name", e)
             null
         }
     }
 
-    private fun createNewSession(title: String? = null, onComplete: ((ChatSession) -> Unit)? = null) {
+    private fun createNewSession(title: String? = null, onComplete: ((com.lifo.mongo.repository.ChatSession) -> Unit)? = null) {
         viewModelScope.launch {
             _uiState.update { it.copy(isNavigating = true) }
 
             when (val result = repository.createSession(title)) {
-                is ChatResult.Success -> {
+                is RequestState.Success -> {
                     Log.d(TAG, "Session created: ${result.data.id}")
                     _uiState.update {
                         it.copy(
@@ -288,15 +286,14 @@ class ChatViewModel @Inject constructor(
                             isNavigating = false
                         )
                     }
-                    // Load session properly
                     loadSession(result.data.id)
                     onComplete?.invoke(result.data)
                 }
-                is ChatResult.Error -> {
-                    Log.e(TAG, "Failed to create session", result.exception)
+                is RequestState.Error -> {
+                    Log.e(TAG, "Failed to create session", result.error)
                     _uiState.update {
                         it.copy(
-                            error = result.exception.message ?: "Failed to create session",
+                            error = result.error.message ?: "Failed to create session",
                             isNavigating = false
                         )
                     }
@@ -309,7 +306,7 @@ class ChatViewModel @Inject constructor(
     private fun deleteSession(sessionId: String) {
         viewModelScope.launch {
             when (val result = repository.deleteSession(sessionId)) {
-                is ChatResult.Success -> {
+                is RequestState.Success -> {
                     if (_uiState.value.currentSession?.id == sessionId) {
                         _uiState.update {
                             it.copy(
@@ -321,9 +318,9 @@ class ChatViewModel @Inject constructor(
                         }
                     }
                 }
-                is ChatResult.Error -> {
+                is RequestState.Error -> {
                     _uiState.update {
-                        it.copy(error = result.exception.message ?: "Failed to delete session")
+                        it.copy(error = result.error.message ?: "Failed to delete session")
                     }
                 }
                 else -> {}
@@ -334,14 +331,14 @@ class ChatViewModel @Inject constructor(
     private fun deleteMessage(messageId: String) {
         viewModelScope.launch {
             when (val result = repository.deleteMessage(messageId)) {
-                is ChatResult.Success -> {
+                is RequestState.Success -> {
                     if (_uiState.value.messages.size <= 1) {
                         _uiState.update { it.copy(sessionStarted = false) }
                     }
                 }
-                is ChatResult.Error -> {
+                is RequestState.Error -> {
                     _uiState.update {
-                        it.copy(error = result.exception.message ?: "Failed to delete message")
+                        it.copy(error = result.error.message ?: "Failed to delete message")
                     }
                 }
                 else -> {}
@@ -354,12 +351,12 @@ class ChatViewModel @Inject constructor(
             val message = _uiState.value.messages.find { it.id == messageId }
             if (message != null && message.isUser) {
                 when (val result = repository.retryMessage(messageId)) {
-                    is ChatResult.Success -> {
+                    is RequestState.Success -> {
                         generateAiResponseOptimized(message.sessionId, message.content)
                     }
-                    is ChatResult.Error -> {
+                    is RequestState.Error -> {
                         _uiState.update {
-                            it.copy(error = result.exception.message ?: "Failed to retry message")
+                            it.copy(error = result.error.message ?: "Failed to retry message")
                         }
                     }
                     else -> {}
@@ -371,13 +368,13 @@ class ChatViewModel @Inject constructor(
     private fun exportToDiary(sessionId: String) {
         viewModelScope.launch {
             when (val result = repository.exportSessionToDiary(sessionId)) {
-                is ChatResult.Success -> {
+                is RequestState.Success -> {
                     // TODO: Navigate to write screen with exported content
                     Log.d(TAG, "Exported content: ${result.data}")
                 }
-                is ChatResult.Error -> {
+                is RequestState.Error -> {
                     _uiState.update {
-                        it.copy(error = result.exception.message ?: "Failed to export session")
+                        it.copy(error = result.error.message ?: "Failed to export session")
                     }
                 }
                 else -> {}

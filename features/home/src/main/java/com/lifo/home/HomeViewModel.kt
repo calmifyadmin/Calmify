@@ -12,7 +12,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.storage.FirebaseStorage
-import com.lifo.mongo.database.ImageToDeleteDao
+import com.lifo.mongo.database.dao.ImageToDeleteDao
 import com.lifo.mongo.database.entity.ImageToDelete
 import com.lifo.mongo.repository.Diaries
 import com.lifo.mongo.repository.MongoDB

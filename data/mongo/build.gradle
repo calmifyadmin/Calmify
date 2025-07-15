@@ -48,7 +48,18 @@ dependencies {
     implementation libs.room.runtime
     implementation libs.room.ktx
     ksp libs.room.compiler
-
+    // Google AI
+    implementation libs.generative.ai
+    implementation libs.firebase.auth
+    // Hilt
+    implementation libs.hilt.android
+    ksp libs.hilt.compiler
+    implementation libs.hilt.navigation.compose
+    // Coroutines
+    implementation libs.coroutines.core
+    implementation libs.coroutines.android
+    implementation libs.firebase.auth
+    implementation libs.firebase.storage
     // Testing
     testImplementation libs.junit
     androidTestImplementation libs.junit.ext

@@ -1,4 +1,4 @@
-package com.lifo.mongo.database
+package com.lifo.mongo.database.dao
 
 import androidx.room.Dao
 import androidx.room.Insert

@@ -44,13 +44,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.rememberAsyncImagePainter
 import com.lifo.chat.domain.model.ChatEvent
-import com.lifo.chat.domain.model.ChatMessage
 import com.lifo.chat.presentation.components.ChatBubble
 import com.lifo.chat.presentation.components.ChatInput
 import com.lifo.chat.presentation.viewmodel.ChatViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
+import com.lifo.mongo.repository.ChatMessage
+import com.lifo.mongo.repository.ChatSession
+import com.lifo.mongo.repository.MessageStatus
 // Import necessari
 import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.layout.offset
