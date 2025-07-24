@@ -4,15 +4,17 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.util.Log
-import android.view.animation.OvershootInterpolator
 import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -29,6 +31,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.asComposeRenderEffect
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -37,13 +42,17 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.rememberAsyncImagePainter
 import com.lifo.chat.domain.model.ChatEvent
+import com.lifo.chat.domain.model.SmartSuggestion
+import com.lifo.chat.domain.model.SuggestionCategory
+import com.lifo.chat.domain.model.VoiceState
+import com.lifo.chat.domain.model.StreamingMessage
 import com.lifo.chat.presentation.components.ChatBubble
 import com.lifo.chat.presentation.components.ChatInput
 import com.lifo.chat.presentation.viewmodel.ChatViewModel
@@ -52,48 +61,15 @@ import kotlinx.coroutines.launch
 import com.lifo.mongo.repository.ChatMessage
 import com.lifo.mongo.repository.ChatSession
 import com.lifo.mongo.repository.MessageStatus
-// Import necessari
 import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.Image
 import androidx.compose.ui.geometry.Offset
-// Import necessari:
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
-import kotlin.math.PI
-import kotlin.math.sin
-
-
-// Import necessari:
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.asComposeRenderEffect
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
 import kotlin.math.PI
 import kotlin.math.sin
 import kotlin.math.cos
-
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
@@ -104,6 +80,9 @@ fun ChatScreen(
     viewModel: ChatViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val voiceState by viewModel.voiceState.collectAsStateWithLifecycle()
+    val suggestions by viewModel.suggestions.collectAsStateWithLifecycle()
+
     val context = LocalContext.current
     val haptics = LocalHapticFeedback.current
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
@@ -114,11 +93,18 @@ fun ChatScreen(
     val userDisplayName = viewModel.getUserDisplayName()
     val userPhotoUrl = viewModel.getUserPhotoUrl()
 
-    // Auto-scroll ottimizzato
+    // Handle export navigation
+    LaunchedEffect(uiState.exportedContent) {
+        uiState.exportedContent?.let { content ->
+            navigateToWriteWithContent(content)
+        }
+    }
+
+    // Auto-scroll ottimizzato con smooth scrolling
     LaunchedEffect(uiState.messages.size, uiState.streamingMessage) {
         val totalItems = uiState.messages.size + (if (uiState.streamingMessage != null) 1 else 0)
         if (totalItems > 0) {
-            delay(100)
+            delay(50) // Delay ridotto per scrolling più veloce
             try {
                 listState.animateScrollToItem(
                     index = totalItems - 1,
@@ -126,15 +112,6 @@ fun ChatScreen(
                 )
             } catch (e: Exception) {
                 Log.e("ChatScreen", "Error scrolling", e)
-            }
-        }
-    }
-
-    // Previeni navigazione durante operazioni
-    DisposableEffect(uiState.isNavigating) {
-        onDispose {
-            if (uiState.isNavigating) {
-                Log.w("ChatScreen", "Navigation interrupted")
             }
         }
     }
@@ -148,6 +125,7 @@ fun ChatScreen(
                 title = uiState.currentSession?.title ?: "AI Chat",
                 scrollBehavior = scrollBehavior,
                 userPhotoUrl = userPhotoUrl,
+                voiceState = voiceState,
                 onNavigateBack = {
                     if (!uiState.isNavigating) {
                         haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -163,46 +141,34 @@ fun ChatScreen(
                     uiState.currentSession?.let { session ->
                         viewModel.onEvent(ChatEvent.ExportToDiary(session.id))
                     }
+                },
+                onToggleAutoSpeak = {
+                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    viewModel.toggleAutoSpeak()
                 }
             )
         },
         bottomBar = {
             Column {
-                // Suggestion buttons
+                // Smart suggestions con animazioni fluide
                 AnimatedVisibility(
                     visible = !uiState.sessionStarted &&
                             uiState.messages.isEmpty() &&
-                            uiState.streamingMessage == null,
+                            uiState.streamingMessage == null &&
+                            suggestions.isNotEmpty(),
                     enter = expandVertically() + fadeIn(),
                     exit = shrinkVertically() + fadeOut()
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        SuggestionButton(
-                            text = "Aiutami a pianificare",
-                            onClick = {
-                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                viewModel.onEvent(ChatEvent.UpdateInputText("Aiutami a pianificare "))
-                            },
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        SuggestionButton(
-                            text = "Parliamo della giornata",
-                            onClick = {
-                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                viewModel.onEvent(ChatEvent.UpdateInputText("Parliamo della giornata "))
-                            },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
+                    SmartSuggestionsRow(
+                        suggestions = suggestions,
+                        onSuggestionClick = { suggestion ->
+                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            viewModel.onEvent(ChatEvent.UseSuggestion(suggestion))
+                        }
+                    )
                 }
 
-                // Chat input
+                // Enhanced chat input
                 ChatInput(
                     value = uiState.inputText,
                     onValueChange = { viewModel.onEvent(ChatEvent.UpdateInputText(it)) },
@@ -221,12 +187,13 @@ fun ChatScreen(
                 .padding(paddingValues)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            // MAIN CONTENT - sempre mostra la lista se ci sono messaggi o streaming
+            // Main content
             if (uiState.messages.isNotEmpty() || uiState.streamingMessage != null) {
                 ChatMessagesList(
                     messages = uiState.messages,
                     streamingMessage = uiState.streamingMessage,
                     listState = listState,
+                    voiceState = voiceState,
                     onRetry = { message ->
                         haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         viewModel.onEvent(ChatEvent.RetryMessage(message.id))
@@ -238,18 +205,29 @@ fun ChatScreen(
                     onCopy = { message ->
                         haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         copyToClipboard(context, message.content)
+                    },
+                    onSpeak = { message ->
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        if (voiceState.currentSpeakingMessageId == message.id) {
+                            viewModel.onEvent(ChatEvent.StopSpeaking)
+                        } else {
+                            viewModel.onEvent(ChatEvent.SpeakMessage(message.id))
+                        }
                     }
                 )
             } else if (!uiState.isLoading) {
-                // Empty state with user name
-                EmptyStateContent(
+                // Enhanced empty state
+                EnhancedEmptyState(
                     userName = userDisplayName,
-                    onStartChat = { /* handled by input */ },
-                    modifier = Modifier.fillMaxSize()
+                    suggestions = suggestions,
+                    onSuggestionClick = { suggestion ->
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        viewModel.onEvent(ChatEvent.UseSuggestion(suggestion))
+                    }
                 )
             }
 
-            // Loading overlay
+            // Loading overlay con animazione migliorata
             AnimatedVisibility(
                 visible = uiState.isLoading && uiState.messages.isEmpty(),
                 enter = fadeIn(),
@@ -258,14 +236,17 @@ fun ChatScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background.copy(alpha = 0.9f)),
+                        .background(MaterialTheme.colorScheme.background.copy(alpha = 0.95f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(
+                        modifier = Modifier.scale(1.2f),
+                        strokeWidth = 3.dp
+                    )
                 }
             }
 
-            // Error snackbar
+            // Error snackbar con design migliorato
             AnimatedVisibility(
                 visible = uiState.error != null,
                 enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
@@ -273,7 +254,9 @@ fun ChatScreen(
                 modifier = Modifier.align(Alignment.BottomCenter)
             ) {
                 Snackbar(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .navigationBarsPadding(),
                     action = {
                         TextButton(
                             onClick = {
@@ -281,11 +264,12 @@ fun ChatScreen(
                                 viewModel.onEvent(ChatEvent.ClearError)
                             }
                         ) {
-                            Text("Dismiss")
+                            Text("Chiudi")
                         }
                     },
                     containerColor = MaterialTheme.colorScheme.errorContainer,
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(uiState.error ?: "")
                 }
@@ -314,9 +298,11 @@ private fun ChatTopBar(
     title: String,
     scrollBehavior: TopAppBarScrollBehavior,
     userPhotoUrl: String?,
+    voiceState: VoiceState,
     onNavigateBack: () -> Unit,
     onNewChat: () -> Unit,
-    onExportToDiary: () -> Unit
+    onExportToDiary: () -> Unit,
+    onToggleAutoSpeak: () -> Unit
 ) {
     TopAppBar(
         title = {
@@ -327,15 +313,26 @@ private fun ChatTopBar(
                     fontWeight = FontWeight.Medium
                 )
                 AnimatedVisibility(
-                    visible = true,
+                    visible = voiceState.isSpeaking,
                     enter = fadeIn() + expandVertically(),
                     exit = fadeOut() + shrinkVertically()
                 ) {
-                    Text(
-                        text = "AI Assistant",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.VolumeUp,
+                            contentDescription = null,
+                            modifier = Modifier.size(12.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "Lifo sta parlando...",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
         },
@@ -348,7 +345,27 @@ private fun ChatTopBar(
             }
         },
         actions = {
-            // User profile image
+            // Auto-speak toggle
+            IconToggleButton(
+                checked = voiceState.autoSpeak,
+                onCheckedChange = { onToggleAutoSpeak() }
+            ) {
+                Icon(
+                    imageVector = if (voiceState.autoSpeak) {
+                        Icons.Filled.VolumeUp
+                    } else {
+                        Icons.Outlined.VolumeOff
+                    },
+                    contentDescription = "Auto-speak",
+                    tint = if (voiceState.autoSpeak) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+            }
+
+            // User profile
             userPhotoUrl?.let {
                 Image(
                     painter = rememberAsyncImagePainter(
@@ -356,7 +373,7 @@ private fun ChatTopBar(
                         error = painterResource(id = com.lifo.ui.R.drawable.google_logo_ic),
                         placeholder = painterResource(id = com.lifo.ui.R.drawable.google_logo_ic)
                     ),
-                    contentDescription = "User Profile Image",
+                    contentDescription = "User Profile",
                     modifier = Modifier
                         .padding(end = 8.dp)
                         .size(32.dp)
@@ -371,6 +388,7 @@ private fun ChatTopBar(
                     contentDescription = "New Chat"
                 )
             }
+
             IconButton(onClick = onExportToDiary) {
                 Icon(
                     imageVector = Icons.Outlined.Book,
@@ -387,36 +405,103 @@ private fun ChatTopBar(
 }
 
 @Composable
+private fun SmartSuggestionsRow(
+    suggestions: List<SmartSuggestion>,
+    onSuggestionClick: (SmartSuggestion) -> Unit
+) {
+    LazyRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(suggestions) { suggestion ->
+            SuggestionChip(
+                suggestion = suggestion,
+                onClick = { onSuggestionClick(suggestion) }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SuggestionChip(
+    suggestion: SmartSuggestion,
+    onClick: () -> Unit
+) {
+    val categoryColor = when (suggestion.category) {
+        SuggestionCategory.MOOD -> MaterialTheme.colorScheme.tertiary
+        SuggestionCategory.PLANNING -> MaterialTheme.colorScheme.primary
+        SuggestionCategory.WELLNESS -> MaterialTheme.colorScheme.secondary
+        SuggestionCategory.REFLECTION -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.surfaceVariant
+    }
+
+    SuggestionChip(
+        onClick = onClick,
+        label = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                if (suggestion.icon.isNotEmpty()) {
+                    Text(
+                        text = suggestion.icon,
+                        fontSize = 16.sp
+                    )
+                }
+                Text(
+                    text = suggestion.text,
+                    style = MaterialTheme.typography.labelMedium
+                )
+            }
+        },
+        modifier = Modifier.animateContentSize(),
+        colors = SuggestionChipDefaults.suggestionChipColors(
+            containerColor = categoryColor.copy(alpha = 0.1f),
+            labelColor = categoryColor
+        ),
+        border = BorderStroke(
+            width = 1.dp,
+            color = categoryColor.copy(alpha = 0.3f)
+        )
+    )
+}
+
+@Composable
 private fun ChatMessagesList(
     messages: List<ChatMessage>,
-    streamingMessage: com.lifo.chat.domain.model.StreamingMessage?,
+    streamingMessage: StreamingMessage?,
     listState: LazyListState,
+    voiceState: VoiceState,
     onRetry: (ChatMessage) -> Unit,
     onDelete: (ChatMessage) -> Unit,
     onCopy: (ChatMessage) -> Unit,
+    onSpeak: (ChatMessage) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
         state = listState,
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp) // Più spazio tra messaggi
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Messaggi esistenti con chiavi stabili
         items(
             items = messages,
             key = { it.id },
             contentType = { if (it.isUser) "user" else "ai" }
         ) { message ->
-            ChatMessageItem(
+            EnhancedChatMessageItem(
                 message = message,
+                isSpeaking = voiceState.currentSpeakingMessageId == message.id,
                 onRetry = { onRetry(message) },
                 onDelete = { onDelete(message) },
-                onCopy = { onCopy(message) }
+                onCopy = { onCopy(message) },
+                onSpeak = { onSpeak(message) }
             )
         }
 
-        // Messaggio streaming (se presente)
         streamingMessage?.let { streaming ->
             item(
                 key = streaming.id,
@@ -431,16 +516,19 @@ private fun ChatMessagesList(
 }
 
 @Composable
-private fun ChatMessageItem(
+private fun EnhancedChatMessageItem(
     message: ChatMessage,
+    isSpeaking: Boolean,
     onRetry: () -> Unit,
     onDelete: () -> Unit,
     onCopy: () -> Unit,
+    onSpeak: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // RIMOSSO: Animazioni di scale e alpha che causavano l'effetto espansione
     Box(
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxWidth()
+            .animateContentSize()
     ) {
         ChatBubble(
             message = message,
@@ -448,6 +536,38 @@ private fun ChatMessageItem(
             onDelete = onDelete,
             onCopy = onCopy
         )
+
+        // Voice indicator per messaggi AI
+        if (!message.isUser) {
+            AnimatedVisibility(
+                visible = true,
+                enter = fadeIn() + scaleIn(),
+                exit = fadeOut() + scaleOut(),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 16.dp, bottom = 4.dp)
+            ) {
+                IconButton(
+                    onClick = onSpeak,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isSpeaking) {
+                            Icons.Filled.Stop
+                        } else {
+                            Icons.Outlined.VolumeUp
+                        },
+                        contentDescription = if (isSpeaking) "Stop" else "Ascolta",
+                        modifier = Modifier.size(20.dp),
+                        tint = if (isSpeaking) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        }
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -456,20 +576,16 @@ private fun StreamingMessageItem(
     content: String,
     modifier: Modifier = Modifier
 ) {
-    // STILE GEMINI: Niente bubble, full width
     Row(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        // AI Avatar
         AvatarBubble()
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        // Content - occupa tutto lo spazio
         Column(modifier = Modifier.weight(1f)) {
-            // AI Name
             Text(
                 text = "Lifo",
                 style = MaterialTheme.typography.labelMedium,
@@ -480,21 +596,172 @@ private fun StreamingMessageItem(
             Spacer(modifier = Modifier.height(4.dp))
 
             if (content.isEmpty()) {
-                // Typing indicator
                 AiTypingIndicator()
             } else {
-                // Streaming content
                 Row {
                     Text(
                         text = content,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-
-                    // Blinking cursor
                     BlinkingCursor()
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun EnhancedEmptyState(
+    userName: String?,
+    suggestions: List<SmartSuggestion>,
+    onSuggestionClick: (SmartSuggestion) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        // Animated greeting
+        AnimatedGreeting(userName = userName)
+
+        Spacer(modifier = Modifier.height(48.dp))
+
+        // Suggestion cards in grid
+        Text(
+            text = "Come posso aiutarti oggi?",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        suggestions.chunked(2).forEach { rowSuggestions ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                rowSuggestions.forEach { suggestion ->
+                    SuggestionCard(
+                        suggestion = suggestion,
+                        onClick = { onSuggestionClick(suggestion) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                if (rowSuggestions.size == 1) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+    }
+}
+
+@Composable
+private fun AnimatedGreeting(userName: String?) {
+    var isVisible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        delay(100)
+        isVisible = true
+    }
+
+    val alpha by animateFloatAsState(
+        targetValue = if (isVisible) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = 1200,
+            easing = FastOutSlowInEasing
+        ),
+        label = "alpha"
+    )
+
+    val scale by animateFloatAsState(
+        targetValue = if (isVisible) 1f else 0.8f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessVeryLow
+        ),
+        label = "scale"
+    )
+
+    Text(
+        text = "Ciao ${userName ?: ""}",
+        style = MaterialTheme.typography.displayMedium.copy(
+            fontSize = 48.sp,
+            letterSpacing = (-1).sp,
+            brush = Brush.linearGradient(
+                colors = listOf(
+                    MaterialTheme.colorScheme.primary,
+                    MaterialTheme.colorScheme.secondary
+                )
+            )
+        ),
+        fontWeight = FontWeight.Normal,
+        modifier = Modifier
+            .scale(scale)
+            .alpha(alpha)
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SuggestionCard(
+    suggestion: SmartSuggestion,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier
+            .height(100.dp)
+            .animateContentSize(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        ),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.Start
+        ) {
+            if (suggestion.icon.isNotEmpty()) {
+                Text(
+                    text = suggestion.icon,
+                    fontSize = 24.sp,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+            Text(
+                text = suggestion.text,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+// Utility components
+@Composable
+private fun AvatarBubble() {
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        modifier = Modifier.size(32.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = Icons.Outlined.AutoAwesome,
+                contentDescription = "AI",
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
         }
     }
 }
@@ -521,350 +788,7 @@ private fun BlinkingCursor() {
 }
 
 @Composable
-private fun AvatarBubble() {
-    // RIMOSSO: Animazione pulsante dell'avatar
-    Surface(
-        shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.primaryContainer,
-        modifier = Modifier.size(32.dp)
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                imageVector = Icons.Outlined.AutoAwesome,
-                contentDescription = "AI",
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        }
-    }
-}
-@Composable
-private fun EmptyStateContent(
-    userName: String?,
-    onStartChat: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier,
-        contentAlignment = Alignment.Center
-    ) {
-        // Stati per le animazioni
-        var isVisible by remember { mutableStateOf(false) }
-
-        // Trigger dell'animazione all'avvio
-        LaunchedEffect(Unit) {
-            delay(100) // Piccolo delay iniziale
-            isVisible = true
-        }
-
-        // Animazioni multiple combinate
-        val animationDuration = 1200
-
-        // Opacità animata
-        val alpha by animateFloatAsState(
-            targetValue = if (isVisible) 1f else 0f,
-            animationSpec = tween(
-                durationMillis = animationDuration,
-                easing = FastOutSlowInEasing
-            ),
-            label = "alpha"
-        )
-
-        // Animazione infinita per il gradiente
-        val infiniteTransition = rememberInfiniteTransition(label = "gradient")
-        val gradientOffset by infiniteTransition.animateFloat(
-            initialValue = 0f,
-            targetValue = 1f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(3000, easing = LinearEasing),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "gradientOffset"
-        )
-
-        // Colori del gradiente animato
-        val gradientColors = listOf(
-            MaterialTheme.colorScheme.primary,
-            MaterialTheme.colorScheme.secondary,
-            MaterialTheme.colorScheme.tertiary,
-            MaterialTheme.colorScheme.primary
-        )
-
-        // Brush gradiente animato
-        val brush = Brush.linearGradient(
-            colors = gradientColors,
-            start = Offset(0f, 0f),
-            end = Offset(1000f * gradientOffset, 0f)
-        )
-
-        // Effetto stelline "pouf" - appare prima del testo
-        if (isVisible) {
-            SparklePoufEffect(
-                modifier = Modifier
-                    .fillMaxSize()
-            )
-        }
-
-        // Contenitore per il testo con animazione uniforme
-        Box(
-            modifier = Modifier
-                .offset(y = (-80).dp)
-                .alpha(alpha),
-            contentAlignment = Alignment.Center
-        ) {
-            val text = "Ciao ${userName ?: ""}"
-
-            // Animazione del blur/sfocatura
-            val blurRadius by animateFloatAsState(
-                targetValue = if (isVisible) 0f else 13f,
-                animationSpec = tween(
-                    durationMillis = 400,
-                    easing = FastOutSlowInEasing
-                ),
-                label = "blur"
-            )
-
-            // Animazione della scala uniforme
-            val textScale by animateFloatAsState(
-                targetValue = if (isVisible) 1f else 0.8f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessVeryLow
-                ),
-                label = "textScale"
-            )
-
-            // Testo principale con effetto di comparsa dalla sfocatura
-            Text(
-                text = text,
-                style = MaterialTheme.typography.displayMedium.copy(
-                    fontSize = 48.sp,
-                    letterSpacing = (-1).sp,
-                    brush = brush
-                ),
-                fontWeight = FontWeight.Normal,
-                modifier = Modifier
-                    .scale(textScale)
-                    .graphicsLayer {
-                        // Effetto blur custom (richiede API 31+)
-                        if (android.os.Build.VERSION.SDK_INT >= 31) {
-                            renderEffect = android.graphics.RenderEffect
-                                .createBlurEffect(
-                                    blurRadius,
-                                    blurRadius,
-                                    android.graphics.Shader.TileMode.DECAL
-                                ).asComposeRenderEffect()
-                        }
-                    }
-            )
-
-            // Overlay per effetto di dissolvenza aggiuntivo
-            if (blurRadius > 0) {
-                Text(
-                    text = text,
-                    style = MaterialTheme.typography.displayMedium.copy(
-                        fontSize = 48.sp,
-                        letterSpacing = (-1).sp,
-                        brush = brush
-                    ),
-                    fontWeight = FontWeight.Normal,
-                    modifier = Modifier
-                        .scale(textScale)
-                        .alpha((20f - blurRadius) / 20f * 0.3f) // Sovrapposizione leggera
-                )
-            }
-        }
-    }
-}
-
-// Effetto stelline "pouf" elegante che appare solo all'inizio
-@Composable
-private fun SparklePoufEffect(modifier: Modifier = Modifier) {
-    // Stato per controllare quando far partire l'animazione
-    var startAnimation by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        startAnimation = true
-    }
-
-    // Recupera i colori dal tema
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val secondaryColor = MaterialTheme.colorScheme.secondary
-    val tertiaryColor = MaterialTheme.colorScheme.tertiary
-
-    // Crea 5 stelline con animazioni individuali
-    val sparkles = remember {
-        List(5) { index ->
-            SparkleData(
-                id = index,
-                startX = 0.5f + (index - 2) * 0.15f, // Posizioni intorno al centro
-                startY = 0.45f,
-                targetX = when (index) {
-                    0 -> 0.2f
-                    1 -> 0.35f
-                    2 -> 0.5f
-                    3 -> 0.65f
-                    else -> 0.8f
-                },
-                targetY = when (index) {
-                    0 -> 0.3f
-                    1 -> 0.25f
-                    2 -> 0.2f
-                    3 -> 0.25f
-                    else -> 0.3f
-                },
-                delay = index * 100L, // Delay sequenziale
-                color = when (index % 3) {
-                    0 -> primaryColor
-                    1 -> secondaryColor
-                    else -> tertiaryColor
-                }
-            )
-        }
-    }
-
-    // Animazioni per ogni stellina - FUORI dal Canvas
-    val animationProgresses = sparkles.map { sparkle ->
-        val animationProgress = remember { Animatable(0f) }
-
-        LaunchedEffect(sparkle.id, startAnimation) {
-            if (startAnimation) {
-                delay(sparkle.delay)
-                animationProgress.animateTo(
-                    targetValue = 1f,
-                    animationSpec = tween(
-                        durationMillis = 800,
-                        easing = FastOutSlowInEasing
-                    )
-                )
-            }
-        }
-
-        animationProgress.value
-    }
-
-    Canvas(modifier = modifier) {
-        if (startAnimation) {
-            sparkles.forEachIndexed { index, sparkle ->
-                val progress = animationProgresses[index]
-
-                // Calcola posizione interpolata
-                val currentX = size.width * (sparkle.startX + (sparkle.targetX - sparkle.startX) * progress)
-                val currentY = size.height * (sparkle.startY + (sparkle.targetY - sparkle.startY) * progress)
-
-                // Alpha che sfuma elegantemente
-                val alpha = when {
-                    progress < 0.7f -> 1f
-                    else -> 1f - ((progress - 0.7f) / 0.3f) // Sfuma negli ultimi 30%
-                }
-
-                // Scala che cresce e poi diminuisce
-                val scale = when {
-                    progress < 0.3f -> progress / 0.3f
-                    progress < 0.7f -> 1f
-                    else -> 1f - ((progress - 0.7f) / 0.3f) * 0.5f
-                }
-
-                // Disegna la stellina
-                drawPath(
-                    path = createStarPath(
-                        center = Offset(currentX, currentY),
-                        outerRadius = 4.dp.toPx() * scale,
-                        innerRadius = 2.dp.toPx() * scale
-                    ),
-                    color = sparkle.color.copy(alpha = alpha * 0.8f)
-                )
-
-                // Piccolo alone luminoso
-                drawCircle(
-                    color = sparkle.color.copy(alpha = alpha * 0.2f),
-                    radius = 6.dp.toPx() * scale,
-                    center = Offset(currentX, currentY),
-                    blendMode = BlendMode.Plus
-                )
-            }
-        }
-    }
-}
-
-// Data class per le stelline
-private data class SparkleData(
-    val id: Int,
-    val startX: Float,
-    val startY: Float,
-    val targetX: Float,
-    val targetY: Float,
-    val delay: Long,
-    val color: Color
-)
-
-// Funzione helper per creare una stella
-private fun createStarPath(center: Offset, outerRadius: Float, innerRadius: Float): Path {
-    return Path().apply {
-        val angleStep = PI.toFloat() / 2f
-        moveTo(center.x, center.y - outerRadius)
-
-        for (i in 0 until 4) {
-            val outerAngle = i * angleStep - PI.toFloat() / 2f
-            val innerAngle = outerAngle + angleStep / 2f
-
-            lineTo(
-                center.x + cos(innerAngle) * innerRadius,
-                center.y + sin(innerAngle) * innerRadius
-            )
-            lineTo(
-                center.x + cos(outerAngle + angleStep) * outerRadius,
-                center.y + sin(outerAngle + angleStep) * outerRadius
-            )
-        }
-        close()
-    }
-}
-
-@Composable
-private fun SuggestionButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val haptics = LocalHapticFeedback.current
-
-    Surface(
-        onClick = {
-            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-            onClick()
-        },
-        modifier = modifier.height(48.dp),
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-        tonalElevation = 0.dp
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1
-            )
-        }
-    }
-}
-
-private fun copyToClipboard(context: Context, text: String) {
-    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    val clip = ClipData.newPlainText("Chat Message", text)
-    clipboard.setPrimaryClip(clip)
-    Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
-}
-
-@Composable
 private fun AiTypingIndicator() {
-    // STILE GEMINI: Solo i puntini, senza sfondo
     Row(
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -912,14 +836,14 @@ private fun NewSessionDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("New Chat Session")
+            Text("Nuova Conversazione")
         },
         text = {
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
-                label = { Text("Session title (optional)") },
-                placeholder = { Text("e.g., Evening reflection") },
+                label = { Text("Titolo (opzionale)") },
+                placeholder = { Text("es. Riflessione serale") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -931,13 +855,20 @@ private fun NewSessionDialog(
                     onCreate(title.ifEmpty { null })
                 }
             ) {
-                Text("Create")
+                Text("Crea")
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text("Annulla")
             }
         }
     )
+}
+
+private fun copyToClipboard(context: Context, text: String) {
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    val clip = ClipData.newPlainText("Chat Message", text)
+    clipboard.setPrimaryClip(clip)
+    Toast.makeText(context, "Copiato negli appunti", Toast.LENGTH_SHORT).show()
 }
