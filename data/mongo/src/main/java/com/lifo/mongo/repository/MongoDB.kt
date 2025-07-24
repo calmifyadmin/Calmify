@@ -85,6 +85,12 @@ object MongoDB : MongoRepository {
         }
     }
 
+    // Nuovo metodo per AI - non crea un nuovo Realm ma usa quello esistente
+    @SuppressLint("NewApi")
+    fun getAllDiariesForAI(): Flow<Diaries> {
+        return getAllDiaries() // Usa lo stesso metodo esistente
+    }
+
     @SuppressLint("NewApi")
     override fun getFilteredDiaries(zonedDateTime: ZonedDateTime): Flow<Diaries> {
         return if (user != null) {

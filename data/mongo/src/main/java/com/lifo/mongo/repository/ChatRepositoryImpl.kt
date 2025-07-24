@@ -10,13 +10,16 @@ import com.lifo.mongo.database.dao.ChatSessionDao
 import com.lifo.mongo.database.entity.ChatMessageEntity
 import com.lifo.mongo.database.entity.ChatSessionEntity
 import com.lifo.util.Constants.GEMINI_API_KEY
+import com.lifo.util.model.Diary
 import com.lifo.util.model.RequestState
+import com.lifo.util.toInstant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -31,16 +34,18 @@ class ChatRepositoryImpl @Inject constructor(
     companion object {
         private const val TAG = "ChatRepository"
         private const val STREAMING_BUFFER_SIZE = 10
+        private const val DIARY_CONTEXT_DAYS = 30
+        private const val MAX_DIARY_ENTRIES = 20
     }
 
     private val generativeModel = GenerativeModel(
         modelName = "gemini-2.0-flash",
         apiKey = GEMINI_API_KEY,
         generationConfig = generationConfig {
-            temperature = 0.7f
+            temperature = 0.8f
             topK = 1
-            topP = 1f
-            maxOutputTokens = 2048
+            topP = 0.95f
+            maxOutputTokens = 4096
         }
     )
 
@@ -79,7 +84,7 @@ class ChatRepositoryImpl @Inject constructor(
             try {
                 val session = ChatSession(
                     id = UUID.randomUUID().toString(),
-                    title = title ?: generateSessionTitle(),
+                    title = title ?: generatePersonalizedSessionTitle(),
                     createdAt = Instant.now(),
                     lastMessageAt = Instant.now(),
                     aiModel = "gemini-2.0-flash",
@@ -189,9 +194,29 @@ class ChatRepositoryImpl @Inject constructor(
         context: List<ChatMessage>
     ): Flow<RequestState<String>> = flow {
         try {
-            Log.d(TAG, "Starting AI response generation for message: $userMessage")
+            Log.d(TAG, "Starting AI response generation with diary context")
 
-            val prompt = buildConversationPrompt(userMessage, context)
+            // Recupera il contesto del diario
+            val diaryContext = getDiaryContext()
+            Log.d(TAG, "Retrieved ${diaryContext.size} diary entries for context")
+
+            val userProfile = analyzeUserProfile(diaryContext)
+            val currentMood = detectCurrentMood(diaryContext)
+            val recurringThemes = extractRecurringThemes(diaryContext)
+
+            Log.d(TAG, "User profile: $userProfile")
+            Log.d(TAG, "Current mood: $currentMood")
+            Log.d(TAG, "Themes: $recurringThemes")
+
+            val prompt = buildPersonalizedPrompt(
+                userMessage = userMessage,
+                conversationContext = context,
+                diaryContext = diaryContext,
+                userProfile = userProfile,
+                currentMood = currentMood,
+                recurringThemes = recurringThemes
+            )
+
             val responseBuffer = StringBuilder()
 
             try {
@@ -200,7 +225,6 @@ class ChatRepositoryImpl @Inject constructor(
                     .collect { chunk ->
                         chunk.text?.let { text ->
                             responseBuffer.append(text)
-                            Log.d(TAG, "Streaming chunk: ${text.take(50)}...")
                             emit(RequestState.Success(responseBuffer.toString()))
                         }
                     }
@@ -231,7 +255,7 @@ class ChatRepositoryImpl @Inject constructor(
                 )
                 chatMessageDao.insertMessage(message.toEntity())
                 chatSessionDao.incrementMessageCount(sessionId, Instant.now().toEpochMilli())
-                Log.d(TAG, "AI message saved: ${content.take(50)}...")
+                Log.d(TAG, "AI message saved")
                 RequestState.Success(message)
             } catch (e: Exception) {
                 Log.e(TAG, "Error saving AI message", e)
@@ -250,7 +274,7 @@ class ChatRepositoryImpl @Inject constructor(
                     .map { it.toDomain() }
                     .filter { it.status == MessageStatus.SENT }
 
-                val diaryContent = buildDiaryContent(session, messages)
+                val diaryContent = buildEnhancedDiaryContent(session, messages)
                 RequestState.Success(diaryContent)
             } catch (e: Exception) {
                 Log.e(TAG, "Error exporting session", e)
@@ -259,60 +283,278 @@ class ChatRepositoryImpl @Inject constructor(
         }
     }
 
-    private fun generateSessionTitle(): String {
-        val formatter = DateTimeFormatter.ofPattern("MMM d, h:mm a")
-            .withZone(ZoneId.systemDefault())
-        return "Chat - ${formatter.format(Instant.now())}"
+    private suspend fun getDiaryContext(): List<Diary> {
+        return withContext(Dispatchers.IO) {
+            try {
+                // Usa MongoDB singleton per accedere ai diari
+                val diariesResult = MongoDB.getAllDiaries().first()
+
+                when (diariesResult) {
+                    is RequestState.Success -> {
+                        val cutoffDate = Instant.now().minus(DIARY_CONTEXT_DAYS.toLong(), ChronoUnit.DAYS)
+                        val diaries = diariesResult.data
+                            .flatMap { it.value }
+                            .filter { diary ->
+                                diary.date.toInstant().isAfter(cutoffDate)
+                            }
+                            .sortedByDescending { it.date.toInstant() }
+                            .take(MAX_DIARY_ENTRIES)
+
+                        Log.d(TAG, "Found ${diaries.size} diary entries in the last $DIARY_CONTEXT_DAYS days")
+
+                        diaries.firstOrNull()?.let { diary ->
+                            Log.d(TAG, "Latest diary: ${diary.title} - ${diary.description.take(100)}...")
+                        }
+
+                        diaries
+                    }
+                    is RequestState.Error -> {
+                        Log.e(TAG, "Error getting diaries: ${diariesResult.error.message}")
+                        emptyList()
+                    }
+                    else -> emptyList()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error getting diary context", e)
+                emptyList()
+            }
+        }
     }
 
-    private fun buildConversationPrompt(userMessage: String, context: List<ChatMessage>): String {
-        val contextMessages = context.takeLast(10)
+    private fun analyzeUserProfile(diaries: List<Diary>): UserProfile {
+        val moodFrequency = diaries.groupingBy { it.mood }.eachCount()
+        val dominantMood = moodFrequency.maxByOrNull { it.value }?.key ?: "Neutral"
 
-        val conversationHistory = contextMessages.joinToString("\n") { message ->
-            if (message.isUser) "User: ${message.content}" else "Assistant: ${message.content}"
+        val writingTimes = diaries.map {
+            it.date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .hour
+        }
+        val preferredWritingTime = when {
+            writingTimes.count { it in 5..11 } > writingTimes.size / 2 -> "mattutino"
+            writingTimes.count { it in 17..23 } > writingTimes.size / 2 -> "serale"
+            else -> "vario"
+        }
+
+        val themes = extractThemes(diaries)
+        val interests = extractInterests(diaries)
+
+        return UserProfile(
+            dominantMood = dominantMood,
+            moodTrends = moodFrequency,
+            preferredWritingTime = preferredWritingTime,
+            recurringThemes = themes,
+            interests = interests,
+            writingStyle = analyzeWritingStyle(diaries)
+        )
+    }
+
+    private fun detectCurrentMood(diaries: List<Diary>): String {
+        val recentDiaries = diaries.take(3)
+        if (recentDiaries.isEmpty()) return "neutrale"
+
+        val recentMoods = recentDiaries.map { it.mood }
+        val moodScores = mapOf(
+            "Happy" to 5, "Excited" to 4, "Surprised" to 3,
+            "Neutral" to 2, "Sad" to 1, "Angry" to 0
+        )
+
+        val avgScore = recentMoods.mapNotNull { moodScores[it] }.average()
+
+        return when {
+            avgScore >= 4 -> "positivo e energico"
+            avgScore >= 3 -> "sereno"
+            avgScore >= 2 -> "neutrale"
+            avgScore >= 1 -> "malinconico"
+            else -> "difficile"
+        }
+    }
+
+    private fun extractRecurringThemes(diaries: List<Diary>): List<String> {
+        val allText = diaries.joinToString(" ") {
+            "${it.title} ${it.description}"
+        }.lowercase()
+
+        val themes = mutableListOf<String>()
+
+        if (allText.contains("stress") || allText.contains("ansi")) themes.add("gestione stress")
+        if (allText.contains("lavoro") || allText.contains("ufficio")) themes.add("vita lavorativa")
+        if (allText.contains("famiglia") || allText.contains("genitori")) themes.add("relazioni familiari")
+        if (allText.contains("amor") || allText.contains("partner")) themes.add("vita sentimentale")
+        if (allText.contains("amici") || allText.contains("amic")) themes.add("amicizie")
+        if (allText.contains("sport") || allText.contains("palestra")) themes.add("attività fisica")
+        if (allText.contains("obiettiv") || allText.contains("progett")) themes.add("obiettivi personali")
+
+        return themes
+    }
+
+    private fun extractThemes(diaries: List<Diary>): List<String> {
+        return extractRecurringThemes(diaries)
+    }
+
+    private fun extractInterests(diaries: List<Diary>): List<String> {
+        val interests = mutableSetOf<String>()
+        val allText = diaries.joinToString(" ") {
+            "${it.title} ${it.description}"
+        }.lowercase()
+
+        val interestPatterns = mapOf(
+            "musica" to listOf("musica", "canzone", "ascolt", "concert"),
+            "lettura" to listOf("libro", "legg", "romanzo", "lettura"),
+            "cucina" to listOf("cucin", "ricetta", "mangia", "cibo"),
+            "viaggi" to listOf("viagg", "vacan", "visit", "esplor"),
+            "tecnologia" to listOf("app", "computer", "tecnolog", "programm"),
+            "natura" to listOf("natura", "parco", "montagna", "mare"),
+            "arte" to listOf("arte", "dipint", "museo", "mostra"),
+            "cinema" to listOf("film", "serie", "netflix", "cinema")
+        )
+
+        interestPatterns.forEach { (interest, patterns) ->
+            if (patterns.any { pattern -> allText.contains(pattern) }) {
+                interests.add(interest)
+            }
+        }
+
+        return interests.toList()
+    }
+
+    private fun analyzeWritingStyle(diaries: List<Diary>): String {
+        if (diaries.isEmpty()) return "riflessivo"
+
+        val avgLength = diaries.map { it.description.length }.average()
+        val hasEmotionalWords = diaries.any { diary ->
+            val text = diary.description.lowercase()
+            listOf("sento", "emozione", "cuore", "anima").any { text.contains(it) }
+        }
+
+        return when {
+            avgLength > 500 && hasEmotionalWords -> "espressivo e dettagliato"
+            avgLength > 500 -> "analitico e approfondito"
+            hasEmotionalWords -> "emotivo e diretto"
+            else -> "sintetico e pratico"
+        }
+    }
+
+    private fun buildPersonalizedPrompt(
+        userMessage: String,
+        conversationContext: List<ChatMessage>,
+        diaryContext: List<Diary>,
+        userProfile: UserProfile,
+        currentMood: String,
+        recurringThemes: List<String>
+    ): String {
+        val recentDiaries = diaryContext.take(5)
+        val diaryInsights = if (recentDiaries.isNotEmpty()) {
+            """
+            CONTESTO PERSONALE DELL'UTENTE (dai suoi diari recenti):
+            
+            Stato emotivo attuale: $currentMood
+            Mood dominante nel tempo: ${userProfile.dominantMood}
+            Temi ricorrenti: ${recurringThemes.joinToString(", ")}
+            Interessi: ${userProfile.interests.joinToString(", ")}
+            Stile di scrittura: ${userProfile.writingStyle}
+            
+            Estratti significativi dai diari recenti:
+            ${recentDiaries.joinToString("\n") { diary ->
+                val date = diary.date.toInstant()
+                    .atZone(ZoneId.systemDefault())
+                    .format(DateTimeFormatter.ofPattern("d MMMM"))
+                "- $date (${diary.mood}): ${diary.title} - ${diary.description.take(150)}..."
+            }}
+            
+            IMPORTANTE: Usa queste informazioni per personalizzare la tua risposta, 
+            mostrando che comprendi veramente la situazione e i sentimenti dell'utente.
+            Fai riferimenti sottili ma significativi alle sue esperienze passate quando pertinente.
+            NON usare placeholder o frasi generiche. Usa SOLO informazioni reali dai diari.
+            Se non hai informazioni specifiche su un argomento, non inventare.
+            """.trimIndent()
+        } else {
+            """
+            L'utente è nuovo e non ha ancora condiviso molto nei suoi diari. 
+            Sii accogliente e incoraggiante, invitandolo a condividere di più.
+            NON fingere di conoscere dettagli che non esistono.
+            """.trimIndent()
+        }
+
+        val conversationHistory = conversationContext.takeLast(10).joinToString("\n") { message ->
+            if (message.isUser) "User: ${message.content}" else "Lifo: ${message.content}"
         }
 
         return """
-            You are Lifo, a supportive and empathetic AI companion in a personal diary app called Calmify. 
-            Your role is to:
-            - Provide emotional support and understanding
-            - Help users reflect on their thoughts and feelings
-            - Encourage mindfulness and self-awareness
-            - Offer gentle, non-judgmental responses
-            - Suggest healthy coping strategies when appropriate
+            Sei Lifo, l'assistente AI personale dell'app Calmify. Non sei solo un chatbot, 
+            ma un vero compagno che conosce profondamente l'utente attraverso i suoi diari.
             
-            Important guidelines:
-            - Be warm, caring, and conversational
-            - Respond in Italian
-            - Avoid giving medical advice
-            - Encourage professional help for serious concerns
-            - Keep responses concise but meaningful
-            - Use simple, clear language
+            La tua personalità:
+            - Empatico e comprensivo, come un amico che ascolta davvero
+            - Ricordi le esperienze passate dell'utente e le usi per dare consigli personalizzati
+            - Parli in modo naturale e caldo, usando il nome dell'utente quando appropriato
+            - Sei positivo ma realistico, non minimizzi mai i problemi
+            - Offri supporto pratico basato sulla conoscenza dell'utente
             
-            Previous conversation:
+            $diaryInsights
+            
+            LINEE GUIDA FONDAMENTALI:
+            1. MAI usare placeholder come [nome del progetto] o [obiettivo specifico]
+            2. Se hai informazioni dai diari, usale in modo specifico e naturale
+            3. Se NON hai informazioni su qualcosa, non inventare - chiedi invece all'utente
+            4. Mostra che ricordi e comprendi la vita dell'utente SOLO con dettagli reali
+            5. Collega la risposta alle sue esperienze passate quando rilevante
+            6. Usa un tono adatto al suo stato emotivo attuale ($currentMood)
+            7. Se menzioni eventi dai diari, fallo in modo naturale e sensibile
+            8. Offri suggerimenti personalizzati basati sui suoi interessi e pattern
+            9. Mantieni la conversazione fluida e naturale, non robotica
+            10. Se l'utente sembra in difficoltà, ricorda momenti positivi dai suoi diari
+            11. Rispondi SEMPRE in italiano
+            
+            Conversazione precedente:
             $conversationHistory
             
-            User: $userMessage
+            Messaggio dell'utente: $userMessage
             
-            Please respond with empathy and understanding in Italian.
+            Rispondi come un amico che conosce davvero l'utente basandoti SOLO sui dati reali.
+            Se non hai informazioni specifiche, chiedi gentilmente invece di inventare.
         """.trimIndent()
     }
 
-    private fun buildDiaryContent(session: ChatSession, messages: List<ChatMessage>): String {
-        val formatter = DateTimeFormatter.ofPattern("MMMM d, yyyy 'at' h:mm a")
+    private fun generatePersonalizedSessionTitle(): String {
+        val hour = java.time.LocalTime.now().hour
+        val greeting = when (hour) {
+            in 5..11 -> "Chiacchierata mattutina"
+            in 12..17 -> "Conversazione pomeridiana"
+            in 18..22 -> "Dialogo serale"
+            else -> "Conversazione notturna"
+        }
+
+        val formatter = DateTimeFormatter.ofPattern("d MMM")
             .withZone(ZoneId.systemDefault())
+        return "$greeting - ${formatter.format(Instant.now())}"
+    }
+
+    private fun buildEnhancedDiaryContent(session: ChatSession, messages: List<ChatMessage>): String {
+        val formatter = DateTimeFormatter.ofPattern("d MMMM yyyy 'alle' HH:mm")
+            .withZone(ZoneId.systemDefault())
+
+        val insights = messages.filter { !it.isUser }
+            .flatMap { message ->
+                extractKeyInsights(message.content)
+            }
+            .distinct()
+            .take(5)
 
         val header = """
             # ${session.title}
-            *Exported from AI Chat on ${formatter.format(Instant.now())}*
+            *Conversazione con Lifo esportata il ${formatter.format(Instant.now())}*
+            
+            ## Punti chiave della conversazione:
+            ${insights.joinToString("\n") { "- $it" }}
             
             ---
             
         """.trimIndent()
 
         val conversation = messages.joinToString("\n\n") { message ->
-            val role = if (message.isUser) "**Me**" else "**Lifo AI**"
-            val time = DateTimeFormatter.ofPattern("h:mm a")
+            val role = if (message.isUser) "**Tu**" else "**Lifo**"
+            val time = DateTimeFormatter.ofPattern("HH:mm")
                 .withZone(ZoneId.systemDefault())
                 .format(message.timestamp)
 
@@ -322,7 +564,34 @@ class ChatRepositoryImpl @Inject constructor(
         return header + conversation
     }
 
-    // Extension functions per mapping
+    private fun extractKeyInsights(content: String): List<String> {
+        val insights = mutableListOf<String>()
+
+        val sentences = content.split(". ")
+        sentences.forEach { sentence ->
+            if (sentence.contains("suggerisc") ||
+                sentence.contains("ricord") ||
+                sentence.contains("important") ||
+                sentence.contains("potrest") ||
+                sentence.contains("consiglio")) {
+                insights.add(sentence.trim())
+            }
+        }
+
+        return insights.take(3)
+    }
+
+    // Data classes
+    private data class UserProfile(
+        val dominantMood: String,
+        val moodTrends: Map<String, Int>,
+        val preferredWritingTime: String,
+        val recurringThemes: List<String>,
+        val interests: List<String>,
+        val writingStyle: String
+    )
+
+    // Extension functions
     private fun ChatSessionEntity.toDomain() = ChatSession(
         id = id,
         title = title,
