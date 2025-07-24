@@ -1,28 +1,36 @@
 package com.lifo.chat.presentation.viewmodel
 
 import android.content.Context
-import android.speech.tts.TextToSpeech
+import android.media.AudioAttributes
+import android.media.MediaPlayer
+import android.os.Build
+import android.util.Base64
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
-import com.lifo.chat.domain.model.ChatEvent
-import com.lifo.chat.domain.model.ChatUiState
-import com.lifo.chat.domain.model.StreamingMessage
-import com.lifo.chat.domain.model.SmartSuggestion
-import com.lifo.chat.domain.model.SuggestionCategory
-import com.lifo.chat.domain.model.VoiceState
+import com.lifo.chat.domain.model.*
 import com.lifo.mongo.repository.ChatRepository
 import com.lifo.mongo.repository.MessageStatus
+import com.lifo.util.Constants.GOOGLE_CLOUD_API_KEY
 import com.lifo.util.model.RequestState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.util.Locale
+import kotlinx.coroutines.withContext
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 import javax.inject.Inject
 
 @HiltViewModel
@@ -35,15 +43,16 @@ class ChatViewModel @Inject constructor(
     companion object {
         private const val TAG = "ChatViewModel"
         private const val KEY_SESSION_ID = "sessionId"
-        private const val STREAMING_DEBOUNCE_MS = 50L // Più veloce per UX fluida
+        private const val STREAMING_DEBOUNCE_MS = 50L
         private const val AUTO_SAVE_DELAY = 2000L
+        private const val CLOUD_TTS_URL = "https://texttospeech.googleapis.com/v1/text:synthesize"
     }
 
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
     // Voice support
-    private var tts: TextToSpeech? = null
+    private var mediaPlayer: MediaPlayer? = null
     private val _voiceState = MutableStateFlow(VoiceState())
     val voiceState: StateFlow<VoiceState> = _voiceState.asStateFlow()
 
@@ -51,16 +60,23 @@ class ChatViewModel @Inject constructor(
     private val _suggestions = MutableStateFlow<List<SmartSuggestion>>(emptyList())
     val suggestions: StateFlow<List<SmartSuggestion>> = _suggestions.asStateFlow()
 
+    // OkHttp client for Cloud TTS
+    private val okHttpClient = OkHttpClient.Builder()
+        .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+        .build()
+
     private val sessionId: String? = savedStateHandle.get<String>(KEY_SESSION_ID)
     private var streamingJob: Job? = null
     private var messagesJob: Job? = null
     private var autoSaveJob: Job? = null
+    private var ttsJob: Job? = null
     private val streamingBuffer = StringBuilder()
     private var lastStreamingUpdate = 0L
 
     init {
         Log.d(TAG, "ChatViewModel initialized with sessionId: $sessionId")
-        initializeTTS()
+        _voiceState.update { it.copy(isTTSReady = true) } // Cloud TTS sempre pronto
         loadSessions()
         if (sessionId != null) {
             loadSession(sessionId)
@@ -70,17 +86,6 @@ class ChatViewModel @Inject constructor(
             }
         }
         generateSmartSuggestions()
-    }
-
-    private fun initializeTTS() {
-        tts = TextToSpeech(context) { status ->
-            if (status == TextToSpeech.SUCCESS) {
-                tts?.language = Locale.ITALIAN
-                tts?.setSpeechRate(1.0f)
-                tts?.setPitch(1.0f)
-                _voiceState.update { it.copy(isTTSReady = true) }
-            }
-        }
     }
 
     fun onEvent(event: ChatEvent) {
@@ -107,20 +112,487 @@ class ChatViewModel @Inject constructor(
         }
     }
 
+    private fun speakMessage(messageId: String) {
+        val message = _uiState.value.messages.find { it.id == messageId }
+        message?.let {
+            if (!it.isUser) {
+                // Cancella qualsiasi TTS in corso
+                ttsJob?.cancel()
+                stopSpeaking()
+
+                ttsJob = viewModelScope.launch {
+                    _voiceState.update { state ->
+                        state.copy(
+                            isSpeaking = true,
+                            currentSpeakingMessageId = messageId
+                        )
+                    }
+
+                    try {
+                        // Prepara il testo
+                        val textToSpeak = prepareTextForCloudTTS(it.content)
+
+                        // Genera audio con Cloud TTS
+                        val audioFile = generateCloudTTSAudio(textToSpeak)
+
+                        if (audioFile != null) {
+                            // Riproduci l'audio
+                            playAudioFile(audioFile, messageId)
+                        } else {
+                            Log.e(TAG, "Failed to generate audio")
+                            _voiceState.update { state ->
+                                state.copy(
+                                    isSpeaking = false,
+                                    currentSpeakingMessageId = null
+                                )
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error in TTS", e)
+                        _voiceState.update { state ->
+                            state.copy(
+                                isSpeaking = false,
+                                currentSpeakingMessageId = null
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun prepareTextForCloudTTS(text: String): String {
+        return text
+            // Rimuovi emoji
+            .replace(Regex("[\\p{So}\\p{Cn}]"), "")
+            // Rimuovi markdown
+            .replace("**", "")
+            .replace("*", "")
+            .replace("#", "")
+            .replace("`", "")
+            .replace("```", "")
+            // Gestisci abbreviazioni
+            .replace("es.", "esempio")
+            .replace("ecc.", "eccetera")
+            .replace("etc.", "eccetera")
+            .replace("dott.", "dottore")
+            .replace("sig.", "signor")
+            .replace("sig.ra", "signora")
+            // Pulisci spazi
+            .replace("  ", " ")
+            .trim()
+    }
+
+    // 1. Aggiorna la funzione generateCloudTTSAudio con configurazioni avanzate
+    private suspend fun generateCloudTTSAudio(text: String): File? {
+        return withContext(Dispatchers.IO) {
+            try {
+                // Preprocessa il testo per ottimizzare la naturalezza
+                val processedText = preprocessTextForNaturalSpeech(text)
+                val ssmlText = buildAdvancedSSMLText(processedText)
+
+                val requestBody = JSONObject().apply {
+                    put("input", JSONObject().apply {
+                        put("ssml", ssmlText)
+                    })
+                    put("voice", JSONObject().apply {
+                        put("languageCode", "it-IT")
+                        put("name", "it-IT-Wavenet-A") // Voce femminile WaveNet italiana
+                        put("ssmlGender", "FEMALE")
+                    })
+                    put("audioConfig", JSONObject().apply {
+                        put("audioEncoding", "MP3")
+                        put("speakingRate", 1.3) // Velocità leggermente più lenta per naturalezza
+                        put("pitch", 1.1) // Tono più profondo e naturale
+                        put("volumeGainDb", 2.0) // Volume leggermente aumentato
+                        // Aggiungi effetti audio per maggiore naturalezza
+                        put("effectsProfileId", JSONArray().apply {
+                            put("handset-class-device") // Simula voce telefonica per intimità
+                        })
+                    })
+                }
+
+                Log.d(TAG, "Enhanced Cloud TTS Request: ${requestBody.toString(2)}")
+
+                val request = Request.Builder()
+                    .url("$CLOUD_TTS_URL?key=$GOOGLE_CLOUD_API_KEY")
+                    .addHeader("Content-Type", "application/json")
+                    .post(requestBody.toString().toRequestBody("application/json".toMediaType()))
+                    .build()
+
+                val response = okHttpClient.newCall(request).execute()
+
+                if (response.isSuccessful) {
+                    response.body?.let { responseBody ->
+                        val json = JSONObject(responseBody.string())
+                        val audioContent = json.getString("audioContent")
+
+                        val audioBytes = Base64.decode(audioContent, Base64.DEFAULT)
+                        val tempFile = File(context.cacheDir, "tts_${System.currentTimeMillis()}.mp3")
+
+                        FileOutputStream(tempFile).use { fos ->
+                            fos.write(audioBytes)
+                        }
+
+                        Log.d(TAG, "Enhanced audio file created: ${tempFile.absolutePath}")
+                        return@withContext tempFile
+                    }
+                } else {
+                    val errorBody = response.body?.string()
+                    Log.e(TAG, "Cloud TTS error: ${response.code} - $errorBody")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error generating Cloud TTS audio", e)
+            }
+            null
+        }
+    }
+    // 2. Preprocessing avanzato del testo per naturalezza
+    private fun preprocessTextForNaturalSpeech(text: String): String {
+        return text
+            // Gestione emoticon testuali
+            .replace(":)", "")
+            .replace(":(", "")
+            .replace(":D", "")
+            .replace("XD", "")
+
+            // Gestione punteggiatura per pause naturali
+            .replace("...", "...")
+            .replace("!!", "!")
+            .replace("??", "?")
+
+            // Sostituzione abbreviazioni comuni italiane
+            .replace("cmq", "comunque")
+            .replace("nn", "non")
+            .replace("xché", "perché")
+            .replace("x", "per")
+            .replace("ke", "che")
+            .replace("tt", "tutto")
+            .replace("qlc", "qualcosa")
+            .replace("qlcn", "qualcuno")
+
+            // Gestione numeri
+            .replace(Regex("(\\d+)%"), "$1 percento")
+            .replace(Regex("€(\\d+)"), "$1 euro")
+            .replace(Regex("\\$(\\d+)"), "$1 dollari")
+
+            // Rimuovi parentesi mantenendo il contenuto
+            .replace(Regex("\\(([^)]+)\\)"), ", $1,")
+            .replace(Regex("\\[([^]]+)\\]"), ", $1,")
+
+            // Normalizza spazi
+            .replace(Regex("\\s+"), " ")
+            .trim()
+    }
+
+    // 3. SSML avanzato con variazioni naturali
+    private fun buildAdvancedSSMLText(text: String): String {
+        val escapedText = text
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\"", "&quot;")
+            .replace("'", "&apos;")
+
+        val ssmlBuilder = StringBuilder("<speak>")
+
+        // Aggiungi variazione iniziale per naturalezza
+        ssmlBuilder.append("<prosody rate=\"95%\" pitch=\"-2st\">")
+
+        // Dividi in frasi e applica variazioni
+        val sentences = escapedText.split(Regex("(?<=[.!?])\\s+"))
+
+        sentences.forEachIndexed { index, sentence ->
+            val trimmedSentence = sentence.trim()
+            if (trimmedSentence.isNotEmpty()) {
+                // Varia leggermente velocità e tono per ogni frase
+                val rateVariation = (90..100).random()
+                val pitchVariation = (-3..-1).random()
+
+                when {
+                    // Domande
+                    trimmedSentence.endsWith("?") -> {
+                        ssmlBuilder.append(
+                            "<prosody rate=\"${rateVariation}%\" pitch=\"+20%\">" +
+                                    "<emphasis level=\"moderate\">$trimmedSentence</emphasis>" +
+                                    "</prosody>"
+                        )
+                        ssmlBuilder.append("<break time=\"400ms\"/>")
+                    }
+
+                    // Esclamazioni
+                    trimmedSentence.endsWith("!") -> {
+                        ssmlBuilder.append(
+                            "<prosody rate=\"${rateVariation + 5}%\" pitch=\"+10%\" volume=\"+2dB\">" +
+                                    "<emphasis level=\"strong\">$trimmedSentence</emphasis>" +
+                                    "</prosody>"
+                        )
+                        ssmlBuilder.append("<break time=\"350ms\"/>")
+                    }
+
+                    // Frasi con virgole (pause interne)
+                    trimmedSentence.contains(",") -> {
+                        val parts = trimmedSentence.split(",")
+                        parts.forEachIndexed { partIndex, part ->
+                            ssmlBuilder.append(
+                                "<prosody rate=\"${rateVariation}%\" pitch=\"${pitchVariation}st\">" +
+                                        part.trim() +
+                                        "</prosody>"
+                            )
+                            if (partIndex < parts.size - 1) {
+                                ssmlBuilder.append("<break time=\"200ms\"/>")
+                            }
+                        }
+                        ssmlBuilder.append("<break time=\"300ms\"/>")
+                    }
+
+                    // Frasi normali
+                    else -> {
+                        // Aggiungi micro-pause casuali per naturalezza
+                        val words = trimmedSentence.split(" ")
+                        words.forEachIndexed { wordIndex, word ->
+                            ssmlBuilder.append(word)
+
+                            // Pause casuali tra parole per effetto naturale
+                            if (wordIndex < words.size - 1 && (0..10).random() > 7) {
+                                ssmlBuilder.append("<break time=\"50ms\"/>")
+                            } else if (wordIndex < words.size - 1) {
+                                ssmlBuilder.append(" ")
+                            }
+                        }
+                        ssmlBuilder.append("<break time=\"250ms\"/>")
+                    }
+                }
+
+                // Pausa più lunga tra paragrafi
+                if (index < sentences.size - 1 && trimmedSentence.endsWith(".") && (index + 1) % 3 == 0) {
+                    ssmlBuilder.append("<break time=\"500ms\"/>")
+                }
+            }
+        }
+
+        ssmlBuilder.append("</prosody>")
+
+        // Aggiungi respiro occasionale per lunghi testi
+        val ssmlText = ssmlBuilder.toString()
+        val breathPattern = Regex("(<break time=\"\\d+ms\"/>)")
+        var breathCount = 0
+        val finalSsml = breathPattern.replace(ssmlText) { matchResult ->
+            breathCount++
+            if (breathCount % 5 == 0) {
+                // Simula respiro ogni 5 pause
+                "${matchResult.value}<break time=\"100ms\"/><prosody volume=\"-6dB\"><break time=\"200ms\"/></prosody>"
+            } else {
+                matchResult.value
+            }
+        }
+
+        return "$finalSsml</speak>"
+    }
+
+    // 4. Migliora playAudioFile con effetti audio
+    private fun playAudioFile(audioFile: File, messageId: String) {
+        try {
+            mediaPlayer?.let { player ->
+                try {
+                    player.reset()
+                    player.release()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error releasing previous media player", e)
+                }
+            }
+            mediaPlayer = null
+
+            mediaPlayer = MediaPlayer().apply {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_ASSISTANT)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                            .setFlags(AudioAttributes.FLAG_AUDIBILITY_ENFORCED)
+                            .build()
+                    )
+                }
+
+                setDataSource(audioFile.absolutePath)
+
+                // Aggiungi effetto fade-in
+                setVolume(0f, 0f)
+
+                setOnPreparedListener { mp ->
+                    mp.start()
+
+                    // Fade-in graduale del volume
+                    viewModelScope.launch {
+                        for (i in 0..10) {
+                            val volume = i / 10f
+                            mp.setVolume(volume, volume)
+                            delay(50)
+                        }
+                    }
+
+                    Log.d(TAG, "Started playing enhanced audio")
+                }
+
+                setOnCompletionListener { mp ->
+                    Log.d(TAG, "Audio playback completed")
+
+                    // Fade-out prima di terminare
+                    viewModelScope.launch {
+                        for (i in 10 downTo 0) {
+                            val volume = i / 10f
+                            try {
+                                mp.setVolume(volume, volume)
+                                delay(30)
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Error during fade-out", e)
+                            }
+                        }
+
+                        _voiceState.update { state ->
+                            state.copy(
+                                isSpeaking = false,
+                                currentSpeakingMessageId = null
+                            )
+                        }
+
+                        try {
+                            audioFile.delete()
+                            mp.reset()
+                            mp.release()
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error cleaning up", e)
+                        }
+                        mediaPlayer = null
+                    }
+                }
+
+                setOnErrorListener { mp, what, extra ->
+                    Log.e(TAG, "MediaPlayer error: what=$what, extra=$extra")
+                    _voiceState.update { state ->
+                        state.copy(
+                            isSpeaking = false,
+                            currentSpeakingMessageId = null
+                        )
+                    }
+                    try {
+                        audioFile.delete()
+                        mp.reset()
+                        mp.release()
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error on cleanup", e)
+                    }
+                    mediaPlayer = null
+                    true
+                }
+
+                prepareAsync()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error playing audio", e)
+            _voiceState.update { state ->
+                state.copy(
+                    isSpeaking = false,
+                    currentSpeakingMessageId = null
+                )
+            }
+            try {
+                audioFile.delete()
+            } catch (ex: Exception) {
+                Log.e(TAG, "Error deleting temp file", ex)
+            }
+            mediaPlayer = null
+        }
+    }
+
+    // 5. Aggiungi gestione intelligente delle emozioni nel testo
+    private fun detectEmotionAndAdjustSSML(text: String): String {
+        val emotions = mapOf(
+            "felice" to mapOf("rate" to "105%", "pitch" to "+5%", "volume" to "+2dB"),
+            "triste" to mapOf("rate" to "90%", "pitch" to "-5%", "volume" to "-2dB"),
+            "arrabbiato" to mapOf("rate" to "110%", "pitch" to "+10%", "volume" to "+3dB"),
+            "preoccupato" to mapOf("rate" to "95%", "pitch" to "-2%", "volume" to "0dB"),
+            "entusiasta" to mapOf("rate" to "115%", "pitch" to "+15%", "volume" to "+4dB")
+        )
+
+        // Rileva emozioni basiche nel testo
+        for ((emotion, settings) in emotions) {
+            if (text.toLowerCase().contains(emotion)) {
+                return "<prosody rate=\"${settings["rate"]}\" pitch=\"${settings["pitch"]}\" volume=\"${settings["volume"]}\">"
+            }
+        }
+
+        // Default neutro ma naturale
+        return "<prosody rate=\"95%\" pitch=\"-2st\" volume=\"+1dB\">"
+    }
+    private fun buildSSMLText(text: String): String {
+        // Escape caratteri speciali per XML/SSML
+        val escapedText = text
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\"", "&quot;")
+            .replace("'", "&apos;")
+
+        // Costruisci SSML con pause naturali e enfasi
+        val sentences = escapedText.split(Regex("(?<=[.!?])\\s+"))
+        val ssmlBuilder = StringBuilder("<speak>")
+
+        sentences.forEach { sentence ->
+            val trimmedSentence = sentence.trim()
+            if (trimmedSentence.isNotEmpty()) {
+                when {
+                    trimmedSentence.endsWith("?") -> {
+                        // Domande con intonazione ascendente
+                        ssmlBuilder.append("<prosody pitch=\"+10%\">$trimmedSentence</prosody>")
+                    }
+                    trimmedSentence.endsWith("!") -> {
+                        // Esclamazioni con enfasi
+                        ssmlBuilder.append("<emphasis level=\"moderate\">$trimmedSentence</emphasis>")
+                    }
+                    else -> {
+                        // Frasi normali
+                        ssmlBuilder.append(trimmedSentence)
+                    }
+                }
+                // Aggiungi pausa tra frasi
+                ssmlBuilder.append("<break time=\"300ms\"/>")
+            }
+        }
+
+        ssmlBuilder.append("</speak>")
+
+        val ssml = ssmlBuilder.toString()
+        Log.d(TAG, "Generated SSML: $ssml")
+        return ssml
+    }
+
+
+    private fun stopSpeaking() {
+        ttsJob?.cancel()
+        try {
+            mediaPlayer?.let { player ->
+                if (player.isPlaying) {
+                    player.stop()
+                }
+                player.reset()
+                player.release()
+            }
+        } catch (e: IllegalStateException) {
+            Log.e(TAG, "Error stopping media player", e)
+        } finally {
+            mediaPlayer = null
+            _voiceState.update { it.copy(isSpeaking = false, currentSpeakingMessageId = null) }
+        }
+    }
+
     private fun generateSmartSuggestions() {
         viewModelScope.launch {
-            // Genera suggerimenti basati su:
-            // 1. Ora del giorno
-            // 2. Giorno della settimana
-            // 3. Mood recente dai diari
-            // 4. Pattern di conversazione
-
             val hour = java.time.LocalTime.now().hour
             val dayOfWeek = java.time.LocalDate.now().dayOfWeek
 
             val baseSuggestions = mutableListOf<SmartSuggestion>()
 
-            // Suggerimenti basati sull'ora
             when (hour) {
                 in 6..11 -> {
                     baseSuggestions.add(
@@ -178,7 +650,6 @@ class ChatViewModel @Inject constructor(
                 }
             }
 
-            // Suggerimenti per il weekend
             if (dayOfWeek == java.time.DayOfWeek.SATURDAY ||
                 dayOfWeek == java.time.DayOfWeek.SUNDAY) {
                 baseSuggestions.add(
@@ -191,7 +662,6 @@ class ChatViewModel @Inject constructor(
                 )
             }
 
-            // Suggerimenti sempre disponibili
             baseSuggestions.addAll(listOf(
                 SmartSuggestion(
                     id = "general_1",
@@ -213,60 +683,12 @@ class ChatViewModel @Inject constructor(
                 )
             ))
 
-            _suggestions.value = baseSuggestions.take(4) // Mostra max 4 suggerimenti
+            _suggestions.value = baseSuggestions.take(4)
         }
-    }
-
-    private fun speakMessage(messageId: String) {
-        val message = _uiState.value.messages.find { it.id == messageId }
-        message?.let {
-            if (_voiceState.value.isTTSReady && !it.isUser) {
-                _voiceState.update { state ->
-                    state.copy(
-                        isSpeaking = true,
-                        currentSpeakingMessageId = messageId
-                    )
-                }
-
-                tts?.speak(
-                    it.content,
-                    TextToSpeech.QUEUE_FLUSH,
-                    null,
-                    messageId
-                )
-
-                // Listener per quando finisce di parlare
-                tts?.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
-                    override fun onStart(utteranceId: String?) {}
-                    override fun onDone(utteranceId: String?) {
-                        _voiceState.update { state ->
-                            state.copy(
-                                isSpeaking = false,
-                                currentSpeakingMessageId = null
-                            )
-                        }
-                    }
-                    override fun onError(utteranceId: String?) {
-                        _voiceState.update { state ->
-                            state.copy(
-                                isSpeaking = false,
-                                currentSpeakingMessageId = null
-                            )
-                        }
-                    }
-                })
-            }
-        }
-    }
-
-    private fun stopSpeaking() {
-        tts?.stop()
-        _voiceState.update { it.copy(isSpeaking = false, currentSpeakingMessageId = null) }
     }
 
     private fun useSuggestion(suggestion: SmartSuggestion) {
         _uiState.update { it.copy(inputText = suggestion.text) }
-        // Invia automaticamente dopo un breve delay per UX migliore
         viewModelScope.launch {
             delay(300)
             sendMessage(suggestion.text)
@@ -296,7 +718,7 @@ class ChatViewModel @Inject constructor(
     private fun loadSession(sessionId: String) {
         Log.d(TAG, "Loading session: $sessionId")
         messagesJob?.cancel()
-        stopSpeaking() // Stop any ongoing speech
+        stopSpeaking()
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, isNavigating = true) }
@@ -322,7 +744,6 @@ class ChatViewModel @Inject constructor(
                                                 sessionStarted = messagesResult.data.isNotEmpty()
                                             )
                                         }
-                                        // Rigenera suggerimenti basati sul contesto
                                         generateSmartSuggestions()
                                     }
                                     is RequestState.Error -> {
@@ -382,7 +803,6 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(inputText = "") }
 
-            // Rigenera suggerimenti dopo l'invio
             generateSmartSuggestions()
 
             when (val result = repository.sendMessage(sessionId, content)) {
@@ -453,8 +873,8 @@ class ChatViewModel @Inject constructor(
                     repository.saveAiMessage(sessionId, finalContent)
                     _uiState.update { it.copy(streamingMessage = null) }
 
-                    // Auto-speak se abilitato
                     if (_voiceState.value.autoSpeak) {
+                        delay(500)
                         val savedMessage = _uiState.value.messages.lastOrNull { !it.isUser }
                         savedMessage?.let { speakMessage(it.id) }
                     }
@@ -462,7 +882,7 @@ class ChatViewModel @Inject constructor(
 
             } finally {
                 _uiState.update { it.copy(streamingMessage = null) }
-                generateSmartSuggestions() // Rigenera suggerimenti dopo la risposta
+                generateSmartSuggestions()
             }
         }
     }
@@ -504,7 +924,7 @@ class ChatViewModel @Inject constructor(
                     }
                     loadSession(result.data.id)
                     onComplete?.invoke(result.data)
-                    generateSmartSuggestions() // Rigenera suggerimenti per nuova sessione
+                    generateSmartSuggestions()
                 }
                 is RequestState.Error -> {
                     Log.e(TAG, "Failed to create session", result.error)
@@ -586,7 +1006,6 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch {
             when (val result = repository.exportSessionToDiary(sessionId)) {
                 is RequestState.Success -> {
-                    // TODO: Navigate to write screen with exported content
                     Log.d(TAG, "Exported content: ${result.data}")
                     _uiState.update {
                         it.copy(exportedContent = result.data)
@@ -605,12 +1024,10 @@ class ChatViewModel @Inject constructor(
     private fun updateInputText(text: String) {
         _uiState.update { it.copy(inputText = text) }
 
-        // Auto-save draft dopo 2 secondi di inattività
         autoSaveJob?.cancel()
         if (text.isNotEmpty()) {
             autoSaveJob = viewModelScope.launch {
                 delay(AUTO_SAVE_DELAY)
-                // TODO: Salvare draft in locale
                 Log.d(TAG, "Auto-saving draft: $text")
             }
         }
@@ -637,6 +1054,24 @@ class ChatViewModel @Inject constructor(
         streamingJob?.cancel()
         messagesJob?.cancel()
         autoSaveJob?.cancel()
-        tts?.shutdown()
+        ttsJob?.cancel()
+
+        // Rilascia MediaPlayer in modo sicuro
+        try {
+            mediaPlayer?.let { player ->
+                player.reset()
+                player.release()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error releasing media player in onCleared", e)
+        }
+        mediaPlayer = null
+
+        // Shutdown OkHttp
+        try {
+            okHttpClient.dispatcher.executorService.shutdown()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error shutting down OkHttp", e)
+        }
     }
 }

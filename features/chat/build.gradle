@@ -74,7 +74,7 @@ dependencies {
     implementation libs.compose.material.icons.extended
     implementation libs.google.firebase.auth
     debugImplementation libs.compose.ui.tooling
-
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
     // Core
     implementation libs.core.ktx
     implementation libs.activity.compose
