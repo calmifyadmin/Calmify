@@ -101,11 +101,6 @@ internal fun HomeContent(
                             )
                         }
                     }
-
-                    // Bottom padding for FAB
-                    item {
-                        Spacer(modifier = Modifier.height(80.dp))
-                    }
                 }
             }
         }

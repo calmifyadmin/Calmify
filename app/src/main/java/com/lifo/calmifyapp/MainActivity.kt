@@ -30,7 +30,7 @@ import androidx.navigation.compose.rememberNavController
 import com.google.firebase.FirebaseApp
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.ktx.storageMetadata
-import com.lifo.calmifyapp.navigation.SetupNavGraph
+import com.lifo.app.CalmifyApp
 import com.lifo.mongo.database.dao.ImageToDeleteDao
 import com.lifo.mongo.database.dao.ImageToUploadDao
 import com.lifo.mongo.database.entity.ImageToDelete
@@ -111,13 +111,13 @@ class MainActivity : ComponentActivity() {
                                 InitializingScreen()
                             }
                             is AppState.Ready -> {
-                                // Create navigation controller only when ready
-                                val navigationController = rememberNavController()
-                                navController = navigationController
-
-                                MainAppContent(
-                                    navController = navigationController,
-                                    startDestination = getStartDestination()
+                                // Use the new CalmifyApp with global navigation bar
+                                CalmifyApp(
+                                    startDestination = getStartDestination(),
+                                    onDataLoaded = {
+                                        // Data loaded callback - can be used for analytics
+                                        Log.d("MainActivity", "Navigation data loaded")
+                                    }
                                 )
                             }
                             is AppState.Error -> {
@@ -298,27 +298,6 @@ private fun ErrorScreen(
                 Text("Try Again")
             }
         }
-    }
-}
-
-@Composable
-private fun MainAppContent(
-    navController: NavHostController,
-    startDestination: String
-) {
-    // Provide consistent background
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
-        SetupNavGraph(
-            startDestination = startDestination,
-            navController = navController,
-            onDataLoaded = {
-                // Data loaded callback - can be used for analytics
-                Log.d("MainActivity", "Navigation data loaded")
-            }
-        )
     }
 }
 

@@ -3,7 +3,6 @@ package com.lifo.ui.components.navigation
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
@@ -18,23 +17,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -44,7 +36,7 @@ import kotlin.math.ln
 /**
  * Navigation destination model
  */
-sealed class NavigationDestination(
+open class NavigationDestination(
     val route: String,
     val label: String,
     val selectedIcon: ImageVector,
@@ -53,51 +45,132 @@ sealed class NavigationDestination(
     val badge: String? = null
 ) {
     object Home : NavigationDestination(
-        route = "home_screen", // Match your actual route
+        route = "home_screen",
         label = "Home",
         selectedIcon = Icons.Filled.Home,
         unselectedIcon = Icons.Outlined.Home
     )
 
-    object Reports : NavigationDestination(
-        route = "reports_screen", // Match your actual route
-        label = "Reports",
-        selectedIcon = Icons.Filled.AccountCircle,
-        unselectedIcon = Icons.Outlined.AccountCircle,
-        badge = "3" // Example badge
+    object Write : NavigationDestination(
+        route = "write_screen",
+        label = "Write",
+        selectedIcon = Icons.Filled.EditNote,
+        unselectedIcon = Icons.Outlined.EditNote
     )
 
-    object Personal : NavigationDestination(
-        route = "personal_screen", // Match your actual route
-        label = "Personal",
+    object Profile : NavigationDestination(
+        route = "profile_screen",
+        label = "Profile",
         selectedIcon = Icons.Filled.Person,
-        unselectedIcon = Icons.Outlined.Person,
-        hasNews = true // Example notification dot
+        unselectedIcon = Icons.Outlined.Person
     )
 }
 
 /**
- * Enterprise-grade Navigation Bar following Google's Material Design 3
+ * Material 3 Navigation Bar per Calmify
  */
 @Composable
-fun GoogleStyleNavigationBar(
+fun CalmifyNavigationBar(
     navController: NavController,
     modifier: Modifier = Modifier,
     destinations: List<NavigationDestination> = listOf(
         NavigationDestination.Home,
-        NavigationDestination.Reports,
-        NavigationDestination.Personal
+        NavigationDestination.Write,
+        NavigationDestination.Profile
     )
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    // Debug: Log current route
-    LaunchedEffect(currentDestination) {
-        println("Current route: ${currentDestination?.route}")
-    }
+    NavigationBar(
+        modifier = modifier,
+        containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp),
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        tonalElevation = 0.dp
+    ) {
+        destinations.forEach { destination ->
+            // Check if the current destination is selected
+            val selected = currentDestination?.hierarchy?.any { navDestination ->
+                navDestination.route == destination.route ||
+                        navDestination.route?.startsWith(destination.route) == true
+            } == true
 
-    // Always show the navigation bar
+            NavigationBarItem(
+                selected = selected,
+                onClick = {
+                    navController.navigate(destination.route) {
+                        // Pop up to the start destination to avoid building up a back stack
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        // Avoid multiple copies of the same destination
+                        launchSingleTop = true
+                        // Restore state when reselecting a previously selected item
+                        restoreState = true
+                    }
+                },
+                icon = {
+                    BadgedBox(
+                        badge = {
+                            if (destination.badge != null) {
+                                Badge {
+                                    Text(
+                                        text = destination.badge,
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                }
+                            } else if (destination.hasNews) {
+                                Badge(
+                                    modifier = Modifier.size(8.dp)
+                                )
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = if (selected) {
+                                destination.selectedIcon
+                            } else {
+                                destination.unselectedIcon
+                            },
+                            contentDescription = null
+                        )
+                    }
+                },
+                label = {
+                    Text(
+                        text = destination.label,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                },
+                alwaysShowLabel = false,
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                    indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
+        }
+    }
+}
+
+/**
+ * Alternative style con animazioni personalizzate (opzionale)
+ */
+@Composable
+fun CalmifyNavigationBarAnimated(
+    navController: NavController,
+    modifier: Modifier = Modifier,
+    destinations: List<NavigationDestination> = listOf(
+        NavigationDestination.Home,
+        NavigationDestination.Write,
+        NavigationDestination.Profile
+    )
+) {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+
     Surface(
         color = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp),
         tonalElevation = 3.dp,
@@ -113,24 +186,19 @@ fun GoogleStyleNavigationBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             destinations.forEach { destination ->
-                // For now, check if this is the home route
-                val selected = when (destination) {
-                    is NavigationDestination.Home -> currentDestination?.route == "home_screen"
-                    else -> false
-                }
+                val selected = currentDestination?.hierarchy?.any {
+                    it.route == destination.route
+                } == true
 
-                GoogleNavigationBarItem(
+                NavigationBarItemAnimated(
                     selected = selected,
                     onClick = {
-                        // For now, only navigate to home
-                        if (destination is NavigationDestination.Home) {
-                            navController.navigate(destination.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
+                        navController.navigate(destination.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
                             }
+                            launchSingleTop = true
+                            restoreState = true
                         }
                     },
                     icon = if (selected) destination.selectedIcon else destination.unselectedIcon,
@@ -145,11 +213,10 @@ fun GoogleStyleNavigationBar(
 }
 
 /**
- * Individual navigation item with Google-style animations
+ * Animated navigation item
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun GoogleNavigationBarItem(
+private fun NavigationBarItemAnimated(
     selected: Boolean,
     onClick: () -> Unit,
     icon: ImageVector,
@@ -158,7 +225,6 @@ private fun GoogleNavigationBarItem(
     hasNews: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val density = LocalDensity.current
     val animationProgress by animateFloatAsState(
         targetValue = if (selected) 1f else 0f,
         animationSpec = spring(
@@ -272,7 +338,7 @@ private fun GoogleNavigationBarItem(
 }
 
 /**
- * Extension to create elevation colors like Google apps
+ * Extension per creare elevation colors
  */
 @Composable
 fun ColorScheme.surfaceColorAtElevation(
@@ -287,7 +353,7 @@ fun ColorScheme.surfaceColorAtElevation(
 }
 
 /**
- * Utility function for color composition
+ * Utility function per color composition
  */
 fun Color.compositeOver(background: Color): Color {
     val fg = this
