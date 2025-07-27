@@ -28,15 +28,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.*
 
-/**
- * Sistema Audio AI Premium - Qualità Studio 48kHz Stereo
- * Features:
- * - Audio 48kHz/16-bit Stereo per qualità CD
- * - Processamento spaziale 3D avanzato
- * - Effetti audio professionali
- * - Compressione dinamica per voce broadcast
- * - Limiter per prevenire clipping
- */
 @Singleton
 class GeminiKillerAudioSystem @Inject constructor(
     private val context: Context
@@ -52,8 +43,8 @@ class GeminiKillerAudioSystem @Inject constructor(
         // Streaming configuration for high quality
         private const val CHUNK_DURATION_MS = 150 // Longer chunks for better quality
         private const val BUFFER_CHUNKS = 3 // More buffer for smooth playback
-        private const val CROSSFADE_SAMPLES = 4800 // 100ms at 48kHz
-        private const val WRITE_CHUNK_SIZE = 2400 // 50ms stereo at 48kHz (smaller for smoother writes)
+        private const val CROSSFADE_SAMPLES = 2400 // 100ms at 48kHz
+        private const val WRITE_CHUNK_SIZE = 9600 // 50ms stereo at 48kHz (smaller for smoother writes)
 
         // Network configuration
         private const val AUDIO_API_URL = "https://audio-streaming-api-23546263069.europe-west1.run.app/generateNeuralAudio"
@@ -87,6 +78,7 @@ class GeminiKillerAudioSystem @Inject constructor(
     // Audio buffering
     private val audioQueue = ConcurrentLinkedQueue<ProcessedAudioData>()
     private val isPlaying = AtomicBoolean(false)
+    private val isStopRequested = AtomicBoolean(false) // NEW: Flag for stop request
     private val chunksReceived = AtomicInteger(0)
     private val chunksPlayed = AtomicInteger(0)
 
@@ -98,6 +90,7 @@ class GeminiKillerAudioSystem @Inject constructor(
     private var playbackJob: Job? = null
     private var firebaseListener: ChildEventListener? = null
     private var currentStreamRef: DatabaseReference? = null
+    private var timeoutJob: Job? = null // NEW: Separate timeout job
 
     // Network
     private val okHttpClient = OkHttpClient.Builder()
@@ -188,15 +181,20 @@ class GeminiKillerAudioSystem @Inject constructor(
         Log.d(TAG, "🎧 Audio quality: 48kHz Stereo")
 
         try {
-            // Cleanup precedente
+            // Cleanup precedente COMPLETO
             stopStreaming()
 
-            // Reset counters
+            // Wait a bit to ensure cleanup is complete
+            delay(100)
+
+            // Reset all flags and counters
+            isStopRequested.set(false)
             chunksReceived.set(0)
             chunksPlayed.set(0)
             audioQueue.clear()
+            lastChunkTail = null
 
-            // Update state
+            // Update state with new message ID
             _audioState.update {
                 it.copy(
                     isStreaming = true,
@@ -239,6 +237,18 @@ class GeminiKillerAudioSystem @Inject constructor(
 
     private fun initializeStudioQualityAudioTrack() {
         Log.d(TAG, "🎵 Initializing STUDIO QUALITY AudioTrack")
+
+        // Release any existing audio track
+        audioTrack?.apply {
+            try {
+                stop()
+                flush()
+                release()
+            } catch (e: Exception) {
+                Log.w(TAG, "Error releasing existing AudioTrack", e)
+            }
+        }
+        audioTrack = null
 
         val minBufferSize = AudioTrack.getMinBufferSize(
             SAMPLE_RATE,
@@ -294,6 +304,9 @@ class GeminiKillerAudioSystem @Inject constructor(
 
     private fun applyStudioQualityEffects() {
         val sessionId = audioTrack?.audioSessionId ?: return
+
+        // Release any existing effects first
+        releaseAudioEffects()
 
         try {
             // Professional EQ curve
@@ -477,6 +490,12 @@ class GeminiKillerAudioSystem @Inject constructor(
     }
 
     private fun processAudioChunk(chunk: AudioChunk) {
+        // Check if stop was requested
+        if (isStopRequested.get()) {
+            Log.d(TAG, "🛑 Stop requested, ignoring chunk ${chunk.id}")
+            return
+        }
+
         try {
             Log.d(TAG, "🎵 Processing HIGH QUALITY chunk: ${chunk.id} (seq: ${chunk.sequence})")
 
@@ -525,8 +544,7 @@ class GeminiKillerAudioSystem @Inject constructor(
                 emotion = chunkEmotion
             )
 
-            // Skip harmonic enhancement and studio processing for now to avoid array size issues
-            // Just do basic crossfade if we have a tail
+            // Apply crossfade if we have a tail
             val (finalLeft, finalRight) = if (lastChunkTail != null && chunksReceived.get() > 0) {
                 applyStereoFade(processedLeft to processedRight, lastChunkTail!!)
             } else {
@@ -539,40 +557,45 @@ class GeminiKillerAudioSystem @Inject constructor(
             }
             previousEmotion = chunkEmotion
 
-            // Add to queue
-            val audioData = ProcessedAudioData(
-                chunkId = chunk.id,
-                pcmDataLeft = finalLeft,
-                pcmDataRight = finalRight,
-                sequenceNumber = chunk.sequence,
-                emotion = chunkEmotion,
-                naturalness = naturalness,
-                isLast = chunk.isLast
-            )
-
-            audioQueue.offer(audioData)
-            val received = chunksReceived.incrementAndGet()
-
-            Log.d(TAG, "✅ Added HIGH QUALITY chunk to queue. Total: $received")
-
-            // Update state
-            _audioState.update {
-                it.copy(
-                    bufferLevel = audioQueue.size,
-                    chunksReceived = received,
-                    currentEmotion = chunkEmotion,
-                    emotionalIntensity = calculateEmotionalIntensity(chunk)
+            // Add to queue only if not stopping
+            if (!isStopRequested.get()) {
+                val audioData = ProcessedAudioData(
+                    chunkId = chunk.id,
+                    pcmDataLeft = finalLeft,
+                    pcmDataRight = finalRight,
+                    sequenceNumber = chunk.sequence,
+                    emotion = chunkEmotion,
+                    naturalness = naturalness,
+                    isLast = chunk.isLast
                 )
-            }
 
-            // Handle last chunk
-            if (chunk.isLast) {
-                Log.d(TAG, "🏁 Last chunk received - total chunks: $received")
-                audioScope.launch {
-                    while (chunksPlayed.get() < received || audioQueue.isNotEmpty()) {
-                        delay(50)
+                audioQueue.offer(audioData)
+                val received = chunksReceived.incrementAndGet()
+
+                Log.d(TAG, "✅ Added HIGH QUALITY chunk to queue. Total: $received")
+
+                // Update state
+                _audioState.update {
+                    it.copy(
+                        bufferLevel = audioQueue.size,
+                        chunksReceived = received,
+                        currentEmotion = chunkEmotion,
+                        emotionalIntensity = calculateEmotionalIntensity(chunk)
+                    )
+                }
+
+                // Handle last chunk
+                if (chunk.isLast) {
+                    Log.d(TAG, "🏁 Last chunk received - total chunks: $received")
+                    audioScope.launch {
+                        while (!isStopRequested.get() &&
+                            (chunksPlayed.get() < received || audioQueue.isNotEmpty())) {
+                            delay(50)
+                        }
+                        if (!isStopRequested.get()) {
+                            fadeOutAndStop()
+                        }
                     }
-                    fadeOutAndStop()
                 }
             }
 
@@ -593,86 +616,89 @@ class GeminiKillerAudioSystem @Inject constructor(
 
             // Wait for initial buffer
             var waitTime = 0
-            while (audioQueue.size < BUFFER_CHUNKS && _audioState.value.isStreaming && waitTime < 5000) {
+            while (audioQueue.size < BUFFER_CHUNKS &&
+                _audioState.value.isStreaming &&
+                waitTime < 5000 &&
+                !isStopRequested.get()) {
                 delay(50)
                 waitTime += 50
             }
 
-            if (audioQueue.isEmpty() && waitTime >= 5000) {
-                Log.e(TAG, "❌ No audio chunks received after 5 seconds")
-                _audioState.update { it.copy(error = "No audio received") }
+            if ((audioQueue.isEmpty() && waitTime >= 5000) || isStopRequested.get()) {
+                if (!isStopRequested.get()) {
+                    Log.e(TAG, "❌ No audio chunks received after 5 seconds")
+                    _audioState.update { it.copy(error = "No audio received") }
+                }
                 stopStreaming()
                 return@launch
             }
 
             _audioState.update { it.copy(isPlaying = true) }
 
-            // Stereo interleaved buffer
+            // Larger buffer for smoother playback
             val stereoBuffer = ShortArray(WRITE_CHUNK_SIZE * 2)
+            val audioBuffer = mutableListOf<Short>()
 
             // Playback loop
-            while (isActive && (isPlaying.get() || audioQueue.isNotEmpty())) {
-                val audioData = audioQueue.poll()
+            while (isActive && !isStopRequested.get() &&
+                (isPlaying.get() || audioQueue.isNotEmpty())) {
 
-                if (audioData != null) {
-                    try {
-                        val leftData = audioData.pcmDataLeft
-                        val rightData = audioData.pcmDataRight
+                // Accumulate multiple chunks for smoother playback
+                while (audioBuffer.size < WRITE_CHUNK_SIZE * 2 && audioQueue.isNotEmpty()) {
+                    val audioData = audioQueue.poll()
+                    audioData?.let {
+                        val leftData = it.pcmDataLeft
+                        val rightData = it.pcmDataRight
                         val totalSamples = minOf(leftData.size, rightData.size)
 
-                        // Process in chunks to avoid buffer overflow
-                        var offset = 0
-                        while (offset < totalSamples && isActive && isPlaying.get()) {
-                            val samplesToWrite = minOf(WRITE_CHUNK_SIZE, totalSamples - offset)
-
-                            // Interleave stereo channels for this chunk
-                            for (i in 0 until samplesToWrite) {
-                                stereoBuffer[i * 2] = leftData[offset + i]      // Left
-                                stereoBuffer[i * 2 + 1] = rightData[offset + i] // Right
-                            }
-
-                            // Write stereo data
-                            val written = audioTrack?.write(
-                                stereoBuffer,
-                                0,
-                                samplesToWrite * 2, // Double for stereo
-                                AudioTrack.WRITE_BLOCKING
-                            ) ?: 0
-
-                            if (written > 0) {
-                                offset += written / 2 // Divide by 2 because stereo
-                            } else if (written == 0) {
-                                // Buffer full, wait a bit
-                                delay(10)
-                            } else {
-                                Log.e(TAG, "AudioTrack write error: $written")
-                                break
-                            }
+                        // Add interleaved stereo data to buffer
+                        for (i in 0 until totalSamples) {
+                            audioBuffer.add(leftData[i])
+                            audioBuffer.add(rightData[i])
                         }
 
-                        if (offset >= totalSamples) {
-                            val played = chunksPlayed.incrementAndGet()
-                            Log.d(TAG, "🔊 Played HIGH QUALITY chunk ${audioData.chunkId} (${totalSamples} samples)")
-                            Log.d(TAG, "📊 Progress: $played/${chunksReceived.get()} chunks")
+                        Log.d(TAG, "📊 Added chunk ${it.chunkId} to buffer (${totalSamples} samples)")
 
-                            _audioState.update {
-                                it.copy(
-                                    bufferLevel = audioQueue.size,
-                                    chunksPlayed = played,
-                                    naturalness = 1.0f // Maximum quality
-                                )
-                            }
+                        // Update state
+                        val played = chunksPlayed.incrementAndGet()
+                        _audioState.update { state ->
+                            state.copy(
+                                bufferLevel = audioQueue.size,
+                                chunksPlayed = played,
+                                naturalness = 1.0f
+                            )
                         }
+                    }
+                }
 
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Playback error", e)
+                // Write accumulated audio in larger chunks
+                if (audioBuffer.isNotEmpty()) {
+                    val samplesToWrite = minOf(audioBuffer.size, stereoBuffer.size)
+
+                    // Copy from buffer to array
+                    for (i in 0 until samplesToWrite) {
+                        stereoBuffer[i] = audioBuffer.removeAt(0)
+                    }
+
+                    // Write to AudioTrack
+                    val written = audioTrack?.write(
+                        stereoBuffer,
+                        0,
+                        samplesToWrite,
+                        AudioTrack.WRITE_NON_BLOCKING // Use non-blocking for smoother playback
+                    ) ?: 0
+
+                    if (written < 0) {
+                        Log.e(TAG, "AudioTrack write error: $written")
                     }
                 } else {
+                    // No data available, wait a bit
                     delay(10)
                 }
             }
 
             Log.d(TAG, "🛑 High quality playback ended")
+            isPlaying.set(false)
             _audioState.update { it.copy(isPlaying = false) }
         }
     }
@@ -740,78 +766,6 @@ class GeminiKillerAudioSystem @Inject constructor(
         }
     }
 
-    // Harmonic enhancer for richness
-    inner class HarmonicEnhancer {
-        fun enhance(
-            leftChannel: ShortArray,
-            rightChannel: ShortArray
-        ): Pair<ShortArray, ShortArray> {
-            val enhancedLeft = leftChannel.copyOf()
-            val enhancedRight = rightChannel.copyOf()
-
-            // Simple harmonic generation
-            for (i in 2 until enhancedLeft.size - 2) {
-                // Generate 2nd harmonic (octave)
-                val harmonic2ndL = (leftChannel[i] * 0.05f).toInt().toShort()
-                val harmonic2ndR = (rightChannel[i] * 0.05f).toInt().toShort()
-
-                // Generate 3rd harmonic (warmth)
-                val harmonic3rdL = (leftChannel[i] * 0.03f * sin(i * 0.01f)).toInt().toShort()
-                val harmonic3rdR = (rightChannel[i] * 0.03f * sin(i * 0.01f + PI / 4)).toInt().toShort()
-
-                // Mix harmonics
-                enhancedLeft[i] = (enhancedLeft[i] + harmonic2ndL + harmonic3rdL).toShort()
-                enhancedRight[i] = (enhancedRight[i] + harmonic2ndR + harmonic3rdR).toShort()
-            }
-
-            return enhancedLeft to enhancedRight
-        }
-    }
-
-    // Studio quality processor
-    inner class StudioQualityProcessor {
-        fun process(
-            leftChannel: ShortArray,
-            rightChannel: ShortArray,
-            previousTail: Pair<ShortArray, ShortArray>?
-        ): Pair<ShortArray, ShortArray> {
-            val processedLeft = leftChannel.copyOf()
-            val processedRight = rightChannel.copyOf()
-
-            // Apply gentle compression
-            for (i in processedLeft.indices) {
-                processedLeft[i] = compress(processedLeft[i])
-                processedRight[i] = compress(processedRight[i])
-            }
-
-            // Apply soft limiting to prevent clipping
-            for (i in processedLeft.indices) {
-                processedLeft[i] = softLimit(processedLeft[i])
-                processedRight[i] = softLimit(processedRight[i])
-            }
-
-            return processedLeft to processedRight
-        }
-
-        private fun compress(sample: Short): Short {
-            val normalized = sample / 32768f
-            val compressed = normalized.coerceIn(-1f, 1f) * 0.9f // Headroom
-            return (compressed * 32767f).toInt().toShort()
-        }
-
-        private fun softLimit(sample: Short): Short {
-            val normalized = sample / 32768f
-            val limited = tanh(normalized * 0.7f) / 0.7f
-            return (limited * 32767f * 0.95f).toInt().toShort() // 95% to prevent clipping
-        }
-
-        private fun tanh(x: Float): Float {
-            val ex = exp(x)
-            val emx = exp(-x)
-            return (ex - emx) / (ex + emx)
-        }
-    }
-
     private suspend fun fadeOutAndStop() {
         Log.d(TAG, "🔇 Studio quality fade out starting")
 
@@ -819,6 +773,8 @@ class GeminiKillerAudioSystem @Inject constructor(
         val fadeDelay = 25L
 
         for (i in fadeSteps downTo 0) {
+            if (isStopRequested.get()) break
+
             val volume = (i.toFloat() / fadeSteps).pow(2) // Exponential fade
             audioTrack?.setVolume(volume)
             delay(fadeDelay)
@@ -854,6 +810,11 @@ class GeminiKillerAudioSystem @Inject constructor(
     private fun setupFirebaseListener(messageId: String) {
         Log.d(TAG, "🔥 Setting up Firebase listener for HIGH QUALITY audio")
 
+        // Clean up any existing listener first
+        firebaseListener?.let { listener ->
+            currentStreamRef?.removeEventListener(listener)
+        }
+
         val streamRef = database.getReference("$AUDIO_STREAMS_PATH/$messageId/chunks")
         currentStreamRef = streamRef
 
@@ -861,6 +822,8 @@ class GeminiKillerAudioSystem @Inject constructor(
 
         firebaseListener = object : ChildEventListener {
             override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
+                if (isStopRequested.get()) return
+
                 val chunkId = snapshot.key ?: return
 
                 if (processedChunks.contains(chunkId)) {
@@ -923,10 +886,13 @@ class GeminiKillerAudioSystem @Inject constructor(
         streamRef.addChildEventListener(firebaseListener!!)
         Log.d(TAG, "✅ Firebase listener attached for HIGH QUALITY audio")
 
-        // Safety timeout
-        audioScope.launch {
+        // Safety timeout with separate job
+        timeoutJob?.cancel()
+        timeoutJob = audioScope.launch {
             delay(60000)
-            if (_audioState.value.currentMessageId == messageId && chunksReceived.get() == 0) {
+            if (!isStopRequested.get() &&
+                _audioState.value.currentMessageId == messageId &&
+                chunksReceived.get() == 0) {
                 Log.w(TAG, "⏱️ Timeout - no chunks received")
                 _audioState.update { it.copy(error = "Timeout waiting for audio") }
                 stopStreaming()
@@ -946,12 +912,12 @@ class GeminiKillerAudioSystem @Inject constructor(
         val resultLeft = inLeft.copyOf()
         val resultRight = inRight.copyOf()
 
-        // Simple linear crossfade
+        // Crossfade più aggressivo per transizioni più fluide
         for (i in 0 until fadeLength) {
-            val fadeIn = i.toFloat() / fadeLength
+            val fadeIn = (i.toFloat() / fadeLength).pow(0.5f) // Curva più veloce
             val fadeOut = 1f - fadeIn
 
-            // Mix with tail (using tail for both channels for simplicity)
+            // Mix con tail
             resultLeft[i] = ((resultLeft[i] * fadeIn) + (outgoingTail[i] * fadeOut)).toInt().toShort()
             resultRight[i] = ((resultRight[i] * fadeIn) + (outgoingTail[i] * fadeOut * 0.8f)).toInt().toShort()
         }
@@ -962,9 +928,15 @@ class GeminiKillerAudioSystem @Inject constructor(
     fun stopStreaming() {
         Log.d(TAG, "🛑 Stopping high quality voice streaming")
 
+        // Set stop flag first
+        isStopRequested.set(true)
         isPlaying.set(false)
-        playbackJob?.cancel()
 
+        // Cancel all jobs
+        playbackJob?.cancel()
+        timeoutJob?.cancel()
+
+        // Remove Firebase listener
         firebaseListener?.let { listener ->
             currentStreamRef?.removeEventListener(listener)
             Log.d(TAG, "Firebase listener removed")
@@ -972,16 +944,22 @@ class GeminiKillerAudioSystem @Inject constructor(
         firebaseListener = null
         currentStreamRef = null
 
+        // Clear audio queue and reset counters
         audioQueue.clear()
         chunksReceived.set(0)
         chunksPlayed.set(0)
         lastChunkTail = null
+        previousEmotion = VoiceEmotion.NEUTRAL
 
+        // Release audio effects
         releaseAudioEffects()
 
+        // Stop and release AudioTrack
         audioTrack?.apply {
             try {
-                stop()
+                if (playState == AudioTrack.PLAYSTATE_PLAYING) {
+                    stop()
+                }
                 flush()
                 release()
             } catch (e: Exception) {
@@ -990,9 +968,12 @@ class GeminiKillerAudioSystem @Inject constructor(
         }
         audioTrack = null
 
+        // Reset state completely
         _audioState.update {
             AudioState()
         }
+
+        Log.d(TAG, "✅ Audio system stopped and cleaned up")
     }
 
     private fun releaseAudioEffects() {
@@ -1008,6 +989,8 @@ class GeminiKillerAudioSystem @Inject constructor(
             bassBoost = null
             virtualizer = null
             dynamicsProcessing = null
+
+            Log.d(TAG, "Audio effects released")
         } catch (e: Exception) {
             Log.e(TAG, "Error releasing audio effects", e)
         }

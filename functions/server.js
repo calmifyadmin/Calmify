@@ -170,13 +170,12 @@ class RealisticBreathingModel {
       const airConsumption = this.calculateAirConsumption(word, emotionalState);
       this.currentCapacity -= airConsumption;
 
-      // Condizioni per respirare
+      // Condizioni per respirare - MOLTO MENO FREQUENTI
       const needsBreath =
-        this.currentCapacity < 20 ||
-        (this.currentCapacity < 40 && word.match(/[.!?]/)) ||
-        wordsSinceBreath > 15 ||
-        charactersSinceBreath > 80 ||
-        (emotionalState === 'excited' && this.currentCapacity < 50);
+        this.currentCapacity < 10 || // Solo quando davvero necessario
+        wordsSinceBreath > 25 || // Aumentato da 15
+        charactersSinceBreath > 150 || // Aumentato da 80
+        (emotionalState === 'excited' && this.currentCapacity < 30); // Ridotto da 50
 
       if (needsBreath) {
         const breathType = this.determineBreathType(this.currentCapacity, emotionalState);
@@ -186,7 +185,7 @@ class RealisticBreathingModel {
           duration: this.getBreathDuration(breathType)
         });
 
-        this.currentCapacity = breathType === 'deep' ? 100 : 80;
+        this.currentCapacity = breathType === 'deep' ? 100 : 90; // Più capacità
         wordsSinceBreath = 0;
         charactersSinceBreath = 0;
       }
@@ -223,11 +222,12 @@ class RealisticBreathingModel {
   }
 
   insertBreath(type) {
+    // Pause MOLTO più brevi per non spezzare il discorso
     const breathConfigs = {
-      quick: '<break time="200ms"/>',
-      normal: '<break time="400ms"/>',
-      deep: '<break time="600ms"/>',
-      sigh: '<break time="800ms"/><prosody pitch="-20%"><break time="200ms"/></prosody>'
+      quick: '<break time="100ms"/>', // Ridotto da 200ms
+      normal: '<break time="200ms"/>', // Ridotto da 400ms
+      deep: '<break time="300ms"/>', // Ridotto da 600ms
+      sigh: '<break time="400ms"/><prosody pitch="-20%"><break time="100ms"/></prosody>' // Ridotto
     };
 
     return breathConfigs[type] || breathConfigs.normal;
@@ -235,7 +235,6 @@ class RealisticBreathingModel {
 }
 
 // Funzione principale per costruire SSML avanzato
-// Update the SSML builder to add more quality enhancements for maximum quality
 function buildAdvancedSSML(text, options) {
   const { emotion, isFirst, isLast, quality } = options;
   const speechEngine = new ConversationalSpeechEngine();
@@ -250,13 +249,10 @@ function buildAdvancedSSML(text, options) {
 
   // For maximum quality, add more natural elements
   if (quality === 'MAXIMUM') {
-    // Add a subtle ambient pause at the beginning
-    if (isFirst) {
-      ssml += '<break time="200ms"/>';
-    }
+    // NO initial pause - causes choppy start
 
-    // Add prosody wrapper for overall quality
-    ssml += '<prosody rate="98%" pitch="+0st">';
+    // Add prosody wrapper for overall quality with more natural rate
+    ssml += '<prosody rate="100%" pitch="+0st">'; // Normal rate, no slowdown
   }
 
   let currentWordIndex = 0;
@@ -266,11 +262,11 @@ function buildAdvancedSSML(text, options) {
       e.startIndex <= segment.startIndex && e.endIndex >= segment.endIndex
     ) || { emotion: 'neutral', intensity: 0.5 };
 
-    // Respiro iniziale se necessario
-    if (segmentIndex === 0 && !isFirst) {
-      ssml += '<break time="300ms"/>';
-    } else if (segment.text.length > 50) {
-      ssml += breathingModel.insertBreath('normal');
+    // Respiro iniziale se necessario - SOLO per frasi molto lunghe
+    if (segmentIndex === 0 && !isFirst && segment.text.length > 100) {
+      ssml += '<break time="150ms"/>'; // Ridotto da 300ms
+    } else if (segment.text.length > 150) { // Aumentato da 50
+      ssml += breathingModel.insertBreath('quick'); // Usa quick invece di normal
     }
 
     // Processa ogni parola del segmento
@@ -287,23 +283,17 @@ function buildAdvancedSSML(text, options) {
       const wordSpeed = calculateWordSpeed(word, segmentEmotion, wordIndex, words.length);
       const wordPitch = calculateWordPitch(word, segmentEmotion, wordIndex);
 
-      // For maximum quality, add more subtle variations
-      if (quality === 'MAXIMUM') {
-        // Add micro-timing variations
-        if (Math.random() < 0.05) {
-          ssml += '<break time="10ms"/>';
-        }
-      }
+      // NO micro-timing variations for maximum quality - causano interruzioni!
 
       // Gestione speciale per parole enfatiche
       if (isEmphaticWord(word)) {
-        ssml += `<prosody rate="${wordSpeed * 0.85}" pitch="${wordPitch}+10%">`;
+        ssml += `<prosody rate="${wordSpeed * 0.9}" pitch="${wordPitch}+5%">`; // Ridotto enfasi
         ssml += `<emphasis level="moderate">${word}</emphasis>`;
         ssml += '</prosody>';
-      } else if (isTransitionWord(word)) {
-        // Esitazione naturale su parole di transizione
-        ssml += `<break time="100ms"/>`;
-        ssml += `<prosody rate="${wordSpeed * 0.9}" pitch="${wordPitch}">`;
+      } else if (isTransitionWord(word) && wordIndex > 0) { // Solo se non è la prima parola
+        // Esitazione MINIMA su parole di transizione
+        ssml += `<break time="50ms"/>`; // Ridotto da 100ms
+        ssml += `<prosody rate="${wordSpeed}" pitch="${wordPitch}">`; // Rimosso rallentamento
         ssml += word;
         ssml += '</prosody>';
       } else {
@@ -336,9 +326,9 @@ function buildAdvancedSSML(text, options) {
     ssml += '</prosody>';
   }
 
-  // Pausa finale se non è l'ultimo chunk
+  // Pausa finale SOLO se non è l'ultimo chunk
   if (!isLast) {
-    ssml += '<break time="200ms"/>';
+    ssml += '<break time="100ms"/>'; // Ridotto da 200ms
   }
 
   ssml += '</speak>';
@@ -348,33 +338,33 @@ function buildAdvancedSSML(text, options) {
 function calculateWordSpeed(word, emotion, position, totalWords) {
   let baseSpeed = 1.0;
 
-  // Velocità base per emozione
+  // Velocità base per emozione - più naturali
   const emotionSpeeds = {
-    excited: 1.15,
-    happy: 1.05,
-    sad: 0.9,
-    thoughtful: 0.85,
-    emphatic: 0.95,
+    excited: 1.08, // Ridotto da 1.15
+    happy: 1.03, // Ridotto da 1.05
+    sad: 0.95, // Aumentato da 0.9
+    thoughtful: 0.92, // Aumentato da 0.85
+    emphatic: 0.98, // Aumentato da 0.95
     neutral: 1.0
   };
 
   baseSpeed = emotionSpeeds[emotion.emotion] || 1.0;
 
-  // Variazione basata sulla posizione nella frase
+  // MENO variazione basata sulla posizione
   if (position < 2) {
-    // Accelerazione all'inizio
-    baseSpeed *= 1.2;
+    // Leggera accelerazione all'inizio
+    baseSpeed *= 1.05; // Ridotto da 1.2
   } else if (position > totalWords - 3) {
-    // Rallentamento alla fine
+    // Nessun rallentamento alla fine per fluidità
     baseSpeed *= 1.0;
   }
 
-  // Variazione per intensità emotiva
-  baseSpeed *= (1.0 + emotion.intensity * 0.2);
+  // Meno variazione per intensità emotiva
+  baseSpeed *= (1.0 + emotion.intensity * 0.1); // Ridotto da 0.2
 
-  // Aggiungi variazione casuale naturale
-  const randomVariation = 1.1 + Math.random() * 0.1;
-  baseSpeed *= randomVariation;
+  // Rimuovi variazione casuale per consistenza
+  // const randomVariation = 1.1 + Math.random() * 0.1;
+  // baseSpeed *= randomVariation;
 
   return baseSpeed.toFixed(2);
 }
@@ -426,38 +416,37 @@ function isTransitionWord(word) {
 }
 
 function shouldInsertMicroPause(word, position, words) {
-  // Pausa dopo virgola
+  // Pausa SOLO dopo virgola, non prima
   if (word.includes(',')) return true;
 
-  // Pausa prima di congiunzioni
-  if (position < words.length - 1 && isTransitionWord(words[position + 1])) return true;
-
-  // Pausa occasionale per naturalezza (10% di probabilità)
-  return Math.random() < 0.1;
+  // NO pause casuali - erano queste che spezzettavano il parlato!
+  return false;
 }
 
 function calculateMicroPauseDuration(word, emotion) {
-  let baseDuration = 50;
+  // Pause molto più brevi
+  let baseDuration = 30;
 
-  if (word.includes(',')) baseDuration = 150;
-  if (word.includes(':') || word.includes(';')) baseDuration = 200;
+  if (word.includes(',')) baseDuration = 100; // Ridotto da 150
+  if (word.includes(':') || word.includes(';')) baseDuration = 150; // Ridotto da 200
 
-  // Emozioni riflessive hanno pause più lunghe
-  if (emotion.emotion === 'thoughtful') baseDuration *= 1.5;
+  // Emozioni riflessive hanno pause leggermente più lunghe
+  if (emotion.emotion === 'thoughtful') baseDuration *= 1.2; // Ridotto da 1.5
 
-  // Aggiungi variazione casuale
-  return baseDuration + Math.random() * 50;
+  // Meno variazione casuale
+  return baseDuration + Math.random() * 20; // Ridotto da 50
 }
 
 function calculateInterSegmentPause(segment, emotion) {
-  let basePause = 300;
+  // Pause molto più brevi tra segmenti
+  let basePause = 150; // Ridotto da 300
 
-  if (segment.text.endsWith('.')) basePause = 400;
-  if (segment.text.endsWith('!')) basePause = 350;
-  if (segment.text.endsWith('?')) basePause = 450;
+  if (segment.text.endsWith('.')) basePause = 200; // Ridotto da 400
+  if (segment.text.endsWith('!')) basePause = 175; // Ridotto da 350
+  if (segment.text.endsWith('?')) basePause = 225; // Ridotto da 450
 
-  // Pause più lunghe per contenuto riflessivo
-  if (segment.requiresReflection) basePause *= 1.3;
+  // Pause più brevi anche per contenuto riflessivo
+  if (segment.requiresReflection) basePause *= 1.1; // Ridotto da 1.3
 
   return basePause;
 }

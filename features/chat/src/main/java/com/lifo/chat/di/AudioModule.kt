@@ -1,7 +1,7 @@
 package com.lifo.chat.di
 
 import android.content.Context
-import com.lifo.chat.audio.GeminiKillerAudioSystem
+import com.lifo.chat.audio.OnDeviceNaturalVoiceSystem
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -15,9 +15,9 @@ object AudioModule {
 
     @Provides
     @Singleton
-    fun provideGeminiKillerAudioSystem(
+    fun provideOnDeviceNaturalVoiceSystem(
         @ApplicationContext context: Context
-    ): GeminiKillerAudioSystem {
-        return GeminiKillerAudioSystem(context)
+    ): OnDeviceNaturalVoiceSystem {
+        return OnDeviceNaturalVoiceSystem(context)
     }
 }
