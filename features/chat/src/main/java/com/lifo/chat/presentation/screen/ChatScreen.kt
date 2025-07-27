@@ -3,13 +3,14 @@ package com.lifo.chat.presentation.screen
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.os.Build
 import android.util.Log
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -31,12 +32,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.asComposeRenderEffect
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
@@ -51,7 +48,7 @@ import coil.compose.rememberAsyncImagePainter
 import com.lifo.chat.domain.model.ChatEvent
 import com.lifo.chat.domain.model.SmartSuggestion
 import com.lifo.chat.domain.model.SuggestionCategory
-import com.lifo.chat.domain.model.VoiceState
+import com.lifo.chat.presentation.viewmodel.VoiceState
 import com.lifo.chat.domain.model.StreamingMessage
 import com.lifo.chat.presentation.components.ChatBubble
 import com.lifo.chat.presentation.components.ChatInput
@@ -59,18 +56,15 @@ import com.lifo.chat.presentation.viewmodel.ChatViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.lifo.mongo.repository.ChatMessage
-import com.lifo.mongo.repository.ChatSession
-import com.lifo.mongo.repository.MessageStatus
 import androidx.compose.ui.draw.shadow
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.Image
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.Canvas
-import androidx.compose.ui.graphics.BlendMode
-import kotlin.math.PI
-import kotlin.math.sin
-import kotlin.math.cos
-
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import kotlin.math.*
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+@RequiresApi(Build.VERSION_CODES.S_V2)
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun ChatScreen(
@@ -100,11 +94,11 @@ fun ChatScreen(
         }
     }
 
-    // Auto-scroll ottimizzato con smooth scrolling
+    // Auto-scroll naturale con smooth scrolling
     LaunchedEffect(uiState.messages.size, uiState.streamingMessage) {
         val totalItems = uiState.messages.size + (if (uiState.streamingMessage != null) 1 else 0)
         if (totalItems > 0) {
-            delay(50) // Delay ridotto per scrolling più veloce
+            delay(100) // Delay breve per animazione fluida
             try {
                 listState.animateScrollToItem(
                     index = totalItems - 1,
@@ -116,12 +110,19 @@ fun ChatScreen(
         }
     }
 
+    // Voice state animation
+    val voiceIndicatorAlpha by animateFloatAsState(
+        targetValue = if (voiceState.isSpeaking) 1f else 0f,
+        animationSpec = tween(300),
+        label = "voiceAlpha"
+    )
+
     Scaffold(
         modifier = modifier
             .fillMaxSize()
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            ChatTopBar(
+            NaturalChatTopBar(
                 title = uiState.currentSession?.title ?: "AI Chat",
                 scrollBehavior = scrollBehavior,
                 userPhotoUrl = userPhotoUrl,
@@ -150,25 +151,7 @@ fun ChatScreen(
         },
         bottomBar = {
             Column {
-                // Smart suggestions con animazioni fluide
-                AnimatedVisibility(
-                    visible = !uiState.sessionStarted &&
-                            uiState.messages.isEmpty() &&
-                            uiState.streamingMessage == null &&
-                            suggestions.isNotEmpty(),
-                    enter = expandVertically() + fadeIn(),
-                    exit = shrinkVertically() + fadeOut()
-                ) {
-                    SmartSuggestionsRow(
-                        suggestions = suggestions,
-                        onSuggestionClick = { suggestion ->
-                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            viewModel.onEvent(ChatEvent.UseSuggestion(suggestion))
-                        }
-                    )
-                }
-
-                // Enhanced chat input
+                // Natural voice input con feedback emotivo
                 ChatInput(
                     value = uiState.inputText,
                     onValueChange = { viewModel.onEvent(ChatEvent.UpdateInputText(it)) },
@@ -176,7 +159,9 @@ fun ChatScreen(
                         viewModel.onEvent(ChatEvent.SendMessage(uiState.inputText))
                     },
                     isEnabled = !uiState.isLoading && uiState.streamingMessage == null,
-                    isStreaming = uiState.streamingMessage != null
+                    isStreaming = uiState.streamingMessage != null,
+                    currentEmotion = voiceState.currentEmotion,
+                    voiceNaturalness = voiceState.naturalness
                 )
             }
         }
@@ -187,9 +172,20 @@ fun ChatScreen(
                 .padding(paddingValues)
                 .background(MaterialTheme.colorScheme.background)
         ) {
+            // Voice wave background quando parla
+            if (voiceState.isSpeaking) {
+                VoiceWaveBackground(
+                    emotion = voiceState.currentEmotion,
+                    intensity = voiceState.emotionalIntensity,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .alpha(voiceIndicatorAlpha * 0.3f)
+                )
+            }
+
             // Main content
             if (uiState.messages.isNotEmpty() || uiState.streamingMessage != null) {
-                ChatMessagesList(
+                NaturalChatMessagesList(
                     messages = uiState.messages,
                     streamingMessage = uiState.streamingMessage,
                     listState = listState,
@@ -216,8 +212,8 @@ fun ChatScreen(
                     }
                 )
             } else if (!uiState.isLoading) {
-                // Enhanced empty state
-                EnhancedEmptyState(
+                // Enhanced empty state con animazioni naturali
+                NaturalEmptyState(
                     userName = userDisplayName,
                     suggestions = suggestions,
                     onSuggestionClick = { suggestion ->
@@ -227,26 +223,30 @@ fun ChatScreen(
                 )
             }
 
-            // Loading overlay con animazione migliorata
+            // Loading overlay naturale
             AnimatedVisibility(
                 visible = uiState.isLoading && uiState.messages.isEmpty(),
-                enter = fadeIn(),
-                exit = fadeOut()
+                enter = fadeIn(animationSpec = tween(500)),
+                exit = fadeOut(animationSpec = tween(300))
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background.copy(alpha = 0.95f)),
+                        .background(
+                            brush = Brush.radialGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.background,
+                                    MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
+                                )
+                            )
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.scale(1.2f),
-                        strokeWidth = 3.dp
-                    )
+                    NaturalLoadingIndicator()
                 }
             }
 
-            // Error snackbar con design migliorato
+            // Error snackbar elegante
             AnimatedVisibility(
                 visible = uiState.error != null,
                 enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
@@ -269,7 +269,7 @@ fun ChatScreen(
                     },
                     containerColor = MaterialTheme.colorScheme.errorContainer,
                     contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(16.dp)
                 ) {
                     Text(uiState.error ?: "")
                 }
@@ -294,7 +294,7 @@ fun ChatScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ChatTopBar(
+private fun NaturalChatTopBar(
     title: String,
     scrollBehavior: TopAppBarScrollBehavior,
     userPhotoUrl: String?,
@@ -317,22 +317,10 @@ private fun ChatTopBar(
                     enter = fadeIn() + expandVertically(),
                     exit = fadeOut() + shrinkVertically()
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.VolumeUp,
-                            contentDescription = null,
-                            modifier = Modifier.size(12.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = "Lifo sta parlando...",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
+                    VoiceStatusIndicator(
+                        emotion = voiceState.currentEmotion,
+                        naturalness = voiceState.naturalness
+                    )
                 }
             }
         },
@@ -345,24 +333,38 @@ private fun ChatTopBar(
             }
         },
         actions = {
-            // Auto-speak toggle
-            IconToggleButton(
-                checked = voiceState.autoSpeak,
-                onCheckedChange = { onToggleAutoSpeak() }
-            ) {
-                Icon(
-                    imageVector = if (voiceState.autoSpeak) {
-                        Icons.Filled.VolumeUp
-                    } else {
-                        Icons.Outlined.VolumeOff
-                    },
-                    contentDescription = "Auto-speak",
-                    tint = if (voiceState.autoSpeak) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    }
+            // Voice quality indicator
+            if (voiceState.isSpeaking) {
+                VoiceQualityIndicator(
+                    naturalness = voiceState.naturalness,
+                    modifier = Modifier.padding(end = 8.dp)
                 )
+            }
+
+            // Auto-speak toggle con animazione
+            AnimatedVisibility(
+                visible = true,
+                enter = scaleIn() + fadeIn(),
+                exit = scaleOut() + fadeOut()
+            ) {
+                IconToggleButton(
+                    checked = voiceState.autoSpeak,
+                    onCheckedChange = { onToggleAutoSpeak() }
+                ) {
+                    Icon(
+                        imageVector = if (voiceState.autoSpeak) {
+                            Icons.Filled.VolumeUp
+                        } else {
+                            Icons.Outlined.VolumeOff
+                        },
+                        contentDescription = "Auto-speak",
+                        tint = if (voiceState.autoSpeak) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    )
+                }
             }
 
             // User profile
@@ -378,22 +380,46 @@ private fun ChatTopBar(
                         .padding(end = 8.dp)
                         .size(32.dp)
                         .clip(CircleShape)
-                        .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
                 )
             }
 
-            IconButton(onClick = onNewChat) {
-                Icon(
-                    imageVector = Icons.Outlined.Add,
-                    contentDescription = "New Chat"
-                )
-            }
+            // Menu actions
+            var showMenu by remember { mutableStateOf(false) }
 
-            IconButton(onClick = onExportToDiary) {
-                Icon(
-                    imageVector = Icons.Outlined.Book,
-                    contentDescription = "Export to Diary"
-                )
+            Box {
+                IconButton(onClick = { showMenu = !showMenu }) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "Menu"
+                    )
+                }
+
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Nuova Chat") },
+                        onClick = {
+                            onNewChat()
+                            showMenu = false
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Outlined.Add, contentDescription = null)
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = { Text("Esporta nel Diario") },
+                        onClick = {
+                            onExportToDiary()
+                            showMenu = false
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Outlined.Book, contentDescription = null)
+                        }
+                    )
+                }
             }
         },
         scrollBehavior = scrollBehavior,
@@ -405,72 +431,84 @@ private fun ChatTopBar(
 }
 
 @Composable
-private fun SmartSuggestionsRow(
-    suggestions: List<SmartSuggestion>,
-    onSuggestionClick: (SmartSuggestion) -> Unit
+private fun VoiceStatusIndicator(
+    emotion: String,
+    naturalness: Float
 ) {
-    LazyRow(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        items(suggestions) { suggestion ->
-            SuggestionChip(
-                suggestion = suggestion,
-                onClick = { onSuggestionClick(suggestion) }
+        // Animated speaking icon
+        val infiniteTransition = rememberInfiniteTransition(label = "speaking")
+        val scale by infiniteTransition.animateFloat(
+            initialValue = 1f,
+            targetValue = 1.2f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(800),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "scale"
+        )
+
+        Icon(
+            imageVector = Icons.Outlined.GraphicEq,
+            contentDescription = null,
+            modifier = Modifier
+                .size(12.dp)
+                .scale(scale),
+            tint = MaterialTheme.colorScheme.primary
+        )
+
+        Text(
+            text = when (emotion) {
+                "HAPPY", "EXCITED" -> "Lifo sta parlando con entusiasmo..."
+                "SAD" -> "Lifo sta parlando con empatia..."
+                "THOUGHTFUL" -> "Lifo sta riflettendo..."
+                else -> "Lifo sta parlando..."
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
+@Composable
+private fun VoiceQualityIndicator(
+    naturalness: Float,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = CircleShape,
+        color = when {
+            naturalness > 0.8f -> MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+            naturalness > 0.5f -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f)
+            else -> MaterialTheme.colorScheme.error.copy(alpha = 0.1f)
+        },
+        modifier = modifier.size(32.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(
+                progress = naturalness,
+                modifier = Modifier.size(24.dp),
+                strokeWidth = 2.dp,
+                color = when {
+                    naturalness > 0.8f -> MaterialTheme.colorScheme.primary
+                    naturalness > 0.5f -> MaterialTheme.colorScheme.secondary
+                    else -> MaterialTheme.colorScheme.error
+                }
+            )
+            Text(
+                text = "${(naturalness * 100).toInt()}",
+                style = MaterialTheme.typography.labelSmall,
+                fontSize = 10.sp
             )
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SuggestionChip(
-    suggestion: SmartSuggestion,
-    onClick: () -> Unit
-) {
-    val categoryColor = when (suggestion.category) {
-        SuggestionCategory.MOOD -> MaterialTheme.colorScheme.tertiary
-        SuggestionCategory.PLANNING -> MaterialTheme.colorScheme.primary
-        SuggestionCategory.WELLNESS -> MaterialTheme.colorScheme.secondary
-        SuggestionCategory.REFLECTION -> MaterialTheme.colorScheme.primary
-        else -> MaterialTheme.colorScheme.surfaceVariant
-    }
-
-    SuggestionChip(
-        onClick = onClick,
-        label = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                if (suggestion.icon.isNotEmpty()) {
-                    Text(
-                        text = suggestion.icon,
-                        fontSize = 16.sp
-                    )
-                }
-                Text(
-                    text = suggestion.text,
-                    style = MaterialTheme.typography.labelMedium
-                )
-            }
-        },
-        modifier = Modifier.animateContentSize(),
-        colors = SuggestionChipDefaults.suggestionChipColors(
-            containerColor = categoryColor.copy(alpha = 0.1f),
-            labelColor = categoryColor
-        ),
-        border = BorderStroke(
-            width = 1.dp,
-            color = categoryColor.copy(alpha = 0.3f)
-        )
-    )
-}
-
-@Composable
-private fun ChatMessagesList(
+private fun NaturalChatMessagesList(
     messages: List<ChatMessage>,
     streamingMessage: StreamingMessage?,
     listState: LazyListState,
@@ -485,16 +523,17 @@ private fun ChatMessagesList(
         state = listState,
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(
             items = messages,
             key = { it.id },
             contentType = { if (it.isUser) "user" else "ai" }
         ) { message ->
-            EnhancedChatMessageItem(
+            NaturalChatMessageItem(
                 message = message,
                 isSpeaking = voiceState.currentSpeakingMessageId == message.id,
+                voiceState = voiceState,
                 onRetry = { onRetry(message) },
                 onDelete = { onDelete(message) },
                 onCopy = { onCopy(message) },
@@ -507,8 +546,9 @@ private fun ChatMessagesList(
                 key = streaming.id,
                 contentType = "streaming"
             ) {
-                StreamingMessageItem(
-                    content = streaming.content.toString()
+                NaturalStreamingMessageItem(
+                    content = streaming.content.toString(),
+                    emotion = voiceState.currentEmotion
                 )
             }
         }
@@ -516,9 +556,10 @@ private fun ChatMessagesList(
 }
 
 @Composable
-private fun EnhancedChatMessageItem(
+private fun NaturalChatMessageItem(
     message: ChatMessage,
     isSpeaking: Boolean,
+    voiceState: VoiceState,
     onRetry: () -> Unit,
     onDelete: () -> Unit,
     onCopy: () -> Unit,
@@ -528,52 +569,30 @@ private fun EnhancedChatMessageItem(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .animateContentSize()
+            .animateContentSize(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                )
+            )
     ) {
         ChatBubble(
             message = message,
             onRetry = onRetry,
             onDelete = onDelete,
-            onCopy = onCopy
+            onCopy = onCopy,
+            onSpeak = onSpeak,
+            isSpeaking = isSpeaking,
+            currentEmotion = voiceState.currentEmotion,
+            voiceNaturalness = voiceState.naturalness
         )
-
-        // Voice indicator per messaggi AI
-        if (!message.isUser) {
-            AnimatedVisibility(
-                visible = true,
-                enter = fadeIn() + scaleIn(),
-                exit = fadeOut() + scaleOut(),
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = 4.dp)
-            ) {
-                IconButton(
-                    onClick = onSpeak,
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        imageVector = if (isSpeaking) {
-                            Icons.Filled.Stop
-                        } else {
-                            Icons.Outlined.VolumeUp
-                        },
-                        contentDescription = if (isSpeaking) "Stop" else "Ascolta",
-                        modifier = Modifier.size(20.dp),
-                        tint = if (isSpeaking) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                        }
-                    )
-                }
-            }
-        }
     }
 }
 
 @Composable
-private fun StreamingMessageItem(
+private fun NaturalStreamingMessageItem(
     content: String,
+    emotion: String,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -581,7 +600,8 @@ private fun StreamingMessageItem(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        AvatarBubble()
+        // Animated avatar per streaming
+        StreamingAvatarBubble(emotion = emotion)
 
         Spacer(modifier = Modifier.width(12.dp))
 
@@ -596,7 +616,7 @@ private fun StreamingMessageItem(
             Spacer(modifier = Modifier.height(4.dp))
 
             if (content.isEmpty()) {
-                AiTypingIndicator()
+                NaturalAiTypingIndicator(emotion = emotion)
             } else {
                 Row {
                     Text(
@@ -604,7 +624,7 @@ private fun StreamingMessageItem(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    BlinkingCursor()
+                    NaturalBlinkingCursor()
                 }
             }
         }
@@ -612,7 +632,47 @@ private fun StreamingMessageItem(
 }
 
 @Composable
-private fun EnhancedEmptyState(
+private fun StreamingAvatarBubble(emotion: String) {
+    val infiniteTransition = rememberInfiniteTransition(label = "streaming")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3000, easing = LinearEasing)
+        ),
+        label = "rotation"
+    )
+
+    Box(modifier = Modifier.size(32.dp)) {
+        Surface(
+            shape = MaterialTheme.shapes.small,
+            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { rotationZ = rotation }
+        ) {}
+
+        Surface(
+            shape = MaterialTheme.shapes.small,
+            color = MaterialTheme.colorScheme.primaryContainer,
+            modifier = Modifier
+                .size(28.dp)
+                .align(Alignment.Center)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Outlined.AutoAwesome,
+                    contentDescription = "AI",
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NaturalEmptyState(
     userName: String?,
     suggestions: List<SmartSuggestion>,
     onSuggestionClick: (SmartSuggestion) -> Unit,
@@ -621,31 +681,33 @@ private fun EnhancedEmptyState(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Animated greeting
-        AnimatedGreeting(userName = userName)
+        // Animated natural greeting
+        NaturalAnimatedGreeting(userName = userName)
 
         Spacer(modifier = Modifier.height(48.dp))
 
-        // Suggestion cards in grid
+        // Descriptive text
         Text(
             text = "Come posso aiutarti oggi?",
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
+        // Natural suggestion cards
         suggestions.chunked(2).forEach { rowSuggestions ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 rowSuggestions.forEach { suggestion ->
-                    SuggestionCard(
+                    NaturalSuggestionCard(
                         suggestion = suggestion,
                         onClick = { onSuggestionClick(suggestion) },
                         modifier = Modifier.weight(1f)
@@ -661,67 +723,104 @@ private fun EnhancedEmptyState(
 }
 
 @Composable
-private fun AnimatedGreeting(userName: String?) {
+private fun NaturalAnimatedGreeting(userName: String?) {
     var isVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        delay(100)
+        delay(200)
         isVisible = true
     }
 
     val alpha by animateFloatAsState(
         targetValue = if (isVisible) 1f else 0f,
         animationSpec = tween(
-            durationMillis = 1200,
+            durationMillis = 1500,
             easing = FastOutSlowInEasing
         ),
         label = "alpha"
     )
 
-    val scale by animateFloatAsState(
-        targetValue = if (isVisible) 1f else 0.8f,
+    val offsetY by animateDpAsState(
+        targetValue = if (isVisible) 0.dp else 20.dp,
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioNoBouncy,
-            stiffness = Spring.StiffnessVeryLow
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
         ),
-        label = "scale"
+        label = "offsetY"
     )
 
-    Text(
-        text = "Ciao ${userName ?: ""}",
-        style = MaterialTheme.typography.displayMedium.copy(
-            fontSize = 48.sp,
-            letterSpacing = (-1).sp,
-            brush = Brush.linearGradient(
-                colors = listOf(
-                    MaterialTheme.colorScheme.primary,
-                    MaterialTheme.colorScheme.secondary
-                )
-            )
-        ),
-        fontWeight = FontWeight.Normal,
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .scale(scale)
             .alpha(alpha)
-    )
+            .offset(y = offsetY)
+    ) {
+        Text(
+            text = "Ciao${userName?.let { " $it" } ?: ""}",
+            style = MaterialTheme.typography.displayMedium.copy(
+                fontSize = 48.sp,
+                letterSpacing = (-1).sp
+            ),
+            fontWeight = FontWeight.Light,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Animated wave emoji
+        val waveRotation by rememberInfiniteTransition(label = "wave").animateFloat(
+            initialValue = -10f,
+            targetValue = 10f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(800),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "waveRotation"
+        )
+
+        Text(
+            text = "👋",
+            fontSize = 32.sp,
+            modifier = Modifier.graphicsLayer {
+                rotationZ = waveRotation
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SuggestionCard(
+private fun NaturalSuggestionCard(
     suggestion: SmartSuggestion,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var isPressed by remember { mutableStateOf(false) }
+
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy
+        ),
+        label = "scale"
+    )
+
     Card(
-        onClick = onClick,
+        onClick = {
+            isPressed = true
+            onClick()
+        },
         modifier = modifier
-            .height(100.dp)
-            .animateContentSize(),
+            .height(110.dp)
+            .scale(scale),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+        )
     ) {
         Column(
             modifier = Modifier
@@ -733,41 +832,206 @@ private fun SuggestionCard(
             if (suggestion.icon.isNotEmpty()) {
                 Text(
                     text = suggestion.icon,
-                    fontSize = 24.sp,
+                    fontSize = 28.sp,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
             }
             Text(
                 text = suggestion.text,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurface
             )
+        }
+    }
+
+    LaunchedEffect(isPressed) {
+        if (isPressed) {
+            delay(200)
+            isPressed = false
         }
     }
 }
 
-// Utility components
 @Composable
-private fun AvatarBubble() {
-    Surface(
-        shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.primaryContainer,
-        modifier = Modifier.size(32.dp)
+private fun NaturalLoadingIndicator() {
+    val infiniteTransition = rememberInfiniteTransition(label = "loading")
+
+    val scale1 by infiniteTransition.animateFloat(
+        initialValue = 0.5f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = keyframes {
+                durationMillis = 1200
+                0.5f at 0
+                1f at 400
+                0.5f at 800
+            }
+        ),
+        label = "scale1"
+    )
+
+    val scale2 by infiniteTransition.animateFloat(
+        initialValue = 0.5f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = keyframes {
+                durationMillis = 1200
+                0.5f at 200
+                1f at 600
+                0.5f at 1000
+            }
+        ),
+        label = "scale2"
+    )
+
+    val scale3 by infiniteTransition.animateFloat(
+        initialValue = 0.5f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = keyframes {
+                durationMillis = 1200
+                0.5f at 400
+                1f at 800
+                0.5f at 1200
+            }
+        ),
+        label = "scale3"
+    )
+
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                imageVector = Icons.Outlined.AutoAwesome,
-                contentDescription = "AI",
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
+        Box(
+            modifier = Modifier
+                .size(12.dp)
+                .scale(scale1)
+                .background(
+                    MaterialTheme.colorScheme.primary,
+                    shape = CircleShape
+                )
+        )
+        Box(
+            modifier = Modifier
+                .size(12.dp)
+                .scale(scale2)
+                .background(
+                    MaterialTheme.colorScheme.secondary,
+                    shape = CircleShape
+                )
+        )
+        Box(
+            modifier = Modifier
+                .size(12.dp)
+                .scale(scale3)
+                .background(
+                    MaterialTheme.colorScheme.tertiary,
+                    shape = CircleShape
+                )
+        )
+    }
+}
+
+@Composable
+private fun VoiceWaveBackground(
+    emotion: String,
+    intensity: Float,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "waves")
+
+    val wavePhase by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 2f * PI.toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = when (emotion) {
+                    "EXCITED" -> 2000
+                    "CALM", "THOUGHTFUL" -> 6000
+                    else -> 4000
+                },
+                easing = LinearEasing
+            )
+        ),
+        label = "wavePhase"
+    )
+
+    // Get the colors outside the Canvas scope
+    val waveColor = when (emotion) {
+        "HAPPY", "EXCITED" -> MaterialTheme.colorScheme.tertiary
+        "SAD" -> MaterialTheme.colorScheme.secondary
+        else -> MaterialTheme.colorScheme.primary
+    }.copy(alpha = 0.1f)
+
+    Canvas(modifier = modifier) {
+        val width = size.width
+        val height = size.height
+        val amplitude = 50f * intensity
+
+        val path = Path()
+        path.moveTo(0f, height / 2)
+
+        for (x in 0..width.toInt()) {
+            val y = height / 2 + amplitude * sin(x * 0.01f + wavePhase)
+            path.lineTo(x.toFloat(), y)
+        }
+
+        path.lineTo(width, height)
+        path.lineTo(0f, height)
+        path.close()
+
+        drawPath(
+            path = path,
+            color = waveColor  // Use the pre-calculated color
+        )
+    }
+}
+
+@Composable
+private fun NaturalAiTypingIndicator(emotion: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        repeat(3) { index ->
+            val infiniteTransition = rememberInfiniteTransition(label = "typing$index")
+
+            val offsetY by infiniteTransition.animateFloat(
+                initialValue = 0f,
+                targetValue = -8f,
+                animationSpec = infiniteRepeatable(
+                    animation = keyframes {
+                        durationMillis = 600
+                        0f at 0 + (index * 100)
+                        -8f at 150 + (index * 100)
+                        0f at 300 + (index * 100)
+                    }
+                ),
+                label = "offsetY$index"
+            )
+
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .offset(y = offsetY.dp)
+                    .background(
+                        color = when (emotion) {
+                            "EXCITED" -> MaterialTheme.colorScheme.tertiary
+                            "THOUGHTFUL" -> MaterialTheme.colorScheme.secondary
+                            else -> MaterialTheme.colorScheme.primary
+                        }.copy(alpha = 0.7f),
+                        shape = CircleShape
+                    )
             )
         }
     }
 }
 
 @Composable
-private fun BlinkingCursor() {
+private fun NaturalBlinkingCursor() {
     val infiniteTransition = rememberInfiniteTransition(label = "cursor")
     val alpha by infiniteTransition.animateFloat(
         initialValue = 1f,
@@ -780,48 +1044,11 @@ private fun BlinkingCursor() {
     )
 
     Text(
-        text = "▌",
+        text = "│",
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
-        modifier = Modifier.padding(start = 2.dp)
+        modifier = Modifier.padding(start = 1.dp)
     )
-}
-
-@Composable
-private fun AiTypingIndicator() {
-    Row(
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        repeat(3) { index ->
-            val infiniteTransition = rememberInfiniteTransition(label = "typing")
-            val alpha by infiniteTransition.animateFloat(
-                initialValue = 0.3f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(
-                    animation = keyframes {
-                        durationMillis = 1200
-                        0.3f at 0 + (index * 150)
-                        1f at 300 + (index * 150)
-                        0.3f at 600 + (index * 150)
-                    }
-                ),
-                label = "DotAlpha$index"
-            )
-
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .background(
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
-                        shape = MaterialTheme.shapes.small
-                    )
-            )
-
-            if (index < 2) {
-                Spacer(modifier = Modifier.width(4.dp))
-            }
-        }
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -843,26 +1070,32 @@ private fun NewSessionDialog(
                 value = title,
                 onValueChange = { title = it },
                 label = { Text("Titolo (opzionale)") },
-                placeholder = { Text("es. Riflessione serale") },
+                placeholder = { Text("es. Chat del ${java.time.LocalDate.now()}") },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
             )
         },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = {
                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     onCreate(title.ifEmpty { null })
-                }
+                },
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Text("Crea")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(12.dp)
+            ) {
                 Text("Annulla")
             }
-        }
+        },
+        shape = RoundedCornerShape(20.dp)
     )
 }
 

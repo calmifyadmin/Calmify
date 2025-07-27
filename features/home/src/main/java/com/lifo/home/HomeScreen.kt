@@ -3,11 +3,8 @@ package com.lifo.home
 import android.annotation.SuppressLint
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -16,19 +13,14 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
-import coil.compose.rememberAsyncImagePainter
 import com.lifo.mongo.repository.Diaries
 import com.lifo.ui.components.loading.*
 import com.lifo.util.model.RequestState
-import kotlinx.coroutines.delay
 import java.time.ZonedDateTime
 
 // Screen state management
@@ -60,7 +52,7 @@ internal fun HomeScreen(
     // Collect states
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
 
-    // Determine screen state - don't use rememberSaveable for sealed class
+    // Determine screen state
     val screenState = remember(diaries) {
         when (diaries) {
             is RequestState.Loading -> HomeScreenState.Loading
@@ -70,7 +62,7 @@ internal fun HomeScreen(
         }
     }
 
-    // FAB expansion state - this can be saved as it's a boolean
+    // FAB expansion state
     var fabExpanded by rememberSaveable { mutableStateOf(true) }
 
     // Use enterAlwaysScrollBehavior for consistent appearance
@@ -81,119 +73,147 @@ internal fun HomeScreen(
         fabExpanded = scrollBehavior.state.heightOffset > -50
     }
 
-    NavigationDrawer(
-        drawerState = drawerState,
-        onSignOutClicked = onSignOutClicked,
-        onDeleteAllClicked = onDeleteAllClicked,
-        userProfileImageUrl = userProfileImageUrl
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Scaffold(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .nestedScroll(scrollBehavior.nestedScrollConnection)
-                    .background(MaterialTheme.colorScheme.background),
-                containerColor = MaterialTheme.colorScheme.background,
-                topBar = {
-                    AnimatedHomeTopBar(
-                        scrollBehavior = scrollBehavior,
-                        onMenuClicked = onMenuClicked,
-                        dateIsSelected = dateIsSelected,
-                        onDateSelected = onDateSelected,
-                        onDateReset = onDateReset,
-                        userProfileImageUrl = userProfileImageUrl,
-                        screenState = screenState
-                    )
-                },
-                content = { paddingValues ->
-                    // Main content with proper state handling
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.background)
-                    ) {
-                        AnimatedContent(
-                            targetState = screenState,
-                            transitionSpec = {
-                                fadeIn(animationSpec = tween(300)) with
-                                        fadeOut(animationSpec = tween(200))
-                            },
-                            contentAlignment = Alignment.Center,
-                            label = "HomeContentTransition"
-                        ) { state ->
-                            when (state) {
-                                is HomeScreenState.Loading -> {
-                                    LoadingContent()
-                                }
-                                is HomeScreenState.Ready -> {
-                                    if (diaries is RequestState.Success) {
-                                        MissingPermissionsComponent {
-                                            HomeContent(
-                                                paddingValues = paddingValues,
-                                                diaryNotes = diaries.data,
-                                                onClick = navigateToWriteWithArgs,
-                                                isLoading = isLoading,
-                                                viewModel = viewModel
-                                            )
-                                        }
+    // Rimuoviamo il NavigationDrawer wrapper - ora usiamo solo il Scaffold
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier
+                .fillMaxSize()
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
+                .background(MaterialTheme.colorScheme.background),
+            containerColor = MaterialTheme.colorScheme.background,
+            topBar = {
+                AnimatedHomeTopBar(
+                    scrollBehavior = scrollBehavior,
+                    onMenuClicked = onMenuClicked,
+                    dateIsSelected = dateIsSelected,
+                    onDateSelected = onDateSelected,
+                    onDateReset = onDateReset,
+                    userProfileImageUrl = userProfileImageUrl,
+                    screenState = screenState
+                )
+            },
+            content = { paddingValues ->
+                // Main content with proper state handling
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background)
+                ) {
+                    AnimatedContent(
+                        targetState = screenState,
+                        transitionSpec = {
+                            fadeIn(animationSpec = tween(300)) with
+                                    fadeOut(animationSpec = tween(200))
+                        },
+                        contentAlignment = Alignment.Center,
+                        label = "HomeContentTransition"
+                    ) { state ->
+                        when (state) {
+                            is HomeScreenState.Loading -> {
+                                LoadingContent()
+                            }
+                            is HomeScreenState.Ready -> {
+                                if (diaries is RequestState.Success) {
+                                    MissingPermissionsComponent {
+                                        HomeContent(
+                                            paddingValues = paddingValues,
+                                            diaryNotes = diaries.data,
+                                            onClick = navigateToWriteWithArgs,
+                                            isLoading = isLoading,
+                                            viewModel = viewModel
+                                        )
                                     }
                                 }
-                                is HomeScreenState.Error -> {
-                                    ErrorContent(
-                                        message = state.message,
-                                        onRetry = { viewModel.fetchDiaries() }
-                                    )
-                                }
+                            }
+                            is HomeScreenState.Error -> {
+                                ErrorContent(
+                                    message = state.message,
+                                    onRetry = { viewModel.fetchDiaries() }
+                                )
                             }
                         }
                     }
                 }
-            )
+            }
+        )
 
-// Multiple FABs
+        // Multiple FABs - Explicitly positioned at bottom right
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            contentAlignment = Alignment.BottomEnd
+        ) {
             Column(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                modifier = Modifier.padding(vertical = 12.dp),
+                horizontalAlignment = Alignment.End,  // Allineamento esplicito a destra
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                // Chat FAB
+                // Chat FAB - sopra il Write FAB
                 AnimatedVisibility(
                     visible = screenState is HomeScreenState.Ready,
                     enter = scaleIn(
+                        initialScale = 0.3f,
                         animationSpec = spring(
                             dampingRatio = Spring.DampingRatioMediumBouncy,
                             stiffness = Spring.StiffnessLow
                         )
                     ) + fadeIn(),
-                    exit = scaleOut() + fadeOut()
+                    exit = scaleOut(targetScale = 0.3f) + fadeOut()
                 ) {
                     SmallFloatingActionButton(
                         onClick = navigateToChat,
                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.size(48.dp)  // Dimensione esplicita per il FAB piccolo
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Star,
-                            contentDescription = "AI Chat"
+                            contentDescription = "AI Chat",
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 }
 
-                // Write FAB (existing)
+                // Write FAB - sotto il Chat FAB
                 AnimatedVisibility(
                     visible = screenState is HomeScreenState.Ready,
                     enter = scaleIn(
+                        initialScale = 0.3f,
                         animationSpec = spring(
                             dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessLow
+                            stiffness = Spring.StiffnessLow,
+                            visibilityThreshold = 0.1f
                         )
                     ) + fadeIn(),
-                    exit = scaleOut() + fadeOut()
+                    exit = scaleOut(targetScale = 0.3f) + fadeOut()
                 ) {
-                    AnimatedFAB(
+                    ExtendedFloatingActionButton(
                         onClick = navigateToWrite,
-                        expanded = fabExpanded && !isLoading
+                        expanded = fabExpanded && !isLoading,
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "New Diary",
+                                modifier = Modifier.animateContentSize()
+                            )
+                        },
+                        text = {
+                            AnimatedVisibility(
+                                visible = fabExpanded && !isLoading,
+                                enter = fadeIn() + expandHorizontally(),
+                                exit = fadeOut() + shrinkHorizontally()
+                            ) {
+                                Text("Write")
+                            }
+                        },
+                        modifier = Modifier
+                            .animateContentSize(
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessLow
+                                )
+                            )
                     )
                 }
             }
@@ -232,7 +252,7 @@ private fun AnimatedFAB(
                     stiffness = Spring.StiffnessLow
                 )
             )
-            .padding(16.dp) // Aggiungi qui il padding
+            .padding(16.dp)
     )
 }
 
@@ -363,153 +383,4 @@ private fun ErrorContent(
             }
         }
     }
-}
-
-/**
- * Enhanced navigation drawer with animations
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-internal fun NavigationDrawer(
-    drawerState: DrawerState,
-    onSignOutClicked: () -> Unit,
-    onDeleteAllClicked: () -> Unit,
-    userProfileImageUrl: String?,
-    content: @Composable () -> Unit
-) {
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet(
-                modifier = Modifier.fillMaxWidth(0.85f),
-                drawerContainerColor = MaterialTheme.colorScheme.surface
-            ) {
-                // Animated drawer content
-                val drawerContentAlpha by animateFloatAsState(
-                    targetValue = if (drawerState.isOpen) 1f else 0f,
-                    animationSpec = tween(300),
-                    label = "DrawerAlpha"
-                )
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer { alpha = drawerContentAlpha }
-                ) {
-                    // Header with user info
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        color = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp)
-                        ) {
-                            // App Logo/Name with animation
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(bottom = 24.dp)
-                            ) {
-                                AnimatedVisibility(
-                                    visible = true,
-                                    enter = scaleIn() + fadeIn()
-                                ) {
-                                    Image(
-                                        painter = painterResource(id = com.lifo.ui.R.drawable.logo_calmify),
-                                        contentDescription = "Calmify Logo",
-                                        modifier = Modifier.size(40.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = "Calmify",
-                                    style = MaterialTheme.typography.headlineSmall
-                                )
-                            }
-
-                            // User Profile with animation
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Surface(
-                                    shape = CircleShape,
-                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                    modifier = Modifier
-                                        .size(56.dp)
-                                        .animateContentSize()
-                                ) {
-                                    Image(
-                                        painter = rememberAsyncImagePainter(
-                                            model = userProfileImageUrl,
-                                            error = painterResource(id = com.lifo.ui.R.drawable.google_logo_ic),
-                                            placeholder = painterResource(id = com.lifo.ui.R.drawable.google_logo_ic)
-                                        ),
-                                        contentDescription = "Profile Picture",
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .clip(CircleShape)
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.width(16.dp))
-
-                                Column {
-                                    Text(
-                                        text = "Welcome back!",
-                                        style = MaterialTheme.typography.titleMedium
-                                    )
-                                    Text(
-                                        text = "Manage your account",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-                    // Navigation Items with stagger animation
-                    NavigationDrawerItem(
-                        icon = {
-                            Icon(
-                                painter = painterResource(id = com.lifo.ui.R.drawable.google_logo_ic),
-                                contentDescription = null
-                            )
-                        },
-                        label = { Text("Sign Out") },
-                        selected = false,
-                        onClick = onSignOutClicked,
-                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                    )
-
-                    NavigationDrawerItem(
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Outlined.Delete,
-                                contentDescription = null
-                            )
-                        },
-                        label = { Text("Delete All Diaries") },
-                        selected = false,
-                        onClick = onDeleteAllClicked,
-                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                    )
-
-                    Spacer(modifier = Modifier.weight(1f))
-
-                    // Footer
-                    Text(
-                        text = "Version 1.0.0",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        modifier = Modifier.padding(16.dp)
-                    )
-                }
-            }
-        },
-        content = content
-    )
 }

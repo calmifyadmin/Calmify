@@ -1,70 +1,61 @@
 package com.lifo.chat.presentation.viewmodel
 
 import android.content.Context
-import android.media.AudioAttributes
-import android.media.MediaPlayer
 import android.os.Build
-import android.util.Base64
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
+import com.lifo.chat.audio.GeminiKillerAudioSystem
 import com.lifo.chat.domain.model.*
+import com.lifo.mongo.repository.ChatMessage
 import com.lifo.mongo.repository.ChatRepository
 import com.lifo.mongo.repository.MessageStatus
-import com.lifo.util.Constants.GOOGLE_CLOUD_API_KEY
 import com.lifo.util.model.RequestState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import okhttp3.*
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONArray
-import org.json.JSONObject
-import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
+import java.time.LocalTime
 import javax.inject.Inject
+import kotlin.math.*
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val repository: ChatRepository,
     @ApplicationContext private val context: Context,
-    savedStateHandle: SavedStateHandle
+    savedStateHandle: SavedStateHandle,
+    private val geminiKillerAudio: GeminiKillerAudioSystem
 ) : ViewModel() {
 
     companion object {
-        private const val TAG = "ChatViewModel"
+        private const val TAG = "NaturalChatViewModel"
         private const val KEY_SESSION_ID = "sessionId"
         private const val STREAMING_DEBOUNCE_MS = 50L
         private const val AUTO_SAVE_DELAY = 2000L
-        private const val CLOUD_TTS_URL = "https://texttospeech.googleapis.com/v1/text:synthesize"
     }
 
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
-    // Voice support
-    private var mediaPlayer: MediaPlayer? = null
+    // Voice state con sistema avanzato
     private val _voiceState = MutableStateFlow(VoiceState())
     val voiceState: StateFlow<VoiceState> = _voiceState.asStateFlow()
 
-    // Smart suggestions based on context
+    // Smart suggestions basate sul contesto
     private val _suggestions = MutableStateFlow<List<SmartSuggestion>>(emptyList())
     val suggestions: StateFlow<List<SmartSuggestion>> = _suggestions.asStateFlow()
 
-    // OkHttp client for Cloud TTS
-    private val okHttpClient = OkHttpClient.Builder()
-        .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-        .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-        .build()
+    // Analizzatori avanzati
+    private val emotionalAnalyzer = EmotionalAnalyzer()
+    private val conversationalContextAnalyzer = ConversationalContextAnalyzer()
+    private val naturalLanguageProcessor = NaturalLanguageProcessor()
+
+    // Conversation state
+    private val conversationHistory = mutableListOf<ConversationTurn>()
+    private var emotionalJourney = EmotionalJourney()
 
     private val sessionId: String? = savedStateHandle.get<String>(KEY_SESSION_ID)
     private var streamingJob: Job? = null
@@ -75,8 +66,11 @@ class ChatViewModel @Inject constructor(
     private var lastStreamingUpdate = 0L
 
     init {
-        Log.d(TAG, "ChatViewModel initialized with sessionId: $sessionId")
-        _voiceState.update { it.copy(isTTSReady = true) } // Cloud TTS sempre pronto
+        Log.d(TAG, "Natural ChatViewModel initialized with sessionId: $sessionId")
+
+        // Inizializza sistema audio naturale
+        initializeNaturalAudioSystem()
+
         loadSessions()
         if (sessionId != null) {
             loadSession(sessionId)
@@ -85,9 +79,33 @@ class ChatViewModel @Inject constructor(
                 createNewSession()
             }
         }
-        generateSmartSuggestions()
+        generateContextualSmartSuggestions()
     }
 
+    private fun initializeNaturalAudioSystem() {
+        viewModelScope.launch {
+            // Monitora lo stato del sistema audio naturale
+            geminiKillerAudio.audioState.collect { audioState ->
+                _voiceState.update { current ->
+                    current.copy(
+                        isSpeaking = audioState.isPlaying,
+                        isStreaming = audioState.isStreaming,
+                        bufferHealth = audioState.bufferLevel.toFloat() / 10f,
+                        chunksReceived = audioState.chunksReceived,
+                        chunksPlayed = audioState.chunksPlayed,
+                        currentEmotion = audioState.currentEmotion.name,
+                        naturalness = audioState.naturalness,
+                        emotionalIntensity = audioState.emotionalIntensity,
+                        error = audioState.error
+                    )
+                }
+            }
+        }
+
+        _voiceState.update { it.copy(isTTSReady = true) }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.S_V2)
     fun onEvent(event: ChatEvent) {
         if (_uiState.value.isNavigating) {
             Log.d(TAG, "Event ignored during navigation: $event")
@@ -95,7 +113,7 @@ class ChatViewModel @Inject constructor(
         }
 
         when (event) {
-            is ChatEvent.SendMessage -> sendMessage(event.content)
+            is ChatEvent.SendMessage -> sendMessageWithNaturalResponse(event.content)
             is ChatEvent.LoadSession -> loadSession(event.sessionId)
             is ChatEvent.CreateNewSession -> createNewSession(event.title)
             is ChatEvent.DeleteSession -> deleteSession(event.sessionId)
@@ -106,53 +124,92 @@ class ChatViewModel @Inject constructor(
             is ChatEvent.ClearError -> clearError()
             is ChatEvent.ShowNewSessionDialog -> showNewSessionDialog()
             is ChatEvent.HideNewSessionDialog -> hideNewSessionDialog()
-            is ChatEvent.SpeakMessage -> speakMessage(event.messageId)
+            is ChatEvent.SpeakMessage -> speakMessageWithNaturalVoice(event.messageId)
             is ChatEvent.StopSpeaking -> stopSpeaking()
             is ChatEvent.UseSuggestion -> useSuggestion(event.suggestion)
         }
     }
 
-    private fun speakMessage(messageId: String) {
+    /**
+     * Sistema TTS con voce naturale e analisi emotiva avanzata
+     */
+    @RequiresApi(Build.VERSION_CODES.S_V2)
+    private fun speakMessageWithNaturalVoice(messageId: String) {
+        Log.d(TAG, "🎙️ Speaking message with natural voice system: $messageId")
+
         val message = _uiState.value.messages.find { it.id == messageId }
         message?.let {
             if (!it.isUser) {
-                // Cancella qualsiasi TTS in corso
                 ttsJob?.cancel()
-                stopSpeaking()
 
                 ttsJob = viewModelScope.launch {
-                    _voiceState.update { state ->
-                        state.copy(
-                            isSpeaking = true,
-                            currentSpeakingMessageId = messageId
-                        )
-                    }
-
                     try {
-                        // Prepara il testo
-                        val textToSpeak = prepareTextForCloudTTS(it.content)
+                        // Analisi emotiva profonda del messaggio
+                        val emotionalAnalysis = emotionalAnalyzer.analyzeMessage(
+                            message = it,
+                            conversationHistory = conversationHistory,
+                            emotionalJourney = emotionalJourney
+                        )
 
-                        // Genera audio con Cloud TTS
-                        val audioFile = generateCloudTTSAudio(textToSpeak)
+                        // Analisi del contesto conversazionale
+                        val contextualAnalysis = conversationalContextAnalyzer.analyze(
+                            currentMessage = it,
+                            previousMessages = _uiState.value.messages.takeLast(10),
+                            userProfile = getUserProfile()
+                        )
 
-                        if (audioFile != null) {
-                            // Riproduci l'audio
-                            playAudioFile(audioFile, messageId)
-                        } else {
-                            Log.e(TAG, "Failed to generate audio")
-                            _voiceState.update { state ->
-                                state.copy(
-                                    isSpeaking = false,
-                                    currentSpeakingMessageId = null
-                                )
-                            }
+                        // Prepara il testo con marcatori prosodici naturali
+                        val naturalText = naturalLanguageProcessor.prepareForNaturalSpeech(
+                            text = it.content,
+                            emotionalAnalysis = emotionalAnalysis,
+                            contextualAnalysis = contextualAnalysis
+                        )
+
+                        // Determina posizione spaziale basata sul contesto
+                        val spatialPosition = determineDynamicSpatialPosition(
+                            message = it,
+                            emotionalAnalysis = emotionalAnalysis,
+                            messageIndex = _uiState.value.messages.indexOf(it)
+                        )
+
+                        // Estrai storia conversazionale recente per contesto
+                        val recentHistory = conversationHistory.takeLast(5).map { turn ->
+                            turn.content.take(100) // Primi 100 caratteri per contesto
                         }
+
+                        // Avvia streaming con voce naturale
+                        geminiKillerAudio.startUltraLowLatencyStreaming(
+                            messageId = messageId,
+                            text = naturalText,
+                            emotion = emotionalAnalysis.dominantEmotion,
+                            spatialPosition = spatialPosition,
+                            conversationHistory = recentHistory
+                        )
+
+                        // Aggiorna stato UI
+                        _voiceState.update { state ->
+                            state.copy(
+                                currentSpeakingMessageId = messageId,
+                                currentEmotion = emotionalAnalysis.dominantEmotion.name,
+                                emotionalIntensity = emotionalAnalysis.intensity,
+                                naturalness = 1.0f
+                            )
+                        }
+
+                        // Aggiorna journey emotivo
+                        emotionalJourney = emotionalJourney.addPoint(
+                            emotion = emotionalAnalysis.dominantEmotion,
+                            intensity = emotionalAnalysis.intensity,
+                            timestamp = System.currentTimeMillis()
+                        )
+
                     } catch (e: Exception) {
-                        Log.e(TAG, "Error in TTS", e)
+                        Log.e(TAG, "Error in natural voice TTS", e)
                         _voiceState.update { state ->
                             state.copy(
                                 isSpeaking = false,
-                                currentSpeakingMessageId = null
+                                currentSpeakingMessageId = null,
+                                error = "Errore voce naturale: ${e.message}"
                             )
                         }
                     }
@@ -161,540 +218,933 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    private fun prepareTextForCloudTTS(text: String): String {
-        return text
-            // Rimuovi emoji
-            .replace(Regex("[\\p{So}\\p{Cn}]"), "")
-            // Rimuovi markdown
-            .replace("**", "")
-            .replace("*", "")
-            .replace("#", "")
-            .replace("`", "")
-            .replace("```", "")
-            // Gestisci abbreviazioni
-            .replace("es.", "esempio")
-            .replace("ecc.", "eccetera")
-            .replace("etc.", "eccetera")
-            .replace("dott.", "dottore")
-            .replace("sig.", "signor")
-            .replace("sig.ra", "signora")
-            // Pulisci spazi
-            .replace("  ", " ")
-            .trim()
-    }
+    /**
+     * Analizzatore emotivo avanzato
+     */
+    inner class EmotionalAnalyzer {
+        fun analyzeMessage(
+            message: ChatMessage,
+            conversationHistory: List<ConversationTurn>,
+            emotionalJourney: EmotionalJourney
+        ): EmotionalAnalysis {
+            val content = message.content.lowercase()
 
-    // 1. Aggiorna la funzione generateCloudTTSAudio con configurazioni avanzate
-    private suspend fun generateCloudTTSAudio(text: String): File? {
-        return withContext(Dispatchers.IO) {
-            try {
-                // Preprocessa il testo per ottimizzare la naturalezza
-                val processedText = preprocessTextForNaturalSpeech(text)
-                val ssmlText = buildAdvancedSSMLText(processedText)
+            // Analisi multi-dimensionale dell'emozione
+            val emotionScores = mutableMapOf<GeminiKillerAudioSystem.VoiceEmotion, Float>()
 
-                val requestBody = JSONObject().apply {
-                    put("input", JSONObject().apply {
-                        put("ssml", ssmlText)
-                    })
-                    put("voice", JSONObject().apply {
-                        put("languageCode", "it-IT")
-                        put("name", "it-IT-Wavenet-A") // Voce femminile WaveNet italiana
-                        put("ssmlGender", "FEMALE")
-                    })
-                    put("audioConfig", JSONObject().apply {
-                        put("audioEncoding", "MP3")
-                        put("speakingRate", 1.3) // Velocità leggermente più lenta per naturalezza
-                        put("pitch", 1.1) // Tono più profondo e naturale
-                        put("volumeGainDb", 2.0) // Volume leggermente aumentato
-                        // Aggiungi effetti audio per maggiore naturalezza
-                        put("effectsProfileId", JSONArray().apply {
-                            put("handset-class-device") // Simula voce telefonica per intimità
-                        })
-                    })
-                }
+            // Analisi lessicale con pesi
+            val lexicalAnalysis = analyzeLexicalContent(content)
+            emotionScores.putAll(lexicalAnalysis)
 
-                Log.d(TAG, "Enhanced Cloud TTS Request: ${requestBody.toString(2)}")
+            // Analisi della punteggiatura e struttura
+            val structuralAnalysis = analyzeStructure(message.content)
+            mergeScores(emotionScores, structuralAnalysis, 0.3f)
 
-                val request = Request.Builder()
-                    .url("$CLOUD_TTS_URL?key=$GOOGLE_CLOUD_API_KEY")
-                    .addHeader("Content-Type", "application/json")
-                    .post(requestBody.toString().toRequestBody("application/json".toMediaType()))
-                    .build()
+            // Analisi del contesto conversazionale
+            val contextualEmotions = analyzeConversationalContext(conversationHistory)
+            mergeScores(emotionScores, contextualEmotions, 0.2f)
 
-                val response = okHttpClient.newCall(request).execute()
+            // Considera il journey emotivo
+            val journeyInfluence = emotionalJourney.getInfluence()
+            mergeScores(emotionScores, journeyInfluence, 0.1f)
 
-                if (response.isSuccessful) {
-                    response.body?.let { responseBody ->
-                        val json = JSONObject(responseBody.string())
-                        val audioContent = json.getString("audioContent")
+            // Trova emozione dominante
+            val dominantEmotion = emotionScores.maxByOrNull { it.value }?.key
+                ?: GeminiKillerAudioSystem.VoiceEmotion.NEUTRAL
 
-                        val audioBytes = Base64.decode(audioContent, Base64.DEFAULT)
-                        val tempFile = File(context.cacheDir, "tts_${System.currentTimeMillis()}.mp3")
+            // Calcola intensità complessiva
+            val intensity = calculateEmotionalIntensity(emotionScores, dominantEmotion)
 
-                        FileOutputStream(tempFile).use { fos ->
-                            fos.write(audioBytes)
-                        }
+            // Identifica emozioni secondarie
+            val secondaryEmotions = emotionScores
+                .filter { it.key != dominantEmotion && it.value > 0.3f }
+                .map { it.key }
 
-                        Log.d(TAG, "Enhanced audio file created: ${tempFile.absolutePath}")
-                        return@withContext tempFile
-                    }
-                } else {
-                    val errorBody = response.body?.string()
-                    Log.e(TAG, "Cloud TTS error: ${response.code} - $errorBody")
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error generating Cloud TTS audio", e)
-            }
-            null
-        }
-    }
-    // 2. Preprocessing avanzato del testo per naturalezza
-    private fun preprocessTextForNaturalSpeech(text: String): String {
-        return text
-            // Gestione emoticon testuali
-            .replace(":)", "")
-            .replace(":(", "")
-            .replace(":D", "")
-            .replace("XD", "")
-
-            // Gestione punteggiatura per pause naturali
-            .replace("...", "...")
-            .replace("!!", "!")
-            .replace("??", "?")
-
-            // Sostituzione abbreviazioni comuni italiane
-            .replace("cmq", "comunque")
-            .replace("nn", "non")
-            .replace("xché", "perché")
-            .replace("x", "per")
-            .replace("ke", "che")
-            .replace("tt", "tutto")
-            .replace("qlc", "qualcosa")
-            .replace("qlcn", "qualcuno")
-
-            // Gestione numeri
-            .replace(Regex("(\\d+)%"), "$1 percento")
-            .replace(Regex("€(\\d+)"), "$1 euro")
-            .replace(Regex("\\$(\\d+)"), "$1 dollari")
-
-            // Rimuovi parentesi mantenendo il contenuto
-            .replace(Regex("\\(([^)]+)\\)"), ", $1,")
-            .replace(Regex("\\[([^]]+)\\]"), ", $1,")
-
-            // Normalizza spazi
-            .replace(Regex("\\s+"), " ")
-            .trim()
-    }
-
-    // 3. SSML avanzato con variazioni naturali
-    private fun buildAdvancedSSMLText(text: String): String {
-        val escapedText = text
-            .replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\"", "&quot;")
-            .replace("'", "&apos;")
-
-        val ssmlBuilder = StringBuilder("<speak>")
-
-        // Aggiungi variazione iniziale per naturalezza
-        ssmlBuilder.append("<prosody rate=\"95%\" pitch=\"-2st\">")
-
-        // Dividi in frasi e applica variazioni
-        val sentences = escapedText.split(Regex("(?<=[.!?])\\s+"))
-
-        sentences.forEachIndexed { index, sentence ->
-            val trimmedSentence = sentence.trim()
-            if (trimmedSentence.isNotEmpty()) {
-                // Varia leggermente velocità e tono per ogni frase
-                val rateVariation = (90..100).random()
-                val pitchVariation = (-3..-1).random()
-
-                when {
-                    // Domande
-                    trimmedSentence.endsWith("?") -> {
-                        ssmlBuilder.append(
-                            "<prosody rate=\"${rateVariation}%\" pitch=\"+20%\">" +
-                                    "<emphasis level=\"moderate\">$trimmedSentence</emphasis>" +
-                                    "</prosody>"
-                        )
-                        ssmlBuilder.append("<break time=\"400ms\"/>")
-                    }
-
-                    // Esclamazioni
-                    trimmedSentence.endsWith("!") -> {
-                        ssmlBuilder.append(
-                            "<prosody rate=\"${rateVariation + 5}%\" pitch=\"+10%\" volume=\"+2dB\">" +
-                                    "<emphasis level=\"strong\">$trimmedSentence</emphasis>" +
-                                    "</prosody>"
-                        )
-                        ssmlBuilder.append("<break time=\"350ms\"/>")
-                    }
-
-                    // Frasi con virgole (pause interne)
-                    trimmedSentence.contains(",") -> {
-                        val parts = trimmedSentence.split(",")
-                        parts.forEachIndexed { partIndex, part ->
-                            ssmlBuilder.append(
-                                "<prosody rate=\"${rateVariation}%\" pitch=\"${pitchVariation}st\">" +
-                                        part.trim() +
-                                        "</prosody>"
-                            )
-                            if (partIndex < parts.size - 1) {
-                                ssmlBuilder.append("<break time=\"200ms\"/>")
-                            }
-                        }
-                        ssmlBuilder.append("<break time=\"300ms\"/>")
-                    }
-
-                    // Frasi normali
-                    else -> {
-                        // Aggiungi micro-pause casuali per naturalezza
-                        val words = trimmedSentence.split(" ")
-                        words.forEachIndexed { wordIndex, word ->
-                            ssmlBuilder.append(word)
-
-                            // Pause casuali tra parole per effetto naturale
-                            if (wordIndex < words.size - 1 && (0..10).random() > 7) {
-                                ssmlBuilder.append("<break time=\"50ms\"/>")
-                            } else if (wordIndex < words.size - 1) {
-                                ssmlBuilder.append(" ")
-                            }
-                        }
-                        ssmlBuilder.append("<break time=\"250ms\"/>")
-                    }
-                }
-
-                // Pausa più lunga tra paragrafi
-                if (index < sentences.size - 1 && trimmedSentence.endsWith(".") && (index + 1) % 3 == 0) {
-                    ssmlBuilder.append("<break time=\"500ms\"/>")
-                }
-            }
+            return EmotionalAnalysis(
+                dominantEmotion = dominantEmotion,
+                intensity = intensity,
+                secondaryEmotions = secondaryEmotions,
+                emotionScores = emotionScores,
+                confidence = calculateConfidence(emotionScores)
+            )
         }
 
-        ssmlBuilder.append("</prosody>")
+        private fun analyzeLexicalContent(content: String): Map<GeminiKillerAudioSystem.VoiceEmotion, Float> {
+            val scores = mutableMapOf<GeminiKillerAudioSystem.VoiceEmotion, Float>()
 
-        // Aggiungi respiro occasionale per lunghi testi
-        val ssmlText = ssmlBuilder.toString()
-        val breathPattern = Regex("(<break time=\"\\d+ms\"/>)")
-        var breathCount = 0
-        val finalSsml = breathPattern.replace(ssmlText) { matchResult ->
-            breathCount++
-            if (breathCount % 5 == 0) {
-                // Simula respiro ogni 5 pause
-                "${matchResult.value}<break time=\"100ms\"/><prosody volume=\"-6dB\"><break time=\"200ms\"/></prosody>"
-            } else {
-                matchResult.value
-            }
-        }
-
-        return "$finalSsml</speak>"
-    }
-
-    // 4. Migliora playAudioFile con effetti audio
-    private fun playAudioFile(audioFile: File, messageId: String) {
-        try {
-            mediaPlayer?.let { player ->
-                try {
-                    player.reset()
-                    player.release()
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error releasing previous media player", e)
-                }
-            }
-            mediaPlayer = null
-
-            mediaPlayer = MediaPlayer().apply {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    setAudioAttributes(
-                        AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_ASSISTANT)
-                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                            .setFlags(AudioAttributes.FLAG_AUDIBILITY_ENFORCED)
-                            .build()
-                    )
-                }
-
-                setDataSource(audioFile.absolutePath)
-
-                // Aggiungi effetto fade-in
-                setVolume(0f, 0f)
-
-                setOnPreparedListener { mp ->
-                    mp.start()
-
-                    // Fade-in graduale del volume
-                    viewModelScope.launch {
-                        for (i in 0..10) {
-                            val volume = i / 10f
-                            mp.setVolume(volume, volume)
-                            delay(50)
-                        }
-                    }
-
-                    Log.d(TAG, "Started playing enhanced audio")
-                }
-
-                setOnCompletionListener { mp ->
-                    Log.d(TAG, "Audio playback completed")
-
-                    // Fade-out prima di terminare
-                    viewModelScope.launch {
-                        for (i in 10 downTo 0) {
-                            val volume = i / 10f
-                            try {
-                                mp.setVolume(volume, volume)
-                                delay(30)
-                            } catch (e: Exception) {
-                                Log.e(TAG, "Error during fade-out", e)
-                            }
-                        }
-
-                        _voiceState.update { state ->
-                            state.copy(
-                                isSpeaking = false,
-                                currentSpeakingMessageId = null
-                            )
-                        }
-
-                        try {
-                            audioFile.delete()
-                            mp.reset()
-                            mp.release()
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Error cleaning up", e)
-                        }
-                        mediaPlayer = null
-                    }
-                }
-
-                setOnErrorListener { mp, what, extra ->
-                    Log.e(TAG, "MediaPlayer error: what=$what, extra=$extra")
-                    _voiceState.update { state ->
-                        state.copy(
-                            isSpeaking = false,
-                            currentSpeakingMessageId = null
-                        )
-                    }
-                    try {
-                        audioFile.delete()
-                        mp.reset()
-                        mp.release()
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error on cleanup", e)
-                    }
-                    mediaPlayer = null
-                    true
-                }
-
-                prepareAsync()
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error playing audio", e)
-            _voiceState.update { state ->
-                state.copy(
-                    isSpeaking = false,
-                    currentSpeakingMessageId = null
+            // Dizionario emotivo avanzato italiano
+            val emotionLexicon = mapOf(
+                GeminiKillerAudioSystem.VoiceEmotion.HAPPY to listOf(
+                    "felice", "contento", "gioia", "allegr", "diverten", "fantastic",
+                    "meraviglios", "splendid", "ottim", "benissimo", "evviva", "bene",
+                    "sorriso", "ridere", "positiv", "fortunat"
+                ),
+                GeminiKillerAudioSystem.VoiceEmotion.SAD to listOf(
+                    "triste", "dispiac", "dolor", "soffr", "pianc", "lacrim",
+                    "infelice", "depress", "malincon", "abbatt", "scoraggiat",
+                    "purtroppo", "male", "brutto", "difficile", "problema"
+                ),
+                GeminiKillerAudioSystem.VoiceEmotion.EXCITED to listOf(
+                    "eccitat", "entusiast", "incredibil", "wow", "straordinari",
+                    "fantastici", "emozion", "stupend", "magnifico", "sorprendent",
+                    "strepitos", "fenomenal", "sensazional"
+                ),
+                GeminiKillerAudioSystem.VoiceEmotion.THOUGHTFUL to listOf(
+                    "penso", "credo", "riflette", "considera", "forse", "probabilmente",
+                    "potrebbe", "sembra", "pare", "suppongo", "immagino", "chiedo",
+                    "domand", "perché", "come mai", "chissà"
+                ),
+                GeminiKillerAudioSystem.VoiceEmotion.CALM to listOf(
+                    "calma", "tranquill", "sereno", "pace", "rilassa", "respir",
+                    "quiete", "armonia", "equilibri", "stabile", "dolce", "lento"
+                ),
+                GeminiKillerAudioSystem.VoiceEmotion.EMPHATIC to listOf(
+                    "importante", "fondamental", "essenzial", "crucial", "vital",
+                    "necessari", "davvero", "assolutamente", "sicuramente", "proprio",
+                    "certamente", "indubbiamente", "senza dubbio", "ovviamente"
                 )
+            )
+
+            // Calcola scores basati sulla presenza di parole chiave
+            emotionLexicon.forEach { (emotion, keywords) ->
+                var score = 0f
+                keywords.forEach { keyword ->
+                    if (content.contains(keyword)) {
+                        score += 1f / keywords.size
+                    }
+                }
+                scores[emotion] = score
             }
-            try {
-                audioFile.delete()
-            } catch (ex: Exception) {
-                Log.e(TAG, "Error deleting temp file", ex)
+
+            // Normalizza scores
+            val total = scores.values.sum()
+            if (total > 0) {
+                scores.forEach { (emotion, score) ->
+                    scores[emotion] = score / total
+                }
             }
-            mediaPlayer = null
+
+            return scores
+        }
+
+        private fun analyzeStructure(text: String): Map<GeminiKillerAudioSystem.VoiceEmotion, Float> {
+            val scores = mutableMapOf<GeminiKillerAudioSystem.VoiceEmotion, Float>()
+
+            // Analisi punteggiatura
+            val exclamationCount = text.count { it == '!' }
+            val questionCount = text.count { it == '?' }
+            val ellipsisCount = text.windowed(3).count { it == "..." }
+
+            if (exclamationCount > 0) {
+                scores[GeminiKillerAudioSystem.VoiceEmotion.EXCITED] =
+                    minOf(1f, exclamationCount * 0.3f)
+            }
+
+            if (questionCount > 0) {
+                scores[GeminiKillerAudioSystem.VoiceEmotion.THOUGHTFUL] =
+                    minOf(1f, questionCount * 0.4f)
+            }
+
+            if (ellipsisCount > 0) {
+                scores[GeminiKillerAudioSystem.VoiceEmotion.THOUGHTFUL] =
+                    scores.getOrDefault(GeminiKillerAudioSystem.VoiceEmotion.THOUGHTFUL, 0f) + 0.3f
+            }
+
+            // Analisi lunghezza frasi
+            val sentences = text.split(Regex("[.!?]+")).filter { it.isNotBlank() }
+            val avgSentenceLength = sentences.map { it.split(" ").size }.average()
+
+            if (avgSentenceLength < 5) {
+                // Frasi brevi = più emotive/eccitate
+                scores[GeminiKillerAudioSystem.VoiceEmotion.EXCITED] =
+                    scores.getOrDefault(GeminiKillerAudioSystem.VoiceEmotion.EXCITED, 0f) + 0.2f
+            } else if (avgSentenceLength > 15) {
+                // Frasi lunghe = più riflessive
+                scores[GeminiKillerAudioSystem.VoiceEmotion.THOUGHTFUL] =
+                    scores.getOrDefault(GeminiKillerAudioSystem.VoiceEmotion.THOUGHTFUL, 0f) + 0.2f
+            }
+
+            return scores
+        }
+
+        private fun analyzeConversationalContext(
+            history: List<ConversationTurn>
+        ): Map<GeminiKillerAudioSystem.VoiceEmotion, Float> {
+            if (history.isEmpty()) {
+                return mapOf(GeminiKillerAudioSystem.VoiceEmotion.NEUTRAL to 1f)
+            }
+
+            // Analizza trend emotivo nella conversazione
+            val recentEmotions = history.takeLast(5).mapNotNull { it.detectedEmotion }
+
+            // Calcola momentum emotivo
+            val emotionCounts = recentEmotions.groupingBy { it }.eachCount()
+            val scores = mutableMapOf<GeminiKillerAudioSystem.VoiceEmotion, Float>()
+
+            emotionCounts.forEach { (emotion, count) ->
+                scores[emotion] = count.toFloat() / recentEmotions.size
+            }
+
+            return scores
+        }
+
+        private fun calculateEmotionalIntensity(
+            scores: Map<GeminiKillerAudioSystem.VoiceEmotion, Float>,
+            dominantEmotion: GeminiKillerAudioSystem.VoiceEmotion
+        ): Float {
+            val dominantScore = scores[dominantEmotion] ?: 0.5f
+            val variance = scores.values.map { (it - dominantScore).pow(2) }.average()
+
+            // Alta dominanza e bassa varianza = alta intensità
+            return minOf(1f, dominantScore * (1f - variance.toFloat()))
+        }
+
+        private fun calculateConfidence(scores: Map<GeminiKillerAudioSystem.VoiceEmotion, Float>): Float {
+            if (scores.isEmpty()) return 0f
+
+            val maxScore = scores.values.maxOrNull() ?: 0f
+            val secondMaxScore = scores.values.sortedDescending().getOrNull(1) ?: 0f
+
+            // Confidence alta quando c'è chiara distinzione
+            return minOf(1f, (maxScore - secondMaxScore) * 2f)
+        }
+
+        private fun mergeScores(
+            target: MutableMap<GeminiKillerAudioSystem.VoiceEmotion, Float>,
+            source: Map<GeminiKillerAudioSystem.VoiceEmotion, Float>,
+            weight: Float
+        ) {
+            source.forEach { (emotion, score) ->
+                target[emotion] = target.getOrDefault(emotion, 0f) + (score * weight)
+            }
         }
     }
 
-    // 5. Aggiungi gestione intelligente delle emozioni nel testo
-    private fun detectEmotionAndAdjustSSML(text: String): String {
-        val emotions = mapOf(
-            "felice" to mapOf("rate" to "105%", "pitch" to "+5%", "volume" to "+2dB"),
-            "triste" to mapOf("rate" to "90%", "pitch" to "-5%", "volume" to "-2dB"),
-            "arrabbiato" to mapOf("rate" to "110%", "pitch" to "+10%", "volume" to "+3dB"),
-            "preoccupato" to mapOf("rate" to "95%", "pitch" to "-2%", "volume" to "0dB"),
-            "entusiasta" to mapOf("rate" to "115%", "pitch" to "+15%", "volume" to "+4dB")
+    /**
+     * Analizzatore del contesto conversazionale
+     */
+    inner class ConversationalContextAnalyzer {
+        fun analyze(
+            currentMessage: ChatMessage,
+            previousMessages: List<ChatMessage>,
+            userProfile: UserProfile
+        ): ContextualAnalysis {
+            // Identifica il topic della conversazione
+            val topic = identifyTopic(currentMessage, previousMessages)
+
+            // Analizza il tono generale
+            val conversationTone = analyzeConversationTone(previousMessages)
+
+            // Identifica pattern di conversazione
+            val patterns = identifyConversationalPatterns(previousMessages)
+
+            // Calcola il livello di intimità/formalità
+            val intimacyLevel = calculateIntimacyLevel(previousMessages, userProfile)
+
+            // Identifica momenti chiave
+            val keyMoments = identifyKeyMoments(currentMessage, previousMessages)
+
+            return ContextualAnalysis(
+                topic = topic,
+                tone = conversationTone,
+                patterns = patterns,
+                intimacyLevel = intimacyLevel,
+                keyMoments = keyMoments,
+                userEngagement = calculateUserEngagement(previousMessages),
+                emotionalDepth = calculateEmotionalDepth(previousMessages)
+            )
+        }
+
+        private fun identifyTopic(
+            current: ChatMessage,
+            history: List<ChatMessage>
+        ): ConversationTopic {
+            val allContent = (history + current).joinToString(" ") { it.content }
+
+            return when {
+                allContent.contains(Regex("(sentiment|emozion|sent|stato d'animo)")) ->
+                    ConversationTopic.EMOTIONAL_SUPPORT
+                allContent.contains(Regex("(obiettiv|pianific|progett|futur)")) ->
+                    ConversationTopic.PLANNING
+                allContent.contains(Regex("(problem|difficolt|sfid|stress)")) ->
+                    ConversationTopic.PROBLEM_SOLVING
+                allContent.contains(Regex("(gratitudin|ringraz|apprezza|positiv)")) ->
+                    ConversationTopic.GRATITUDE
+                allContent.contains(Regex("(crescit|miglior|svilupp|progress)")) ->
+                    ConversationTopic.PERSONAL_GROWTH
+                else -> ConversationTopic.GENERAL
+            }
+        }
+
+        private fun analyzeConversationTone(messages: List<ChatMessage>): ConversationTone {
+            if (messages.isEmpty()) return ConversationTone.NEUTRAL
+
+            val recentMessages = messages.takeLast(5)
+            val positiveWords = listOf("bene", "ottimo", "felice", "grazie", "positiv")
+            val negativeWords = listOf("male", "problema", "difficile", "stress", "preoccup")
+
+            var positiveScore = 0
+            var negativeScore = 0
+
+            recentMessages.forEach { msg ->
+                val content = msg.content.lowercase()
+                positiveWords.forEach { if (content.contains(it)) positiveScore++ }
+                negativeWords.forEach { if (content.contains(it)) negativeScore++ }
+            }
+
+            return when {
+                positiveScore > negativeScore * 2 -> ConversationTone.POSITIVE
+                negativeScore > positiveScore * 2 -> ConversationTone.SUPPORTIVE
+                else -> ConversationTone.NEUTRAL
+            }
+        }
+
+        private fun calculateIntimacyLevel(
+            messages: List<ChatMessage>,
+            userProfile: UserProfile
+        ): Float {
+            // Base intimacy su durata e profondità della conversazione
+            val messageCount = messages.size
+            val avgMessageLength = messages.map { it.content.length }.average().toFloat()
+            val personalTopics = messages.count {
+                it.content.contains(Regex("(io|mio|mia|me|mi sento)"))
+            }.toFloat()
+
+            val intimacy = minOf(1f,
+                (messageCount / 20f) * 0.3f +
+                        (avgMessageLength / 200f) * 0.3f +
+                        (personalTopics / messages.size.toFloat()) * 0.4f
+            )
+            return intimacy
+        }
+
+        private fun identifyConversationalPatterns(
+            messages: List<ChatMessage>
+        ): List<ConversationPattern> {
+            val patterns = mutableListOf<ConversationPattern>()
+
+            // Pattern domanda-risposta
+            val questionCount = messages.count { it.content.contains("?") }
+            if (questionCount > messages.size / 3) {
+                patterns.add(ConversationPattern.QUESTION_ANSWER)
+            }
+
+            // Pattern narrativo
+            val longMessages = messages.count { it.content.length > 200 }
+            if (longMessages > messages.size / 2) {
+                patterns.add(ConversationPattern.NARRATIVE)
+            }
+
+            // Pattern emotivo
+            val emotiveWords = listOf("sento", "provo", "emozione", "sentiment")
+            val emotiveMessages = messages.count { msg ->
+                emotiveWords.any { msg.content.contains(it) }
+            }
+            if (emotiveMessages > messages.size / 3) {
+                patterns.add(ConversationPattern.EMOTIONAL_EXPLORATION)
+            }
+
+            return patterns
+        }
+
+        private fun identifyKeyMoments(
+            current: ChatMessage,
+            history: List<ChatMessage>
+        ): List<KeyMoment> {
+            val moments = mutableListOf<KeyMoment>()
+
+            // Breakthrough moment
+            if (current.content.contains(Regex("(capito|realizzato|compreso|ora vedo)"))) {
+                moments.add(KeyMoment.BREAKTHROUGH)
+            }
+
+            // Vulnerability moment
+            if (current.content.contains(Regex("(paura|timore|vulnerabil|fragil)"))) {
+                moments.add(KeyMoment.VULNERABILITY)
+            }
+
+            // Gratitude moment
+            if (current.content.contains(Regex("(grazie|grato|apprezzo|aiutato)"))) {
+                moments.add(KeyMoment.GRATITUDE)
+            }
+
+            return moments
+        }
+
+        private fun calculateUserEngagement(messages: List<ChatMessage>): Float {
+            if (messages.isEmpty()) return 0.5f
+
+            val userMessages = messages.filter { it.isUser }
+            if (userMessages.isEmpty()) return 0.5f
+
+            val avgLength = userMessages.map { it.content.length }.average()
+            val frequency = userMessages.size.toFloat() / messages.size
+
+            return minOf(1f, ((avgLength / 100f) * 0.5f + frequency * 0.5f).toFloat())
+        }
+
+        private fun calculateEmotionalDepth(messages: List<ChatMessage>): Float {
+            val emotionalWords = listOf(
+                "sento", "provo", "emozione", "sentiment", "cuore",
+                "anima", "profond", "intenso", "forte"
+            )
+
+            val emotionalMessages = messages.count { msg ->
+                emotionalWords.count { word -> msg.content.contains(word) } >= 2
+            }
+
+            return minOf(1f, emotionalMessages.toFloat() / messages.size)
+        }
+    }
+
+    /**
+     * Processore di linguaggio naturale per preparazione speech
+     */
+    inner class NaturalLanguageProcessor {
+        fun prepareForNaturalSpeech(
+            text: String,
+            emotionalAnalysis: EmotionalAnalysis,
+            contextualAnalysis: ContextualAnalysis
+        ): String {
+            var processedText = text
+
+            // Rimuovi formattazione markdown per speech pulito
+            processedText = cleanMarkdown(processedText)
+
+            // Aggiungi marcatori prosodici impliciti
+            processedText = addProsodicMarkers(processedText, emotionalAnalysis)
+
+            // Adatta il testo al contesto conversazionale
+            processedText = adaptToContext(processedText, contextualAnalysis)
+
+            // Aggiungi pause naturali basate sulla struttura
+            processedText = addNaturalPauses(processedText)
+
+            // Gestisci abbreviazioni e numeri
+            processedText = expandAbbreviations(processedText)
+
+            return processedText
+        }
+
+        private fun cleanMarkdown(text: String): String {
+            return text
+                .replace("**", "")
+                .replace("*", "")
+                .replace("#", "")
+                .replace("`", "")
+                .replace("```", "")
+                .replace("_", "")
+                .replace("[", "")
+                .replace("]", "")
+                .replace("(", "")
+                .replace(")", "")
+        }
+
+        private fun addProsodicMarkers(
+            text: String,
+            emotionalAnalysis: EmotionalAnalysis
+        ): String {
+            var marked = text
+
+            // Aggiungi enfasi su parole chiave basate sull'emozione
+            when (emotionalAnalysis.dominantEmotion) {
+                GeminiKillerAudioSystem.VoiceEmotion.EXCITED -> {
+                    val excitedWords = listOf("fantastico", "incredibile", "meraviglioso")
+                    excitedWords.forEach { word ->
+                        marked = marked.replace(word, word.uppercase())
+                    }
+                }
+                GeminiKillerAudioSystem.VoiceEmotion.THOUGHTFUL -> {
+                    // Aggiungi pause riflessive
+                    marked = marked.replace(", ", ", ... ")
+                }
+                GeminiKillerAudioSystem.VoiceEmotion.EMPHATIC -> {
+                    val emphaticWords = listOf("importante", "fondamentale", "essenziale")
+                    emphaticWords.forEach { word ->
+                        marked = marked.replace(word, "... $word ...")
+                    }
+                }
+                else -> {}
+            }
+
+            return marked
+        }
+
+        private fun adaptToContext(
+            text: String,
+            contextualAnalysis: ContextualAnalysis
+        ): String {
+            var adapted = text
+
+            // Adatta basandosi sul livello di intimità
+            if (contextualAnalysis.intimacyLevel > 0.7f) {
+                // Conversazione intima - aggiungi calore
+                adapted = adapted.replace("Tu", "Tu")
+                adapted = adapted.replace("possiamo", "possiamo insieme")
+            }
+
+            // Adatta basandosi sui key moments
+            if (contextualAnalysis.keyMoments.contains(KeyMoment.BREAKTHROUGH)) {
+                // Aggiungi enfasi celebrativa
+                adapted = adapted.replace("!", "!!")
+            }
+
+            return adapted
+        }
+
+        private fun addNaturalPauses(text: String): String {
+            var paused = text
+
+            // Aggiungi pause dopo congiunzioni
+            val conjunctions = listOf("ma", "però", "quindi", "inoltre", "comunque")
+            conjunctions.forEach { conj ->
+                paused = paused.replace(" $conj ", " $conj, ")
+            }
+
+            // Aggiungi pause prima di liste
+            paused = paused.replace(":", ": ...")
+
+            return paused
+        }
+
+        private fun expandAbbreviations(text: String): String {
+            val abbreviations = mapOf(
+                "es." to "esempio",
+                "ecc." to "eccetera",
+                "etc." to "eccetera",
+                "prof." to "professore",
+                "dott." to "dottore",
+                "sig." to "signor",
+                "sig.ra" to "signora"
+            )
+
+            var expanded = text
+            abbreviations.forEach { (abbr, full) ->
+                expanded = expanded.replace(abbr, full)
+            }
+
+            return expanded
+        }
+    }
+
+    /**
+     * Determina posizione spaziale dinamica basata sul contesto
+     */
+    private fun determineDynamicSpatialPosition(
+        message: ChatMessage,
+        emotionalAnalysis: EmotionalAnalysis,
+        messageIndex: Int
+    ): GeminiKillerAudioSystem.SpatialPosition {
+        // Base position su emozione
+        val basePosition = when (emotionalAnalysis.dominantEmotion) {
+            GeminiKillerAudioSystem.VoiceEmotion.CALM,
+            GeminiKillerAudioSystem.VoiceEmotion.THOUGHTFUL ->
+                GeminiKillerAudioSystem.SpatialPosition.CONVERSATIONAL
+
+            GeminiKillerAudioSystem.VoiceEmotion.EXCITED,
+            GeminiKillerAudioSystem.VoiceEmotion.HAPPY ->
+                GeminiKillerAudioSystem.SpatialPosition.INTIMATE
+
+            GeminiKillerAudioSystem.VoiceEmotion.SAD ->
+                GeminiKillerAudioSystem.SpatialPosition(0f, -0.1f, -0.7f) // Slightly lower
+
+            else -> GeminiKillerAudioSystem.SpatialPosition.CENTER
+        }
+
+        // Aggiungi movimento dinamico basato sulla progressione
+        val progressionFactor = messageIndex.toFloat() / max(10f, _uiState.value.messages.size.toFloat())
+        val dynamicX = sin(progressionFactor * PI * 2).toFloat() * 0.2f
+
+        return GeminiKillerAudioSystem.SpatialPosition(
+            x = basePosition.x + dynamicX,
+            y = basePosition.y,
+            z = basePosition.z
         )
-
-        // Rileva emozioni basiche nel testo
-        for ((emotion, settings) in emotions) {
-            if (text.toLowerCase().contains(emotion)) {
-                return "<prosody rate=\"${settings["rate"]}\" pitch=\"${settings["pitch"]}\" volume=\"${settings["volume"]}\">"
-            }
-        }
-
-        // Default neutro ma naturale
-        return "<prosody rate=\"95%\" pitch=\"-2st\" volume=\"+1dB\">"
-    }
-    private fun buildSSMLText(text: String): String {
-        // Escape caratteri speciali per XML/SSML
-        val escapedText = text
-            .replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\"", "&quot;")
-            .replace("'", "&apos;")
-
-        // Costruisci SSML con pause naturali e enfasi
-        val sentences = escapedText.split(Regex("(?<=[.!?])\\s+"))
-        val ssmlBuilder = StringBuilder("<speak>")
-
-        sentences.forEach { sentence ->
-            val trimmedSentence = sentence.trim()
-            if (trimmedSentence.isNotEmpty()) {
-                when {
-                    trimmedSentence.endsWith("?") -> {
-                        // Domande con intonazione ascendente
-                        ssmlBuilder.append("<prosody pitch=\"+10%\">$trimmedSentence</prosody>")
-                    }
-                    trimmedSentence.endsWith("!") -> {
-                        // Esclamazioni con enfasi
-                        ssmlBuilder.append("<emphasis level=\"moderate\">$trimmedSentence</emphasis>")
-                    }
-                    else -> {
-                        // Frasi normali
-                        ssmlBuilder.append(trimmedSentence)
-                    }
-                }
-                // Aggiungi pausa tra frasi
-                ssmlBuilder.append("<break time=\"300ms\"/>")
-            }
-        }
-
-        ssmlBuilder.append("</speak>")
-
-        val ssml = ssmlBuilder.toString()
-        Log.d(TAG, "Generated SSML: $ssml")
-        return ssml
     }
 
-
-    private fun stopSpeaking() {
-        ttsJob?.cancel()
-        try {
-            mediaPlayer?.let { player ->
-                if (player.isPlaying) {
-                    player.stop()
-                }
-                player.reset()
-                player.release()
-            }
-        } catch (e: IllegalStateException) {
-            Log.e(TAG, "Error stopping media player", e)
-        } finally {
-            mediaPlayer = null
-            _voiceState.update { it.copy(isSpeaking = false, currentSpeakingMessageId = null) }
-        }
-    }
-
-    private fun generateSmartSuggestions() {
+    /**
+     * Genera suggerimenti smart contestuali
+     */
+    private fun generateContextualSmartSuggestions() {
         viewModelScope.launch {
-            val hour = java.time.LocalTime.now().hour
-            val dayOfWeek = java.time.LocalDate.now().dayOfWeek
+            val hour = LocalTime.now().hour
+            val emotionalContext = emotionalJourney.getCurrentMood()
+            val conversationDepth = conversationHistory.size
 
-            val baseSuggestions = mutableListOf<SmartSuggestion>()
+            val suggestions = mutableListOf<SmartSuggestion>()
 
+            // Suggerimenti basati sull'ora e contesto emotivo
             when (hour) {
                 in 6..11 -> {
-                    baseSuggestions.add(
+                    // Mattina
+                    suggestions.add(
                         SmartSuggestion(
-                            id = "morning_1",
-                            text = "Come stai iniziando la giornata?",
+                            id = "morning_energy",
+                            text = "Come ti senti questa mattina?",
                             category = SuggestionCategory.MOOD,
                             icon = "☀️"
                         )
                     )
-                    baseSuggestions.add(
-                        SmartSuggestion(
-                            id = "morning_2",
-                            text = "Quali sono i tuoi obiettivi per oggi?",
-                            category = SuggestionCategory.PLANNING,
-                            icon = "📋"
+
+                    if (emotionalContext == GeminiKillerAudioSystem.VoiceEmotion.THOUGHTFUL) {
+                        suggestions.add(
+                            SmartSuggestion(
+                                id = "morning_reflection",
+                                text = "Cosa ti ha fatto riflettere ultimamente?",
+                                category = SuggestionCategory.REFLECTION,
+                                icon = "💭"
+                            )
                         )
-                    )
+                    }
                 }
+
                 in 12..17 -> {
-                    baseSuggestions.add(
+                    // Pomeriggio
+                    suggestions.add(
                         SmartSuggestion(
-                            id = "afternoon_1",
-                            text = "Come sta andando la tua giornata?",
+                            id = "afternoon_check",
+                            text = "Come sta procedendo la giornata?",
                             category = SuggestionCategory.CHECK_IN,
                             icon = "🌤️"
                         )
                     )
-                    baseSuggestions.add(
-                        SmartSuggestion(
-                            id = "afternoon_2",
-                            text = "Hai bisogno di una pausa?",
-                            category = SuggestionCategory.WELLNESS,
-                            icon = "☕"
+
+                    if (conversationDepth > 5) {
+                        suggestions.add(
+                            SmartSuggestion(
+                                id = "deep_dive",
+                                text = "Vuoi approfondire questo argomento?",
+                                category = SuggestionCategory.REFLECTION,
+                                icon = "🔍"
+                            )
                         )
-                    )
+                    }
                 }
+
                 in 18..23 -> {
-                    baseSuggestions.add(
+                    // Sera
+                    suggestions.add(
                         SmartSuggestion(
-                            id = "evening_1",
-                            text = "Vuoi riflettere sulla giornata?",
+                            id = "evening_reflection",
+                            text = "Cosa ti ha colpito di più oggi?",
                             category = SuggestionCategory.REFLECTION,
                             icon = "🌙"
                         )
                     )
-                    baseSuggestions.add(
+
+                    if (emotionalContext == GeminiKillerAudioSystem.VoiceEmotion.SAD ||
+                        emotionalContext == GeminiKillerAudioSystem.VoiceEmotion.THOUGHTFUL) {
+                        suggestions.add(
+                            SmartSuggestion(
+                                id = "evening_support",
+                                text = "C'è qualcosa che ti preoccupa?",
+                                category = SuggestionCategory.SUPPORT,
+                                icon = "🤗"
+                            )
+                        )
+                    }
+                }
+            }
+
+            // Suggerimenti basati sul journey emotivo
+            when (emotionalJourney.getTrend()) {
+                EmotionalTrend.IMPROVING -> {
+                    suggestions.add(
                         SmartSuggestion(
-                            id = "evening_2",
-                            text = "C'è qualcosa che ti preoccupa?",
+                            id = "celebrate_progress",
+                            text = "Parliamo dei tuoi progressi recenti",
+                            category = SuggestionCategory.WELLNESS,
+                            icon = "🎉"
+                        )
+                    )
+                }
+                EmotionalTrend.DECLINING -> {
+                    suggestions.add(
+                        SmartSuggestion(
+                            id = "offer_support",
+                            text = "Come posso supportarti meglio?",
                             category = SuggestionCategory.SUPPORT,
-                            icon = "💭"
+                            icon = "💝"
+                        )
+                    )
+                }
+                EmotionalTrend.STABLE -> {
+                    suggestions.add(
+                        SmartSuggestion(
+                            id = "explore_new",
+                            text = "Vuoi esplorare qualcosa di nuovo?",
+                            category = SuggestionCategory.LIFESTYLE,
+                            icon = "🌟"
                         )
                     )
                 }
             }
 
-            if (dayOfWeek == java.time.DayOfWeek.SATURDAY ||
-                dayOfWeek == java.time.DayOfWeek.SUNDAY) {
-                baseSuggestions.add(
+            // Aggiungi suggerimenti universali contestuali
+            if (conversationHistory.isEmpty()) {
+                suggestions.add(
                     SmartSuggestion(
-                        id = "weekend_1",
-                        text = "Come stai trascorrendo il weekend?",
-                        category = SuggestionCategory.LIFESTYLE,
-                        icon = "🎉"
+                        id = "first_share",
+                        text = "Raccontami di te",
+                        category = SuggestionCategory.CHECK_IN,
+                        icon = "👋"
                     )
                 )
             }
 
-            baseSuggestions.addAll(listOf(
-                SmartSuggestion(
-                    id = "general_1",
-                    text = "Ho bisogno di sfogarmi",
-                    category = SuggestionCategory.SUPPORT,
-                    icon = "💬"
-                ),
-                SmartSuggestion(
-                    id = "general_2",
-                    text = "Aiutami a gestire lo stress",
-                    category = SuggestionCategory.WELLNESS,
-                    icon = "🧘"
-                ),
-                SmartSuggestion(
-                    id = "general_3",
-                    text = "Voglio parlare dei miei progressi",
-                    category = SuggestionCategory.REFLECTION,
-                    icon = "📈"
-                )
-            ))
-
-            _suggestions.value = baseSuggestions.take(4)
+            _suggestions.value = suggestions.take(4) // Massimo 4 suggerimenti
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.S_V2)
+    private fun sendMessageWithNaturalResponse(content: String) {
+        val trimmedContent = content.trim()
+        if (trimmedContent.isEmpty()) {
+            Log.d(TAG, "Empty message, not sending")
+            return
+        }
+
+        // Aggiungi alla storia conversazionale
+        conversationHistory.add(
+            ConversationTurn(
+                content = trimmedContent,
+                isUser = true,
+                timestamp = System.currentTimeMillis(),
+                detectedEmotion = null // L'emozione dell'utente verrà analizzata dopo
+            )
+        )
+
+        _uiState.update { it.copy(sessionStarted = true) }
+
+        Log.d(TAG, "Sending message with natural response: $trimmedContent")
+        val currentSession = _uiState.value.currentSession
+
+        if (currentSession == null) {
+            Log.d(TAG, "No current session, creating new one")
+            createNewSession { session ->
+                Log.d(TAG, "New session created: ${session.id}")
+                sendMessageToSessionWithNaturalResponse(session.id, trimmedContent)
+            }
+        } else {
+            Log.d(TAG, "Using existing session: ${currentSession.id}")
+            sendMessageToSessionWithNaturalResponse(currentSession.id, trimmedContent)
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.S_V2)
+    private fun sendMessageToSessionWithNaturalResponse(sessionId: String, content: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(inputText = "") }
+
+            // Genera suggerimenti contestuali aggiornati
+            generateContextualSmartSuggestions()
+
+            when (val result = repository.sendMessage(sessionId, content)) {
+                is RequestState.Success -> {
+                    Log.d(TAG, "Message sent successfully, generating natural AI response")
+                    generateNaturalAiResponse(sessionId, content)
+                }
+                is RequestState.Error -> {
+                    Log.e(TAG, "Failed to send message", result.error)
+                    _uiState.update {
+                        it.copy(error = result.error.message ?: "Failed to send message")
+                    }
+                }
+                else -> {}
+            }
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.S_V2)
+    private fun generateNaturalAiResponse(sessionId: String, userMessage: String) {
+        streamingJob?.cancel()
+        streamingJob = viewModelScope.launch {
+            try {
+                val streamingMessage = StreamingMessage()
+                _uiState.update { it.copy(streamingMessage = streamingMessage) }
+
+                streamingBuffer.clear()
+                lastStreamingUpdate = System.currentTimeMillis()
+
+                // Usa contesto emotivo per generazione risposta
+                val emotionalContext = emotionalJourney.getCurrentMood()
+                val context = _uiState.value.messages.takeLast(10)
+
+                repository.generateAiResponse(sessionId, userMessage, context)
+                    .collect { result ->
+                        when (result) {
+                            is RequestState.Success -> {
+                                streamingBuffer.clear()
+                                streamingBuffer.append(result.data)
+
+                                val currentTime = System.currentTimeMillis()
+                                if (currentTime - lastStreamingUpdate > STREAMING_DEBOUNCE_MS ||
+                                    result.data.endsWith(".") ||
+                                    result.data.endsWith("!") ||
+                                    result.data.endsWith("?")) {
+
+                                    _uiState.update { state ->
+                                        state.copy(
+                                            streamingMessage = streamingMessage.copy(
+                                                content = StringBuilder(streamingBuffer.toString())
+                                            )
+                                        )
+                                    }
+                                    lastStreamingUpdate = currentTime
+                                }
+                            }
+                            is RequestState.Error -> {
+                                _uiState.update {
+                                    it.copy(
+                                        streamingMessage = null,
+                                        error = "Failed to generate response: ${result.error.message}"
+                                    )
+                                }
+                            }
+                            else -> {}
+                        }
+                    }
+
+                val finalContent = streamingBuffer.toString()
+                if (finalContent.isNotEmpty()) {
+                    // Aggiungi risposta AI alla storia
+                    conversationHistory.add(
+                        ConversationTurn(
+                            content = finalContent,
+                            isUser = false,
+                            timestamp = System.currentTimeMillis(),
+                            detectedEmotion = emotionalAnalyzer.analyzeMessage(
+                                ChatMessage(
+                                    id = "",
+                                    sessionId = sessionId,
+                                    content = finalContent,
+                                    isUser = false,
+                                    timestamp = java.time.Instant.now(),
+                                    status = MessageStatus.SENT
+                                ),
+                                conversationHistory,
+                                emotionalJourney
+                            ).dominantEmotion
+                        )
+                    )
+
+                    repository.saveAiMessage(sessionId, finalContent)
+                    _uiState.update { it.copy(streamingMessage = null) }
+
+                    // Auto-speak con voce naturale
+                    if (_voiceState.value.autoSpeak) {
+                        delay(500)
+                        val savedMessage = _uiState.value.messages.lastOrNull { !it.isUser }
+                        savedMessage?.let { speakMessageWithNaturalVoice(it.id) }
+                    }
+                }
+
+            } finally {
+                _uiState.update { it.copy(streamingMessage = null) }
+                generateContextualSmartSuggestions()
+            }
+        }
+    }
+
+    private fun getUserProfile(): UserProfile {
+        val user = FirebaseAuth.getInstance().currentUser
+        return UserProfile(
+            name = user?.displayName ?: "User",
+            conversationCount = conversationHistory.size,
+            averageSessionLength = _uiState.value.messages.size,
+            preferredTopics = identifyPreferredTopics()
+        )
+    }
+
+    private fun identifyPreferredTopics(): List<ConversationTopic> {
+        // Analizza la storia per identificare topic preferiti
+        return listOf(ConversationTopic.EMOTIONAL_SUPPORT) // Placeholder
+    }
+
+    fun getUserPhotoUrl(): String? {
+        return try {
+            FirebaseAuth.getInstance().currentUser?.photoUrl?.toString()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting user photo", e)
+            null
+        }
+    }
+
+    fun getUserDisplayName(): String? {
+        return try {
+            FirebaseAuth.getInstance().currentUser?.displayName?.toString()?.split(" ")?.firstOrNull()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting user name", e)
+            null
+        }
+    }
+
+    private fun createNewSession(title: String? = null, onComplete: ((com.lifo.mongo.repository.ChatSession) -> Unit)? = null) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isNavigating = true) }
+
+            when (val result = repository.createSession(title)) {
+                is RequestState.Success -> {
+                    Log.d(TAG, "Session created: ${result.data.id}")
+
+                    // Reset emotional journey per nuova sessione
+                    emotionalJourney = EmotionalJourney()
+                    conversationHistory.clear()
+
+                    _uiState.update {
+                        it.copy(
+                            currentSession = result.data,
+                            messages = emptyList(),
+                            showNewSessionDialog = false,
+                            sessionStarted = false,
+                            streamingMessage = null,
+                            isNavigating = false
+                        )
+                    }
+                    loadSession(result.data.id)
+                    onComplete?.invoke(result.data)
+                    generateContextualSmartSuggestions()
+                }
+                is RequestState.Error -> {
+                    Log.e(TAG, "Failed to create session", result.error)
+                    _uiState.update {
+                        it.copy(
+                            error = result.error.message ?: "Failed to create session",
+                            isNavigating = false
+                        )
+                    }
+                }
+                else -> {}
+            }
+        }
+    }
+
+    private fun stopSpeaking() {
+        ttsJob?.cancel()
+        geminiKillerAudio.stopStreaming()
+        _voiceState.update {
+            it.copy(
+                isSpeaking = false,
+                currentSpeakingMessageId = null,
+                currentEmotion = "neutral"
+            )
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.S_V2)
     private fun useSuggestion(suggestion: SmartSuggestion) {
         _uiState.update { it.copy(inputText = suggestion.text) }
         viewModelScope.launch {
             delay(300)
-            sendMessage(suggestion.text)
+            sendMessageWithNaturalResponse(suggestion.text)
         }
     }
 
+    fun toggleAutoSpeak() {
+        _voiceState.update { it.copy(autoSpeak = !it.autoSpeak) }
+    }
+
+    // Altri metodi esistenti rimangono invariati...
     private fun loadSessions() {
         viewModelScope.launch {
             repository.getAllSessions()
@@ -744,7 +1194,7 @@ class ChatViewModel @Inject constructor(
                                                 sessionStarted = messagesResult.data.isNotEmpty()
                                             )
                                         }
-                                        generateSmartSuggestions()
+                                        generateContextualSmartSuggestions()
                                     }
                                     is RequestState.Error -> {
                                         _uiState.update {
@@ -766,171 +1216,6 @@ class ChatViewModel @Inject constructor(
                         it.copy(
                             error = result.error.message ?: "Session not found",
                             isLoading = false,
-                            isNavigating = false
-                        )
-                    }
-                }
-                else -> {}
-            }
-        }
-    }
-
-    private fun sendMessage(content: String) {
-        val trimmedContent = content.trim()
-        if (trimmedContent.isEmpty()) {
-            Log.d(TAG, "Empty message, not sending")
-            return
-        }
-
-        _uiState.update { it.copy(sessionStarted = true) }
-
-        Log.d(TAG, "Sending message: $trimmedContent")
-        val currentSession = _uiState.value.currentSession
-
-        if (currentSession == null) {
-            Log.d(TAG, "No current session, creating new one")
-            createNewSession { session ->
-                Log.d(TAG, "New session created: ${session.id}")
-                sendMessageToSession(session.id, trimmedContent)
-            }
-        } else {
-            Log.d(TAG, "Using existing session: ${currentSession.id}")
-            sendMessageToSession(currentSession.id, trimmedContent)
-        }
-    }
-
-    private fun sendMessageToSession(sessionId: String, content: String) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(inputText = "") }
-
-            generateSmartSuggestions()
-
-            when (val result = repository.sendMessage(sessionId, content)) {
-                is RequestState.Success -> {
-                    Log.d(TAG, "Message sent successfully")
-                    generateAiResponseOptimized(sessionId, content)
-                }
-                is RequestState.Error -> {
-                    Log.e(TAG, "Failed to send message", result.error)
-                    _uiState.update {
-                        it.copy(error = result.error.message ?: "Failed to send message")
-                    }
-                }
-                else -> {}
-            }
-        }
-    }
-
-    private fun generateAiResponseOptimized(sessionId: String, userMessage: String) {
-        streamingJob?.cancel()
-        streamingJob = viewModelScope.launch {
-            try {
-                val streamingMessage = StreamingMessage()
-                _uiState.update { it.copy(streamingMessage = streamingMessage) }
-
-                streamingBuffer.clear()
-                lastStreamingUpdate = System.currentTimeMillis()
-
-                val context = _uiState.value.messages.takeLast(10)
-
-                repository.generateAiResponse(sessionId, userMessage, context)
-                    .collect { result ->
-                        when (result) {
-                            is RequestState.Success -> {
-                                streamingBuffer.clear()
-                                streamingBuffer.append(result.data)
-
-                                val currentTime = System.currentTimeMillis()
-                                if (currentTime - lastStreamingUpdate > STREAMING_DEBOUNCE_MS ||
-                                    result.data.endsWith(".") ||
-                                    result.data.endsWith("!") ||
-                                    result.data.endsWith("?")) {
-
-                                    _uiState.update { state ->
-                                        state.copy(
-                                            streamingMessage = streamingMessage.copy(
-                                                content = StringBuilder(streamingBuffer.toString())
-                                            )
-                                        )
-                                    }
-                                    lastStreamingUpdate = currentTime
-                                }
-                            }
-                            is RequestState.Error -> {
-                                _uiState.update {
-                                    it.copy(
-                                        streamingMessage = null,
-                                        error = "Failed to generate response: ${result.error.message}"
-                                    )
-                                }
-                            }
-                            else -> {}
-                        }
-                    }
-
-                val finalContent = streamingBuffer.toString()
-                if (finalContent.isNotEmpty()) {
-                    repository.saveAiMessage(sessionId, finalContent)
-                    _uiState.update { it.copy(streamingMessage = null) }
-
-                    if (_voiceState.value.autoSpeak) {
-                        delay(500)
-                        val savedMessage = _uiState.value.messages.lastOrNull { !it.isUser }
-                        savedMessage?.let { speakMessage(it.id) }
-                    }
-                }
-
-            } finally {
-                _uiState.update { it.copy(streamingMessage = null) }
-                generateSmartSuggestions()
-            }
-        }
-    }
-
-    fun getUserPhotoUrl(): String? {
-        return try {
-            FirebaseAuth.getInstance().currentUser?.photoUrl?.toString()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error getting user photo", e)
-            null
-        }
-    }
-
-    fun getUserDisplayName(): String? {
-        return try {
-            FirebaseAuth.getInstance().currentUser?.displayName?.toString()?.split(" ")?.firstOrNull()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error getting user name", e)
-            null
-        }
-    }
-
-    private fun createNewSession(title: String? = null, onComplete: ((com.lifo.mongo.repository.ChatSession) -> Unit)? = null) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isNavigating = true) }
-
-            when (val result = repository.createSession(title)) {
-                is RequestState.Success -> {
-                    Log.d(TAG, "Session created: ${result.data.id}")
-                    _uiState.update {
-                        it.copy(
-                            currentSession = result.data,
-                            messages = emptyList(),
-                            showNewSessionDialog = false,
-                            sessionStarted = false,
-                            streamingMessage = null,
-                            isNavigating = false
-                        )
-                    }
-                    loadSession(result.data.id)
-                    onComplete?.invoke(result.data)
-                    generateSmartSuggestions()
-                }
-                is RequestState.Error -> {
-                    Log.e(TAG, "Failed to create session", result.error)
-                    _uiState.update {
-                        it.copy(
-                            error = result.error.message ?: "Failed to create session",
                             isNavigating = false
                         )
                     }
@@ -983,13 +1268,14 @@ class ChatViewModel @Inject constructor(
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.S_V2)
     private fun retryMessage(messageId: String) {
         viewModelScope.launch {
             val message = _uiState.value.messages.find { it.id == messageId }
             if (message != null && message.isUser) {
                 when (val result = repository.retryMessage(messageId)) {
                     is RequestState.Success -> {
-                        generateAiResponseOptimized(message.sessionId, message.content)
+                        generateNaturalAiResponse(message.sessionId, message.content)
                     }
                     is RequestState.Error -> {
                         _uiState.update {
@@ -1045,10 +1331,6 @@ class ChatViewModel @Inject constructor(
         _uiState.update { it.copy(showNewSessionDialog = false) }
     }
 
-    fun toggleAutoSpeak() {
-        _voiceState.update { it.copy(autoSpeak = !it.autoSpeak) }
-    }
-
     override fun onCleared() {
         super.onCleared()
         streamingJob?.cancel()
@@ -1056,22 +1338,142 @@ class ChatViewModel @Inject constructor(
         autoSaveJob?.cancel()
         ttsJob?.cancel()
 
-        // Rilascia MediaPlayer in modo sicuro
-        try {
-            mediaPlayer?.let { player ->
-                player.reset()
-                player.release()
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error releasing media player in onCleared", e)
-        }
-        mediaPlayer = null
-
-        // Shutdown OkHttp
-        try {
-            okHttpClient.dispatcher.executorService.shutdown()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error shutting down OkHttp", e)
-        }
+        // Ferma sistema audio naturale
+        geminiKillerAudio.stopStreaming()
     }
 }
+
+// Data classes di supporto
+data class VoiceState(
+    val isTTSReady: Boolean = false,
+    val isSpeaking: Boolean = false,
+    val isStreaming: Boolean = false,
+    val currentSpeakingMessageId: String? = null,
+    val autoSpeak: Boolean = false,
+    val bufferHealth: Float = 1f,
+    val chunksReceived: Int = 0,
+    val chunksPlayed: Int = 0,
+    val currentEmotion: String = "neutral",
+    val naturalness: Float = 1.0f,
+    val emotionalIntensity: Float = 0.5f,
+    val error: String? = null
+)
+
+data class ConversationTurn(
+    val content: String,
+    val isUser: Boolean,
+    val timestamp: Long,
+    val detectedEmotion: GeminiKillerAudioSystem.VoiceEmotion?
+)
+
+data class EmotionalJourney(
+    private val points: List<EmotionPoint> = emptyList()
+) {
+    fun addPoint(
+        emotion: GeminiKillerAudioSystem.VoiceEmotion,
+        intensity: Float,
+        timestamp: Long
+    ): EmotionalJourney {
+        return copy(
+            points = points + EmotionPoint(emotion, intensity, timestamp)
+        ).let {
+            // Mantieni solo ultimi 50 punti
+            if (it.points.size > 50) {
+                it.copy(points = it.points.takeLast(50))
+            } else it
+        }
+    }
+
+    fun getCurrentMood(): GeminiKillerAudioSystem.VoiceEmotion {
+        if (points.isEmpty()) return GeminiKillerAudioSystem.VoiceEmotion.NEUTRAL
+
+        // Media pesata degli ultimi punti (più recenti hanno più peso)
+        val recentPoints = points.takeLast(10)
+        val weightedEmotions = mutableMapOf<GeminiKillerAudioSystem.VoiceEmotion, Float>()
+
+        recentPoints.forEachIndexed { index, point ->
+            val weight = (index + 1).toFloat() / recentPoints.size
+            weightedEmotions[point.emotion] =
+                weightedEmotions.getOrDefault(point.emotion, 0f) + (weight * point.intensity)
+        }
+
+        return weightedEmotions.maxByOrNull { it.value }?.key
+            ?: GeminiKillerAudioSystem.VoiceEmotion.NEUTRAL
+    }
+
+    fun getTrend(): EmotionalTrend {
+        if (points.size < 3) return EmotionalTrend.STABLE
+
+        val recent = points.takeLast(5).map { it.intensity }.average()
+        val previous = points.dropLast(5).takeLast(5).map { it.intensity }.average()
+
+        return when {
+            recent > previous + 0.2 -> EmotionalTrend.IMPROVING
+            recent < previous - 0.2 -> EmotionalTrend.DECLINING
+            else -> EmotionalTrend.STABLE
+        }
+    }
+
+    fun getInfluence(): Map<GeminiKillerAudioSystem.VoiceEmotion, Float> {
+        val influence = mutableMapOf<GeminiKillerAudioSystem.VoiceEmotion, Float>()
+        val recentPoints = points.takeLast(20)
+
+        recentPoints.forEach { point ->
+            influence[point.emotion] =
+                influence.getOrDefault(point.emotion, 0f) + (point.intensity / recentPoints.size)
+        }
+
+        return influence
+    }
+
+    data class EmotionPoint(
+        val emotion: GeminiKillerAudioSystem.VoiceEmotion,
+        val intensity: Float,
+        val timestamp: Long
+    )
+}
+
+enum class EmotionalTrend {
+    IMPROVING, STABLE, DECLINING
+}
+
+data class EmotionalAnalysis(
+    val dominantEmotion: GeminiKillerAudioSystem.VoiceEmotion,
+    val intensity: Float,
+    val secondaryEmotions: List<GeminiKillerAudioSystem.VoiceEmotion>,
+    val emotionScores: Map<GeminiKillerAudioSystem.VoiceEmotion, Float>,
+    val confidence: Float
+)
+
+data class ContextualAnalysis(
+    val topic: ConversationTopic,
+    val tone: ConversationTone,
+    val patterns: List<ConversationPattern>,
+    val intimacyLevel: Float,
+    val keyMoments: List<KeyMoment>,
+    val userEngagement: Float,
+    val emotionalDepth: Float
+)
+
+enum class ConversationTopic {
+    EMOTIONAL_SUPPORT, PLANNING, PROBLEM_SOLVING, GRATITUDE, PERSONAL_GROWTH, GENERAL
+}
+
+enum class ConversationTone {
+    POSITIVE, NEUTRAL, SUPPORTIVE
+}
+
+enum class ConversationPattern {
+    QUESTION_ANSWER, NARRATIVE, EMOTIONAL_EXPLORATION
+}
+
+enum class KeyMoment {
+    BREAKTHROUGH, VULNERABILITY, GRATITUDE
+}
+
+data class UserProfile(
+    val name: String,
+    val conversationCount: Int,
+    val averageSessionLength: Int,
+    val preferredTopics: List<ConversationTopic>
+)

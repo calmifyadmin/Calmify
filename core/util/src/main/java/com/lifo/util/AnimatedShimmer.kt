@@ -44,7 +44,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.lifo.ui.theme.Elevation
-import com.lifo.ui.theme.md_theme_dark_background
 import java.time.Instant
 
 @RequiresApi(Build.VERSION_CODES.O)

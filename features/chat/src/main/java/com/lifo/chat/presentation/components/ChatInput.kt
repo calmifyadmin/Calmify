@@ -8,8 +8,6 @@ import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
-import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -37,8 +35,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -53,6 +53,7 @@ import androidx.core.content.ContextCompat
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
+import kotlin.math.*
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
@@ -63,6 +64,8 @@ fun ChatInput(
     modifier: Modifier = Modifier,
     isEnabled: Boolean = true,
     isStreaming: Boolean = false,
+    currentEmotion: String = "NEUTRAL",
+    voiceNaturalness: Float = 1.0f,
     onStartListening: (() -> Unit)? = null,
     onStopListening: (() -> Unit)? = null
 ) {
@@ -74,15 +77,12 @@ fun ChatInput(
 
     // Voice states
     var isListening by remember { mutableStateOf(false) }
-    var isSpeaking by remember { mutableStateOf(false) }
     var hasRecordPermission by remember { mutableStateOf(false) }
     var transcribedText by remember { mutableStateOf("") }
     var showVoiceOverlay by remember { mutableStateOf(false) }
+    var voiceConfidence by remember { mutableStateOf(0f) }
 
-    // TTS
-    var tts by remember { mutableStateOf<TextToSpeech?>(null) }
-
-    // Speech recognizer
+    // Speech recognizer con configurazione italiana
     var speechRecognizer by remember { mutableStateOf<SpeechRecognizer?>(null) }
 
     // Permission launcher
@@ -91,33 +91,35 @@ fun ChatInput(
     ) { isGranted ->
         hasRecordPermission = isGranted
         if (isGranted) {
-            startListening(
+            startNaturalListening(
                 context = context,
                 speechRecognizer = speechRecognizer,
-                onStart = { isListening = true },
-                onResult = { result ->
-                    transcribedText = result
-                    onValueChange(value + " " + result)
+                onStart = {
+                    isListening = true
+                    showVoiceOverlay = true
                 },
-                onEnd = { isListening = false }
+                onResult = { result, confidence ->
+                    transcribedText = result
+                    voiceConfidence = confidence
+                },
+                onEnd = {
+                    isListening = false
+                    if (transcribedText.isNotEmpty()) {
+                        onValueChange(value + " " + transcribedText)
+                        transcribedText = ""
+                    }
+                }
             )
         }
     }
 
-    // Initialize TTS
+    // Initialize speech recognizer
     DisposableEffect(Unit) {
-        tts = TextToSpeech(context) { status ->
-            if (status == TextToSpeech.SUCCESS) {
-                tts?.language = Locale.ITALIAN
-                tts?.setSpeechRate(1.0f)
-                tts?.setPitch(1.0f)
-            }
+        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context).apply {
+            // Usa il riconoscimento vocale italiano
         }
 
-        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
-
         onDispose {
-            tts?.shutdown()
             speechRecognizer?.destroy()
         }
     }
@@ -130,7 +132,7 @@ fun ChatInput(
         ) == PackageManager.PERMISSION_GRANTED
     }
 
-    // Auto-focus
+    // Auto-focus intelligente
     LaunchedEffect(isEnabled, isStreaming) {
         if (isEnabled && !isStreaming && value.isEmpty() && !isListening) {
             delay(300)
@@ -142,18 +144,51 @@ fun ChatInput(
         }
     }
 
-    // Animation states
+    // Animation states con dinamiche naturali
     val sendButtonScale = remember { Animatable(1f) }
     val micButtonScale = remember { Animatable(1f) }
+    val inputFieldElevation = animateDpAsState(
+        targetValue = if (value.isNotEmpty() || isListening) 4.dp else 1.dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "elevation"
+    )
+
+    // Pulsazione naturale per registrazione
     val recordingPulse = rememberInfiniteTransition(label = "recording")
     val pulseScale by recordingPulse.animateFloat(
         initialValue = 1f,
-        targetValue = 1.2f,
+        targetValue = 1.15f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = FastOutSlowInEasing),
+            animation = tween(800, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "pulseScale"
+    )
+    val pulseAlpha by recordingPulse.animateFloat(
+        initialValue = 0.8f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulseAlpha"
+    )
+
+    // Colore dinamico basato sull'emozione
+    val emotionColor = when (currentEmotion) {
+        "HAPPY", "EXCITED" -> MaterialTheme.colorScheme.tertiary
+        "SAD", "THOUGHTFUL" -> MaterialTheme.colorScheme.secondary
+        "EMPHATIC" -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.primary
+    }
+
+    val animatedEmotionColor by animateColorAsState(
+        targetValue = emotionColor,
+        animationSpec = tween(600, easing = FastOutSlowInEasing),
+        label = "emotionColor"
     )
 
     Column(
@@ -163,53 +198,75 @@ fun ChatInput(
             .navigationBarsPadding()
             .imePadding(),
     ) {
-        // Voice overlay
+        // Voice overlay naturale
         AnimatedVisibility(
             visible = showVoiceOverlay,
-            enter = fadeIn() + slideInVertically(),
-            exit = fadeOut() + slideOutVertically()
+            enter = slideInVertically() + fadeIn(),
+            exit = slideOutVertically() + fadeOut()
         ) {
-            VoiceInputOverlay(
+            NaturalVoiceInputOverlay(
                 isListening = isListening,
                 transcribedText = transcribedText,
+                confidence = voiceConfidence,
                 onDismiss = {
                     showVoiceOverlay = false
-                    stopListening(speechRecognizer) { isListening = false }
+                    stopListening(speechRecognizer) {
+                        isListening = false
+                        if (transcribedText.isNotEmpty()) {
+                            onValueChange(value + " " + transcribedText)
+                            transcribedText = ""
+                        }
+                    }
                 }
+            )
+        }
+
+        // Indicatore di naturalezza vocale
+        AnimatedVisibility(
+            visible = isStreaming && voiceNaturalness > 0,
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut()
+        ) {
+            VoiceNaturalnessIndicator(
+                naturalness = voiceNaturalness,
+                emotion = currentEmotion,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
             )
         }
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp)
-                .padding(bottom = 8.dp, top = 8.dp)
+                .padding(horizontal = 12.dp)
+                .padding(bottom = 8.dp, top = 4.dp)
         ) {
             Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                tonalElevation = 0.dp,
+                modifier = Modifier
+                    .fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp),
+                tonalElevation = inputFieldElevation.value,
                 border = BorderStroke(
-                    width = if (isListening) 2.dp else 0.8.dp,
+                    width = if (isListening) 2.dp else 0.5.dp,
                     color = if (isListening) {
-                        MaterialTheme.colorScheme.primary
+                        animatedEmotionColor.copy(alpha = pulseAlpha)
                     } else {
-                        MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)
+                        MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
                     }
                 )
             ) {
                 Column {
-                    // Row 1: Input field
+                    // Input field principale
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+                            .padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // Campo di testo
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .padding(vertical = 8.dp),
+                                .padding(vertical = 12.dp),
                             contentAlignment = Alignment.CenterStart
                         ) {
                             BasicTextField(
@@ -221,7 +278,8 @@ fun ChatInput(
                                 textStyle = TextStyle(
                                     color = MaterialTheme.colorScheme.onSurface,
                                     fontSize = 16.sp,
-                                    fontWeight = FontWeight.Normal
+                                    fontWeight = FontWeight.Normal,
+                                    letterSpacing = 0.15.sp
                                 ),
                                 enabled = isEnabled && !isStreaming && !isListening,
                                 keyboardOptions = KeyboardOptions(
@@ -231,26 +289,33 @@ fun ChatInput(
                                 keyboardActions = KeyboardActions(
                                     onSend = {
                                         if (value.isNotBlank() && isEnabled && !isStreaming) {
+                                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                             onSend()
                                             keyboardController?.hide()
                                         }
                                     }
                                 ),
                                 singleLine = true,
-                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                cursorBrush = SolidColor(animatedEmotionColor),
                                 decorationBox = { innerTextField ->
                                     Box {
                                         if (value.isEmpty()) {
                                             Text(
                                                 text = when {
                                                     isListening -> "Sto ascoltando..."
-                                                    isStreaming -> "Lifo sta rispondendo..."
-                                                    else -> "Chiedi a Lifo"
+                                                    isStreaming -> when (currentEmotion) {
+                                                        "THOUGHTFUL" -> "Lifo sta riflettendo..."
+                                                        "EXCITED" -> "Lifo sta rispondendo con entusiasmo!"
+                                                        "HAPPY" -> "Lifo sta sorridendo mentre risponde..."
+                                                        else -> "Lifo sta rispondendo..."
+                                                    }
+                                                    else -> "Parla con Lifo"
                                                 },
                                                 style = TextStyle(
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                                     fontSize = 16.sp,
-                                                    fontWeight = FontWeight.Normal
+                                                    fontWeight = FontWeight.Normal,
+                                                    letterSpacing = 0.15.sp
                                                 )
                                             )
                                         }
@@ -259,71 +324,10 @@ fun ChatInput(
                                 }
                             )
                         }
-                    }
 
-                    // Row 2: Action buttons
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 8.dp, end = 8.dp, bottom = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Plus button
-                        IconButton(
-                            onClick = {
-                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            },
-                            modifier = Modifier.size(44.dp),
-                            enabled = !isStreaming && !isListening
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "Aggiungi",
-                                modifier = Modifier.size(24.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                    alpha = if (isStreaming || isListening) 0.4f else 0.9f
-                                )
-                            )
-                        }
+                        Spacer(modifier = Modifier.width(8.dp))
 
-                        // TTS button - parla l'ultimo messaggio
-                        AnimatedVisibility(
-                            visible = !isListening && !isStreaming,
-                            enter = scaleIn() + fadeIn(),
-                            exit = scaleOut() + fadeOut()
-                        ) {
-                            TextButton(
-                                onClick = {
-                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    // TODO: Implementa TTS per l'ultimo messaggio dell'AI
-                                },
-                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
-                                modifier = Modifier.height(44.dp),
-                                enabled = !isStreaming && !isListening,
-                                colors = ButtonDefaults.textButtonColors(
-                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                        alpha = if (isStreaming || isListening) 0.4f else 0.9f
-                                    )
-                                )
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.VolumeUp,
-                                    contentDescription = "Ascolta",
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "Ascolta",
-                                    style = MaterialTheme.typography.labelLarge.copy(
-                                        fontWeight = FontWeight.Normal
-                                    )
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.weight(1f))
-
-                        // Send/Mic/Stop button
+                        // Send/Mic button con animazioni fluide
                         AnimatedContent(
                             targetState = when {
                                 isListening -> "listening"
@@ -332,27 +336,44 @@ fun ChatInput(
                                 else -> "mic"
                             },
                             transitionSpec = {
-                                scaleIn() + fadeIn() with scaleOut() + fadeOut()
+                                (scaleIn(
+                                    animationSpec = tween(200),
+                                    initialScale = 0.8f
+                                ) + fadeIn()) with
+                                        (scaleOut(
+                                            animationSpec = tween(200),
+                                            targetScale = 0.8f
+                                        ) + fadeOut())
                             },
                             label = "SendMicSwap"
                         ) { state ->
                             when (state) {
                                 "listening" -> {
-                                    // Recording button with pulse
+                                    // Pulsante di registrazione animato
                                     IconButton(
                                         onClick = {
                                             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                                             showVoiceOverlay = false
-                                            stopListening(speechRecognizer) { isListening = false }
+                                            stopListening(speechRecognizer) {
+                                                isListening = false
+                                                if (transcribedText.isNotEmpty()) {
+                                                    onValueChange(value + " " + transcribedText)
+                                                    transcribedText = ""
+                                                }
+                                            }
                                         },
                                         modifier = Modifier
-                                            .size(44.dp)
+                                            .size(48.dp)
                                             .scale(pulseScale)
                                     ) {
                                         Surface(
                                             shape = CircleShape,
                                             color = MaterialTheme.colorScheme.error,
-                                            modifier = Modifier.size(40.dp)
+                                            modifier = Modifier
+                                                .size(44.dp)
+                                                .graphicsLayer {
+                                                    alpha = pulseAlpha
+                                                }
                                         ) {
                                             Box(contentAlignment = Alignment.Center) {
                                                 Icon(
@@ -366,24 +387,12 @@ fun ChatInput(
                                     }
                                 }
                                 "streaming" -> {
-                                    IconButton(
-                                        onClick = { /* TODO: Stop streaming */ },
-                                        modifier = Modifier.size(44.dp)
+                                    // Indicatore di streaming con animazione
+                                    Box(
+                                        modifier = Modifier.size(48.dp),
+                                        contentAlignment = Alignment.Center
                                     ) {
-                                        Surface(
-                                            shape = CircleShape,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f),
-                                            modifier = Modifier.size(40.dp)
-                                        ) {
-                                            Box(contentAlignment = Alignment.Center) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Stop,
-                                                    contentDescription = "Stop",
-                                                    modifier = Modifier.size(24.dp),
-                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            }
-                                        }
+                                        StreamingIndicator(emotion = currentEmotion)
                                     }
                                 }
                                 "send" -> {
@@ -392,8 +401,11 @@ fun ChatInput(
                                             if (!isStreaming && value.isNotBlank()) {
                                                 haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                                 scope.launch {
-                                                    sendButtonScale.animateTo(0.9f, tween(80))
-                                                    sendButtonScale.animateTo(1f, spring(dampingRatio = 0.3f))
+                                                    sendButtonScale.animateTo(0.85f, tween(80))
+                                                    sendButtonScale.animateTo(1f, spring(
+                                                        dampingRatio = Spring.DampingRatioLowBouncy,
+                                                        stiffness = Spring.StiffnessLow
+                                                    ))
                                                 }
                                                 onSend()
                                                 keyboardController?.hide()
@@ -401,13 +413,13 @@ fun ChatInput(
                                         },
                                         enabled = !isStreaming && value.isNotBlank(),
                                         modifier = Modifier
-                                            .size(44.dp)
+                                            .size(48.dp)
                                             .scale(sendButtonScale.value)
                                     ) {
                                         Surface(
                                             shape = CircleShape,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(40.dp)
+                                            color = animatedEmotionColor,
+                                            modifier = Modifier.size(44.dp)
                                         ) {
                                             Box(contentAlignment = Alignment.Center) {
                                                 Icon(
@@ -426,39 +438,97 @@ fun ChatInput(
                                             haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                             scope.launch {
                                                 micButtonScale.animateTo(0.9f, tween(80))
-                                                micButtonScale.animateTo(1f, spring(dampingRatio = 0.3f))
+                                                micButtonScale.animateTo(1f, spring(
+                                                    dampingRatio = Spring.DampingRatioMediumBouncy
+                                                ))
                                             }
 
                                             if (hasRecordPermission) {
                                                 showVoiceOverlay = true
-                                                startListening(
+                                                startNaturalListening(
                                                     context = context,
                                                     speechRecognizer = speechRecognizer,
                                                     onStart = { isListening = true },
-                                                    onResult = { result ->
+                                                    onResult = { result, confidence ->
                                                         transcribedText = result
-                                                        onValueChange(value + " " + result)
+                                                        voiceConfidence = confidence
                                                     },
-                                                    onEnd = { isListening = false }
+                                                    onEnd = {
+                                                        isListening = false
+                                                        if (transcribedText.isNotEmpty()) {
+                                                            onValueChange(value + " " + transcribedText)
+                                                            transcribedText = ""
+                                                        }
+                                                    }
                                                 )
                                             } else {
                                                 permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                                             }
                                         },
                                         modifier = Modifier
-                                            .size(44.dp)
+                                            .size(48.dp)
                                             .scale(micButtonScale.value),
                                         enabled = !isStreaming
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.Mic,
-                                            contentDescription = "Voce",
-                                            modifier = Modifier.size(24.dp),
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = MaterialTheme.colorScheme.surfaceVariant,
+                                            modifier = Modifier.size(44.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.Mic,
+                                                    contentDescription = "Voce",
+                                                    modifier = Modifier.size(24.dp),
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
+                        }
+                    }
+
+                    // Quick actions row
+                    AnimatedVisibility(
+                        visible = !isStreaming && !isListening && value.isEmpty(),
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // Quick emotion buttons
+                            QuickEmotionButton(
+                                icon = "😊",
+                                text = "Felice",
+                                onClick = {
+                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    onValueChange("Mi sento felice")
+                                }
+                            )
+
+                            QuickEmotionButton(
+                                icon = "💭",
+                                text = "Riflessivo",
+                                onClick = {
+                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    onValueChange("Sto riflettendo su")
+                                }
+                            )
+
+                            QuickEmotionButton(
+                                icon = "💪",
+                                text = "Motivato",
+                                onClick = {
+                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    onValueChange("Mi sento motivato")
+                                }
+                            )
                         }
                     }
                 }
@@ -468,18 +538,24 @@ fun ChatInput(
 }
 
 @Composable
-private fun VoiceInputOverlay(
+private fun NaturalVoiceInputOverlay(
     isListening: Boolean,
     transcribedText: String,
+    confidence: Float,
     onDismiss: () -> Unit
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(200.dp)
+            .height(280.dp)
             .background(
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f),
-                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.98f),
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f)
+                    )
+                ),
+                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
             )
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -489,66 +565,126 @@ private fun VoiceInputOverlay(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.SpaceEvenly
         ) {
-            // Wave animation
+            // Animated voice visualization
             if (isListening) {
-                WaveAnimation()
+                NaturalWaveAnimation()
+            } else {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(48.dp),
+                    strokeWidth = 3.dp
+                )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            // Transcribed text with confidence
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = if (transcribedText.isNotEmpty()) {
+                        transcribedText
+                    } else if (isListening) {
+                        "Parla naturalmente..."
+                    } else {
+                        "Preparazione in corso..."
+                    },
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
 
-            Text(
-                text = if (transcribedText.isNotEmpty()) {
-                    transcribedText
-                } else if (isListening) {
-                    "Parla ora..."
-                } else {
-                    "Preparazione..."
-                },
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+                // Confidence indicator
+                if (transcribedText.isNotEmpty() && confidence > 0) {
+                    LinearProgressIndicator(
+                        progress = confidence,
+                        modifier = Modifier
+                            .fillMaxWidth(0.6f)
+                            .height(2.dp),
+                        color = when {
+                            confidence > 0.8f -> MaterialTheme.colorScheme.primary
+                            confidence > 0.5f -> MaterialTheme.colorScheme.secondary
+                            else -> MaterialTheme.colorScheme.error
+                        }
+                    )
+                }
+            }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            // Action buttons
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+                    Text("Annulla")
+                }
 
-            TextButton(onClick = onDismiss) {
-                Text("Annulla")
+                if (transcribedText.isNotEmpty()) {
+                    Button(
+                        onClick = onDismiss,
+                        shape = RoundedCornerShape(20.dp)
+                    ) {
+                        Text("Usa testo")
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun WaveAnimation() {
+private fun NaturalWaveAnimation() {
     val infiniteTransition = rememberInfiniteTransition(label = "wave")
 
     Row(
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.height(60.dp)
     ) {
-        repeat(5) { index ->
+        repeat(7) { index ->
+            val delay = index * 100
+
             val height by infiniteTransition.animateFloat(
-                initialValue = 10f,
-                targetValue = 30f,
+                initialValue = 0.3f,
+                targetValue = 1f,
                 animationSpec = infiniteRepeatable(
-                    animation = tween(
-                        durationMillis = 300 + (index * 100),
-                        easing = FastOutSlowInEasing
-                    ),
-                    repeatMode = RepeatMode.Reverse
+                    animation = keyframes {
+                        durationMillis = 1400
+                        0.3f at 0 + delay
+                        1f at 350 + delay
+                        0.3f at 700 + delay
+                    },
+                    repeatMode = RepeatMode.Restart
                 ),
                 label = "wave$index"
+            )
+
+            val alpha by infiniteTransition.animateFloat(
+                initialValue = 0.5f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = keyframes {
+                        durationMillis = 1400
+                        0.5f at 0 + delay
+                        1f at 350 + delay
+                        0.5f at 700 + delay
+                    },
+                    repeatMode = RepeatMode.Restart
+                ),
+                label = "waveAlpha$index"
             )
 
             Box(
                 modifier = Modifier
                     .width(4.dp)
-                    .height(height.dp)
+                    .fillMaxHeight(height)
                     .background(
-                        MaterialTheme.colorScheme.primary,
+                        MaterialTheme.colorScheme.primary.copy(alpha = alpha),
                         shape = RoundedCornerShape(2.dp)
                     )
             )
@@ -556,50 +692,205 @@ private fun WaveAnimation() {
     }
 }
 
-// Helper functions
-private fun startListening(
+@Composable
+private fun VoiceNaturalnessIndicator(
+    naturalness: Float,
+    emotion: String,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                shape = RoundedCornerShape(12.dp)
+            )
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Emotion icon
+        Text(
+            text = when (emotion) {
+                "HAPPY" -> "😊"
+                "SAD" -> "😢"
+                "EXCITED" -> "🎉"
+                "THOUGHTFUL" -> "🤔"
+                "CALM" -> "😌"
+                else -> "🎙️"
+            },
+            fontSize = 16.sp
+        )
+
+        // Naturalness bar
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(4.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(naturalness)
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.secondary,
+                                MaterialTheme.colorScheme.primary
+                            )
+                        )
+                    )
+            )
+        }
+
+        // Naturalness percentage
+        Text(
+            text = "${(naturalness * 100).toInt()}%",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun StreamingIndicator(emotion: String) {
+    val infiniteTransition = rememberInfiniteTransition(label = "streaming")
+
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = when (emotion) {
+                    "EXCITED" -> 800
+                    "THOUGHTFUL" -> 2000
+                    else -> 1200
+                },
+                easing = LinearEasing
+            )
+        ),
+        label = "rotation"
+    )
+
+    Surface(
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+        modifier = Modifier
+            .size(44.dp)
+            .graphicsLayer {
+                rotationZ = rotation
+            }
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = Icons.Default.AutoAwesome,
+                contentDescription = "Streaming",
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
+@Composable
+private fun QuickEmotionButton(
+    icon: String,
+    text: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        modifier = Modifier.height(32.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(text = icon, fontSize = 14.sp)
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+// Helper functions per riconoscimento vocale naturale
+private fun startNaturalListening(
     context: Context,
     speechRecognizer: SpeechRecognizer?,
     onStart: () -> Unit,
-    onResult: (String) -> Unit,
+    onResult: (String, Float) -> Unit,
     onEnd: () -> Unit
 ) {
     val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
         putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
         putExtra(RecognizerIntent.EXTRA_LANGUAGE, "it-IT")
         putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+        putExtra(RecognizerIntent.EXTRA_CONFIDENCE_SCORES, true)
+        putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1500)
+        putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 500)
     }
 
     speechRecognizer?.setRecognitionListener(object : RecognitionListener {
+        private var lastPartialResult = ""
+
         override fun onReadyForSpeech(params: Bundle?) {
             onStart()
         }
 
         override fun onResults(results: Bundle?) {
             val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+            val scores = results?.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES)
+
             if (!matches.isNullOrEmpty()) {
-                onResult(matches[0])
+                val bestMatch = matches[0]
+                val confidence = scores?.getOrNull(0) ?: 0.5f
+                onResult(bestMatch, confidence)
+            }
+
+            onEnd()
+        }
+
+        override fun onPartialResults(partialResults: Bundle?) {
+            val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+            if (!matches.isNullOrEmpty() && matches[0] != lastPartialResult) {
+                lastPartialResult = matches[0]
+                onResult(matches[0], 0.7f) // Confidence intermedia per risultati parziali
             }
         }
 
         override fun onEndOfSpeech() {
-            onEnd()
+            // L'utente ha finito di parlare
         }
 
         override fun onError(error: Int) {
-            Log.e("ChatInput", "Speech recognition error: $error")
+            Log.e("NaturalChatInput", "Speech recognition error: $error")
+            val errorMessage = when (error) {
+                SpeechRecognizer.ERROR_NETWORK -> "Errore di rete"
+                SpeechRecognizer.ERROR_NO_MATCH -> "Non ho capito, riprova"
+                SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Timeout, riprova"
+                else -> "Errore riconoscimento vocale"
+            }
+            onResult(errorMessage, 0f)
             onEnd()
         }
 
-        override fun onBeginningOfSpeech() {}
-        override fun onRmsChanged(rmsdB: Float) {}
-        override fun onBufferReceived(buffer: ByteArray?) {}
-        override fun onPartialResults(partialResults: Bundle?) {
-            val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-            if (!matches.isNullOrEmpty()) {
-                onResult(matches[0])
-            }
+        override fun onBeginningOfSpeech() {
+            // Iniziato a parlare
         }
+
+        override fun onRmsChanged(rmsdB: Float) {
+            // Livello audio cambiato - può essere usato per animazioni
+        }
+
+        override fun onBufferReceived(buffer: ByteArray?) {}
         override fun onEvent(eventType: Int, params: Bundle?) {}
     })
 

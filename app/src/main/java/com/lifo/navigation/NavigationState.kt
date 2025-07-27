@@ -9,6 +9,7 @@ import androidx.compose.material.icons.outlined.Person
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -16,7 +17,7 @@ import androidx.navigation.compose.rememberNavController
 import com.lifo.util.Screen
 
 /**
- * Stato di navigazione dell'app che gestisce la visibilità della bottom bar
+ * Stato di navigazione dell'app che gestisce la visibilità della bottom bar e drawer events
  */
 @Stable
 class NavigationState(
@@ -30,6 +31,10 @@ class NavigationState(
         TopLevelDestination.Write,
         TopLevelDestination.Profile
     )
+
+    // Stati per i dialogs del drawer
+    private val _signOutDialogState = mutableStateOf(false)
+    private val _deleteAllDialogState = mutableStateOf(false)
 
     /**
      * Route corrente basata sul back stack
@@ -51,6 +56,12 @@ class NavigationState(
         }
 
     /**
+     * Determina se il drawer può essere aperto (solo sulla home)
+     */
+    val canOpenDrawer: Boolean
+        @Composable get() = currentRoute == Screen.Home.route
+
+    /**
      * Naviga verso una destinazione top-level
      */
     fun navigateToTopLevelDestination(destination: TopLevelDestination) {
@@ -64,6 +75,28 @@ class NavigationState(
             // Ripristina lo stato se disponibile
             restoreState = true
         }
+    }
+
+    /**
+     * Callback per gestire il sign out globalmente
+     */
+    fun requestSignOut() {
+        _signOutDialogState.value = true
+    }
+
+    /**
+     * Callback per gestire delete all globalmente
+     */
+    fun requestDeleteAll() {
+        _deleteAllDialogState.value = true
+    }
+
+    /**
+     * Chiude i dialogs
+     */
+    fun dismissDialogs() {
+        _signOutDialogState.value = false
+        _deleteAllDialogState.value = false
     }
 }
 

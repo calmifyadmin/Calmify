@@ -4,7 +4,9 @@ import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -25,13 +27,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+@OptIn(ExperimentalMaterial3Api::class)
 fun NavGraphBuilder.homeRoute(
     navController: NavHostController,
     navigateToWrite: () -> Unit,
     navigateToWriteWithArgs: (String) -> Unit,
     navigateToAuth: () -> Unit,
-    navigateToChat: () -> Unit,  // Add this parameter
-    onDataLoaded: () -> Unit
+    navigateToChat: () -> Unit,
+    onDataLoaded: () -> Unit,
+    drawerState: DrawerState  // Riceve il drawer state globale
 ) {
     composable(
         route = Screen.Home.route,
@@ -75,8 +79,6 @@ fun NavGraphBuilder.homeRoute(
         var signOutDialogOpened by rememberSaveable { mutableStateOf(false) }
         var deleteAllDialogOpened by rememberSaveable { mutableStateOf(false) }
 
-        // Drawer state
-        val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
         val scope = rememberCoroutineScope()
         val context = LocalContext.current
 
@@ -103,11 +105,11 @@ fun NavGraphBuilder.homeRoute(
             }
         }
 
-        // Home Screen with all necessary parameters
+        // Home Screen with drawer state globale
         HomeScreen(
             diaries = diaries,
             navController = navController,
-            drawerState = drawerState,
+            drawerState = drawerState,  // Usa il drawer state globale
             onMenuClicked = {
                 scope.launch {
                     try {

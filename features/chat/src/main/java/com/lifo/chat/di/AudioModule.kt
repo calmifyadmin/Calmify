@@ -1,17 +1,23 @@
 package com.lifo.chat.di
 
 import android.content.Context
-import com.google.firebase.functions.dagger.Provides
 import com.lifo.chat.audio.GeminiKillerAudioSystem
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
-import dagger.hilt.android.components.ViewModelComponent
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
+
 @Module
-@InstallIn(ViewModelComponent::class)
-object ChatModule {
+@InstallIn(SingletonComponent::class)
+object AudioModule {
 
-
+    @Provides
+    @Singleton
+    fun provideGeminiKillerAudioSystem(
+        @ApplicationContext context: Context
+    ): GeminiKillerAudioSystem {
+        return GeminiKillerAudioSystem(context)
+    }
 }

@@ -99,7 +99,37 @@ dependencies {
     implementation libs.hilt.android
     ksp libs.hilt.compiler
     implementation libs.hilt.navigation.compose
+    // Firebase (probabilmente le hai già)
+    implementation("com.google.firebase:firebase-database-ktx")
+    implementation("com.google.firebase:firebase-functions-ktx")
+    implementation("com.google.firebase:firebase-auth-ktx")
+// OkHttp per chiamate HTTP
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
+    // Firebase Auth (se non ce l'hai già)
+    implementation("com.google.firebase:firebase-auth-ktx")
+
+    // Coroutines per await()
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+    // Se non le hai già
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+    // Nel tuo modulo app o chat build.gradle.kts, aggiungi queste dipendenze:
+
+        // Firebase Database - NECESSARIO per ChildEventListener
+        implementation("com.google.firebase:firebase-database-ktx:20.3.0")
+
+        // Firebase Auth (se non l'hai già)
+        implementation("com.google.firebase:firebase-auth-ktx:22.3.0")
+
+        // Firebase Storage (se non l'hai già)
+        implementation("com.google.firebase:firebase-storage-ktx:20.3.0")
+
+        // Coroutines per Firebase
+        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+
+        // OkHttp per le richieste HTTP
+        implementation("com.squareup.okhttp3:okhttp:4.12.0")
     // Coroutines
     implementation libs.coroutines.core
     implementation libs.coroutines.android
