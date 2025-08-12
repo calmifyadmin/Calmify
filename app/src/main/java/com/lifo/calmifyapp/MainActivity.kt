@@ -31,6 +31,8 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.ktx.storageMetadata
 import com.lifo.app.CalmifyApp
+import com.lifo.chat.audio.GeminiNativeVoiceSystem
+import com.lifo.chat.config.ApiConfigManager
 import com.lifo.mongo.database.dao.ImageToDeleteDao
 import com.lifo.mongo.database.dao.ImageToUploadDao
 import com.lifo.mongo.database.entity.ImageToDelete
@@ -51,6 +53,15 @@ sealed class AppState {
     data class Error(val message: String, val retry: () -> Unit) : AppState()
 }
 
+// Assuming you have an ApiConfigManager class and it's set up for Hilt injection
+// For example:
+// class ApiConfigManager @Inject constructor() {
+//    fun setGeminiApiKey(apiKey: String) {
+//        // Implement your logic to set the API key, e.g., store it in preferences or a singleton
+//        Log.d("ApiConfigManager", "Setting Gemini API Key: $apiKey")
+//    }
+// }
+
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
@@ -60,6 +71,11 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var imageToDeleteDao: ImageToDeleteDao
 
+    @Inject
+    lateinit var apiConfigManager: ApiConfigManager // Inject your ApiConfigManager here
+
+    @Inject
+    lateinit var geminiNativeVoiceSystem: GeminiNativeVoiceSystem // Assuming you inject this too
     // App state management
     private val _appState = MutableStateFlow<AppState>(AppState.Initializing)
     private val appState: StateFlow<AppState> = _appState.asStateFlow()
@@ -72,6 +88,7 @@ class MainActivity : ComponentActivity() {
 
     @OptIn(ExperimentalAnimationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
+
         super.onCreate(savedInstanceState)
 
         // Install splash screen before super.onCreate
@@ -82,6 +99,14 @@ class MainActivity : ComponentActivity() {
         // Configure edge-to-edge display
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
+        // Configure the Gemini API Key
+        // IMPORTANT: Replace "your-gemini-api-key" with your actual API key.
+        // For production apps, consider fetching this key securely (e.g., from a build config,
+        // environment variable, or a secure remote configuration service) instead of hardcoding.
+        apiConfigManager.setGeminiApiKey("GEMINI_KEY_PLACEHOLDER")
+        lifecycleScope.launch {
+            geminiNativeVoiceSystem.initialize()
+        }
         // Initialize in background
         lifecycleScope.launch {
             initializeApp()
@@ -194,6 +219,12 @@ class MainActivity : ComponentActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putBoolean("recreated", true)
+    }
+    override fun onDestroy() {
+        super.onDestroy()
+        lifecycleScope.launch { // Ensure cleanup is called on a coroutine scope
+            geminiNativeVoiceSystem.cleanup()
+        }
     }
 }
 

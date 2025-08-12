@@ -140,6 +140,23 @@ dependencies {
     androidTestImplementation libs.junit.ext
     androidTestImplementation libs.compose.ui.test
     implementation libs.coil
+    // Networking
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
+    // Security for API key storage
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
+    // Coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+
+    // JSON parsing
+    implementation("org.json:json:20230618")
+
+    // Audio permissions handling
+    implementation("com.google.accompanist:accompanist-permissions:0.32.0")
+
 // Per RichText markdown
     implementation("com.halilibo.compose-richtext:richtext-ui:0.20.0")
     implementation("com.halilibo.compose-richtext:richtext-ui-material3:0.20.0")
