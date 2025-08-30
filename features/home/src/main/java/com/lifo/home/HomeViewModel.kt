@@ -16,9 +16,10 @@ import com.lifo.mongo.database.dao.ImageToDeleteDao
 import com.lifo.mongo.database.entity.ImageToDelete
 import com.lifo.mongo.repository.Diaries
 import com.lifo.mongo.repository.MongoDB
+import com.lifo.mongo.repository.UnifiedContentRepository
 import com.lifo.util.connectivity.ConnectivityObserver
 import com.lifo.util.connectivity.NetworkConnectivityObserver
-import com.lifo.util.model.RequestState  // IMPORT CORRETTO
+import com.lifo.util.model.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -36,11 +37,23 @@ data class HomeUiState(
     val error: String? = null
 )
 
+// New unified state for the home feed
+data class UnifiedHomeState(
+    val items: List<HomeContentItem> = emptyList(),
+    val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
+    val selectedFilter: ContentFilter = ContentFilter.ALL,
+    val searchQuery: String = "",
+    val error: String? = null,
+    val isEmpty: Boolean = false
+)
+
 @RequiresApi(Build.VERSION_CODES.N)
 @HiltViewModel
 internal class HomeViewModel @Inject constructor(
     private val connectivity: NetworkConnectivityObserver,
     private val imageToDeleteDao: ImageToDeleteDao,
+    private val unifiedContentRepository: UnifiedContentRepository,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -64,6 +77,10 @@ internal class HomeViewModel @Inject constructor(
     // UI State using StateFlow for better state management
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    // Unified content state
+    private val _unifiedState = MutableStateFlow(UnifiedHomeState())
+    val unifiedState: StateFlow<UnifiedHomeState> = _unifiedState.asStateFlow()
 
     // Legacy state holders for backward compatibility
     var diaries: MutableState<Diaries> = mutableStateOf(RequestState.Loading)
@@ -99,6 +116,9 @@ internal class HomeViewModel @Inject constructor(
 
         // Initial load
         loadDiaries()
+        
+        // Load unified content
+        loadUnifiedContent()
     }
 
     private fun restoreState() {
@@ -333,6 +353,109 @@ internal class HomeViewModel @Inject constructor(
     fun reloadDiaries() = loadDiaries()
     fun fetchDiaries(zonedDateTime: ZonedDateTime? = null) = getDiaries(zonedDateTime)
     fun loadStuff() = refreshDiaries()
+
+    // UNIFIED CONTENT METHODS
+    
+    private fun getCurrentUserId(): String {
+        return FirebaseAuth.getInstance().currentUser?.uid 
+            ?: throw IllegalStateException("User not authenticated")
+    }
+
+    fun loadUnifiedContent() {
+        viewModelScope.launch {
+            _unifiedState.update { it.copy(isLoading = true, error = null) }
+            
+            try {
+                val userId = getCurrentUserId()
+                unifiedContentRepository.applyFilter(
+                    ownerId = userId,
+                    filter = _unifiedState.value.selectedFilter,
+                    searchQuery = _unifiedState.value.searchQuery
+                ).collect { items ->
+                    _unifiedState.update { state ->
+                        state.copy(
+                            items = items,
+                            isLoading = false,
+                            isEmpty = items.isEmpty()
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading unified content", e)
+                _unifiedState.update { 
+                    it.copy(
+                        isLoading = false, 
+                        error = e.message ?: "Unknown error occurred"
+                    ) 
+                }
+            }
+        }
+    }
+
+    fun refreshUnifiedContent() {
+        if (_unifiedState.value.isRefreshing) return
+        
+        viewModelScope.launch {
+            _unifiedState.update { it.copy(isRefreshing = true) }
+            
+            try {
+                delay(500) // Minimum refresh time for better UX
+                val userId = getCurrentUserId()
+                unifiedContentRepository.getUnifiedContent(userId)
+                    .collect { items ->
+                        _unifiedState.update { state ->
+                            state.copy(
+                                items = items,
+                                isRefreshing = false,
+                                isEmpty = items.isEmpty(),
+                                error = null
+                            )
+                        }
+                    }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error refreshing unified content", e)
+                _unifiedState.update { 
+                    it.copy(
+                        isRefreshing = false,
+                        error = e.message ?: "Unknown error occurred"
+                    ) 
+                }
+            }
+        }
+    }
+
+    fun updateFilter(filter: ContentFilter) {
+        _unifiedState.update { it.copy(selectedFilter = filter) }
+        loadUnifiedContent()
+    }
+
+    fun updateSearchQuery(query: String) {
+        _unifiedState.update { it.copy(searchQuery = query) }
+        
+        // Debounce search
+        viewModelScope.launch {
+            delay(300) // 300ms debounce
+            if (_unifiedState.value.searchQuery == query) {
+                loadUnifiedContent()
+            }
+        }
+    }
+
+    fun clearSearch() {
+        _unifiedState.update { it.copy(searchQuery = "") }
+        loadUnifiedContent()
+    }
+
+    // Navigation methods
+    fun onDiaryItemClicked(diaryItem: HomeContentItem.DiaryItem) {
+        // Will be handled by navigation in the UI layer
+        Log.d(TAG, "Diary item clicked: ${diaryItem.title}")
+    }
+
+    fun onChatItemClicked(chatItem: HomeContentItem.ChatItem) {
+        // Will be handled by navigation in the UI layer
+        Log.d(TAG, "Chat item clicked: ${chatItem.title}")
+    }
 
     override fun onCleared() {
         super.onCleared()

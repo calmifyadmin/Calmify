@@ -6,6 +6,8 @@ import com.lifo.mongo.database.dao.ChatMessageDao
 import com.lifo.mongo.database.dao.ChatSessionDao
 import com.lifo.mongo.repository.ChatRepository
 import com.lifo.mongo.repository.ChatRepositoryImpl
+import com.lifo.mongo.repository.UnifiedContentRepository
+import com.lifo.mongo.repository.UnifiedContentRepositoryImpl
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -36,6 +38,14 @@ object MongoDataModule {
         auth: FirebaseAuth
     ): ChatRepository {
         return ChatRepositoryImpl(chatSessionDao, chatMessageDao, auth)
+    }
+
+    @Provides
+    @Singleton
+    fun provideUnifiedContentRepository(
+        chatSessionDao: ChatSessionDao
+    ): UnifiedContentRepository {
+        return UnifiedContentRepositoryImpl(chatSessionDao)
     }
 
     @Provides

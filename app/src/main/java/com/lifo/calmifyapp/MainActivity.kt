@@ -103,7 +103,7 @@ class MainActivity : ComponentActivity() {
         // IMPORTANT: Replace "your-gemini-api-key" with your actual API key.
         // For production apps, consider fetching this key securely (e.g., from a build config,
         // environment variable, or a secure remote configuration service) instead of hardcoding.
-        apiConfigManager.setGeminiApiKey("GEMINI_KEY_PLACEHOLDER")
+        apiConfigManager.setGeminiApiKey("YOUR_API_KEY_HERE")
         lifecycleScope.launch {
             geminiNativeVoiceSystem.initialize()
         }

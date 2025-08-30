@@ -5,6 +5,8 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -18,9 +20,12 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import com.lifo.home.components.*
 import com.lifo.mongo.repository.Diaries
 import com.lifo.ui.components.loading.*
 import com.lifo.util.model.RequestState
+import com.lifo.util.model.HomeContentItem
+import com.lifo.util.model.ContentFilter
 import java.time.ZonedDateTime
 
 // Screen state management
@@ -47,10 +52,18 @@ internal fun HomeScreen(
     onDateReset: () -> Unit,
     viewModel: HomeViewModel,
     userProfileImageUrl: String?,
-    navigateToChat: () -> Unit
+    navigateToChat: () -> Unit,
+    navigateToExistingChat: (String) -> Unit,
+    // New unified content navigation parameters
+    onDiaryClicked: (HomeContentItem.DiaryItem) -> Unit = { navigateToWriteWithArgs(it.id) },
+    onChatClicked: (HomeContentItem.ChatItem) -> Unit = { navigateToExistingChat(it.id) }
 ) {
     // Collect states
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val unifiedState by viewModel.unifiedState.collectAsStateWithLifecycle()
+    
+    // View toggle state
+    var showUnifiedView by rememberSaveable { mutableStateOf(true) }
 
     // Determine screen state
     val screenState = remember(diaries) {
@@ -113,15 +126,39 @@ internal fun HomeScreen(
                                 LoadingContent()
                             }
                             is HomeScreenState.Ready -> {
-                                if (diaries is RequestState.Success) {
-                                    MissingPermissionsComponent {
-                                        HomeContent(
-                                            paddingValues = paddingValues,
-                                            diaryNotes = diaries.data,
-                                            onClick = navigateToWriteWithArgs,
-                                            isLoading = isLoading,
-                                            viewModel = viewModel
-                                        )
+                                if (showUnifiedView) {
+                                    // New unified content view
+                                    UnifiedContentView(
+                                        unifiedState = unifiedState,
+                                        paddingValues = paddingValues,
+                                        onDiaryClick = onDiaryClicked,
+                                        onChatClick = onChatClicked,
+                                        onFilterChange = { filter -> 
+                                            viewModel.updateFilter(filter) 
+                                        },
+                                        onSearchQueryChange = { query -> 
+                                            viewModel.updateSearchQuery(query) 
+                                        },
+                                        onRefresh = { 
+                                            viewModel.refreshUnifiedContent() 
+                                        },
+                                        onClearSearch = { 
+                                            viewModel.clearSearch() 
+                                        },
+                                        onViewToggle = { showUnifiedView = false }
+                                    )
+                                } else {
+                                    // Classic diary view for backward compatibility
+                                    if (diaries is RequestState.Success) {
+                                        MissingPermissionsComponent {
+                                            HomeContent(
+                                                paddingValues = paddingValues,
+                                                diaryNotes = diaries.data,
+                                                onClick = navigateToWriteWithArgs,
+                                                isLoading = isLoading,
+                                                viewModel = viewModel
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -380,6 +417,186 @@ private fun ErrorContent(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Try Again")
+            }
+        }
+    }
+}
+
+/**
+ * New unified content view that combines diary entries and chat sessions
+ */
+@Composable
+private fun UnifiedContentView(
+    unifiedState: UnifiedHomeState,
+    paddingValues: PaddingValues,
+    onDiaryClick: (HomeContentItem.DiaryItem) -> Unit,
+    onChatClick: (HomeContentItem.ChatItem) -> Unit,
+    onFilterChange: (ContentFilter) -> Unit,
+    onSearchQueryChange: (String) -> Unit,
+    onRefresh: () -> Unit,
+    onClearSearch: () -> Unit,
+    onViewToggle: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            top = paddingValues.calculateTopPadding(),
+            bottom = paddingValues.calculateBottomPadding() + 80.dp // Extra padding for FAB
+        ),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Search Bar
+        item("search") {
+            UnifiedSearchBar(
+                query = unifiedState.searchQuery,
+                onQueryChange = onSearchQueryChange,
+                onClearSearch = onClearSearch,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        }
+
+        // Filter Chips
+        item("filters") {
+            FilterChipRow(
+                selectedFilter = unifiedState.selectedFilter,
+                onFilterSelected = onFilterChange,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        }
+
+        // View Toggle Button
+        item("view_toggle") {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(
+                    onClick = onViewToggle
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ViewAgenda,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Classic View")
+                }
+            }
+        }
+
+        // Loading State
+        if (unifiedState.isLoading && unifiedState.items.isEmpty()) {
+            items(5) {
+                // Skeleton loading cards
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .height(120.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.6f)
+                    )
+                ) {
+                    // Skeleton content would go here
+                }
+            }
+        }
+
+        // Content Items
+        if (unifiedState.items.isNotEmpty()) {
+            items(
+                items = unifiedState.items,
+                key = { item -> "${item.contentType.name}-${item.id}" }
+            ) { item ->
+                UnifiedContentCard(
+                    item = item,
+                    onClick = {
+                        when (item) {
+                            is HomeContentItem.DiaryItem -> onDiaryClick(item)
+                            is HomeContentItem.ChatItem -> onChatClick(item)
+                        }
+                    }
+                )
+            }
+        }
+
+        // Empty State
+        if (!unifiedState.isLoading && unifiedState.isEmpty) {
+            item("empty_state") {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Article,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Text(
+                        text = "No content yet",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Text(
+                        text = "Start by writing a diary entry or having a chat",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        // Error State
+        if (unifiedState.error != null) {
+            item("error_state") {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Error,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        Text(
+                            text = unifiedState.error,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        TextButton(
+                            onClick = onRefresh
+                        ) {
+                            Text("Retry")
+                        }
+                    }
+                }
             }
         }
     }

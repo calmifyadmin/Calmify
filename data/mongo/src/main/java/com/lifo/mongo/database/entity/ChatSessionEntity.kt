@@ -13,5 +13,9 @@ data class ChatSessionEntity(
     val lastMessageAt: Long,
     val aiModel: String,
     val messageCount: Int,
-    val ownerId: String
+    val ownerId: String,
+    val summary: String? = null,
+    val lastMessage: String? = null,
+    val mood: String? = null,
+    val isLiveMode: Boolean = false
 )

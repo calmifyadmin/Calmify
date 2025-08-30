@@ -4,169 +4,134 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is **Calmify**, an Android application built with modern Android development practices. It's a wellness/mental health app that combines mood tracking, journaling, AI-powered chat interactions, and Unity-based avatar integration.
-
-## Tech Stack
-
-- **Language**: Kotlin
-- **UI Framework**: Jetpack Compose with Material3
-- **Architecture**: Multi-module MVVM with Clean Architecture
-- **Dependency Injection**: Hilt/Dagger
-- **Navigation**: Jetpack Navigation Compose
-- **Database**: Room (local) + Realm MongoDB (cloud sync)
-- **Backend Services**: Firebase (Auth, Storage, Analytics)
-- **AI Integration**: Google Gemini API for chat and voice features
-- **3D Avatar**: Unity integration (unityLibrary module)
-- **Build System**: Gradle with Version Catalogs (libs.versions.toml)
-
-## Project Structure
-
-```
-app/                     # Main application module
-├── core/
-│   ├── ui/             # Shared UI components and theme
-│   └── util/           # Common utilities and models
-├── data/
-│   └── mongo/          # Database layer (Room + Realm)
-├── features/           # Feature modules (single activity, multiple features)
-│   ├── auth/          # Authentication screens
-│   ├── avatar/        # Unity avatar integration
-│   ├── chat/          # AI chat functionality with Gemini
-│   ├── home/          # Home screen and navigation
-│   └── write/         # Journal/diary writing
-├── functions/         # Cloud functions (Node.js/Express)
-└── buildSrc/         # Build configuration (ProjectConfig.kt)
-```
+Calmify is an Android application built with Kotlin and Jetpack Compose. It's a mental health/wellness app featuring chat functionality, journaling (write feature), and mood tracking with advanced audio/voice capabilities.
 
 ## Build Commands
 
 ```bash
-# Build debug APK
-./gradlew assembleDebug
+# Build the project
+./gradlew build
 
-# Build release APK  
-./gradlew assembleRelease
+# Clean and rebuild
+./gradlew clean build
 
-# Run all tests
+# Run unit tests
 ./gradlew test
 
-# Run instrumented tests
+# Run instrumentation tests on connected device
 ./gradlew connectedAndroidTest
 
-# Clean build
-./gradlew clean
+# Run lint checks
+./gradlew lint
 
-# Check dependencies
-./gradlew app:dependencies
+# Generate APK
+./gradlew assembleDebug
+./gradlew assembleRelease
+
+# Install on device
+./gradlew installDebug
 ```
 
-## Development Configuration
+## Architecture
 
-### Project Constants (buildSrc/src/main/java/ProjectConfig.kt)
-- **compileSdk**: 34
-- **minSdk**: 26  
-- **targetSdk**: 34
-- **Java Version**: 17
-- **Kotlin**: 1.9.22
-- **Compose Compiler**: 1.5.8
+### Multi-Module Structure
+The project follows a multi-module architecture with clear separation of concerns:
 
-### Key Dependencies Managed by BOMs
-- Firebase BOM: 32.7.1
-- Compose BOM: 2024.02.00
+- **app**: Main application module containing MainActivity, navigation graph, and Hilt setup
+- **core/ui**: Shared UI components and theme definitions (Material3)
+- **core/util**: Utility functions, models, and shared constants
+- **data/mongo**: Data layer with Room database, MongoDB Realm sync, and repository implementations
+- **features/auth**: Authentication feature with Firebase Auth integration
+- **features/home**: Home screen with navigation and permission handling
+- **features/write**: Journal/diary writing functionality
+- **features/chat**: Advanced chat system with voice capabilities and Gemini AI integration
 
-## Architecture Patterns
+### Key Technologies
 
-### Module Communication
-- Feature modules are independent and communicate through navigation
-- Shared resources live in `core:ui` and `core:util`
-- Database operations go through `data:mongo` module
+- **UI**: Jetpack Compose with Material3 design system
+- **Navigation**: Navigation Compose with type-safe routes
+- **DI**: Hilt for dependency injection
+- **Database**: Room for local storage + MongoDB Realm for sync
+- **Authentication**: Firebase Auth
+- **Storage**: Firebase Storage for media
+- **AI/Voice**: Google Gemini API for chat, custom voice synthesis system
+- **Async**: Kotlin Coroutines and Flow
+- **Image Loading**: Coil
+
+### Important Classes and Patterns
+
+1. **Navigation**: Uses a centralized `NavGraph.kt` with feature-specific navigation extensions (authRoute, homeRoute, writeRoute, chatRoute)
+
+2. **ViewModels**: Each feature has its own ViewModel extending `androidx.lifecycle.ViewModel` with StateFlow for UI state
+
+3. **Repository Pattern**: 
+   - `MongoRepository` and `ChatRepository` interfaces in data layer
+   - Implementation classes handle both Room and Realm operations
+
+4. **Voice System Architecture** (features/chat/audio):
+   - `OnDeviceNaturalVoiceSystem.kt`: Main voice synthesis system
+   - `GeminiNativeVoiceSystem.kt`: Gemini-powered voice
+   - `VoiceSystemDiagnostics.kt`: Voice system testing utilities
+
+5. **Database Configuration**:
+   - Room database: `AppDatabase.kt` with DAOs for local storage
+   - Converters for type serialization
+   - Entity classes for chat sessions, messages, and media
+
+### Configuration Files
+
+- **ProjectConfig.kt**: Centralized build configuration (SDK versions, app ID, etc.)
+- **libs.versions.toml**: Version catalog for all dependencies
+- **Firebase config**: `google-services.json` required (not in repo)
+
+## Development Guidelines
 
 ### State Management
-- ViewModels with StateFlow for UI state
-- Hilt for dependency injection across all modules
-- Room for local caching, Realm for cloud sync
+- Use `StateFlow` and `collectAsStateWithLifecycle()` for reactive UI
+- Implement `RequestState` sealed class for loading/success/error states
+- Handle configuration changes properly with `rememberSaveable`
 
-### Navigation
-- Single Activity architecture with Compose Navigation
-- Navigation graph defined in `app/.../navigation/NavGraph.kt`
-- Each feature module has its own navigation extension
+### Compose Best Practices
+- Use Material3 components and theming
+- Implement proper error boundaries
+- Optimize recomposition with `remember` and `derivedStateOf`
+- Follow single source of truth principle for UI state
 
-## API Keys and Configuration
+### Testing Approach
+- Unit tests in each module's test directory
+- Use MockK for mocking dependencies
+- Turbine for testing Flow emissions
+- Compose UI tests with `compose-ui-test-junit4`
 
-**IMPORTANT**: The Gemini API key is currently hardcoded in MainActivity.kt:106. For production:
-1. Move to secure configuration (build config, environment variables, or remote config)
-2. Never commit API keys to version control
-3. Use Firebase Remote Config or similar for runtime configuration
+### Performance Considerations
+- Proguard enabled for release builds
+- APK splitting by ABI for smaller downloads
+- Lazy loading for heavy components
+- Proper coroutine scope management to prevent leaks
 
-## Firebase Integration
-
-- **Authentication**: Firebase Auth with Google Sign-In
-- **Storage**: Firebase Storage for images and media
-- **Analytics**: Firebase Analytics for user tracking
-- **Cloud Functions**: Located in `/functions` directory
-
-## Unity Avatar Integration
-
-The app includes a Unity-based 3D avatar system:
-- Unity output is in `unityOutput/` and integrated as a library
-- Avatar features are in `features/avatar/` module
-- Supports emotion detection and memory systems
-
-## Testing
-
-```bash
-# Run unit tests for specific module
-./gradlew :features:chat:test
-
-# Run all unit tests
-./gradlew test
-
-# Generate test coverage report
-./gradlew createDebugCoverageReport
-```
-
-## Important Files
-
-- `MainActivity.kt`: App entry point, handles initialization and cleanup
-- `CalmifyApp.kt`: Main composable with global navigation
-- `libs.versions.toml`: Central dependency version management
-- `ProjectConfig.kt`: Build configuration constants
-
-## Code Style Guidelines
-
-- Follow Kotlin coding conventions
-- Use Compose for all new UI
-- Prefer coroutines over callbacks
-- Use Hilt for dependency injection
-- Keep feature modules independent
-- Use sealed classes for state management
-- Implement proper error handling with Result types
-
-## Common Tasks
+## Common Development Tasks
 
 ### Adding a New Feature Module
-1. Create module in `features/` directory
-2. Add to `settings.gradle`
+1. Create module directory under `features/`
+2. Add module to `settings.gradle`
 3. Configure build.gradle with necessary dependencies
-4. Add navigation extension in the module
-5. Wire up in main navigation graph
+4. Implement navigation extension in the feature
+5. Add route to main NavGraph
 
-### Updating Dependencies
-All versions are centralized in `gradle/libs.versions.toml`. Update versions there and sync project.
+### Working with Room Database
+- Schema location: `app/schemas/`
+- Migrations should be added to `AppDatabase.kt`
+- Use KSP for code generation
+- Always test migrations before release
 
-### Building for Release
-1. Update versionCode and versionName in `ProjectConfig.kt`
-2. Ensure ProGuard rules are configured
-3. Build with `./gradlew assembleRelease`
-4. Sign APK with release keystore
+### Firebase Integration
+- Ensure `google-services.json` is present in app module
+- Firebase is initialized in `MainActivity`
+- Use Firebase BOM for version management
+- Authentication state is managed in `AuthenticationViewModel`
 
-## Cloud Functions Deployment
-
-```bash
-cd functions
-# Deploy to Google Cloud Run (see functions/readme.md)
-docker build -t audio-api .
-docker tag audio-api gcr.io/calmify-388723/audio-streaming-api:latest
-docker push gcr.io/calmify-388723/audio-streaming-api:latest
-gcloud run deploy audio-streaming-api --image=gcr.io/calmify-388723/audio-streaming-api:latest --region=europe-west1
-```
+### Chat System Development
+- Audio configurations in `ChatModule.kt` and `AudioModule.kt`
+- API keys managed through `ApiConfigManager.kt`
+- Voice synthesis runs on background threads
+- Chat history stored in both Room and Realm for offline support

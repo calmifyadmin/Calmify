@@ -34,6 +34,7 @@ fun NavGraphBuilder.homeRoute(
     navigateToWriteWithArgs: (String) -> Unit,
     navigateToAuth: () -> Unit,
     navigateToChat: () -> Unit,
+    navigateToExistingChat: (String) -> Unit,
     onDataLoaded: () -> Unit,
     drawerState: DrawerState  // Riceve il drawer state globale
 ) {
@@ -134,7 +135,8 @@ fun NavGraphBuilder.homeRoute(
             navigateToWriteWithArgs = navigateToWriteWithArgs,
             viewModel = viewModel,
             userProfileImageUrl = viewModel.getUserPhotoUrl(),
-            navigateToChat = navigateToChat
+            navigateToChat = navigateToChat,
+            navigateToExistingChat = navigateToExistingChat
         )
 
         // Enhanced Sign Out Dialog

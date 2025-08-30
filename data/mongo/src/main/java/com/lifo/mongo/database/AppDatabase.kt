@@ -13,7 +13,7 @@ import com.lifo.mongo.database.entity.*
         ChatSessionEntity::class,
         ChatMessageEntity::class
     ],
-    version = 3, // Incrementa se il database esistente è alla versione 2
+    version = 4, // Updated for unified feed fields in ChatSessionEntity
     exportSchema = false
 )
 @TypeConverters(Converters::class)

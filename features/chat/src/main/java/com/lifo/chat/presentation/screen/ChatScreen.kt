@@ -49,6 +49,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lifo.chat.presentation.components.*
 import com.lifo.chat.presentation.viewmodel.ChatViewModel
+import com.lifo.chat.data.realtime.LiveChatState
+import com.lifo.chat.data.realtime.PushToTalkState
+import com.lifo.util.model.ChatEmotion
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -59,6 +62,7 @@ fun ChatScreen(
     navigateBack: () -> Unit,
     navigateToWriteWithContent: (String) -> Unit,
     modifier: Modifier = Modifier,
+    sessionId: String? = null,
     viewModel: ChatViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -66,8 +70,23 @@ fun ChatScreen(
     val isVoiceActive by viewModel.isVoiceActive.collectAsStateWithLifecycle()
     val voiceEmotion by viewModel.voiceEmotion.collectAsStateWithLifecycle()
     val voiceLatency by viewModel.voiceLatency.collectAsStateWithLifecycle()
+    
+    // Live Chat state
+    val liveChatState by viewModel.liveChatState.collectAsStateWithLifecycle()
+    val pushToTalkState by viewModel.pushToTalkState.collectAsStateWithLifecycle()
+    val realtimeSessionState by viewModel.realtimeSessionState.collectAsStateWithLifecycle()
+    
+    // Track live chat mode
+    val isLiveChatMode = remember { mutableStateOf(false) }
+    
+    // Load existing session if sessionId is provided
+    LaunchedEffect(sessionId) {
+        sessionId?.let {
+            viewModel.loadExistingSession(it)
+        }
+    }
 
-// Handle export navigation
+    // Handle export navigation
     LaunchedEffect(uiState.exportedContent) {
         uiState.exportedContent?.let { content ->
             navigateToWriteWithContent(content)
@@ -98,13 +117,29 @@ fun ChatScreen(
             MinimalTopBar(
                 voiceEnabled = voiceState.isInitialized,
                 isVoiceSpeaking = voiceState.isSpeaking,
+                isLiveChatMode = isLiveChatMode.value,
+                liveChatState = liveChatState,
                 onNavigateBack = {
                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    if (isLiveChatMode.value) {
+                        viewModel.endLiveChat()
+                        isLiveChatMode.value = false
+                    }
                     navigateBack()
                 },
                 onStopVoice = {
                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     viewModel.stopSpeaking()
+                },
+                onToggleLiveChat = {
+                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    if (!isLiveChatMode.value) {
+                        isLiveChatMode.value = true
+                        viewModel.startLiveChat()
+                    } else {
+                        isLiveChatMode.value = false
+                        viewModel.endLiveChat()
+                    }
                 }
             )
         },
@@ -133,18 +168,30 @@ fun ChatScreen(
                     )
                 }
 
-                // Simplified chat input
-                ChatInput(
-                    value = uiState.inputText,
-                    onValueChange = viewModel::updateInputText,
-                    onSend = {
-                        viewModel.sendMessage(uiState.inputText)
-                    },
-                    isEnabled = !uiState.isLoading && uiState.streamingMessage == null,
-                    isStreaming = uiState.streamingMessage != null,
-                    currentEmotion = voiceEmotion.name,
-                    voiceNaturalness = voiceState.naturalness
-                )
+                // Live Chat or Traditional Chat Input
+                if (isLiveChatMode.value) {
+                    LiveChatInterface(
+                        liveChatState = liveChatState,
+                        pushToTalkState = pushToTalkState,
+                        onPushToTalkPressed = viewModel::onPushToTalkPressed,
+                        onPushToTalkReleased = viewModel::onPushToTalkReleased,
+                        onCancelPushToTalk = viewModel::cancelPushToTalk,
+                        onClearError = viewModel::clearLiveChatError
+                    )
+                } else {
+                    // Traditional chat input
+                    ChatInput(
+                        value = uiState.inputText,
+                        onValueChange = viewModel::updateInputText,
+                        onSend = {
+                            viewModel.sendMessage(uiState.inputText)
+                        },
+                        isEnabled = !uiState.isLoading && uiState.streamingMessage == null,
+                        isStreaming = uiState.streamingMessage != null,
+                        currentEmotion = voiceEmotion.name,
+                        voiceNaturalness = voiceState.naturalness
+                    )
+                }
             }
         }
     ) { paddingValues ->
@@ -197,8 +244,8 @@ fun ChatScreen(
                 }
             }
 
-            // Empty state
-            if (uiState.messages.isEmpty() && uiState.streamingMessage == null) {
+            // Empty state - show welcome screen only for new sessions (no existing session loaded)
+            if (uiState.messages.isEmpty() && uiState.streamingMessage == null && uiState.currentSession == null) {
                 NaturalAnimatedEmptyState(
                     userName = userDisplayName,
                     modifier = Modifier.align(Alignment.Center)
@@ -222,8 +269,11 @@ fun ChatScreen(
 private fun MinimalTopBar(
     voiceEnabled: Boolean,
     isVoiceSpeaking: Boolean,
+    isLiveChatMode: Boolean,
+    liveChatState: LiveChatState,
     onNavigateBack: () -> Unit,
-    onStopVoice: () -> Unit
+    onStopVoice: () -> Unit,
+    onToggleLiveChat: () -> Unit
 ) {
     TopAppBar(
         title = {
@@ -231,10 +281,51 @@ private fun MinimalTopBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("AI Assistant")
+                Text(if (isLiveChatMode) "Live Chat" else "AI Assistant")
 
-                // Voice status chip
-                if (voiceEnabled) {
+                // Live Chat status chip
+                if (isLiveChatMode) {
+                    val chipColor = when (liveChatState) {
+                        is LiveChatState.Idle -> Color.Gray
+                        is LiveChatState.Connecting -> Color(0xFFFFA500)
+                        is LiveChatState.Connected -> Color(0xFF34A853)
+                        is LiveChatState.Recording -> Color(0xFFFF4444)
+                        is LiveChatState.Processing -> Color.Blue
+                        is LiveChatState.Speaking -> Color(0xFF6200EE)
+                        is LiveChatState.Error -> Color.Red
+                    }
+                    
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = chipColor.copy(alpha = 0.2f),
+                        modifier = Modifier.height(20.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .background(chipColor, shape = MaterialTheme.shapes.small)
+                            )
+                            Text(
+                                text = when (liveChatState) {
+                                    is LiveChatState.Idle -> "Idle"
+                                    is LiveChatState.Connecting -> "Connecting..."
+                                    is LiveChatState.Connected -> "Connected"
+                                    is LiveChatState.Recording -> "Recording"
+                                    is LiveChatState.Processing -> "Processing"
+                                    is LiveChatState.Speaking -> "Speaking"
+                                    is LiveChatState.Error -> "Error"
+                                },
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                    }
+                } else if (voiceEnabled) {
+                    // Traditional voice status chip
                     Surface(
                         shape = MaterialTheme.shapes.small,
                         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
@@ -271,6 +362,24 @@ private fun MinimalTopBar(
             }
         },
         actions = {
+            // Live Chat toggle button
+            IconButton(
+                onClick = onToggleLiveChat,
+                colors = IconButtonDefaults.iconButtonColors(
+                    containerColor = if (isLiveChatMode) 
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) 
+                    else Color.Transparent,
+                    contentColor = if (isLiveChatMode) 
+                        MaterialTheme.colorScheme.primary 
+                    else MaterialTheme.colorScheme.onSurface
+                )
+            ) {
+                Icon(
+                    imageVector = if (isLiveChatMode) Icons.Default.VolumeUp else Icons.Outlined.VolumeOff,
+                    contentDescription = if (isLiveChatMode) "Exit Live Chat" else "Enter Live Chat"
+                )
+            }
+            
             // Stop voice button when speaking
             AnimatedVisibility(
                 visible = isVoiceSpeaking,
@@ -498,6 +607,140 @@ private fun NaturalAnimatedEmptyState(
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
             textAlign = TextAlign.Center
         )
+    }
+}
+
+@Composable
+private fun LiveChatInterface(
+    liveChatState: LiveChatState,
+    pushToTalkState: PushToTalkState,
+    onPushToTalkPressed: () -> Unit,
+    onPushToTalkReleased: () -> Unit,
+    onCancelPushToTalk: () -> Unit,
+    onClearError: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 8.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Status display
+            LiveChatStatusDisplay(liveChatState)
+            
+            // Push-to-talk button with effects
+            PushToTalkButton(
+                isPressed = pushToTalkState.isRecording,
+                onPressStart = onPushToTalkPressed,
+                onPressEnd = onPushToTalkReleased,
+                isEnabled = when (liveChatState) {
+                    is LiveChatState.Connected,
+                    is LiveChatState.Recording -> true
+                    else -> false
+                },
+                emotion = when (liveChatState) {
+                    is LiveChatState.Recording -> ChatEmotion.ANXIOUS
+                    is LiveChatState.Processing -> ChatEmotion.CALM
+                    is LiveChatState.Speaking -> ChatEmotion.HAPPY
+                    is LiveChatState.Error -> ChatEmotion.SAD
+                    else -> ChatEmotion.NEUTRAL
+                }
+            )
+            
+            // Instructions
+            Text(
+                text = when (liveChatState) {
+                    is LiveChatState.Idle -> "Tocca il pulsante per iniziare la live chat"
+                    is LiveChatState.Connecting -> "Connessione in corso..."
+                    is LiveChatState.Connected -> "Tieni premuto per parlare"
+                    is LiveChatState.Recording -> "Rilascia per inviare"
+                    is LiveChatState.Processing -> "L'AI sta elaborando..."
+                    is LiveChatState.Speaking -> "L'AI sta parlando..."
+                    is LiveChatState.Error -> "Errore: ${liveChatState.message}"
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                color = when (liveChatState) {
+                    is LiveChatState.Error -> MaterialTheme.colorScheme.error
+                    else -> MaterialTheme.colorScheme.onSurface
+                }
+            )
+            
+            // Error handling
+            if (liveChatState is LiveChatState.Error) {
+                TextButton(onClick = onClearError) {
+                    Text("Riprova")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LiveChatStatusDisplay(liveChatState: LiveChatState) {
+    when (liveChatState) {
+        is LiveChatState.Recording -> {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "🔴 Registrazione: ${liveChatState.duration / 1000}s",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Color(0xFFFF4444)
+                )
+                
+                // Audio level visualization
+                VoiceWaveform(
+                    audioLevel = liveChatState.audioLevel,
+                    isActive = true,
+                    modifier = Modifier.height(20.dp).width(60.dp)
+                )
+            }
+        }
+        
+        is LiveChatState.Speaking -> {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "💬 ${liveChatState.transcript}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                VoiceWaveform(
+                    audioLevel = liveChatState.audioLevel,
+                    isActive = true,
+                    modifier = Modifier.height(24.dp).width(120.dp)
+                )
+            }
+        }
+        
+        is LiveChatState.Processing -> {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp
+                )
+                Text(
+                    text = liveChatState.message,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+        
+        else -> {
+            // Default status display
+            Box(modifier = Modifier.height(20.dp))
+        }
     }
 }
 

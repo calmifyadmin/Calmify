@@ -47,7 +47,7 @@ fun NavGraphBuilder.chatRoute(
         )
     }
 
-    // Route with session ID (for future use)
+    // Route with session ID for existing sessions
     composable(
         route = "${Screen.Chat.route}/{sessionId}",
         arguments = listOf(
@@ -67,10 +67,12 @@ fun NavGraphBuilder.chatRoute(
                 animationSpec = tween(300)
             ) + fadeOut(animationSpec = tween(300))
         }
-    ) {
+    ) { backStackEntry ->
+        val sessionId = backStackEntry.arguments?.getString("sessionId")
         ChatScreen(
             navigateBack = navigateBack,
-            navigateToWriteWithContent = navigateToWriteWithContent
+            navigateToWriteWithContent = navigateToWriteWithContent,
+            sessionId = sessionId
         )
     }
 }

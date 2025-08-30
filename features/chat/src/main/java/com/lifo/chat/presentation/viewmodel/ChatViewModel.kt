@@ -10,6 +10,9 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.lifo.chat.audio.GeminiNativeVoiceSystem
 import com.lifo.chat.config.ApiConfigManager
+import com.lifo.chat.data.realtime.*
+import com.lifo.chat.domain.audio.PushToTalkController
+import com.lifo.chat.domain.audio.RealtimeAudioPlayer
 import com.lifo.chat.domain.model.*
 import com.lifo.mongo.repository.ChatMessage
 import com.lifo.mongo.repository.ChatRepository
@@ -27,6 +30,9 @@ class ChatViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val voiceSystem: GeminiNativeVoiceSystem,
     private val apiConfigManager: ApiConfigManager,
+    private val realtimeSessionManager: RealtimeSessionManager,
+    private val pushToTalkController: PushToTalkController,
+    private val realtimeAudioPlayer: RealtimeAudioPlayer,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -36,8 +42,11 @@ class ChatViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
+    
+    // Current session tracking
+    private var currentSessionId: String? = null
 
-    // Voice state exposed to UI
+    // Voice state exposed to UI (existing Gemini system)
     val voiceState = voiceSystem.voiceState
     val isVoiceActive = voiceState
         .map { it.isSpeaking }
@@ -61,6 +70,17 @@ class ChatViewModel @Inject constructor(
             initialValue = 0L
         )
 
+    // OpenAI Realtime Live Chat State
+    private val _liveChatState = MutableStateFlow<LiveChatState>(LiveChatState.Idle)
+    val liveChatState = _liveChatState.asStateFlow()
+    
+    // Push-to-talk state
+    val pushToTalkState = pushToTalkController.state
+    
+    // Realtime session state
+    val realtimeSessionState = realtimeSessionManager.sessionState
+    val realtimeConversationState = realtimeSessionManager.conversationState
+
     private val emotionDetector = SimpleEmotionDetector()
 
     // SEMPLIFICATO: niente più chunking, solo messaggi completi
@@ -71,7 +91,13 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch {
             Log.d(TAG, "🎙️ Initializing ChatViewModel...")
             initializeVoiceSystem()
-            createNewSession()
+            // Only create new session if no existing session is loaded
+            if (currentSessionId == null) {
+                Log.d(TAG, "📝 Creating new session (no existing session loaded)")
+                createNewSession()
+            } else {
+                Log.d(TAG, "♻️ Skipping new session creation - existing session loaded: $currentSessionId")
+            }
         }
     }
 
@@ -108,6 +134,51 @@ class ChatViewModel @Inject constructor(
             Log.e(TAG, "❌ Exception during voice initialization", e)
             _uiState.update {
                 it.copy(error = "Voice error: ${e.message}")
+            }
+        }
+    }
+
+    fun loadExistingSession(sessionId: String) {
+        Log.d(TAG, "Loading existing session: $sessionId")
+        viewModelScope.launch {
+            try {
+                // Load the session from database
+                val sessionResult = repository.getSession(sessionId)
+                val session = when (sessionResult) {
+                    is RequestState.Success -> sessionResult.data
+                    else -> null
+                }
+                session?.let {
+                    // Update current session
+                    currentSessionId = sessionId
+                    
+                    // Update UI state with session info
+                    _uiState.update { state ->
+                        state.copy(
+                            currentSession = it,
+                            sessionStarted = true
+                        )
+                    }
+                    
+                    // Load messages for this session
+                    loadMessages(sessionId)
+                    
+                    Log.d(TAG, "Loaded session $sessionId with ${it.messageCount} messages")
+                } ?: run {
+                    Log.w(TAG, "Session $sessionId not found")
+                    _uiState.update { state ->
+                        state.copy(
+                            error = "Session not found"
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading session $sessionId", e)
+                _uiState.update { state ->
+                    state.copy(
+                        error = e.message ?: "Failed to load session"
+                    )
+                }
             }
         }
     }
@@ -344,9 +415,234 @@ class ChatViewModel @Inject constructor(
         }
     }
 
+    // ============= OPENAI REALTIME LIVE CHAT FUNCTIONS =============
+    
+    /**
+     * Start a live voice chat session using OpenAI Realtime API
+     */
+    fun startLiveChat() {
+        viewModelScope.launch {
+            Log.d(TAG, "Starting live chat session...")
+            
+            try {
+                _liveChatState.value = LiveChatState.Connecting
+                
+                val sessionConfig = SessionConfig(
+                    instructions = """
+                        You are a compassionate mental health companion in the Calmify app.
+                        Provide supportive, empathetic responses in Italian when speaking to Italian users.
+                        Keep responses conversational, warm, and concise (30-60 seconds of speech max).
+                        Focus on emotional wellness, active listening, and positive coping strategies.
+                        Use a gentle, caring tone that makes users feel heard and understood.
+                    """.trimIndent(),
+                    voice = "shimmer",
+                    temperature = 0.8f,
+                    modalities = listOf("text", "audio")
+                )
+                
+                val result = realtimeSessionManager.startSession(sessionConfig)
+                
+                if (result.isSuccess) {
+                    Log.d(TAG, "Live chat session started successfully")
+                    _liveChatState.value = LiveChatState.Connected
+                    
+                    // Start audio player for response playback
+                    realtimeAudioPlayer.startPlayback()
+                    
+                    // Start observing realtime events for audio playback
+                    observeRealtimeAudioEvents()
+                    
+                } else {
+                    Log.e(TAG, "Failed to start live chat: ${result.exceptionOrNull()?.message}")
+                    _liveChatState.value = LiveChatState.Error(
+                        result.exceptionOrNull()?.message ?: "Failed to start live chat",
+                        result.exceptionOrNull()
+                    )
+                }
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "Error starting live chat", e)
+                _liveChatState.value = LiveChatState.Error("Live chat error: ${e.message}", e)
+            }
+        }
+    }
+    
+    /**
+     * End the current live chat session
+     */
+    fun endLiveChat() {
+        viewModelScope.launch {
+            Log.d(TAG, "Ending live chat session...")
+            
+            try {
+                // Stop any ongoing recording
+                if (pushToTalkState.value.isRecording) {
+                    pushToTalkController.cancelRecording()
+                }
+                
+                // Stop audio playback
+                realtimeAudioPlayer.stopPlayback()
+                
+                // End the realtime session
+                realtimeSessionManager.endSession()
+                
+                _liveChatState.value = LiveChatState.Idle
+                
+                Log.d(TAG, "Live chat session ended")
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "Error ending live chat", e)
+                _liveChatState.value = LiveChatState.Error("Error ending session: ${e.message}", e)
+            }
+        }
+    }
+    
+    /**
+     * Start push-to-talk recording
+     */
+    fun onPushToTalkPressed() {
+        viewModelScope.launch {
+            if (!realtimeSessionState.value.isConnected) {
+                Log.w(TAG, "Cannot start recording: not connected to realtime session")
+                return@launch
+            }
+            
+            Log.d(TAG, "Push-to-talk pressed - starting recording")
+            
+            try {
+                // Stop any ongoing AI response playback
+                realtimeAudioPlayer.clearQueue()
+                
+                // Start recording
+                pushToTalkController.startRecording()
+                
+                _liveChatState.value = LiveChatState.Recording(
+                    duration = 0L,
+                    audioLevel = 0f
+                )
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "Error starting push-to-talk", e)
+                _liveChatState.value = LiveChatState.Error("Recording error: ${e.message}", e)
+            }
+        }
+    }
+    
+    /**
+     * Stop push-to-talk recording and request AI response
+     */
+    fun onPushToTalkReleased() {
+        viewModelScope.launch {
+            if (!pushToTalkState.value.isRecording) {
+                Log.w(TAG, "Push-to-talk released but not recording")
+                return@launch
+            }
+            
+            Log.d(TAG, "Push-to-talk released - stopping recording and requesting response")
+            
+            try {
+                // Stop recording and commit audio buffer
+                pushToTalkController.stopRecording()
+                
+                // Request AI response
+                val responseConfig = ResponseConfig(
+                    modalities = listOf("audio", "text"),
+                    voice = "shimmer",
+                    outputAudioFormat = "pcm16"
+                )
+                
+                realtimeSessionManager.generateResponse(responseConfig)
+                
+                _liveChatState.value = LiveChatState.Processing("Elaborando la tua richiesta...")
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "Error stopping push-to-talk", e)
+                _liveChatState.value = LiveChatState.Error("Processing error: ${e.message}", e)
+            }
+        }
+    }
+    
+    /**
+     * Cancel current push-to-talk recording
+     */
+    fun cancelPushToTalk() {
+        viewModelScope.launch {
+            if (pushToTalkState.value.isRecording) {
+                pushToTalkController.cancelRecording()
+                _liveChatState.value = LiveChatState.Connected
+            }
+        }
+    }
+    
+    /**
+     * Clear live chat error state
+     */
+    fun clearLiveChatError() {
+        if (_liveChatState.value is LiveChatState.Error) {
+            _liveChatState.value = if (realtimeSessionState.value.isConnected) {
+                LiveChatState.Connected
+            } else {
+                LiveChatState.Idle
+            }
+        }
+    }
+    
+    private fun observeRealtimeAudioEvents() {
+        viewModelScope.launch {
+            realtimeSessionManager.conversationState.collect { conversationState ->
+                
+                // Update live chat state based on conversation state
+                when {
+                    conversationState.isGeneratingResponse -> {
+                        _liveChatState.value = LiveChatState.Processing("L'AI sta rispondendo...")
+                    }
+                    conversationState.currentTranscript.isNotEmpty() -> {
+                        _liveChatState.value = LiveChatState.Speaking(
+                            transcript = conversationState.currentTranscript,
+                            audioLevel = 0.5f // You can get this from audio player if needed
+                        )
+                    }
+                    else -> {
+                        if (_liveChatState.value is LiveChatState.Processing || 
+                            _liveChatState.value is LiveChatState.Speaking) {
+                            _liveChatState.value = LiveChatState.Connected
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Also observe session state for connection changes
+        viewModelScope.launch {
+            realtimeSessionState.collect { sessionState ->
+                if (!sessionState.isConnected && sessionState.error != null) {
+                    _liveChatState.value = LiveChatState.Error(
+                        sessionState.error,
+                        null
+                    )
+                }
+            }
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         voiceSystem.cleanup()
+        
+        // Cleanup live chat resources
+        viewModelScope.launch {
+            try {
+                if (realtimeSessionState.value.isConnected) {
+                    realtimeSessionManager.endSession()
+                }
+                realtimeAudioPlayer.stopPlayback()
+                if (pushToTalkState.value.isRecording) {
+                    pushToTalkController.cancelRecording()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error during cleanup", e)
+            }
+        }
     }
 
     // Simplified emotion detector

@@ -30,7 +30,7 @@ object MongoDatabaseProvider {
                 klass = AppDatabase::class.java,
                 name = DATABASE_NAME
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .build()
 
             INSTANCE = instance
@@ -87,6 +87,16 @@ object MongoDatabaseProvider {
 
             // Create index on sessionId
             database.execSQL("CREATE INDEX index_chat_messages_sessionId ON chat_messages(sessionId)")
+        }
+    }
+
+    private val MIGRATION_3_4 = object : Migration(3, 4) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            // Add new columns to chat_sessions table for unified feed functionality
+            database.execSQL("ALTER TABLE chat_sessions ADD COLUMN summary TEXT")
+            database.execSQL("ALTER TABLE chat_sessions ADD COLUMN lastMessage TEXT")
+            database.execSQL("ALTER TABLE chat_sessions ADD COLUMN mood TEXT")
+            database.execSQL("ALTER TABLE chat_sessions ADD COLUMN isLiveMode INTEGER NOT NULL DEFAULT 0")
         }
     }
 }
