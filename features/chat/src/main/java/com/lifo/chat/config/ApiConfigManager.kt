@@ -18,6 +18,7 @@ class ApiConfigManager @Inject constructor(
         private const val PREFS_NAME = "api_config_prefs"
         // CORRECTED: This should be a meaningful string key, not the API key itself.
         private const val KEY_GEMINI_API = "gemini_api_key"
+        private const val KEY_OPENAI_API = "openai_api_key"
 
         // For development/testing only - in production, retrieve from secure backend
         // CORRECTED: Default should be an empty string or null, or a specific placeholder.
@@ -55,10 +56,33 @@ class ApiConfigManager @Inject constructor(
     }
 
     /**
-     * Check if API key is configured
+     * Get OpenAI API key
+     */
+    fun getOpenAIApiKey(): String {
+        return encryptedPrefs.getString(KEY_OPENAI_API, DEFAULT_API_KEY) ?: DEFAULT_API_KEY
+    }
+
+    /**
+     * Set OpenAI API key (for configuration)
+     */
+    fun setOpenAIApiKey(apiKey: String) {
+        encryptedPrefs.edit()
+            .putString(KEY_OPENAI_API, apiKey)
+            .apply()
+    }
+
+    /**
+     * Check if Gemini API key is configured
      */
     fun isGeminiApiKeyConfigured(): Boolean {
         // Now it correctly checks if the stored key is not empty
         return getGeminiApiKey().isNotEmpty() && getGeminiApiKey() != DEFAULT_API_KEY
+    }
+
+    /**
+     * Check if OpenAI API key is configured
+     */
+    fun isOpenAIApiKeyConfigured(): Boolean {
+        return getOpenAIApiKey().isNotEmpty() && getOpenAIApiKey() != DEFAULT_API_KEY
     }
 }

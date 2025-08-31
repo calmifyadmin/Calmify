@@ -31,6 +31,7 @@ import com.lifo.app.navigation.*
 import com.lifo.auth.navigation.authenticationRoute
 import com.lifo.chat.navigation.chatRoute
 import com.lifo.chat.navigation.navigateToChat
+import com.lifo.chat.navigation.navigateToLiveChat
 import com.lifo.home.navigation.homeRoute
 import com.lifo.mongo.repository.MongoDB
 import com.lifo.ui.components.DisplayAlertDialog
@@ -578,6 +579,9 @@ private fun CalmifyNavHost(
             },
             navigateToChat = {
                 navController.navigate(Screen.Chat.route)
+            },
+            navigateToLiveChat = {
+                navController.navigateToLiveChat()
             },
             navigateToExistingChat = { sessionId ->
                 navController.navigateToChat(sessionId)

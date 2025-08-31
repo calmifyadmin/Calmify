@@ -18,6 +18,7 @@ android {
 
         // Add API key from local.properties
         buildConfigField("String", "GEMINI_API_KEY", "\"${getGeminiApiKey()}\"")
+        buildConfigField("String", "OPENAI_API_KEY", "\"${getOpenAIApiKey()}\"")
     }
 
     buildTypes {
@@ -60,6 +61,15 @@ def getGeminiApiKey() {
         localProperties.load(new FileInputStream(localPropertiesFile))
     }
     return localProperties.getProperty('GEMINI_API_KEY', '')
+}
+
+def getOpenAIApiKey() {
+    def localProperties = new Properties()
+    def localPropertiesFile = rootProject.file('local.properties')
+    if (localPropertiesFile.exists()) {
+        localProperties.load(new FileInputStream(localPropertiesFile))
+    }
+    return localProperties.getProperty('KEY_OPENAI_API', '')
 }
 
 dependencies {
@@ -156,6 +166,9 @@ dependencies {
 
     // Audio permissions handling
     implementation("com.google.accompanist:accompanist-permissions:0.32.0")
+
+    // WebRTC for OpenAI Realtime API (official Google WebRTC)
+    implementation 'org.webrtc:google-webrtc:1.0.30039@aar'
 
 // Per RichText markdown
     implementation("com.halilibo.compose-richtext:richtext-ui:0.20.0")

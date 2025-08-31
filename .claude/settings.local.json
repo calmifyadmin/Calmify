@@ -1,9 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(test:*)",
       "Bash(./gradlew:*)",
-      "Bash(.gradlew build)"
+      "WebSearch",
+      "WebFetch(domain:platform.openai.com)"
     ],
     "deny": [],
     "ask": []
