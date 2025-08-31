@@ -72,14 +72,31 @@ class LiveChatViewModel @Inject constructor(
         viewModelScope.launch {
             // Observe WebRTC session state changes
             webRTCSessionState.collectLatest { sessionState ->
+                Log.d(TAG, "🎯 WebRTC session state changed: connectionState=${sessionState.connectionState}, sessionId=${sessionState.sessionId}")
                 val connectionStatus = when (sessionState.connectionState) {
-                    WebRTCConnectionState.Connected -> ConnectionStatus.Connected
-                    WebRTCConnectionState.Connecting -> ConnectionStatus.Connecting
-                    WebRTCConnectionState.Failed -> ConnectionStatus.Error
-                    WebRTCConnectionState.Disconnected, WebRTCConnectionState.Closed -> ConnectionStatus.Disconnected
-                    WebRTCConnectionState.New -> ConnectionStatus.Disconnected
+                    WebRTCConnectionState.Connected -> {
+                        Log.d(TAG, "✅ WebRTC Connected - updating UI to Connected")
+                        ConnectionStatus.Connected
+                    }
+                    WebRTCConnectionState.Connecting -> {
+                        Log.d(TAG, "🔄 WebRTC Connecting - updating UI to Connecting")
+                        ConnectionStatus.Connecting
+                    }
+                    WebRTCConnectionState.Failed -> {
+                        Log.d(TAG, "❌ WebRTC Failed - updating UI to Error")
+                        ConnectionStatus.Error
+                    }
+                    WebRTCConnectionState.Disconnected, WebRTCConnectionState.Closed -> {
+                        Log.d(TAG, "🔌 WebRTC Disconnected/Closed - updating UI to Disconnected")
+                        ConnectionStatus.Disconnected
+                    }
+                    WebRTCConnectionState.New -> {
+                        Log.d(TAG, "🆕 WebRTC New - updating UI to Disconnected")
+                        ConnectionStatus.Disconnected
+                    }
                 }
                 
+                Log.d(TAG, "🎯 Updating UI state to: $connectionStatus")
                 _uiState.update { currentState ->
                     currentState.copy(
                         connectionStatus = connectionStatus,
@@ -185,6 +202,8 @@ class LiveChatViewModel @Inject constructor(
     }
 
     fun onPushToTalkPressed() {
+        Log.d(TAG, "🎤 Push-to-talk PRESSED by user")
+        
         if (_uiState.value.connectionStatus != ConnectionStatus.Connected) {
             Log.w(TAG, "⚠️ Push-to-talk pressed while not connected")
             return
@@ -210,6 +229,8 @@ class LiveChatViewModel @Inject constructor(
     }
 
     fun onPushToTalkReleased() {
+        Log.d(TAG, "🎤 Push-to-talk RELEASED by user")
+        
         try {
             Log.d(TAG, "🎤 Stopping push-to-talk recording...")
             val success = pushToTalkManager.stopRecording()

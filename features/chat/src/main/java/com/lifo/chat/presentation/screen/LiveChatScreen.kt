@@ -6,6 +6,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -21,6 +22,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -42,7 +44,9 @@ fun LiveChatScreen(
     modifier: Modifier = Modifier,
     viewModel: LiveChatViewModel = hiltViewModel()
 ) {
+    android.util.Log.d("LiveChatScreen", "🏠 LiveChatScreen composing...")
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    android.util.Log.d("LiveChatScreen", "📱 UI state in screen: connectionStatus=${uiState.connectionStatus}, hasPermission=${uiState.hasAudioPermission}")
     val haptics = LocalHapticFeedback.current
 
     // Permission handler
@@ -390,26 +394,44 @@ private fun PushToTalkSection(
         )
 
         // Push-to-talk button
-        IconButton(
-            onClick = { }, // Handled by press/release gestures below
-            enabled = connectionStatus == ConnectionStatus.Connected,
-            modifier = Modifier.size(72.dp),
-            colors = IconButtonDefaults.iconButtonColors(
-                containerColor = when {
-                    connectionStatus != ConnectionStatus.Connected -> MaterialTheme.colorScheme.surfaceVariant
-                    isRecording -> Color(0xFFFF4444)
-                    else -> MaterialTheme.colorScheme.primary
-                },
-                contentColor = when {
-                    connectionStatus != ConnectionStatus.Connected -> MaterialTheme.colorScheme.onSurfaceVariant
-                    else -> Color.White
+        Box(
+            modifier = Modifier
+                .size(72.dp)
+                .pointerInput(connectionStatus) {
+                    detectTapGestures(
+                        onPress = {
+                            android.util.Log.d("LiveChatScreen", "🖱️ Button TOUCHED!")
+                            android.util.Log.d("LiveChatScreen", "🖱️ Checking connection status: $connectionStatus (expected: ${ConnectionStatus.Connected})")
+                            if (connectionStatus == ConnectionStatus.Connected) {
+                                android.util.Log.d("LiveChatScreen", "🖱️ Button PRESSED - calling onPushToTalkPressed")
+                                onPushToTalkPressed()
+                                tryAwaitRelease() // Wait for finger lift
+                                android.util.Log.d("LiveChatScreen", "🖱️ Button RELEASED - calling onPushToTalkReleased")
+                                onPushToTalkReleased()
+                            } else {
+                                android.util.Log.w("LiveChatScreen", "🖱️ Button touched but not connected - current status: $connectionStatus")
+                            }
+                        }
+                    )
                 }
-            )
+                .background(
+                    color = when {
+                        connectionStatus != ConnectionStatus.Connected -> MaterialTheme.colorScheme.surfaceVariant
+                        isRecording -> Color(0xFFFF4444)
+                        else -> MaterialTheme.colorScheme.primary
+                    },
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.Mic,
                 contentDescription = "Push to talk",
-                modifier = Modifier.size(36.dp)
+                modifier = Modifier.size(36.dp),
+                tint = when {
+                    connectionStatus != ConnectionStatus.Connected -> MaterialTheme.colorScheme.onSurfaceVariant
+                    else -> Color.White
+                }
             )
         }
     }

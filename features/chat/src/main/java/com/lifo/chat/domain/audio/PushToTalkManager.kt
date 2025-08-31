@@ -77,10 +77,20 @@ class PushToTalkManager @Inject constructor(
             Log.d(TAG, "🎤 Starting push-to-talk recording...")
             
             val currentState = _state.value
+            val webRTCState = webRTCClient.sessionState.value
             
             // Check if we can record
             if (!currentState.canRecord) {
                 Log.w(TAG, "⚠️ Cannot start recording - WebRTC not connected")
+                return false
+            }
+            
+            // Check if AI is currently speaking
+            if (webRTCState.isRemoteAudioPlaying) {
+                Log.w(TAG, "⚠️ Cannot start recording - AI is currently speaking")
+                _state.update { 
+                    it.copy(error = "Wait for AI to finish speaking")
+                }
                 return false
             }
             

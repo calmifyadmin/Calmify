@@ -99,11 +99,38 @@ class MainActivity : ComponentActivity() {
         // Configure edge-to-edge display
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        // Configure the Gemini API Key
-        // IMPORTANT: Replace "your-gemini-api-key" with your actual API key.
-        // For production apps, consider fetching this key securely (e.g., from a build config,
-        // environment variable, or a secure remote configuration service) instead of hardcoding.
-        apiConfigManager.setGeminiApiKey("YOUR_API_KEY_HERE")
+        // Configure the API keys from BuildConfig
+        // These are loaded from local.properties file and injected at build time
+        try {
+            // Get API keys from the chat module's BuildConfig
+            val chatBuildConfig = Class.forName("com.lifo.chat.BuildConfig")
+            
+            // Get Gemini API key
+            val geminiApiKeyField = chatBuildConfig.getDeclaredField("GEMINI_API_KEY")
+            val geminiApiKey = geminiApiKeyField.get(null) as String
+            
+            // Get OpenAI API key  
+            val openAIApiKeyField = chatBuildConfig.getDeclaredField("KEY_OPENAI_API")
+            val openAIApiKey = openAIApiKeyField.get(null) as String
+            
+            // Set the API keys if they are not empty
+            if (geminiApiKey.isNotEmpty()) {
+                apiConfigManager.setGeminiApiKey(geminiApiKey)
+                Log.d("MainActivity", "Gemini API key configured from BuildConfig")
+            } else {
+                Log.w("MainActivity", "Gemini API key is empty in BuildConfig")
+            }
+            
+            if (openAIApiKey.isNotEmpty()) {
+                apiConfigManager.setOpenAIApiKey(openAIApiKey)
+                Log.d("MainActivity", "OpenAI API key configured from BuildConfig")
+            } else {
+                Log.w("MainActivity", "OpenAI API key is empty in BuildConfig")
+            }
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Failed to load API keys from BuildConfig", e)
+            // In production, you might want to handle this more gracefully
+        }
         lifecycleScope.launch {
             geminiNativeVoiceSystem.initialize()
         }

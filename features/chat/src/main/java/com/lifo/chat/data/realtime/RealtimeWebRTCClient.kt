@@ -1,6 +1,9 @@
 package com.lifo.chat.data.realtime
 
 import android.content.Context
+import android.media.AudioFormat
+import android.media.AudioManager
+import android.media.MediaRecorder
 import android.util.Log
 import com.lifo.chat.BuildConfig
 import com.lifo.chat.domain.audio.AudioLevelExtractor
@@ -13,6 +16,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import org.webrtc.*
+import org.webrtc.audio.JavaAudioDeviceModule
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -81,6 +85,49 @@ class RealtimeWebRTCClient @Inject constructor(
     }
     
     /**
+     * Configure audio for speaker output (not earpiece)
+     */
+    private fun configureAudioForSpeaker() {
+        try {
+            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            
+            // Set audio mode to MUSIC for speaker output (not IN_CALL or IN_COMMUNICATION)
+            audioManager.mode = AudioManager.MODE_NORMAL
+            
+            // Force route to speaker
+            audioManager.isSpeakerphoneOn = true
+            
+            // Request audio focus for music streaming
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                val focusRequest = android.media.AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                    .setAudioAttributes(
+                        android.media.AudioAttributes.Builder()
+                            .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
+                            .build()
+                    )
+                    .build()
+                audioManager.requestAudioFocus(focusRequest)
+            }
+            
+            // Set volume to a reasonable level
+            val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+            val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+            if (currentVolume < maxVolume * 0.5) {
+                audioManager.setStreamVolume(
+                    AudioManager.STREAM_MUSIC,
+                    (maxVolume * 0.7).toInt(),
+                    AudioManager.FLAG_SHOW_UI
+                )
+            }
+            
+            Log.d(TAG, "🔊 Audio configured for speaker output with MUSIC mode")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to configure audio for speaker", e)
+        }
+    }
+    
+    /**
      * Initialize WebRTC PeerConnectionFactory
      */
     private fun initializeWebRTC() {
@@ -94,7 +141,55 @@ class RealtimeWebRTCClient @Inject constructor(
             
             PeerConnectionFactory.initialize(options)
             
+            // Create custom audio device module for speaker output
+            val audioDeviceModule = JavaAudioDeviceModule.builder(context)
+                .setUseHardwareAcousticEchoCanceler(true)
+                .setUseHardwareNoiseSuppressor(true)
+                .setAudioSource(android.media.MediaRecorder.AudioSource.MIC) // Use MIC instead of VOICE_COMMUNICATION
+                .setAudioFormat(android.media.AudioFormat.ENCODING_PCM_16BIT)
+                .setSampleRate(48000)
+                .setAudioRecordErrorCallback(object : JavaAudioDeviceModule.AudioRecordErrorCallback {
+                    override fun onWebRtcAudioRecordInitError(errorMessage: String?) {
+                        Log.e(TAG, "Audio record init error: $errorMessage")
+                    }
+                    
+                    override fun onWebRtcAudioRecordStartError(
+                        errorCode: JavaAudioDeviceModule.AudioRecordStartErrorCode?,
+                        errorMessage: String?
+                    ) {
+                        Log.e(TAG, "Audio record start error: $errorMessage")
+                    }
+                    
+                    override fun onWebRtcAudioRecordError(errorMessage: String?) {
+                        Log.e(TAG, "Audio record error: $errorMessage")
+                    }
+                })
+                .setAudioTrackErrorCallback(object : JavaAudioDeviceModule.AudioTrackErrorCallback {
+                    override fun onWebRtcAudioTrackInitError(errorMessage: String?) {
+                        Log.e(TAG, "Audio track init error: $errorMessage")
+                    }
+                    
+                    override fun onWebRtcAudioTrackStartError(
+                        errorCode: JavaAudioDeviceModule.AudioTrackStartErrorCode?,
+                        errorMessage: String?
+                    ) {
+                        Log.e(TAG, "Audio track start error: $errorMessage")
+                    }
+                    
+                    override fun onWebRtcAudioTrackError(errorMessage: String?) {
+                        Log.e(TAG, "Audio track error: $errorMessage")
+                    }
+                })
+                .setSamplesReadyCallback { samples ->
+                    // Process audio samples if needed
+                }
+                .createAudioDeviceModule()
+            
+            // Force speaker phone ON to avoid earpiece mode
+            audioDeviceModule.setSpeakerMute(false)
+            
             peerConnectionFactory = PeerConnectionFactory.builder()
+                .setAudioDeviceModule(audioDeviceModule)
                 .createPeerConnectionFactory()
             
             _sessionState.update { it.copy(isInitialized = true) }
@@ -117,6 +212,9 @@ class RealtimeWebRTCClient @Inject constructor(
     suspend fun startSession(): Result<Unit> = withContext(Dispatchers.Main) {
         try {
             Log.d(TAG, "🔌 Starting WebRTC session...")
+            
+            // Configure audio manager for speaker output
+            configureAudioForSpeaker()
             
             _sessionState.update { 
                 it.copy(
@@ -218,14 +316,23 @@ class RealtimeWebRTCClient @Inject constructor(
             
             override fun onAddStream(stream: MediaStream) {
                 Log.d(TAG, "🎵 Remote stream added")
-                // Handle remote audio stream
+                // Handle remote audio stream and disable microphone to prevent feedback
                 stream.audioTracks.forEach { audioTrack ->
-                    Log.d(TAG, "🎵 Remote audio track received")
+                    Log.d(TAG, "🎵 Remote audio track received - disabling local microphone")
+                    localAudioTrack?.setEnabled(false)
+                    _sessionState.update { it.copy(
+                        isAudioEnabled = false,
+                        isRemoteAudioPlaying = false // TODO: Implement proper audio level detection
+                    )}
+                    listener?.onRemoteAudioStarted()
                 }
             }
             
             override fun onRemoveStream(stream: MediaStream) {
-                Log.d(TAG, "🎵 Remote stream removed")
+                Log.d(TAG, "🎵 Remote stream removed - microphone can be re-enabled via push-to-talk")
+                // Don't auto-enable microphone - wait for push-to-talk
+                _sessionState.update { it.copy(isRemoteAudioPlaying = false) }
+                listener?.onRemoteAudioEnded()
             }
             
             override fun onAddTrack(receiver: RtpReceiver?, mediaStreams: Array<out MediaStream>?) {
@@ -233,7 +340,14 @@ class RealtimeWebRTCClient @Inject constructor(
                 // Handle incoming audio track
                 receiver?.track()?.let { track ->
                     if (track.kind() == "audio") {
-                        Log.d(TAG, "🎵 Remote audio track added")
+                        Log.d(TAG, "🎵 Remote audio track added - disabling local microphone to prevent feedback")
+                        // IMPORTANT: Disable local audio when receiving remote audio to prevent feedback
+                        localAudioTrack?.setEnabled(false)
+                        _sessionState.update { it.copy(
+                            isAudioEnabled = false,
+                            isRemoteAudioPlaying = false // TODO: Implement proper audio level detection
+                        )}
+                        listener?.onRemoteAudioStarted()
                     }
                 }
             }
@@ -266,6 +380,10 @@ class RealtimeWebRTCClient @Inject constructor(
         audioSource = peerConnectionFactory?.createAudioSource(audioConstraints)
         localAudioTrack = peerConnectionFactory?.createAudioTrack("local_audio", audioSource)
         
+        // IMPORTANT: Start with audio DISABLED to prevent feedback loop
+        // Audio will only be enabled when push-to-talk is pressed
+        localAudioTrack?.setEnabled(false)
+        
         // Create local stream and add audio track
         localAudioStream = peerConnectionFactory?.createLocalMediaStream("local_stream")
         localAudioStream?.addTrack(localAudioTrack)
@@ -275,8 +393,9 @@ class RealtimeWebRTCClient @Inject constructor(
             peerConnection?.addTrack(track, listOf("local_stream"))
         }
         
-        _sessionState.update { it.copy(isAudioEnabled = true) }
-        Log.d(TAG, "🎤 Local audio track added")
+        // Start with audio disabled to prevent listening while AI is speaking
+        _sessionState.update { it.copy(isAudioEnabled = false) }
+        Log.d(TAG, "🎤 Local audio track added (initially muted to prevent feedback)")
     }
     
     /**
@@ -446,9 +565,13 @@ class RealtimeWebRTCClient @Inject constructor(
      * Enable/disable local audio track
      */
     fun setAudioEnabled(enabled: Boolean) {
+        Log.d(TAG, if (enabled) "🔊 Enabling audio (microphone)" else "🔇 Disabling audio (microphone)")
+        
+        // Enable/disable the audio track
         localAudioTrack?.setEnabled(enabled)
+        
         _sessionState.update { it.copy(isAudioEnabled = enabled) }
-        Log.d(TAG, if (enabled) "🔊 Audio enabled" else "🔇 Audio disabled")
+        Log.d(TAG, if (enabled) "✅ Audio enabled" else "✅ Audio disabled")
     }
     
     /**
@@ -475,6 +598,9 @@ class RealtimeWebRTCClient @Inject constructor(
             audioSource?.dispose()
             audioSource = null
             
+            // Restore audio settings to default
+            restoreAudioSettings()
+            
             // Clear ephemeral session
             ephemeralKeyManager.clearSession()
             
@@ -484,6 +610,20 @@ class RealtimeWebRTCClient @Inject constructor(
             
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error ending WebRTC session", e)
+        }
+    }
+    
+    /**
+     * Restore audio settings to default
+     */
+    private fun restoreAudioSettings() {
+        try {
+            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            audioManager.mode = AudioManager.MODE_NORMAL
+            audioManager.isSpeakerphoneOn = false
+            Log.d(TAG, "🔊 Audio settings restored to default")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to restore audio settings", e)
         }
     }
     

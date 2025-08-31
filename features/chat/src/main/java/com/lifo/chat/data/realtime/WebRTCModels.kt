@@ -62,6 +62,7 @@ data class WebRTCSessionState(
     val sessionId: String? = null,
     val ephemeralKey: String? = null,
     val isAudioEnabled: Boolean = false,
+    val isRemoteAudioPlaying: Boolean = false, // Track if AI is speaking
     val localSdpOffer: String? = null,
     val remoteSdpAnswer: String? = null,
     val audioLevel: Float = 0f, // 0.0 to 1.0 RMS level
@@ -125,6 +126,8 @@ interface WebRTCClientListener {
     fun onIceConnectionStateChanged(state: IceConnectionState)
     fun onAudioLevelChanged(level: Float)
     fun onRemoteAudioReceived(audioFrame: AudioFrame)
+    fun onRemoteAudioStarted() // Called when AI starts speaking
+    fun onRemoteAudioEnded() // Called when AI stops speaking
     fun onError(error: String)
 }
 
