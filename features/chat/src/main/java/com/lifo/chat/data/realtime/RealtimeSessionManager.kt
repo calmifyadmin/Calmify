@@ -50,7 +50,7 @@ class RealtimeSessionManager @Inject constructor(
             Log.d(TAG, "Starting realtime session...")
             
             // Get API key
-            val apiKey = apiConfigManager.getGeminiApiKey() // You might need OpenAI key instead
+            val apiKey = apiConfigManager.getOpenAIApiKey() // Fixed: Use OpenAI key for OpenAI Realtime API
             if (apiKey.isEmpty()) {
                 return Result.failure(Exception("OpenAI API key not configured"))
             }

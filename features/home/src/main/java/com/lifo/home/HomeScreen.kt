@@ -187,31 +187,6 @@ internal fun HomeScreen(
                 horizontalAlignment = Alignment.End,  // Allineamento esplicito a destra
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                // LiveChat FAB - sopra tutti gli altri FAB
-                AnimatedVisibility(
-                    visible = screenState is HomeScreenState.Ready,
-                    enter = scaleIn(
-                        initialScale = 0.3f,
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessLow
-                        )
-                    ) + fadeIn(),
-                    exit = scaleOut(targetScale = 0.3f) + fadeOut()
-                ) {
-                    SmallFloatingActionButton(
-                        onClick = navigateToLiveChat,
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.VolumeUp,
-                            contentDescription = "Live Chat",
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
 
                 // Chat FAB - secondo FAB
                 AnimatedVisibility(
