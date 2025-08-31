@@ -18,7 +18,7 @@ android {
 
         // Add API key from local.properties
         buildConfigField("String", "GEMINI_API_KEY", "\"${getGeminiApiKey()}\"")
-        buildConfigField("String", "OPENAI_API_KEY", "\"${getOpenAIApiKey()}\"")
+        buildConfigField("String", "KEY_OPENAI_API", "\"${getOpenAIApiKey()}\"")
     }
 
     buildTypes {
@@ -28,6 +28,9 @@ android {
         }
         debug {
             minifyEnabled false
+            // Per test su dispositivi fisici - RIMUOVI IN PRODUZIONE
+            buildConfigField("String", "GEMINI_API_KEY_FALLBACK", "\"${getGeminiApiKey()}\"")
+            buildConfigField("String", "OPENAI_API_KEY_FALLBACK", "\"${getOpenAIApiKey()}\"")
         }
     }
 

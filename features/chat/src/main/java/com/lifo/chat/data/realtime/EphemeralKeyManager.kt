@@ -78,7 +78,19 @@ class EphemeralKeyManager @Inject constructor() {
     
     private suspend fun createNewSession(): Result<String> = withContext(Dispatchers.IO) {
         try {
-            val apiKey = BuildConfig.OPENAI_API_KEY
+            var apiKey = BuildConfig.KEY_OPENAI_API
+            
+            // Fallback per debug builds quando local.properties non è disponibile
+            if (apiKey.isEmpty() && BuildConfig.DEBUG) {
+                try {
+                    // Usa reflection per evitare errori di compilazione nei release builds
+                    val fallbackField = BuildConfig::class.java.getDeclaredField("OPENAI_API_KEY_FALLBACK")
+                    apiKey = fallbackField.get(null) as String? ?: ""
+                } catch (e: Exception) {
+                    // Ignore se OPENAI_API_KEY_FALLBACK non è disponibile
+                }
+            }
+            
             if (apiKey.isEmpty()) {
                 return@withContext Result.failure(
                     IllegalStateException("OpenAI API key not configured in BuildConfig")
