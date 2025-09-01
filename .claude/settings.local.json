@@ -3,7 +3,8 @@
     "allow": [
       "Bash(./gradlew:*)",
       "WebSearch",
-      "WebFetch(domain:platform.openai.com)"
+      "WebFetch(domain:platform.openai.com)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": []

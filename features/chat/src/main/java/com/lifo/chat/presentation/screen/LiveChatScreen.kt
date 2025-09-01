@@ -36,6 +36,8 @@ import com.lifo.chat.domain.model.AIEmotion
 import com.lifo.chat.domain.model.LiveChatUiState
 import com.lifo.chat.presentation.viewmodel.LiveChatViewModel
 import com.lifo.chat.presentation.components.LiveChatVisualizer
+import com.lifo.chat.presentation.components.GeminiLiquidVisualizer
+import android.os.Build
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,40 +76,58 @@ fun LiveChatScreen(
         }
     }
 
-    Scaffold(
-        modifier = modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .navigationBarsPadding(),
-        topBar = {
-            LiveChatTopBar(
-                connectionStatus = uiState.connectionStatus,
-                onBackClicked = {
-                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    viewModel.disconnectFromRealtime()
-                    onBackClicked()
-                }
+    // Full-screen background (completely outside all constraints)
+    Box(
+        modifier = modifier.fillMaxSize()
+    ) {
+        // Liquid wave background covering the ENTIRE screen (no padding, no bars)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && uiState.hasAudioPermission) {
+            GeminiLiquidVisualizer(
+                isSpeaking = uiState.aiEmotion == AIEmotion.Speaking || uiState.audioLevel > 0.1f,
+                modifier = Modifier.fillMaxSize(),
+                backgroundColor = MaterialTheme.colorScheme.surface // Use theme surface color
             )
-        },
-        containerColor = Color.Transparent
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.surface,
-                            MaterialTheme.colorScheme.surfaceVariant
+        } else {
+            // Fallback gradient background for older devices or no permission
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.surface,
+                                MaterialTheme.colorScheme.surfaceVariant
+                            )
                         )
                     )
+            )
+        }
+
+        // Scaffold on top of the background with system padding
+        Scaffold(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding(),
+            topBar = {
+                LiveChatTopBar(
+                    connectionStatus = uiState.connectionStatus,
+                    onBackClicked = {
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        viewModel.disconnectFromRealtime()
+                        onBackClicked()
+                    }
                 )
-                .padding(paddingValues)
-        ) {
+            },
+            containerColor = Color.Transparent
+        ) { paddingValues ->
+            // UI content without background (background is handled by outer Box)
             Column(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // Add top padding manually to account for TopBar
+                Spacer(modifier = Modifier.height(paddingValues.calculateTopPadding()))
                 // Center space for liquid globe
                 Box(
                     modifier = Modifier
@@ -122,14 +142,29 @@ fun LiveChatScreen(
                             }
                         )
                     } else {
-                        LiveChatVisualizer(
-                            connectionStatus = uiState.connectionStatus,
-                            aiEmotion = uiState.aiEmotion,
-                            audioLevel = uiState.audioLevel,
-                            userAudioLevel = 0f, // TODO: Connect to actual user audio level from ViewModel
-                            pushToTalkState = uiState.pushToTalkState,
-                            isRecording = uiState.isRecording
-                        )
+                        // Simple status indicator instead of full visualizer (background handles liquid effect)
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Text(
+                                text = when {
+                                    uiState.connectionStatus != ConnectionStatus.Connected -> "Connecting to AI..."
+                                    uiState.aiEmotion == AIEmotion.Speaking || uiState.audioLevel > 0.1f -> "AI is speaking"
+                                    uiState.isRecording -> "Listening..."
+                                    else -> "Ready to chat"
+                                },
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .background(
+                                        MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                                        MaterialTheme.shapes.medium
+                                    )
+                                    .padding(horizontal = 20.dp, vertical = 12.dp)
+                            )
+                        }
                     }
                 }
 
@@ -146,6 +181,9 @@ fun LiveChatScreen(
                     onRetryConnection = viewModel::retryConnection,
                     onClearError = viewModel::clearError
                 )
+                
+                // Add bottom padding manually to account for system navigation
+                Spacer(modifier = Modifier.height(paddingValues.calculateBottomPadding()))
             }
         }
     }
@@ -166,7 +204,8 @@ private fun LiveChatTopBar(
                 Text(
                     text = "Live Chat",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface // Use theme's onSurface color
                 )
                 
                 ConnectionStatusChip(connectionStatus = connectionStatus)
@@ -177,12 +216,12 @@ private fun LiveChatTopBar(
                 Icon(
                     imageVector = Icons.Default.ArrowBack,
                     contentDescription = "Back",
-                    tint = MaterialTheme.colorScheme.onSurface
+                    tint = MaterialTheme.colorScheme.onSurface // Use theme's onSurface color
                 )
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Color.Transparent
+            containerColor = Color.Transparent // Transparent to blend with liquid background
         )
     )
 }
@@ -377,7 +416,7 @@ private fun PushToTalkSection(
             )
         }
 
-        // Instructions
+        // Instructions with enhanced visibility
         Text(
             text = when {
                 connectionStatus == ConnectionStatus.Disconnected -> "Connecting..."

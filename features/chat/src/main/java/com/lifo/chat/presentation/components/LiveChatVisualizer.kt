@@ -1,13 +1,18 @@
 package com.lifo.chat.presentation.components
 
+import android.os.Build
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PaintingStyle.Companion.Stroke
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
@@ -33,7 +38,8 @@ fun LiveChatVisualizer(
     userAudioLevel: Float, // User audio level 0.0 to 1.0
     pushToTalkState: PTTState,
     isRecording: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    useGeminiStyle: Boolean = true // Switch between Gemini-style and original liquid globe
 ) {
     // Main animation coordination
     val isConnected = connectionStatus == ConnectionStatus.Connected
@@ -61,55 +67,75 @@ fun LiveChatVisualizer(
     )
     
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(24.dp),
+        modifier = modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        // Main visualization area
-        Box(
-            modifier = Modifier
-                .size(180.dp)
-                .graphicsLayer {
-                    alpha = globeVisibility
-                    scaleX = if (isAiActive) aiActivityPulse else 1f
-                    scaleY = if (isAiActive) aiActivityPulse else 1f
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            // Background ambient glow based on connection
-            androidx.compose.animation.AnimatedVisibility(
-                visible = isConnected,
-                enter = fadeIn(animationSpec = tween(1000)),
-                exit = fadeOut(animationSpec = tween(500))
+        // Main visualization area - conditional rendering based on style preference
+        if (useGeminiStyle && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Gemini-style liquid wave background that fills available space
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxSize() // Taller to create immersive background feel
+                    .graphicsLayer {
+                        alpha = globeVisibility
+                        scaleX = if (isAiActive) aiActivityPulse else 1f
+                        scaleY = if (isAiActive) aiActivityPulse else 1f
+                    },
+                contentAlignment = Alignment.Center
             ) {
-                BackgroundAmbientGlow(
+                // Background liquid wave that fills the entire container
+                GeminiLiquidVisualizer(
+                    isSpeaking = isAiActive,
+                    modifier = Modifier.fillMaxSize(),
+                    backgroundColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.8f)
+                )
+                
+                // User audio level indicator overlay
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = isRecording && pushToTalkState == PTTState.Listening,
+                    enter = scaleIn(animationSpec = spring()) + fadeIn(),
+                    exit = scaleOut(animationSpec = spring()) + fadeOut()
+                ) {
+                    UserAudioLevelOverlay(
+                        audioLevel = userAudioLevel,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
+        } else {
+            // Original liquid globe style - more minimal when used on liquid background
+            Box(
+                modifier = Modifier
+                    .size(200.dp) // Smaller size to work better over liquid background
+                    .graphicsLayer {
+                        alpha = globeVisibility * 0.8f // More transparent
+                        scaleX = if (isAiActive) aiActivityPulse else 1f
+                        scaleY = if (isAiActive) aiActivityPulse else 1f
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                // Simplified liquid globe without background glow (since liquid background provides it)
+                LiquidGlobe(
                     emotion = aiEmotion,
                     audioLevel = audioLevel,
-                    modifier = Modifier.size(200.dp)
+                    size = 100.dp, // Smaller size
+                    modifier = Modifier.size(100.dp)
                 )
-            }
-            
-            // Main liquid globe
-            LiquidGlobe(
-                emotion = aiEmotion,
-                audioLevel = audioLevel,
-                size = 120.dp,
-                modifier = Modifier.size(120.dp)
-            )
-            
-            // User audio level indicator positioned around the globe
-            androidx.compose.animation.AnimatedVisibility(
-                visible = isRecording && pushToTalkState == PTTState.Listening,
-                enter = scaleIn(animationSpec = spring()) + fadeIn(),
-                exit = scaleOut(animationSpec = spring()) + fadeOut()
-            ) {
-                UserAudioLevelRings(
-                    audioLevel = userAudioLevel,
-                    globeSize = 120.dp,
-                    modifier = Modifier.size(160.dp)
-                )
+                
+                // User audio level indicator positioned around the globe
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = isRecording && pushToTalkState == PTTState.Listening,
+                    enter = scaleIn(animationSpec = spring()) + fadeIn(),
+                    exit = scaleOut(animationSpec = spring()) + fadeOut()
+                ) {
+                    UserAudioLevelRings(
+                        audioLevel = userAudioLevel,
+                        globeSize = 100.dp,
+                        modifier = Modifier.size(160.dp) // Proportionally smaller
+                    )
+                }
             }
         }
         
@@ -192,6 +218,58 @@ private fun UserAudioLevelRings(
 }
 
 /**
+ * User audio level overlay for Gemini-style visualizer
+ */
+@Composable
+private fun UserAudioLevelOverlay(
+    audioLevel: Float,
+    modifier: Modifier = Modifier
+) {
+    val pulseAnimation by rememberInfiniteTransition(label = "user_pulse").animateFloat(
+        initialValue = 1f,
+        targetValue = 1.2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = (1000 - (audioLevel * 500)).toInt().coerceIn(200, 1000),
+                easing = FastOutSlowInEasing
+            ),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse"
+    )
+    
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        // Subtle overlay rings that respond to user voice
+        for (i in 1..2) {
+            val alpha = (audioLevel * 0.3f * (1f - i * 0.1f)).coerceIn(0f, 0.3f)
+            
+            androidx.compose.foundation.Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        scaleX = pulseAnimation * (1f + i * 0.1f)
+                        scaleY = pulseAnimation * (1f + i * 0.1f)
+                    }
+            ) {
+                val center = this.center
+                val radius = size.minDimension * 0.3f * (1f + audioLevel * 0.5f)
+                
+                drawCircle(
+                    color = androidx.compose.ui.graphics.Color.White,
+                    radius = radius,
+                    center = center,
+                    alpha = alpha,
+                    style = Stroke(width = 2.dp.toPx())
+                )
+            }
+        }
+    }
+}
+
+/**
  * Status text section with animated transitions
  */
 @Composable
@@ -218,13 +296,19 @@ private fun StatusTextSection(
         }
     }
     
-    // Status text with smooth transitions
+    // Status text with smooth transitions - enhanced visibility on liquid background
     Text(
         text = statusText,
         style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = Color.White, // White text for better contrast on liquid background
         textAlign = TextAlign.Center,
-        modifier = Modifier.padding(horizontal = 32.dp)
+        modifier = Modifier
+            .padding(horizontal = 32.dp)
+            .background(
+                Color.Black.copy(alpha = 0.3f),
+                MaterialTheme.shapes.small
+            )
+            .padding(horizontal = 12.dp, vertical = 6.dp)
     )
     
     // Additional context indicators
