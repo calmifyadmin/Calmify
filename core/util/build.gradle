@@ -46,7 +46,7 @@ android {
 }
 
 dependencies {
-    // Firebase BOM - NECESSARIO per firebase-storage
+    // Firebase BOM - needed for firebase-storage
     implementation platform(libs.firebase.bom)
 
     // Compose BOM
@@ -56,13 +56,19 @@ dependencies {
     implementation libs.compose.ui
     implementation libs.compose.ui.tooling.preview
     implementation libs.compose.material3
+    debugImplementation libs.compose.ui.tooling
 
     // Core
     implementation libs.core.ktx
-    implementation libs.firebase.storage  // Ora funzionerà con il BOM
+    implementation libs.activity.compose
+
+    // Firebase (no versions with BOM)
+    implementation libs.firebase.storage
+
+    // Other
     implementation libs.realm.sync
     implementation libs.coroutines.core
-    implementation libs.activity.compose
+    implementation libs.coroutines.android
     implementation libs.coil
 
     // Testing
@@ -70,6 +76,6 @@ dependencies {
     androidTestImplementation libs.junit.ext
     androidTestImplementation libs.compose.ui.test
 
-    // Moduli interni
+    // Internal modules
     implementation(project(":core:ui"))
 }

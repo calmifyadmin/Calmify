@@ -4,7 +4,8 @@
       "Bash(./gradlew:*)",
       "WebSearch",
       "WebFetch(domain:platform.openai.com)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

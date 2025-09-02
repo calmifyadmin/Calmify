@@ -3,6 +3,7 @@ plugins {
     id 'org.jetbrains.kotlin.android'
     id 'com.google.devtools.ksp'
     id 'io.realm.kotlin'
+    id 'dagger.hilt.android.plugin'
 }
 
 android {
@@ -41,31 +42,37 @@ android {
 dependencies {
     // Core
     implementation libs.core.ktx
-    implementation libs.coroutines.core
+
+    // Realm
     implementation libs.realm.sync
 
     // Room
     implementation libs.room.runtime
     implementation libs.room.ktx
     ksp libs.room.compiler
+
     // Google AI
     implementation libs.generative.ai
-    implementation libs.firebase.auth
+
     // Hilt
     implementation libs.hilt.android
     ksp libs.hilt.compiler
-    implementation libs.hilt.navigation.compose
+
+    // Firebase BOM
+    implementation platform(libs.firebase.bom)
+
+    // Firebase (no versions with BOM)
+    implementation libs.firebase.auth
+    implementation libs.firebase.storage
+
     // Coroutines
     implementation libs.coroutines.core
     implementation libs.coroutines.android
-    implementation libs.firebase.auth
-    implementation libs.firebase.storage
+
     // Testing
     testImplementation libs.junit
     androidTestImplementation libs.junit.ext
 
-    // Moduli interni
+    // Internal modules
     implementation(project(":core:util"))
 }
-
-

@@ -5,8 +5,8 @@ plugins {
     id 'dagger.hilt.android.plugin'
     id 'io.realm.kotlin'
     id 'com.google.gms.google-services'
-    // id 'com.google.firebase.crashlytics' // Decommenta se vuoi crash reporting
-    // id 'com.google.firebase.firebase-perf' // Decommenta se vuoi performance monitoring
+    // id 'com.google.firebase.crashlytics' // Uncomment for crash reporting
+    // id 'com.google.firebase.firebase-perf' // Uncomment for performance monitoring
 }
 
 android {
@@ -26,7 +26,7 @@ android {
             useSupportLibrary true
         }
 
-        // ProGuard rules per Room
+        // ProGuard rules for Room
         javaCompileOptions {
             annotationProcessorOptions {
                 arguments += ["room.schemaLocation": "$projectDir/schemas"]
@@ -47,12 +47,12 @@ android {
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
 
-            // Ottimizzazioni release
+            // Release optimizations
             ndk {
                 debugSymbolLevel 'NONE'
             }
 
-            // Split APKs per ABI
+            // Split APKs by ABI
             splits {
                 abi {
                     enable true
@@ -62,7 +62,6 @@ android {
                 }
             }
             signingConfig signingConfigs.debug
-
         }
     }
 
@@ -74,7 +73,7 @@ android {
     kotlinOptions {
         jvmTarget = ProjectConfig.jvmTarget
 
-        // Ottimizzazioni Kotlin
+        // Kotlin optimizations
         freeCompilerArgs += [
                 "-opt-in=kotlin.RequiresOptIn",
                 "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
@@ -87,7 +86,7 @@ android {
         compose true
         buildConfig true
 
-        // Disabilita features non usate
+        // Disable unused features
         aidl false
         renderScript false
         shaders false
@@ -118,18 +117,18 @@ android {
         warningsAsErrors false
     }
 
-    // Namespace per BuildConfig
+    // Enable BuildConfig
     buildFeatures.buildConfig = true
 }
 
 dependencies {
-    // Firebase BOM - gestisce tutte le versioni Firebase
+    // Firebase BOM - manages all Firebase versions
     implementation platform(libs.firebase.bom)
 
-    // Compose BOM - gestisce tutte le versioni Compose
+    // Compose BOM - manages all Compose versions
     implementation platform(libs.compose.bom)
 
-    // Compose dependencies (senza versioni)
+    // Compose dependencies (no versions needed with BOM)
     implementation libs.compose.ui
     implementation libs.compose.ui.graphics
     implementation libs.compose.ui.tooling.preview
@@ -139,9 +138,7 @@ dependencies {
     implementation libs.compose.foundation
     debugImplementation libs.compose.ui.tooling
     debugImplementation libs.compose.ui.test.manifest
-    implementation("io.coil-kt:coil-compose:2.5.0")
-    implementation("androidx.compose.material3:material3:1.2.0")
-    implementation("androidx.compose.material:material-icons-extended:1.5.4")
+
     // Core Android
     implementation libs.core.ktx
     implementation libs.lifecycle.runtime.ktx
@@ -152,11 +149,12 @@ dependencies {
     // Navigation
     implementation libs.navigation.compose
 
-    // Firebase (versioni gestite dal BOM)
+    // Firebase (versions managed by BOM)
     implementation libs.firebase.auth
     implementation libs.firebase.storage
     implementation libs.firebase.analytics
-    // implementation libs.firebase.crashlytics // Decommenta se vuoi
+    implementation libs.firebase.vertexai  // Firebase AI support
+    // implementation libs.firebase.crashlytics // Uncomment if needed
 
     // Room
     implementation libs.room.runtime
@@ -179,7 +177,10 @@ dependencies {
     implementation libs.coroutines.android
     implementation libs.coroutines.play.services
 
-    // Moduli interni
+    // Image Loading
+    implementation libs.coil
+
+    // Internal modules
     implementation(project(":core:ui"))
     implementation(project(":core:util"))
     implementation(project(":data:mongo"))

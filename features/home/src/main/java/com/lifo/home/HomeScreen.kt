@@ -188,7 +188,7 @@ internal fun HomeScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
 
-                // Chat FAB - secondo FAB
+                // Chat FAB - terzo FAB
                 AnimatedVisibility(
                     visible = screenState is HomeScreenState.Ready,
                     enter = scaleIn(
@@ -214,7 +214,33 @@ internal fun HomeScreen(
                     }
                 }
 
-                // Write FAB - sotto il Chat FAB
+                // LiveChat FAB - secondo FAB
+                AnimatedVisibility(
+                    visible = screenState is HomeScreenState.Ready,
+                    enter = scaleIn(
+                        initialScale = 0.3f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        )
+                    ) + fadeIn(),
+                    exit = scaleOut(targetScale = 0.3f) + fadeOut()
+                ) {
+                    SmallFloatingActionButton(
+                        onClick = navigateToLiveChat,
+                        containerColor = MaterialTheme.colorScheme.tertiary,
+                        contentColor = MaterialTheme.colorScheme.onTertiary,
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Mic,
+                            contentDescription = "Live Voice Chat",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+
+                // Write FAB - primo FAB (quello principale)
                 AnimatedVisibility(
                     visible = screenState is HomeScreenState.Ready,
                     enter = scaleIn(
