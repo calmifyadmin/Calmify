@@ -7,6 +7,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.*
@@ -16,10 +17,10 @@ import com.lifo.chat.R
 
 /**
  * Gemini-style Liquid Visualizer using GLSL shaders
- * 
+ *
  * This component creates a liquid wave effect similar to Gemini Live,
  * responding to voice activity states without requiring real-time audio analysis.
- * 
+ *
  * Features:
  * - GLSL shader-based liquid wave animation
  * - Smooth transitions between speaking/idle states
@@ -32,12 +33,12 @@ import com.lifo.chat.R
 fun GeminiLiquidVisualizer(
     isSpeaking: Boolean,
     modifier: Modifier = Modifier,
-    primaryColor: Color = Color(0xFF00CCFF), // Bright cyan
-    secondaryColor: Color = Color(0xFF9900FF), // Purple
+    primaryColor: Color = MaterialTheme.colorScheme.primary,
+    secondaryColor: Color = MaterialTheme.colorScheme.secondary,
     backgroundColor: Color = Color.Black
 ) {
     val context = LocalContext.current
-    
+
     // Load and compile the GLSL shader
     val shader = remember {
         try {
@@ -49,7 +50,7 @@ fun GeminiLiquidVisualizer(
             null
         }
     }
-    
+
     // Continuous time animation for wave movement (MUCH slower)
     val infiniteTransition = rememberInfiniteTransition(label = "liquid_wave_time")
     val time by infiniteTransition.animateFloat(
@@ -64,7 +65,7 @@ fun GeminiLiquidVisualizer(
         ),
         label = "time"
     )
-    
+
     // Amplitude animation based on speaking state (slower transitions)
     val amplitude by animateFloatAsState(
         targetValue = if (isSpeaking) 2.0f else 0.6f,
@@ -74,7 +75,7 @@ fun GeminiLiquidVisualizer(
         ),
         label = "amplitude"
     )
-    
+
     // Intensity animation for glow and brightness (slower transitions)
     val intensity by animateFloatAsState(
         targetValue = if (isSpeaking) 1.5f else 0.8f,
@@ -84,7 +85,7 @@ fun GeminiLiquidVisualizer(
         ),
         label = "intensity"
     )
-    
+
     // Fallback when shader is not available (API < 33 or loading failed)
     if (shader == null) {
         FallbackLiquidVisualizer(
@@ -96,7 +97,7 @@ fun GeminiLiquidVisualizer(
         )
         return
     }
-    
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -110,7 +111,7 @@ fun GeminiLiquidVisualizer(
             shader.setFloatUniform("time", time)
             shader.setFloatUniform("amplitude", amplitude)
             shader.setFloatUniform("intensity", intensity)
-            
+
             // Pass background color to shader (convert Color to RGB floats)
             shader.setFloatUniform(
                 "backgroundColor",
@@ -118,7 +119,23 @@ fun GeminiLiquidVisualizer(
                 backgroundColor.green,
                 backgroundColor.blue
             )
-            
+
+            // Pass primary color to shader
+            shader.setFloatUniform(
+                "primaryColor",
+                primaryColor.red,
+                primaryColor.green,
+                primaryColor.blue
+            )
+
+            // Pass secondary color to shader
+            shader.setFloatUniform(
+                "secondaryColor",
+                secondaryColor.red,
+                secondaryColor.green,
+                secondaryColor.blue
+            )
+
             // Draw the shader to fill entire canvas
             drawRect(
                 brush = ShaderBrush(shader),
@@ -135,8 +152,8 @@ fun GeminiLiquidVisualizer(
 private fun FallbackLiquidVisualizer(
     isSpeaking: Boolean,
     modifier: Modifier = Modifier,
-    primaryColor: Color = Color(0xFF00CCFF),
-    secondaryColor: Color = Color(0xFF9900FF),
+    primaryColor: Color = MaterialTheme.colorScheme.primary,
+    secondaryColor: Color = MaterialTheme.colorScheme.secondary,
     backgroundColor: Color = Color.Black
 ) {
     // Time-based animation for wave movement
@@ -153,7 +170,7 @@ private fun FallbackLiquidVisualizer(
         ),
         label = "wave_time"
     )
-    
+
     // Amplitude based on speaking state
     val amplitude by animateFloatAsState(
         targetValue = if (isSpeaking) 0.3f else 0.1f,
@@ -162,7 +179,7 @@ private fun FallbackLiquidVisualizer(
         ),
         label = "fallback_amplitude"
     )
-    
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -171,56 +188,56 @@ private fun FallbackLiquidVisualizer(
         Canvas(
             modifier = Modifier.fillMaxSize()
         ) {
-        val center = center
-        val width = size.width
-        val height = size.height
-        
-        // Create gradient brush
-        val brush = Brush.verticalGradient(
-            colors = listOf(
-                primaryColor.copy(alpha = 0.8f),
-                secondaryColor.copy(alpha = 0.8f)
+            val center = center
+            val width = size.width
+            val height = size.height
+
+            // Create gradient brush
+            val brush = Brush.verticalGradient(
+                colors = listOf(
+                    primaryColor.copy(alpha = 0.8f),
+                    secondaryColor.copy(alpha = 0.8f)
+                )
             )
-        )
-        
-        // Draw animated wave using Path
-        val path = androidx.compose.ui.graphics.Path()
-        val waveHeight = height * 0.6f
-        
-        path.moveTo(0f, height)
-        
-        // Generate wave points
-        for (x in 0..width.toInt() step 5) {
-            val normalizedX = x / width
-            val wave1 = kotlin.math.sin((normalizedX * 8f + time) * 2f) * amplitude * 20f
-            val wave2 = kotlin.math.sin((normalizedX * 12f - time * 1.5f) * 2f) * amplitude * 15f
-            val y = waveHeight + wave1 + wave2
-            path.lineTo(x.toFloat(), y)
-        }
-        
-        path.lineTo(width, height)
-        path.close()
-        
-        // Draw the wave
-        drawPath(
-            path = path,
-            brush = brush,
-            alpha = if (isSpeaking) 0.9f else 0.6f
-        )
-        
-        // Add glow effect
-        if (isSpeaking) {
+
+            // Draw animated wave using Path
+            val path = androidx.compose.ui.graphics.Path()
+            val waveHeight = height * 0.6f
+
+            path.moveTo(0f, height)
+
+            // Generate wave points
+            for (x in 0..width.toInt() step 5) {
+                val normalizedX = x / width
+                val wave1 = kotlin.math.sin((normalizedX * 8f + time) * 2f) * amplitude * 20f
+                val wave2 = kotlin.math.sin((normalizedX * 12f - time * 1.5f) * 2f) * amplitude * 15f
+                val y = waveHeight + wave1 + wave2
+                path.lineTo(x.toFloat(), y)
+            }
+
+            path.lineTo(width, height)
+            path.close()
+
+            // Draw the wave
             drawPath(
                 path = path,
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.3f),
-                        Color.Transparent
-                    )
-                ),
-                blendMode = BlendMode.Overlay
+                brush = brush,
+                alpha = if (isSpeaking) 0.9f else 0.6f
             )
-        }
+
+            // Add glow effect
+            if (isSpeaking) {
+                drawPath(
+                    path = path,
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.3f),
+                            Color.Transparent
+                        )
+                    ),
+                    blendMode = BlendMode.Overlay
+                )
+            }
         }
     }
 }
@@ -232,8 +249,8 @@ private fun FallbackLiquidVisualizer(
 fun CompactGeminiLiquidVisualizer(
     isSpeaking: Boolean,
     modifier: Modifier = Modifier,
-    primaryColor: Color = Color(0xFF00CCFF),
-    secondaryColor: Color = Color(0xFF9900FF)
+    primaryColor: Color = MaterialTheme.colorScheme.primary,
+    secondaryColor: Color = MaterialTheme.colorScheme.secondary
 ) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         GeminiLiquidVisualizer(

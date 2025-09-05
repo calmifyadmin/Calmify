@@ -5,7 +5,11 @@
       "WebSearch",
       "WebFetch(domain:platform.openai.com)",
       "Bash(mkdir:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(del \"C:\\Users\\lifoe\\AndroidStudioProjects\\CalmifyAppAndroid\\features\\chat\\src\\main\\java\\com\\lifo\\chat\\domain\\audio\\GeminiLiveAudioManager.kt\")",
+      "WebFetch(domain:ai.google.dev)",
+      "WebFetch(domain:github.com)"
     ],
     "deny": [],
     "ask": []

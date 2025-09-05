@@ -128,8 +128,11 @@ dependencies {
     implementation libs.coroutines.play.services
 
     // Networking
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation libs.okhttp
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    
+    // WebSocket for Gemini Live  
+    implementation "org.java-websocket:Java-WebSocket:1.5.4"
 
     // Security for API key storage
     implementation("androidx.security:security-crypto:1.1.0-alpha06")

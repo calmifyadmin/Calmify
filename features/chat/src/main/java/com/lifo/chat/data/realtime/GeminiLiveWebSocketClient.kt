@@ -30,7 +30,7 @@ class GeminiLiveWebSocketClient @Inject constructor() {
         // Use the correct native audio model
         private const val MODEL_NAME = "gemini-2.5-flash-preview-native-audio-dialog"
         private const val AUDIO_FORMAT = "pcm16" // 16-bit PCM
-        private const val SAMPLE_RATE = 16000 // 16 kHz
+        private const val SAMPLE_RATE = 24000 // 24 kHz
     }
 
     private val client = OkHttpClient.Builder()
@@ -299,8 +299,8 @@ class GeminiLiveWebSocketClient @Inject constructor() {
                     // Buffer audio data and send in chunks
                     audioBuffer.write(audioData)
 
-                    // Send when we have enough data (e.g., 320 bytes for 10ms at 16kHz)
-                    if (audioBuffer.size() >= 320) {
+                    // Send when we have enough data (e.g., 480 bytes for 10ms at 24kHz)
+                    if (audioBuffer.size() >= 480) {
                         val bufferedData = audioBuffer.toByteArray()
                         audioBuffer.reset()
 
@@ -308,7 +308,7 @@ class GeminiLiveWebSocketClient @Inject constructor() {
                             put("realtimeInput", JSONObject().apply {
                                 put("mediaChunks", org.json.JSONArray().apply {
                                     put(JSONObject().apply {
-                                        put("mimeType", "audio/pcm;rate=16000")
+                                        put("mimeType", "audio/pcm;rate=24000")
                                         put("data", android.util.Base64.encodeToString(bufferedData, android.util.Base64.NO_WRAP))
                                     })
                                 })

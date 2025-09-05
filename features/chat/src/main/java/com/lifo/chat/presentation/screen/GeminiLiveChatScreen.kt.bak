@@ -90,6 +90,8 @@ fun GeminiLiveChatScreen(
             GeminiLiquidVisualizer(
                 isSpeaking = uiState.aiEmotion == AIEmotion.Speaking || uiState.audioLevel > 0.1f,
                 modifier = Modifier.fillMaxSize(),
+                primaryColor = MaterialTheme.colorScheme.primary,
+                secondaryColor = MaterialTheme.colorScheme.tertiary,
                 backgroundColor = MaterialTheme.colorScheme.surface
             )
         } else {
@@ -278,10 +280,10 @@ private fun GeminiLiveTopBar(
 @Composable
 private fun ConnectionStatusChip(connectionStatus: ConnectionStatus) {
     val (statusText, statusColor) = when (connectionStatus) {
-        ConnectionStatus.Disconnected -> "Disconnected" to Color.Gray
-        ConnectionStatus.Connecting -> "Connecting..." to Color(0xFFFFA500)
-        ConnectionStatus.Connected -> "Live" to Color(0xFF34A853)
-        ConnectionStatus.Error -> "Error" to Color(0xFFFF4444)
+        ConnectionStatus.Disconnected -> "Disconnected" to MaterialTheme.colorScheme.outline
+        ConnectionStatus.Connecting -> "Connecting..." to MaterialTheme.colorScheme.tertiary
+        ConnectionStatus.Connected -> "Live" to MaterialTheme.colorScheme.primary
+        ConnectionStatus.Error -> "Error" to MaterialTheme.colorScheme.error
     }
 
     Surface(
@@ -425,8 +427,8 @@ private fun GeminiLivePushToTalkSection(
                     .background(
                         color = when {
                             connectionStatus != ConnectionStatus.Connected -> MaterialTheme.colorScheme.surfaceVariant
-                            isRecording -> Color(0xFFFF4444)
-                            else -> Color(0xFF4285F4) // Google Blue for Gemini
+                            isRecording -> MaterialTheme.colorScheme.error
+                            else -> MaterialTheme.colorScheme.primary
                         },
                         shape = CircleShape
                     ),

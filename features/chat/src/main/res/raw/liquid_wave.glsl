@@ -3,6 +3,8 @@ uniform float time;
 uniform float amplitude;
 uniform float intensity;
 uniform float3 backgroundColor;
+uniform float3 primaryColor;
+uniform float3 secondaryColor;
 
 half4 main(float2 fragCoord) {
     float2 uv = fragCoord / resolution;
@@ -13,17 +15,17 @@ half4 main(float2 fragCoord) {
     // Normalize coordinates to -1 to 1 for better wave calculations
     float2 normalizedUV = (uv - 0.5) * 2.0;
     
-    // Base gradient from bottom to top (cyan to purple) - more subtle
+    // Base gradient using theme colors
     float3 baseColor = mix(
-        float3(0.0, 0.6, 0.9),   // softer cyan
-        float3(0.5, 0.0, 0.9),   // softer purple
+        primaryColor * 0.8,      // Slightly darker primary
+        secondaryColor,          // Secondary color from theme
         uv.y
     );
     
-    // Secondary gradient for depth (blue to magenta) - more subtle
-    float3 secondaryColor = mix(
-        float3(0.0, 0.3, 0.8),   // deeper blue
-        float3(0.8, 0.0, 0.6),   // softer magenta
+    // Secondary gradient for depth using theme colors
+    float3 depthColor = mix(
+        primaryColor * 0.6,      // Darker primary
+        secondaryColor * 0.9,    // Slightly darker secondary
         uv.y * uv.y
     );
     
@@ -61,8 +63,8 @@ half4 main(float2 fragCoord) {
     // Combine colors with multiple blur layers (start from backgroundColor)
     float3 waveColor = baseColor * liquidMask;
     waveColor += baseColor * liquidMask2; // Extra blur layer
-    waveColor += secondaryColor * innerGlow;
-    waveColor += secondaryColor * midGlow * 0.5; // Mid blur
+    waveColor += depthColor * innerGlow;
+    waveColor += depthColor * midGlow * 0.5; // Mid blur
     waveColor += baseColor * outerGlow;
     waveColor += baseColor * superOuterGlow; // Super wide blur
     waveColor += float3(1.0, 1.0, 1.0) * highlight * 0.5; // Softer highlights

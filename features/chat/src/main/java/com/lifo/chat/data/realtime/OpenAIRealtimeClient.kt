@@ -143,16 +143,16 @@ class OpenAIRealtimeClient @Inject constructor(
                 
                 when (event) {
                     is RealtimeEvent.Client.SessionUpdate -> {
-                        put("session", JSONObject(event.session))
+                        put("session", mapToJsonObject(event.session))
                     }
                     is RealtimeEvent.Client.InputAudioBufferAppend -> {
                         put("audio", event.audio)
                     }
                     is RealtimeEvent.Client.ConversationItemCreate -> {
-                        put("item", JSONObject(event.item))
+                        put("item", mapToJsonObject(event.item))
                     }
                     is RealtimeEvent.Client.ResponseCreate -> {
-                        event.response?.let { put("response", JSONObject(it)) }
+                        event.response?.let { put("response", mapToJsonObject(it)) }
                     }
                     // Other client events don't need additional data
                     else -> {}
@@ -400,15 +400,39 @@ class OpenAIRealtimeClient @Inject constructor(
         }
         return map
     }
-
-    private fun startHeartbeat() {
-        heartbeatJob?.cancel()
-        heartbeatJob = CoroutineScope(Dispatchers.IO).launch {
-            while (isActive && webSocket != null) {
-                delay(HEARTBEAT_INTERVAL_MS)
-                webSocket?.send("ping") // Simple ping to keep connection alive
+    
+    private fun mapToJsonObject(map: Map<String, Any>): JSONObject {
+        val jsonObject = JSONObject()
+        for ((key, value) in map) {
+            when (value) {
+                is Map<*, *> -> {
+                    @Suppress("UNCHECKED_CAST")
+                    jsonObject.put(key, mapToJsonObject(value as Map<String, Any>))
+                }
+                is List<*> -> {
+                    val jsonArray = org.json.JSONArray()
+                    for (item in value) {
+                        when (item) {
+                            is Map<*, *> -> {
+                                @Suppress("UNCHECKED_CAST")
+                                jsonArray.put(mapToJsonObject(item as Map<String, Any>))
+                            }
+                            else -> jsonArray.put(item)
+                        }
+                    }
+                    jsonObject.put(key, jsonArray)
+                }
+                else -> jsonObject.put(key, value)
             }
         }
+        return jsonObject
+    }
+
+    private fun startHeartbeat() {
+        // OpenAI Realtime API doesn't require explicit heartbeat messages
+        // The WebSocket connection is maintained by the underlying protocol
+        heartbeatJob?.cancel()
+        heartbeatJob = null
     }
 
     private fun stopHeartbeat() {

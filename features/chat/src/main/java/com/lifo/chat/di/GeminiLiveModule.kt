@@ -2,9 +2,9 @@ package com.lifo.chat.di
 
 import android.content.Context
 import com.lifo.chat.config.ApiConfigManager
-import com.lifo.chat.data.realtime.GeminiLiveWebSocketClient
-import com.lifo.chat.domain.GeminiLiveSessionManager
-import com.lifo.chat.domain.audio.GeminiLiveAudioManager
+import com.lifo.chat.data.websocket.GeminiLiveWebSocketClient
+import com.lifo.chat.data.audio.GeminiLiveAudioManager
+import com.lifo.chat.data.camera.GeminiLiveCameraManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -33,22 +33,17 @@ object GeminiLiveModule {
      */
     @Provides
     @Singleton
-    fun provideGeminiLiveAudioManager(
-        @ApplicationContext context: Context
-    ): GeminiLiveAudioManager {
-        return GeminiLiveAudioManager(context)
+    fun provideGeminiLiveAudioManager(): GeminiLiveAudioManager {
+        return GeminiLiveAudioManager()
     }
 
     /**
-     * Provides GeminiLiveSessionManager for coordinating Live API session
+     * Provides GeminiLiveCameraManager for camera preview and image capture
      */
     @Provides
     @Singleton
-    fun provideGeminiLiveSessionManager(
-        webSocketClient: GeminiLiveWebSocketClient,
-        audioManager: GeminiLiveAudioManager,
-        apiConfigManager: ApiConfigManager
-    ): GeminiLiveSessionManager {
-        return GeminiLiveSessionManager(webSocketClient, audioManager, apiConfigManager)
+    fun provideGeminiLiveCameraManager(@ApplicationContext context: Context): GeminiLiveCameraManager {
+        return GeminiLiveCameraManager(context)
     }
+
 }

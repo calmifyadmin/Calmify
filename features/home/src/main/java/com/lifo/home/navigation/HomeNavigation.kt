@@ -35,7 +35,6 @@ fun NavGraphBuilder.homeRoute(
     navigateToAuth: () -> Unit,
     navigateToChat: () -> Unit,
     navigateToLiveChat: () -> Unit,
-    navigateToGeminiLiveChat: () -> Unit,
     navigateToExistingChat: (String) -> Unit,
     onDataLoaded: () -> Unit,
     drawerState: DrawerState  // Riceve il drawer state globale
@@ -139,7 +138,6 @@ fun NavGraphBuilder.homeRoute(
             userProfileImageUrl = viewModel.getUserPhotoUrl(),
             navigateToChat = navigateToChat,
             navigateToLiveChat = navigateToLiveChat,
-            navigateToGeminiLiveChat = navigateToGeminiLiveChat,
             navigateToExistingChat = navigateToExistingChat
         )
 

@@ -3,15 +3,15 @@ package com.lifo.chat.presentation.viewmodel
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.SurfaceTexture
 import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lifo.chat.config.ApiConfigManager
-import com.lifo.chat.data.realtime.*
-import com.lifo.chat.domain.audio.PushToTalkManager
-import com.lifo.chat.domain.audio.AudioLevelExtractor
+import com.lifo.chat.data.websocket.GeminiLiveWebSocketClient
+import com.lifo.chat.data.audio.GeminiLiveAudioManager
 import com.lifo.chat.domain.model.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -23,9 +23,8 @@ import javax.inject.Inject
 class LiveChatViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val apiConfigManager: ApiConfigManager,
-    private val webRTCClient: RealtimeWebRTCClient,
-    private val pushToTalkManager: PushToTalkManager,
-    private val audioLevelExtractor: AudioLevelExtractor,
+    private val geminiWebSocketClient: GeminiLiveWebSocketClient,
+    private val geminiAudioManager: GeminiLiveAudioManager,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -37,21 +36,29 @@ class LiveChatViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(
         LiveChatUiState(
             connectionStatus = ConnectionStatus.Disconnected,
-            hasAudioPermission = checkAudioPermission()
+            hasAudioPermission = checkAudioPermission(),
+            hasCameraPermission = checkCameraPermission(),
+            isCameraActive = false,
+            pushToTalkState = PTTState.Idle,
+            isRecording = false,
+            audioLevel = 0f,
+            transcript = "",
+            error = null,
+            aiEmotion = AIEmotion.Neutral,
+            sessionId = null,
+            recordingDuration = 0L
         )
     )
     val uiState: StateFlow<LiveChatUiState> = _uiState.asStateFlow()
 
-    // Push-to-talk state from manager
-    val pushToTalkState = pushToTalkManager.state
-
-    // WebRTC session state
-    val webRTCSessionState = webRTCClient.sessionState
+    // Current transcript from AI
+    private val _currentTranscript = MutableStateFlow("")
+    val currentTranscript: StateFlow<String> = _currentTranscript.asStateFlow()
 
     init {
         Log.d(TAG, "🎙️ Initializing LiveChatViewModel...")
-        observePermissions()
-        observeRealtimeStates()
+        observeGeminiStates()
+        setupGeminiCallbacks()
     }
 
     private fun checkAudioPermission(): Boolean {
@@ -61,120 +68,163 @@ class LiveChatViewModel @Inject constructor(
         ) == PackageManager.PERMISSION_GRANTED
     }
 
-    private fun observePermissions() {
-        // Update permission status when needed
-        viewModelScope.launch {
-            // This would be called from the UI when permissions are granted/denied
-        }
+    private fun checkCameraPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
     }
 
-    private fun observeRealtimeStates() {
+    private fun observeGeminiStates() {
+        // Observe WebSocket connection state
         viewModelScope.launch {
-            // Observe WebRTC session state changes
-            webRTCSessionState.collectLatest { sessionState ->
-                Log.d(TAG, "🎯 WebRTC session state changed: connectionState=${sessionState.connectionState}, sessionId=${sessionState.sessionId}")
-                val connectionStatus = when (sessionState.connectionState) {
-                    WebRTCConnectionState.Connected -> {
-                        Log.d(TAG, "✅ WebRTC Connected - updating UI to Connected")
-                        ConnectionStatus.Connected
-                    }
-                    WebRTCConnectionState.Connecting -> {
-                        Log.d(TAG, "🔄 WebRTC Connecting - updating UI to Connecting")
-                        ConnectionStatus.Connecting
-                    }
-                    WebRTCConnectionState.Failed -> {
-                        Log.d(TAG, "❌ WebRTC Failed - updating UI to Error")
-                        ConnectionStatus.Error
-                    }
-                    WebRTCConnectionState.Disconnected, WebRTCConnectionState.Closed -> {
-                        Log.d(TAG, "🔌 WebRTC Disconnected/Closed - updating UI to Disconnected")
-                        ConnectionStatus.Disconnected
-                    }
-                    WebRTCConnectionState.New -> {
-                        Log.d(TAG, "🆕 WebRTC New - updating UI to Disconnected")
-                        ConnectionStatus.Disconnected
-                    }
+            geminiWebSocketClient.connectionState.collectLatest { state ->
+                Log.d(TAG, "🎯 Connection state: $state")
+
+                val uiConnectionStatus = when (state) {
+                    GeminiLiveWebSocketClient.ConnectionState.CONNECTED -> ConnectionStatus.Connected
+                    GeminiLiveWebSocketClient.ConnectionState.CONNECTING -> ConnectionStatus.Connecting
+                    GeminiLiveWebSocketClient.ConnectionState.ERROR -> ConnectionStatus.Error
+                    GeminiLiveWebSocketClient.ConnectionState.DISCONNECTED -> ConnectionStatus.Disconnected
                 }
-                
-                Log.d(TAG, "🎯 Updating UI state to: $connectionStatus")
-                _uiState.update { currentState ->
-                    currentState.copy(
-                        connectionStatus = connectionStatus,
-                        sessionId = sessionState.sessionId,
-                        error = sessionState.error,
-                        audioLevel = sessionState.audioLevel
+
+                _uiState.update { it.copy(connectionStatus = uiConnectionStatus) }
+            }
+        }
+
+        // Observe recording state
+        viewModelScope.launch {
+            geminiAudioManager.recordingState.collectLatest { isRecording ->
+                _uiState.update {
+                    it.copy(
+                        isRecording = isRecording,
+                        pushToTalkState = if (isRecording) PTTState.Listening else PTTState.Idle,
+                        aiEmotion = if (isRecording) AIEmotion.Thinking else AIEmotion.Neutral
                     )
                 }
             }
         }
 
+        // Observe playback state
         viewModelScope.launch {
-            // Observe push-to-talk state for UI updates
-            pushToTalkState.collectLatest { pttState ->
-                val currentPTTState = when {
-                    pttState.isRecording -> PTTState.Listening
-                    pttState.recordingDuration > 0 && !pttState.isRecording -> PTTState.Processing
-                    else -> PTTState.Idle
-                }
-                
-                _uiState.update { currentState ->
-                    currentState.copy(
-                        isRecording = pttState.isRecording,
-                        recordingDuration = pttState.recordingDuration,
-                        pushToTalkState = currentPTTState,
-                        error = pttState.error
-                    )
+            geminiAudioManager.playbackState.collectLatest { isPlaying ->
+                _uiState.update {
+                    it.copy(aiEmotion = if (isPlaying) AIEmotion.Speaking else AIEmotion.Neutral)
                 }
             }
         }
     }
 
-    fun onPermissionGranted() {
+    private fun setupGeminiCallbacks() {
+        // Handle text from Gemini
+        geminiWebSocketClient.onTextReceived = { text ->
+            Log.d(TAG, "📝 Text from Gemini: $text")
+            _currentTranscript.value = text
+            _uiState.update { it.copy(transcript = text) }
+        }
+
+        // Handle audio from Gemini
+        geminiWebSocketClient.onAudioReceived = { audioBase64 ->
+            Log.d(TAG, "🔊 Audio from Gemini (${audioBase64.length} chars)")
+            geminiAudioManager.queueAudioForPlayback(audioBase64)
+
+            // Update audio level for visualization (simulated)
+            _uiState.update { it.copy(audioLevel = 0.7f) }
+
+            // Clear audio level after a delay
+            viewModelScope.launch {
+                delay(2000)
+                _uiState.update { it.copy(audioLevel = 0f) }
+            }
+        }
+
+        // Handle errors
+        geminiWebSocketClient.onError = { error ->
+            Log.e(TAG, "❌ Error: $error")
+            _uiState.update {
+                it.copy(
+                    error = error,
+                    connectionStatus = ConnectionStatus.Error
+                )
+            }
+        }
+
+        // Send audio chunks to Gemini
+        geminiAudioManager.onAudioChunkReady = { audioBase64 ->
+            geminiWebSocketClient.sendAudioData(audioBase64)
+        }
+    }
+
+    fun onAudioPermissionGranted() {
         Log.d(TAG, "🎤 Audio permission granted")
         _uiState.update { it.copy(hasAudioPermission = true) }
-        // Auto-start connection when permission is granted
         connectToRealtime()
     }
 
-    fun onPermissionDenied() {
+    fun onAudioPermissionDenied() {
         Log.d(TAG, "❌ Audio permission denied")
-        _uiState.update { 
+        _uiState.update {
             it.copy(
                 hasAudioPermission = false,
-                error = "Audio permission required for live chat"
+                error = "Audio permission required for voice chat"
             )
         }
     }
 
+    fun onCameraPermissionGranted() {
+        Log.d(TAG, "📸 Camera permission granted")
+        _uiState.update { it.copy(hasCameraPermission = true) }
+    }
+
+    fun onCameraPermissionDenied() {
+        Log.d(TAG, "❌ Camera permission denied")
+        _uiState.update {
+            it.copy(
+                hasCameraPermission = false,
+                error = "Camera permission is optional but enhances the experience"
+            )
+        }
+    }
+
+    fun startCameraPreview(surfaceTexture: SurfaceTexture) {
+        // Camera preview implementation would go here
+        // For now, just update the state
+        Log.d(TAG, "📸 Starting camera preview")
+        _uiState.update { it.copy(isCameraActive = true) }
+    }
+
+    fun stopCameraPreview() {
+        Log.d(TAG, "📸 Stopping camera preview")
+        _uiState.update { it.copy(isCameraActive = false) }
+    }
+
     fun connectToRealtime() {
         if (!_uiState.value.hasAudioPermission) {
-            Log.w(TAG, "⚠️ Attempted to connect without audio permission")
+            Log.w(TAG, "Cannot connect without audio permission")
             return
         }
 
         viewModelScope.launch {
             try {
-                Log.d(TAG, "🔌 Connecting to OpenAI Realtime via WebRTC...")
-                _uiState.update { 
+                Log.d(TAG, "🔌 Connecting to Gemini Live...")
+                _uiState.update {
                     it.copy(
                         connectionStatus = ConnectionStatus.Connecting,
                         error = null
                     )
                 }
 
-                val apiKey = apiConfigManager.getOpenAIApiKey()
+                val apiKey = apiConfigManager.getGeminiApiKey()
                 if (apiKey.isEmpty()) {
-                    throw IllegalStateException("OpenAI API key not configured")
+                    throw IllegalStateException("Gemini API key not configured")
                 }
 
-                val result = webRTCClient.startSession()
-                if (result.isFailure) {
-                    throw result.exceptionOrNull() ?: IllegalStateException("Failed to start WebRTC session")
-                }
-                
+                Log.d(TAG, "🔑 Using API key: ${apiKey.take(10)}...")
+                geminiWebSocketClient.connect(apiKey)
+
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Failed to connect to realtime", e)
-                _uiState.update { 
+                Log.e(TAG, "❌ Connection failed", e)
+                _uiState.update {
                     it.copy(
                         connectionStatus = ConnectionStatus.Error,
                         error = "Connection failed: ${e.message}"
@@ -186,85 +236,107 @@ class LiveChatViewModel @Inject constructor(
 
     fun disconnectFromRealtime() {
         viewModelScope.launch {
-            Log.d(TAG, "🔌 Disconnecting from realtime...")
-            webRTCClient.endSession()
-            _uiState.update { 
+            Log.d(TAG, "🔌 Disconnecting...")
+
+            geminiAudioManager.stopRecording()
+            geminiAudioManager.stopPlayback()
+            geminiWebSocketClient.disconnect()
+
+            _uiState.update {
                 it.copy(
                     connectionStatus = ConnectionStatus.Disconnected,
                     pushToTalkState = PTTState.Idle,
                     isRecording = false,
                     audioLevel = 0f,
                     transcript = "",
-                    error = null
+                    error = null,
+                    aiEmotion = AIEmotion.Neutral
                 )
             }
+
+            _currentTranscript.value = ""
         }
     }
 
     fun onPushToTalkPressed() {
-        Log.d(TAG, "🎤 Push-to-talk PRESSED by user")
-        
+        Log.d(TAG, "🎤 Push-to-talk PRESSED")
+
         if (_uiState.value.connectionStatus != ConnectionStatus.Connected) {
-            Log.w(TAG, "⚠️ Push-to-talk pressed while not connected")
+            Log.w(TAG, "Not connected - current status: ${_uiState.value.connectionStatus}")
             return
         }
 
         try {
-            Log.d(TAG, "🎤 Starting push-to-talk recording...")
-            val success = pushToTalkManager.startRecording()
-            if (success) {
-                _uiState.update { 
-                    it.copy(
-                        pushToTalkState = PTTState.Listening,
-                        aiEmotion = AIEmotion.Thinking
-                    )
+            geminiAudioManager.startRecording()
+            _uiState.update {
+                it.copy(
+                    pushToTalkState = PTTState.Listening,
+                    aiEmotion = AIEmotion.Thinking,
+                    error = null
+                )
+            }
+
+            // Start tracking recording duration
+            viewModelScope.launch {
+                val startTime = System.currentTimeMillis()
+                while (_uiState.value.isRecording) {
+                    _uiState.update {
+                        it.copy(recordingDuration = System.currentTimeMillis() - startTime)
+                    }
+                    delay(100)
                 }
-            } else {
-                Log.w(TAG, "⚠️ Failed to start push-to-talk recording")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to start recording", e)
+            Log.e(TAG, "Failed to start recording", e)
             _uiState.update { it.copy(error = "Recording failed: ${e.message}") }
         }
     }
 
     fun onPushToTalkReleased() {
-        Log.d(TAG, "🎤 Push-to-talk RELEASED by user")
-        
+        Log.d(TAG, "🎤 Push-to-talk RELEASED")
+
         try {
-            Log.d(TAG, "🎤 Stopping push-to-talk recording...")
-            val success = pushToTalkManager.stopRecording()
-            if (success) {
-                _uiState.update { 
-                    it.copy(
-                        pushToTalkState = PTTState.Processing,
-                        aiEmotion = AIEmotion.Thinking
-                    )
-                }
-            } else {
-                Log.w(TAG, "⚠️ Failed to stop push-to-talk recording")
+            geminiAudioManager.stopRecording()
+            geminiWebSocketClient.sendEndOfStream()
+
+            _uiState.update {
+                it.copy(
+                    pushToTalkState = PTTState.Processing,
+                    aiEmotion = AIEmotion.Thinking,
+                    recordingDuration = 0L
+                )
             }
+
+            // Reset to idle after processing
+            viewModelScope.launch {
+                delay(1500)
+                if (_uiState.value.pushToTalkState == PTTState.Processing) {
+                    _uiState.update {
+                        it.copy(pushToTalkState = PTTState.Idle)
+                    }
+                }
+            }
+
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to stop recording", e)
-            _uiState.update { it.copy(error = "Recording stop failed: ${e.message}") }
+            Log.e(TAG, "Failed to stop recording", e)
+            _uiState.update { it.copy(error = "Stop failed: ${e.message}") }
         }
     }
 
     fun cancelPushToTalk() {
+        Log.d(TAG, "❌ Cancelling push-to-talk")
         try {
-            Log.d(TAG, "❌ Cancelling push-to-talk")
-            pushToTalkManager.cancelRecording()
-            _uiState.update { 
+            geminiAudioManager.stopRecording()
+            _uiState.update {
                 it.copy(
                     pushToTalkState = PTTState.Idle,
                     aiEmotion = AIEmotion.Neutral,
                     isRecording = false,
-                    audioLevel = 0f
+                    recordingDuration = 0L
                 )
             }
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to cancel recording", e)
-            _uiState.update { it.copy(error = "Cancel failed: ${e.message}") }
+            Log.e(TAG, "Failed to cancel recording", e)
         }
     }
 
@@ -277,21 +349,11 @@ class LiveChatViewModel @Inject constructor(
         connectToRealtime()
     }
 
-    /**
-     * Update audio level for liquid globe visualization
-     * This is called by WebRTC client when audio levels change
-     */
-    fun updateAudioLevel(level: Float) {
-        _uiState.update { it.copy(audioLevel = level.coerceIn(0f, 1f)) }
-    }
-
     override fun onCleared() {
         super.onCleared()
         viewModelScope.launch {
             disconnectFromRealtime()
-            webRTCClient.cleanup()
-            pushToTalkManager.cleanup()
-            audioLevelExtractor.reset()
+            geminiAudioManager.release()
         }
     }
 }

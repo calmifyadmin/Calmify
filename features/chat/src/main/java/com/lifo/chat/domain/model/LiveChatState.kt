@@ -38,6 +38,7 @@ enum class AIEmotion {
 data class LiveChatUiState(
     val connectionStatus: ConnectionStatus = ConnectionStatus.Disconnected,
     val hasAudioPermission: Boolean = false,
+    val hasCameraPermission: Boolean = false,
     val pushToTalkState: PTTState = PTTState.Idle,
     val aiEmotion: AIEmotion = AIEmotion.Neutral,
     val audioLevel: Float = 0f, // 0.0 to 1.0
@@ -45,5 +46,6 @@ data class LiveChatUiState(
     val transcript: String = "",
     val error: String? = null,
     val isRecording: Boolean = false,
-    val recordingDuration: Long = 0L
+    val recordingDuration: Long = 0L,
+    val isCameraActive: Boolean = false
 )

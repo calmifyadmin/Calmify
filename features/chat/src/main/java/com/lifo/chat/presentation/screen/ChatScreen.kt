@@ -97,9 +97,9 @@ fun ChatScreen(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            liveChatViewModel.onPermissionGranted()
+            liveChatViewModel.onAudioPermissionGranted()
         } else {
-            liveChatViewModel.onPermissionDenied()
+            liveChatViewModel.onAudioPermissionDenied()
         }
     }
     
@@ -154,38 +154,89 @@ fun ChatScreen(
         }
     }
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        topBar = {
-            MinimalTopBar(
-                voiceEnabled = voiceState.isInitialized,
-                isVoiceSpeaking = voiceState.isSpeaking,
-                isLiveChatMode = isLiveChatMode,
-                liveChatState = liveChatState,
-                onNavigateBack = {
-                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    if (isLiveChatMode) {
-                        viewModel.endLiveChat()
-                        isLiveChatMode = false
+    // Full-screen background with liquid visualizer
+    Box(
+        modifier = modifier.fillMaxSize()
+    ) {
+        // Liquid wave background covering the ENTIRE screen
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            GeminiLiquidVisualizer(
+                isSpeaking = when {
+                    // Live chat mode - react only when AI is speaking
+                    isLiveChatMode && liveChatUiState.hasAudioPermission -> {
+                        liveChatUiState.aiEmotion == AIEmotion.Speaking || 
+                        liveChatUiState.audioLevel > 0.1f
+                        // Removed: liveChatUiState.isRecording (user speaking)
                     }
-                    navigateBack()
-                },
-                onStopVoice = {
-                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    viewModel.stopSpeaking()
-                },
-                onToggleLiveChat = {
-                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    if (!isLiveChatMode) {
-                        isLiveChatMode = true
-                        viewModel.startLiveChat()
-                    } else {
-                        isLiveChatMode = false
-                        viewModel.endLiveChat()
+                    // Traditional mode - react only when AI is speaking/generating
+                    !isLiveChatMode -> {
+                        voiceState.isSpeaking || 
+                        isVoiceActive ||
+                        uiState.isLoading ||
+                        uiState.streamingMessage != null
+                        // These are all AI-related activities, not user input
                     }
-                }
+                    // Default case
+                    else -> false
+                },
+                modifier = Modifier.fillMaxSize(),
+                primaryColor = MaterialTheme.colorScheme.primary,
+                secondaryColor = MaterialTheme.colorScheme.tertiary,
+                backgroundColor = MaterialTheme.colorScheme.surface
             )
-        },
+        } else {
+            // Fallback gradient background
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.surface,
+                                MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        )
+                    )
+            )
+        }
+
+        // Scaffold on top of the background
+        Scaffold(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding(),
+            topBar = {
+                MinimalTopBar(
+                    voiceEnabled = voiceState.isInitialized,
+                    isVoiceSpeaking = voiceState.isSpeaking,
+                    isLiveChatMode = isLiveChatMode,
+                    liveChatState = liveChatState,
+                    onNavigateBack = {
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        if (isLiveChatMode) {
+                            viewModel.endLiveChat()
+                            isLiveChatMode = false
+                        }
+                        navigateBack()
+                    },
+                    onStopVoice = {
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        viewModel.stopSpeaking()
+                    },
+                    onToggleLiveChat = {
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        if (!isLiveChatMode) {
+                            isLiveChatMode = true
+                            viewModel.startLiveChat()
+                        } else {
+                            isLiveChatMode = false
+                            viewModel.endLiveChat()
+                        }
+                    }
+                )
+            },
+            containerColor = Color.Transparent,
         bottomBar = {
             Column {
                 // Global voice indicator - appears above input when speaking
@@ -240,13 +291,12 @@ fun ChatScreen(
                 }
             }
         }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(MaterialTheme.colorScheme.background)
-        ) {
+        ) { paddingValues ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
             // Messages list
             LazyColumn(
                 state = listState,
@@ -290,7 +340,7 @@ fun ChatScreen(
                 }
             }
 
-            // Globe visualization when in live chat mode or empty state
+            // Empty state handling when in live chat mode or new sessions
             if (uiState.messages.isEmpty() && uiState.streamingMessage == null) {
                 if (isLiveChatMode) {
                     if (!liveChatUiState.hasAudioPermission) {
@@ -301,18 +351,8 @@ fun ChatScreen(
                             },
                             modifier = Modifier.align(Alignment.Center)
                         )
-                    } else {
-                        // Show the liquid globe visualizer
-                        LiveChatVisualizer(
-                            connectionStatus = liveChatUiState.connectionStatus,
-                            aiEmotion = liveChatUiState.aiEmotion,
-                            audioLevel = liveChatUiState.audioLevel,
-                            userAudioLevel = 0f, // TODO: Connect to actual user audio level
-                            pushToTalkState = liveChatUiState.pushToTalkState,
-                            isRecording = liveChatUiState.isRecording,
-                            modifier = Modifier.align(Alignment.Center)
-                        )
                     }
+                    // Note: No globe visualizer here anymore - using background GeminiLiquidVisualizer instead
                 } else if (uiState.currentSession == null) {
                     // Show welcome screen only for new sessions (no existing session loaded)
                     NaturalAnimatedEmptyState(
@@ -322,7 +362,8 @@ fun ChatScreen(
                 }
             }
         }
-    }
+        } // End of Scaffold
+    } // End of Box
 
     // Error handling
     uiState.error?.let { error ->
@@ -356,13 +397,13 @@ private fun MinimalTopBar(
                 // Live Chat status chip
                 if (isLiveChatMode) {
                     val chipColor = when (liveChatState) {
-                        is LiveChatState.Idle -> Color.Gray
-                        is LiveChatState.Connecting -> Color(0xFFFFA500)
-                        is LiveChatState.Connected -> Color(0xFF34A853)
-                        is LiveChatState.Recording -> Color(0xFFFF4444)
-                        is LiveChatState.Processing -> Color.Blue
-                        is LiveChatState.Speaking -> Color(0xFF6200EE)
-                        is LiveChatState.Error -> Color.Red
+                        is LiveChatState.Idle -> MaterialTheme.colorScheme.outline
+                        is LiveChatState.Connecting -> MaterialTheme.colorScheme.tertiary
+                        is LiveChatState.Connected -> MaterialTheme.colorScheme.primary
+                        is LiveChatState.Recording -> MaterialTheme.colorScheme.error
+                        is LiveChatState.Processing -> MaterialTheme.colorScheme.secondary
+                        is LiveChatState.Speaking -> MaterialTheme.colorScheme.primaryContainer
+                        is LiveChatState.Error -> MaterialTheme.colorScheme.error
                     }
                     
                     Surface(
@@ -384,7 +425,7 @@ private fun MinimalTopBar(
                                 text = when (liveChatState) {
                                     is LiveChatState.Idle -> "Idle"
                                     is LiveChatState.Connecting -> "Connecting..."
-                                    is LiveChatState.Connected -> "Connected"
+                                    is LiveChatState.Connected -> "Live"
                                     is LiveChatState.Recording -> "Recording"
                                     is LiveChatState.Processing -> "Processing"
                                     is LiveChatState.Speaking -> "Speaking"
@@ -410,7 +451,7 @@ private fun MinimalTopBar(
                                 modifier = Modifier
                                     .size(6.dp)
                                     .background(
-                                        Color(0xFF34A853),
+                                        MaterialTheme.colorScheme.primary,
                                         shape = MaterialTheme.shapes.small
                                     )
                             )
@@ -471,7 +512,7 @@ private fun MinimalTopBar(
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.background
+            containerColor = Color.Transparent
         )
     )
 }
@@ -691,8 +732,8 @@ private fun LiveChatInterface(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 8.dp
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f), // Trasparenza
+        shadowElevation = 0.dp // Rimossa ombra per trasparenza
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -761,7 +802,7 @@ private fun LiveChatStatusDisplay(liveChatState: LiveChatState) {
                 Text(
                     text = "🔴 Registrazione: ${liveChatState.duration / 1000}s",
                     style = MaterialTheme.typography.labelLarge,
-                    color = Color(0xFFFF4444)
+                    color = MaterialTheme.colorScheme.error
                 )
                 
                 // Audio level visualization
@@ -886,7 +927,7 @@ private fun LiveChatPushToTalkSection(
             Text(
                 text = "Recording: ${recordingDuration / 1000}s",
                 style = MaterialTheme.typography.labelLarge,
-                color = Color(0xFFFF4444)
+                color = MaterialTheme.colorScheme.error
             )
         }
 
@@ -924,7 +965,7 @@ private fun LiveChatPushToTalkSection(
                 .background(
                     color = when {
                         connectionStatus != ConnectionStatus.Connected -> MaterialTheme.colorScheme.surfaceVariant
-                        isRecording -> Color(0xFFFF4444)
+                        isRecording -> MaterialTheme.colorScheme.error
                         else -> MaterialTheme.colorScheme.primary
                     },
                     shape = CircleShape

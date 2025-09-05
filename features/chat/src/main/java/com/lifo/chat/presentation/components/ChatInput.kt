@@ -194,7 +194,6 @@ fun ChatInput(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background)
             .navigationBarsPadding()
             .imePadding(),
     ) {
@@ -244,13 +243,14 @@ fun ChatInput(
                 modifier = Modifier
                     .fillMaxWidth(),
                 shape = RoundedCornerShape(28.dp),
-                tonalElevation = inputFieldElevation.value,
+                tonalElevation = 0.dp, // Rimosso elevation per trasparenza
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.75f), // Trasparente
                 border = BorderStroke(
                     width = if (isListening) 2.dp else 0.5.dp,
                     color = if (isListening) {
-                        animatedEmotionColor.copy(alpha = pulseAlpha)
+                        MaterialTheme.colorScheme.primary.copy(alpha = pulseAlpha)
                     } else {
-                        MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                        MaterialTheme.colorScheme.outline.copy(alpha = 0.2f) // Bordo molto trasparente
                     }
                 )
             ) {

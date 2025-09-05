@@ -9,7 +9,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.lifo.chat.presentation.screen.ChatScreen
 import com.lifo.chat.presentation.screen.LiveChatScreen
-import com.lifo.chat.presentation.screen.GeminiLiveChatScreen
 import com.lifo.util.Screen
 
 fun NavGraphBuilder.chatRoute(
@@ -110,39 +109,6 @@ fun NavGraphBuilder.chatRoute(
             onBackClicked = navigateBack
         )
     }
-
-    // Gemini LiveChat route (POC)
-    composable(
-        route = Screen.GeminiLiveChat.route,
-        enterTransition = {
-            slideInVertically(
-                initialOffsetY = { it },
-                animationSpec = tween(500)
-            ) + fadeIn(animationSpec = tween(500))
-        },
-        exitTransition = {
-            slideOutVertically(
-                targetOffsetY = { it },
-                animationSpec = tween(500)
-            ) + fadeOut(animationSpec = tween(500))
-        },
-        popEnterTransition = {
-            slideInVertically(
-                initialOffsetY = { -it },
-                animationSpec = tween(500)
-            ) + fadeIn(animationSpec = tween(500))
-        },
-        popExitTransition = {
-            slideOutVertically(
-                targetOffsetY = { it },
-                animationSpec = tween(500)
-            ) + fadeOut(animationSpec = tween(500))
-        }
-    ) {
-        GeminiLiveChatScreen(
-            onBackClicked = navigateBack
-        )
-    }
 }
 
 fun NavController.navigateToChat(sessionId: String? = null) {
@@ -160,13 +126,6 @@ fun NavController.navigateToChat(sessionId: String? = null) {
 
 fun NavController.navigateToLiveChat() {
     navigate(Screen.LiveChat.route) {
-        launchSingleTop = true
-        restoreState = true
-    }
-}
-
-fun NavController.navigateToGeminiLiveChat() {
-    navigate(Screen.GeminiLiveChat.route) {
         launchSingleTop = true
         restoreState = true
     }

@@ -3,6 +3,10 @@ package com.lifo.chat.presentation.screen
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.ui.viewinterop.AndroidView
+import android.view.TextureView
+import android.graphics.SurfaceTexture
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -48,24 +52,39 @@ fun LiveChatScreen(
 ) {
     android.util.Log.d("LiveChatScreen", "🏠 LiveChatScreen composing...")
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val currentTranscript by viewModel.currentTranscript.collectAsStateWithLifecycle()
     android.util.Log.d("LiveChatScreen", "📱 UI state in screen: connectionStatus=${uiState.connectionStatus}, hasPermission=${uiState.hasAudioPermission}")
     val haptics = LocalHapticFeedback.current
 
-    // Permission handler
-    val permissionLauncher = rememberLauncherForActivityResult(
+    // Audio permission handler
+    val audioPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            viewModel.onPermissionGranted()
+            viewModel.onAudioPermissionGranted()
         } else {
-            viewModel.onPermissionDenied()
+            viewModel.onAudioPermissionDenied()
+        }
+    }
+    
+    // Camera permission handler
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            viewModel.onCameraPermissionGranted()
+        } else {
+            viewModel.onCameraPermissionDenied()
         }
     }
 
-    // Request permission on first composition if not granted
+    // Request permissions on first composition if not granted
     LaunchedEffect(Unit) {
         if (!uiState.hasAudioPermission) {
-            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+        if (!uiState.hasCameraPermission) {
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
 
@@ -85,7 +104,9 @@ fun LiveChatScreen(
             GeminiLiquidVisualizer(
                 isSpeaking = uiState.aiEmotion == AIEmotion.Speaking || uiState.audioLevel > 0.1f,
                 modifier = Modifier.fillMaxSize(),
-                backgroundColor = MaterialTheme.colorScheme.surface // Use theme surface color
+                primaryColor = MaterialTheme.colorScheme.primary,
+                secondaryColor = MaterialTheme.colorScheme.tertiary,
+                backgroundColor = MaterialTheme.colorScheme.surface
             )
         } else {
             // Fallback gradient background for older devices or no permission
@@ -135,22 +156,45 @@ fun LiveChatScreen(
                         .weight(1f),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (!uiState.hasAudioPermission) {
+                    if (!uiState.hasAudioPermission || !uiState.hasCameraPermission) {
                         PermissionRequiredContent(
-                            onRetryPermission = {
-                                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                            hasAudioPermission = uiState.hasAudioPermission,
+                            hasCameraPermission = uiState.hasCameraPermission,
+                            onRetryAudioPermission = {
+                                audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                            },
+                            onRetryCameraPermission = {
+                                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                             }
                         )
                     } else {
-                        // Simple status indicator instead of full visualizer (background handles liquid effect)
+                        // Camera preview (background layer)
+                        CameraPreviewSection(
+                            isCameraActive = uiState.isCameraActive,
+                            onCameraToggle = { active ->
+                                if (active) {
+                                    // Will be handled by TextureView listener
+                                } else {
+                                    viewModel.stopCameraPreview()
+                                }
+                            },
+                            onSurfaceTextureAvailable = { surfaceTexture ->
+                                viewModel.startCameraPreview(surfaceTexture)
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        
+                        // Status and transcript display (overlay)
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                            verticalArrangement = Arrangement.spacedBy(24.dp),
+                            modifier = Modifier.padding(32.dp)
                         ) {
+                            // Connection status
                             Text(
                                 text = when {
-                                    uiState.connectionStatus != ConnectionStatus.Connected -> "Connecting to AI..."
-                                    uiState.aiEmotion == AIEmotion.Speaking || uiState.audioLevel > 0.1f -> "AI is speaking"
+                                    uiState.connectionStatus != ConnectionStatus.Connected -> "Connecting to Gemini Live..."
+                                    uiState.aiEmotion == AIEmotion.Speaking || uiState.audioLevel > 0.1f -> "Gemini is speaking"
                                     uiState.isRecording -> "Listening..."
                                     else -> "Ready to chat"
                                 },
@@ -159,11 +203,52 @@ fun LiveChatScreen(
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier
                                     .background(
-                                        MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                                        MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
                                         MaterialTheme.shapes.medium
                                     )
-                                    .padding(horizontal = 20.dp, vertical = 12.dp)
+                                    .padding(horizontal = 24.dp, vertical = 16.dp)
                             )
+                            
+                            // AI transcript display
+                            AnimatedVisibility(
+                                visible = currentTranscript.isNotEmpty(),
+                                enter = slideInVertically { -it } + fadeIn(),
+                                exit = slideOutVertically { -it } + fadeOut()
+                            ) {
+                                Card(
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f)
+                                    ),
+                                    modifier = Modifier.fillMaxWidth(0.9f)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(20.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            text = "Gemini Assistant",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                        )
+                                        Text(
+                                            text = currentTranscript,
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
+                            }
+                            
+                            // Debug info (only in debug builds)
+                            if (com.lifo.chat.BuildConfig.DEBUG && uiState.connectionStatus == ConnectionStatus.Connected) {
+                                Text(
+                                    text = "Audio Level: ${(uiState.audioLevel * 100).toInt()}%",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                )
+                            }
                         }
                     }
                 }
@@ -202,10 +287,10 @@ private fun LiveChatTopBar(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "Live Chat",
+                    text = "Gemini Live",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface // Use theme's onSurface color
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 
                 ConnectionStatusChip(connectionStatus = connectionStatus)
@@ -229,10 +314,10 @@ private fun LiveChatTopBar(
 @Composable
 private fun ConnectionStatusChip(connectionStatus: ConnectionStatus) {
     val (statusText, statusColor) = when (connectionStatus) {
-        ConnectionStatus.Disconnected -> "Disconnected" to Color.Gray
-        ConnectionStatus.Connecting -> "Connecting..." to Color(0xFFFFA500)
-        ConnectionStatus.Connected -> "Connected" to Color(0xFF34A853)
-        ConnectionStatus.Error -> "Error" to Color(0xFFFF4444)
+        ConnectionStatus.Disconnected -> "Disconnected" to MaterialTheme.colorScheme.outline
+        ConnectionStatus.Connecting -> "Connecting..." to MaterialTheme.colorScheme.tertiary
+        ConnectionStatus.Connected -> "Live" to MaterialTheme.colorScheme.primary
+        ConnectionStatus.Error -> "Error" to MaterialTheme.colorScheme.error
     }
 
     Surface(
@@ -283,9 +368,9 @@ private fun LiquidGlobePlaceholder(
         connectionStatus != ConnectionStatus.Connected -> Color.Gray
         else -> when (aiEmotion) {
             AIEmotion.Neutral -> MaterialTheme.colorScheme.primary
-            AIEmotion.Happy -> Color(0xFF4CAF50)
-            AIEmotion.Thinking -> Color(0xFF2196F3)
-            AIEmotion.Speaking -> Color(0xFF9C27B0)
+            AIEmotion.Happy -> MaterialTheme.colorScheme.primary
+            AIEmotion.Thinking -> MaterialTheme.colorScheme.secondary
+            AIEmotion.Speaking -> MaterialTheme.colorScheme.tertiary
         }
     }
 
@@ -412,7 +497,7 @@ private fun PushToTalkSection(
             Text(
                 text = "Recording: ${recordingDuration / 1000}s",
                 style = MaterialTheme.typography.labelLarge,
-                color = Color(0xFFFF4444)
+                color = MaterialTheme.colorScheme.error
             )
         }
 
@@ -456,7 +541,7 @@ private fun PushToTalkSection(
                 .background(
                     color = when {
                         connectionStatus != ConnectionStatus.Connected -> MaterialTheme.colorScheme.surfaceVariant
-                        isRecording -> Color(0xFFFF4444)
+                        isRecording -> MaterialTheme.colorScheme.error
                         else -> MaterialTheme.colorScheme.primary
                     },
                     shape = CircleShape
@@ -478,39 +563,122 @@ private fun PushToTalkSection(
 
 @Composable
 private fun PermissionRequiredContent(
-    onRetryPermission: () -> Unit
+    hasAudioPermission: Boolean,
+    hasCameraPermission: Boolean,
+    onRetryAudioPermission: () -> Unit,
+    onRetryCameraPermission: () -> Unit
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(24.dp),
         modifier = Modifier.padding(32.dp)
     ) {
-        Icon(
-            imageVector = Icons.Default.Mic,
-            contentDescription = null,
-            modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Mic,
+                contentDescription = null,
+                modifier = Modifier.size(32.dp),
+                tint = if (hasAudioPermission) 
+                    MaterialTheme.colorScheme.primary 
+                else 
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+            )
+            Icon(
+                imageVector = Icons.Default.Warning, // Using Warning as camera icon
+                contentDescription = null,
+                modifier = Modifier.size(32.dp),
+                tint = if (hasCameraPermission) 
+                    MaterialTheme.colorScheme.primary 
+                else 
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+            )
+        }
 
         Text(
-            text = "Audio Permission Required",
+            text = "Permissions Required",
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Center
         )
 
         Text(
-            text = "LiveChat needs microphone access to enable voice conversations with AI.",
+            text = "Gemini Live needs microphone and camera access for full AI interaction.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
 
-        Button(
-            onClick = onRetryPermission,
-            modifier = Modifier.fillMaxWidth(0.7f)
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text("Grant Permission")
+            if (!hasAudioPermission) {
+                Button(
+                    onClick = onRetryAudioPermission,
+                    modifier = Modifier.fillMaxWidth(0.7f)
+                ) {
+                    Text("Grant Microphone Permission")
+                }
+            }
+            
+            if (!hasCameraPermission) {
+                Button(
+                    onClick = onRetryCameraPermission,
+                    modifier = Modifier.fillMaxWidth(0.7f)
+                ) {
+                    Text("Grant Camera Permission")
+                }
+            }
+        }
+    }
+}
+
+@Composable 
+private fun CameraPreviewSection(
+    isCameraActive: Boolean,
+    onCameraToggle: (Boolean) -> Unit,
+    onSurfaceTextureAvailable: (SurfaceTexture) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(modifier = modifier) {
+        if (isCameraActive) {
+            AndroidView(
+                factory = { context ->
+                    TextureView(context).apply {
+                        surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+                            override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
+                                onSurfaceTextureAvailable(surface)
+                            }
+                            
+                            override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {}
+                            
+                            override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
+                                onCameraToggle(false)
+                                return true
+                            }
+                            
+                            override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {}
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+        
+        // Camera toggle button (top-right corner)
+        FloatingActionButton(
+            onClick = { onCameraToggle(!isCameraActive) },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(16.dp)
+                .size(48.dp),
+            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+        ) {
+            Text(
+                text = if (isCameraActive) "📹" else "📷",
+                fontSize = 20.sp
+            )
         }
     }
 }

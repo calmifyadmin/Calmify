@@ -24,6 +24,10 @@ class ApiConfigManager @Inject constructor(
         // CORRECTED: Default should be an empty string or null, or a specific placeholder.
         // It should NOT be a valid API key.
         private const val DEFAULT_API_KEY = "" // Changed to empty string
+        
+        // TODO: Replace with your actual Gemini API key for testing
+        // Get it from: https://makersuite.google.com/app/apikey
+        private const val TEMP_TEST_API_KEY = "YOUR_GEMINI_API_KEY_HERE"
     }
 
     private val masterKey = MasterKey.Builder(context)
@@ -43,7 +47,14 @@ class ApiConfigManager @Inject constructor(
      * In production, this should retrieve from a secure backend
      */
     fun getGeminiApiKey(): String {
-        return encryptedPrefs.getString(KEY_GEMINI_API, DEFAULT_API_KEY) ?: DEFAULT_API_KEY
+        val storedKey = encryptedPrefs.getString(KEY_GEMINI_API, DEFAULT_API_KEY) ?: DEFAULT_API_KEY
+        
+        // For testing: if no key is stored and TEMP_TEST_API_KEY is set, use it
+        return if (storedKey.isEmpty() && TEMP_TEST_API_KEY != "YOUR_GEMINI_API_KEY_HERE") {
+            TEMP_TEST_API_KEY
+        } else {
+            storedKey
+        }
     }
 
     /**

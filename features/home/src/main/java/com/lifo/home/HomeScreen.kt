@@ -55,7 +55,6 @@ internal fun HomeScreen(
     userProfileImageUrl: String?,
     navigateToChat: () -> Unit,
     navigateToLiveChat: () -> Unit,
-    navigateToGeminiLiveChat: () -> Unit,
     navigateToExistingChat: (String) -> Unit,
     // New unified content navigation parameters
     onDiaryClicked: (HomeContentItem.DiaryItem) -> Unit = { navigateToWriteWithArgs(it.id) },
@@ -237,32 +236,6 @@ internal fun HomeScreen(
                         Icon(
                             imageVector = Icons.Default.Mic,
                             contentDescription = "OpenAI Live Chat",
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-
-                // Gemini LiveChat FAB - terzo FAB  
-                AnimatedVisibility(
-                    visible = screenState is HomeScreenState.Ready,
-                    enter = scaleIn(
-                        initialScale = 0.3f,
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessLow
-                        )
-                    ) + fadeIn(),
-                    exit = scaleOut(targetScale = 0.3f) + fadeOut()
-                ) {
-                    SmallFloatingActionButton(
-                        onClick = navigateToGeminiLiveChat,
-                        containerColor = Color(0xFF4285F4), // Google Blue
-                        contentColor = Color.White,
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.SmartToy, // Robot icon per Gemini
-                            contentDescription = "Gemini Live Chat",
                             modifier = Modifier.size(24.dp)
                         )
                     }
