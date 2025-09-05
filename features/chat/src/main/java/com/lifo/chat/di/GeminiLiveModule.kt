@@ -33,8 +33,8 @@ object GeminiLiveModule {
      */
     @Provides
     @Singleton
-    fun provideGeminiLiveAudioManager(): GeminiLiveAudioManager {
-        return GeminiLiveAudioManager()
+    fun provideGeminiLiveAudioManager(@ApplicationContext context: Context): GeminiLiveAudioManager {
+        return GeminiLiveAudioManager(context)
     }
 
     /**

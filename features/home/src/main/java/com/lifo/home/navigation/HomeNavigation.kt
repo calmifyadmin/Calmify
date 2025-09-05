@@ -34,7 +34,6 @@ fun NavGraphBuilder.homeRoute(
     navigateToWriteWithArgs: (String) -> Unit,
     navigateToAuth: () -> Unit,
     navigateToChat: () -> Unit,
-    navigateToLiveChat: () -> Unit,
     navigateToExistingChat: (String) -> Unit,
     onDataLoaded: () -> Unit,
     drawerState: DrawerState  // Riceve il drawer state globale
@@ -137,7 +136,6 @@ fun NavGraphBuilder.homeRoute(
             viewModel = viewModel,
             userProfileImageUrl = viewModel.getUserPhotoUrl(),
             navigateToChat = navigateToChat,
-            navigateToLiveChat = navigateToLiveChat,
             navigateToExistingChat = navigateToExistingChat
         )
 

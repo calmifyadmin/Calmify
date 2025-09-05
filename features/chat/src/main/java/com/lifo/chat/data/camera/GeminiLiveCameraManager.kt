@@ -1,6 +1,7 @@
 package com.lifo.chat.data.camera
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -63,16 +64,21 @@ class GeminiLiveCameraManager @Inject constructor(
     }
     
     fun startCameraPreview(surfaceTexture: SurfaceTexture) {
+        Log.d(TAG, "📸 startCameraPreview() called")
+        Log.d(TAG, "📸 Current isActive: $isActive")
+        Log.d(TAG, "📸 SurfaceTexture: $surfaceTexture")
+        
         if (isActive) {
-            Log.d(TAG, "Camera already active")
+            Log.d(TAG, "📸 Camera already active - skipping")
             return
         }
         
         if (!hasCameraPermission()) {
-            Log.w(TAG, "Camera permission not granted")
+            Log.w(TAG, "📸 Camera permission not granted - cannot start")
             return
         }
         
+        Log.d(TAG, "📸 Setting surfaceTexture and calling openCamera()")
         this.surfaceTexture = surfaceTexture
         openCamera()
     }
@@ -86,47 +92,70 @@ class GeminiLiveCameraManager @Inject constructor(
         _isCameraActive.value = false
     }
     
+    @SuppressLint("MissingPermission") // Permission checked in hasCameraPermission() before calling
     private fun openCamera() {
+        Log.d(TAG, "📸 openCamera() called")
         val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
         
         try {
+            Log.d(TAG, "📸 Getting camera list...")
+            val cameraList = cameraManager.cameraIdList
+            Log.d(TAG, "📸 Available cameras: ${cameraList.contentToString()}")
+            
             // Get back camera ID
             cameraId = cameraManager.cameraIdList.firstOrNull { id ->
                 val characteristics = cameraManager.getCameraCharacteristics(id)
                 val facing = characteristics.get(CameraCharacteristics.LENS_FACING)
+                Log.d(TAG, "📸 Camera $id facing: $facing")
                 facing == CameraCharacteristics.LENS_FACING_BACK
             } ?: cameraManager.cameraIdList[0]
             
+            Log.d(TAG, "📸 Selected camera ID: $cameraId")
+            
             val characteristics = cameraManager.getCameraCharacteristics(cameraId)
-            val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP) ?: return
-            previewSize = map.getOutputSizes(SurfaceTexture::class.java)[0]
+            val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+            if (map == null) {
+                Log.e(TAG, "📸 SCALER_STREAM_CONFIGURATION_MAP is null - returning")
+                return
+            }
+            
+            val outputSizes = map.getOutputSizes(SurfaceTexture::class.java)
+            Log.d(TAG, "📸 Available output sizes: ${outputSizes.contentToString()}")
+            previewSize = outputSizes[0]
+            Log.d(TAG, "📸 Selected preview size: ${previewSize.width}x${previewSize.height}")
             
             // Setup ImageReader for capturing frames
+            Log.d(TAG, "📸 Creating ImageReader...")
             imageReader = ImageReader.newInstance(
                 MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION,
                 ImageFormat.JPEG, 2
             ).apply {
                 setOnImageAvailableListener(imageAvailableListener, cameraHandler)
             }
+            Log.d(TAG, "📸 ImageReader created successfully")
             
+            Log.d(TAG, "📸 Opening camera device...")
             cameraManager.openCamera(cameraId, cameraStateCallback, cameraHandler)
             
         } catch (e: CameraAccessException) {
-            Log.e(TAG, "Error opening camera", e)
+            Log.e(TAG, "📸 Error opening camera", e)
         } catch (e: SecurityException) {
-            Log.e(TAG, "Security exception - missing camera permission", e)
+            Log.e(TAG, "📸 Security exception - missing camera permission", e)
+        } catch (e: Exception) {
+            Log.e(TAG, "📸 Unexpected error opening camera", e)
         }
     }
     
     private val cameraStateCallback = object : CameraDevice.StateCallback() {
         override fun onOpened(camera: CameraDevice) {
-            Log.d(TAG, "Camera opened")
+            Log.d(TAG, "📸✅ Camera device opened successfully!")
             cameraDevice = camera
+            Log.d(TAG, "📸 Calling createCameraPreviewSession()...")
             createCameraPreviewSession()
         }
         
         override fun onDisconnected(camera: CameraDevice) {
-            Log.d(TAG, "Camera disconnected")
+            Log.d(TAG, "📸❌ Camera disconnected")
             cameraDevice?.close()
             cameraDevice = null
             isActive = false
@@ -134,7 +163,16 @@ class GeminiLiveCameraManager @Inject constructor(
         }
         
         override fun onError(camera: CameraDevice, error: Int) {
-            Log.e(TAG, "Camera error: $error")
+            Log.e(TAG, "📸❌ Camera error: $error")
+            val errorMsg = when (error) {
+                CameraDevice.StateCallback.ERROR_CAMERA_IN_USE -> "Camera in use"
+                CameraDevice.StateCallback.ERROR_MAX_CAMERAS_IN_USE -> "Max cameras in use"
+                CameraDevice.StateCallback.ERROR_CAMERA_DISABLED -> "Camera disabled"
+                CameraDevice.StateCallback.ERROR_CAMERA_DEVICE -> "Camera device error"
+                CameraDevice.StateCallback.ERROR_CAMERA_SERVICE -> "Camera service error"
+                else -> "Unknown error: $error"
+            }
+            Log.e(TAG, "📸❌ Error details: $errorMsg")
             cameraDevice?.close()
             cameraDevice = null
             isActive = false
@@ -143,51 +181,91 @@ class GeminiLiveCameraManager @Inject constructor(
     }
     
     private fun createCameraPreviewSession() {
+        Log.d(TAG, "📸 createCameraPreviewSession() called")
         try {
-            surfaceTexture?.setDefaultBufferSize(previewSize.width, previewSize.height)
-            val previewSurface = Surface(surfaceTexture)
+            Log.d(TAG, "📸 SurfaceTexture: $surfaceTexture")
+            if (surfaceTexture == null) {
+                Log.e(TAG, "📸❌ SurfaceTexture is null - cannot create session")
+                return
+            }
             
+            Log.d(TAG, "📸 Setting buffer size: ${previewSize.width}x${previewSize.height}")
+            surfaceTexture?.setDefaultBufferSize(previewSize.width, previewSize.height)
+            
+            val previewSurface = Surface(surfaceTexture)
+            Log.d(TAG, "📸 Preview surface created: $previewSurface")
+            
+            Log.d(TAG, "📸 Creating capture request...")
             captureRequestBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)?.apply {
+                Log.d(TAG, "📸 Adding preview surface target")
                 addTarget(previewSurface)
-                imageReader?.surface?.let { addTarget(it) }
+                imageReader?.surface?.let { 
+                    Log.d(TAG, "📸 Adding image reader surface target")
+                    addTarget(it) 
+                }
+            }
+            
+            if (captureRequestBuilder == null) {
+                Log.e(TAG, "📸❌ Failed to create capture request builder")
+                return
             }
             
             val surfaces = listOfNotNull(previewSurface, imageReader?.surface)
+            Log.d(TAG, "📸 Creating capture session with ${surfaces.size} surfaces...")
             cameraDevice?.createCaptureSession(surfaces, cameraCaptureSessionCallback, cameraHandler)
             
         } catch (e: CameraAccessException) {
-            Log.e(TAG, "Error creating preview session", e)
+            Log.e(TAG, "📸❌ Error creating preview session", e)
+        } catch (e: Exception) {
+            Log.e(TAG, "📸❌ Unexpected error creating preview session", e)
         }
     }
     
     private val cameraCaptureSessionCallback = object : CameraCaptureSession.StateCallback() {
         override fun onConfigured(session: CameraCaptureSession) {
-            Log.d(TAG, "Camera session configured")
+            Log.d(TAG, "📸✅ Camera session configured successfully!")
             cameraCaptureSession = session
+            Log.d(TAG, "📸 Calling updatePreview()...")
             updatePreview()
             isActive = true
             _isCameraActive.value = true
+            Log.d(TAG, "📸✅ Camera is now ACTIVE and preview should be visible!")
         }
         
         override fun onConfigureFailed(session: CameraCaptureSession) {
-            Log.e(TAG, "Camera session configuration failed")
+            Log.e(TAG, "📸❌ Camera session configuration FAILED")
             isActive = false
             _isCameraActive.value = false
         }
     }
     
     private fun updatePreview() {
-        if (cameraDevice == null) return
+        Log.d(TAG, "📸 updatePreview() called")
+        if (cameraDevice == null) {
+            Log.e(TAG, "📸❌ cameraDevice is null - cannot update preview")
+            return
+        }
         
         try {
+            Log.d(TAG, "📸 Setting capture request control mode...")
             captureRequestBuilder?.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
             
+            val request = captureRequestBuilder?.build()
+            if (request == null) {
+                Log.e(TAG, "📸❌ Failed to build capture request")
+                return
+            }
+            
+            Log.d(TAG, "📸 Starting repeating request...")
             cameraCaptureSession?.setRepeatingRequest(
-                captureRequestBuilder?.build()!!,
+                request,
                 null, cameraHandler
             )
+            Log.d(TAG, "📸✅ Preview repeating request started successfully!")
         } catch (e: CameraAccessException) {
-            Log.e(TAG, "Error starting preview repeat request", e)
+            Log.e(TAG, "📸❌ Error starting preview repeat request", e)
+        } catch (e: Exception) {
+            Log.e(TAG, "📸❌ Unexpected error updating preview", e)
         }
     }
     

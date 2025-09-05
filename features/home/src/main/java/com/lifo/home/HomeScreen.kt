@@ -54,7 +54,6 @@ internal fun HomeScreen(
     viewModel: HomeViewModel,
     userProfileImageUrl: String?,
     navigateToChat: () -> Unit,
-    navigateToLiveChat: () -> Unit,
     navigateToExistingChat: (String) -> Unit,
     // New unified content navigation parameters
     onDiaryClicked: (HomeContentItem.DiaryItem) -> Unit = { navigateToWriteWithArgs(it.id) },
@@ -215,31 +214,6 @@ internal fun HomeScreen(
                     }
                 }
 
-                // LiveChat FAB - secondo FAB (OpenAI)
-                AnimatedVisibility(
-                    visible = screenState is HomeScreenState.Ready,
-                    enter = scaleIn(
-                        initialScale = 0.3f,
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessLow
-                        )
-                    ) + fadeIn(),
-                    exit = scaleOut(targetScale = 0.3f) + fadeOut()
-                ) {
-                    SmallFloatingActionButton(
-                        onClick = navigateToLiveChat,
-                        containerColor = MaterialTheme.colorScheme.tertiary,
-                        contentColor = MaterialTheme.colorScheme.onTertiary,
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Mic,
-                            contentDescription = "OpenAI Live Chat",
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
 
                 // Write FAB - primo FAB (quello principale)
                 AnimatedVisibility(

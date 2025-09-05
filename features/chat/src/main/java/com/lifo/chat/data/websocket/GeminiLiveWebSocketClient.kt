@@ -157,6 +157,33 @@ class GeminiLiveWebSocketClient @Inject constructor() {
         }
     }
 
+    fun sendImageData(imageBase64: String) {
+        if (_connectionState.value != ConnectionState.CONNECTED) {
+            Log.w(TAG, "Cannot send image - not connected")
+            return
+        }
+
+        try {
+            Log.d(TAG, "📸 Sending image data (${imageBase64.length} chars)")
+            val msg = JSONObject()
+            val realtimeInput = JSONObject()
+            val mediaChunks = JSONArray()
+
+            val imageChunk = JSONObject()
+            imageChunk.put("mime_type", "image/jpeg")
+            imageChunk.put("data", imageBase64)
+            mediaChunks.put(imageChunk)
+
+            realtimeInput.put("media_chunks", mediaChunks)
+            msg.put("realtime_input", realtimeInput)
+
+            webSocket?.send(msg.toString())
+            Log.d(TAG, "📤 Image sent successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error sending image", e)
+        }
+    }
+
     fun sendEndOfStream() {
         if (_connectionState.value != ConnectionState.CONNECTED) return
 

@@ -89,8 +89,8 @@ fun ChatScreen(
     var isVoiceChatMode by remember { mutableStateOf(false) }
     var isLiveChatMode by remember { mutableStateOf(false) }
     
-    // Permission handling for voice modes
-    val permissionLauncher = rememberLauncherForActivityResult(
+    // Permission handling for voice and camera modes
+    val audioPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
@@ -104,6 +104,16 @@ fun ChatScreen(
                 liveChatViewModel.onAudioPermissionDenied()
                 isLiveChatMode = false
             }
+        }
+    }
+    
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            liveChatViewModel.onCameraPermissionGranted()
+        } else {
+            liveChatViewModel.onCameraPermissionDenied()
         }
     }
     
@@ -206,7 +216,7 @@ fun ChatScreen(
                         isVoiceChatMode = !isVoiceChatMode
                         if (isVoiceChatMode) {
                             isLiveChatMode = false // Disable live chat mode
-                            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                         } else {
                             viewModel.stopSpeaking()
                         }
@@ -217,7 +227,7 @@ fun ChatScreen(
                         if (isLiveChatMode) {
                             isVoiceChatMode = false // Disable regular voice chat
                             viewModel.stopSpeaking() // Stop any current voice
-                            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                         } else {
                             liveChatViewModel.disconnectFromRealtime()
                         }
@@ -227,6 +237,49 @@ fun ChatScreen(
             containerColor = Color.Transparent,
         bottomBar = {
             Column {
+                // Live chat camera preview
+                AnimatedVisibility(
+                    visible = isLiveChatMode,
+                    enter = slideInVertically { it } + fadeIn(),
+                    exit = slideOutVertically { it } + fadeOut()
+                ) {
+                    LiveCameraPreview(
+                        isCameraActive = liveChatState.isCameraActive,
+                        hasCameraPermission = liveChatState.hasCameraPermission,
+                        isCameraEnabled = liveChatState.isCameraActive || liveChatState.hasCameraPermission,
+                        onToggleCamera = {
+                            if (liveChatState.hasCameraPermission) {
+                                if (liveChatState.isCameraActive) {
+                                    liveChatViewModel.stopCameraPreview()
+                                } else {
+                                    // Camera will start when surface is ready
+                                }
+                            } else {
+                                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                            }
+                        },
+                        onRequestCameraPermission = {
+                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                        },
+                        onSurfaceTextureReady = { surfaceTexture ->
+                            android.util.Log.d("ChatScreen", "📸 onSurfaceTextureReady called")
+                            android.util.Log.d("ChatScreen", "📸 hasCameraPermission: ${liveChatState.hasCameraPermission}")
+                            android.util.Log.d("ChatScreen", "📸 isCameraActive: ${liveChatState.isCameraActive}")
+                            if (liveChatState.hasCameraPermission && !liveChatState.isCameraActive) {
+                                android.util.Log.d("ChatScreen", "📸 Calling startCameraPreview...")
+                                liveChatViewModel.startCameraPreview(surfaceTexture)
+                            } else {
+                                android.util.Log.w("ChatScreen", "📸 NOT starting camera: permission=${liveChatState.hasCameraPermission}, active=${liveChatState.isCameraActive}")
+                            }
+                        },
+                        onSurfaceTextureDestroyed = {
+                            if (liveChatState.isCameraActive) {
+                                liveChatViewModel.stopCameraPreview()
+                            }
+                        }
+                    )
+                }
+
                 // Live chat transcript display
                 AnimatedVisibility(
                     visible = isLiveChatMode && currentTranscript.isNotEmpty(),

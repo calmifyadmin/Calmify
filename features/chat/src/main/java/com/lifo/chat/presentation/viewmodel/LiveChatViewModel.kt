@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import com.lifo.chat.config.ApiConfigManager
 import com.lifo.chat.data.websocket.GeminiLiveWebSocketClient
 import com.lifo.chat.data.audio.GeminiLiveAudioManager
+import com.lifo.chat.data.camera.GeminiLiveCameraManager
 import com.lifo.chat.domain.model.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -25,6 +26,7 @@ class LiveChatViewModel @Inject constructor(
     private val apiConfigManager: ApiConfigManager,
     private val geminiWebSocketClient: GeminiLiveWebSocketClient,
     private val geminiAudioManager: GeminiLiveAudioManager,
+    private val geminiCameraManager: GeminiLiveCameraManager,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -59,6 +61,7 @@ class LiveChatViewModel @Inject constructor(
         Log.d(TAG, "🎙️ Initializing LiveChatViewModel...")
         observeGeminiStates()
         setupGeminiCallbacks()
+        setupCameraIntegration()
     }
 
     private fun checkAudioPermission(): Boolean {
@@ -113,6 +116,15 @@ class LiveChatViewModel @Inject constructor(
                 }
             }
         }
+
+        // Observe camera state
+        viewModelScope.launch {
+            geminiCameraManager.isCameraActive.collectLatest { isActive ->
+                _uiState.update {
+                    it.copy(isCameraActive = isActive)
+                }
+            }
+        }
     }
 
     private fun setupGeminiCallbacks() {
@@ -155,6 +167,23 @@ class LiveChatViewModel @Inject constructor(
         }
     }
 
+    private fun setupCameraIntegration() {
+        // Setup camera callback to send images to Gemini
+        geminiCameraManager.onImageCaptured = { imageBase64 ->
+            Log.d(TAG, "📸 Sending image to Gemini Live (${imageBase64.length} chars)")
+            viewModelScope.launch {
+                try {
+                    geminiWebSocketClient.sendImageData(imageBase64)
+                } catch (e: Exception) {
+                    Log.e(TAG, "❌ Failed to send image to Gemini", e)
+                    _uiState.update {
+                        it.copy(error = "Failed to send image: ${e.message}")
+                    }
+                }
+            }
+        }
+    }
+
     fun onAudioPermissionGranted() {
         Log.d(TAG, "🎤 Audio permission granted")
         _uiState.update { it.copy(hasAudioPermission = true) }
@@ -174,6 +203,7 @@ class LiveChatViewModel @Inject constructor(
     fun onCameraPermissionGranted() {
         Log.d(TAG, "📸 Camera permission granted")
         _uiState.update { it.copy(hasCameraPermission = true) }
+        Log.d(TAG, "📸 Updated UI state - hasCameraPermission: true")
     }
 
     fun onCameraPermissionDenied() {
@@ -187,15 +217,42 @@ class LiveChatViewModel @Inject constructor(
     }
 
     fun startCameraPreview(surfaceTexture: SurfaceTexture) {
-        // Camera preview implementation would go here
-        // For now, just update the state
-        Log.d(TAG, "📸 Starting camera preview")
-        _uiState.update { it.copy(isCameraActive = true) }
+        Log.d(TAG, "🔍 startCameraPreview() called in LiveChatViewModel")
+        Log.d(TAG, "🔍 hasCameraPermission: ${_uiState.value.hasCameraPermission}")
+        Log.d(TAG, "🔍 isCameraActive: ${_uiState.value.isCameraActive}")
+        Log.d(TAG, "🔍 surfaceTexture: $surfaceTexture")
+        
+        if (!_uiState.value.hasCameraPermission) {
+            Log.w(TAG, "❌ Cannot start camera without permission")
+            return
+        }
+        
+        Log.d(TAG, "📸 Starting camera preview - launching coroutine...")
+        viewModelScope.launch {
+            try {
+                Log.d(TAG, "📸 Calling geminiCameraManager.startCameraPreview()...")
+                geminiCameraManager.startCameraPreview(surfaceTexture)
+                Log.d(TAG, "📸 geminiCameraManager.startCameraPreview() completed")
+                // State will be updated automatically through the observer
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Failed to start camera preview", e)
+                _uiState.update {
+                    it.copy(error = "Failed to start camera: ${e.message}")
+                }
+            }
+        }
     }
 
     fun stopCameraPreview() {
         Log.d(TAG, "📸 Stopping camera preview")
-        _uiState.update { it.copy(isCameraActive = false) }
+        viewModelScope.launch {
+            try {
+                geminiCameraManager.stopCameraPreview()
+                // State will be updated automatically through the observer
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Failed to stop camera preview", e)
+            }
+        }
     }
 
     fun connectToRealtime() {
@@ -240,6 +297,7 @@ class LiveChatViewModel @Inject constructor(
 
             geminiAudioManager.stopRecording()
             geminiAudioManager.stopPlayback()
+            geminiCameraManager.stopCameraPreview()
             geminiWebSocketClient.disconnect()
 
             _uiState.update {
@@ -250,7 +308,8 @@ class LiveChatViewModel @Inject constructor(
                     audioLevel = 0f,
                     transcript = "",
                     error = null,
-                    aiEmotion = AIEmotion.Neutral
+                    aiEmotion = AIEmotion.Neutral,
+                    isCameraActive = false
                 )
             }
 
@@ -354,6 +413,7 @@ class LiveChatViewModel @Inject constructor(
         viewModelScope.launch {
             disconnectFromRealtime()
             geminiAudioManager.release()
+            geminiCameraManager.release()
         }
     }
 }

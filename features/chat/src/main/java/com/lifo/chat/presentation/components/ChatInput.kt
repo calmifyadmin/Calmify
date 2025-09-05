@@ -66,8 +66,8 @@ fun ChatInput(
     isStreaming: Boolean = false,
     currentEmotion: String = "NEUTRAL",
     voiceNaturalness: Float = 1.0f,
-    onStartListening: (() -> Unit)? = null,
-    onStopListening: (() -> Unit)? = null
+    isVoiceChatMode: Boolean = false,
+    onVoiceRecord: (() -> Unit)? = null
 ) {
     val haptics = LocalHapticFeedback.current
     val keyboardController = LocalSoftwareKeyboardController.current

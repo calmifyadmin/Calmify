@@ -9,7 +9,13 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(del \"C:\\Users\\lifoe\\AndroidStudioProjects\\CalmifyAppAndroid\\features\\chat\\src\\main\\java\\com\\lifo\\chat\\domain\\audio\\GeminiLiveAudioManager.kt\")",
       "WebFetch(domain:ai.google.dev)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(del \"C:\\Users\\lifoe\\AndroidStudioProjects\\CalmifyAppAndroid\\features\\chat\\src\\main\\java\\com\\lifo\\chat\\presentation\\screen\\LiveChatScreen.kt\")",
+      "Bash(rm:*)",
+      "Bash(git add:*)",
+      "Bash(.gradlew:*)",
+      "Bash(gradlew.bat :features:chat:build:*)",
+      "Bash(cmd.exe:*)"
     ],
     "deny": [],
     "ask": []

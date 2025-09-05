@@ -8,7 +8,6 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.lifo.chat.presentation.screen.ChatScreen
-import com.lifo.chat.presentation.screen.LiveChatScreen
 import com.lifo.util.Screen
 
 fun NavGraphBuilder.chatRoute(
@@ -76,39 +75,6 @@ fun NavGraphBuilder.chatRoute(
             sessionId = sessionId
         )
     }
-
-    // LiveChat route
-    composable(
-        route = Screen.LiveChat.route,
-        enterTransition = {
-            slideInVertically(
-                initialOffsetY = { it },
-                animationSpec = tween(500)
-            ) + fadeIn(animationSpec = tween(500))
-        },
-        exitTransition = {
-            slideOutVertically(
-                targetOffsetY = { it },
-                animationSpec = tween(500)
-            ) + fadeOut(animationSpec = tween(500))
-        },
-        popEnterTransition = {
-            slideInVertically(
-                initialOffsetY = { -it },
-                animationSpec = tween(500)
-            ) + fadeIn(animationSpec = tween(500))
-        },
-        popExitTransition = {
-            slideOutVertically(
-                targetOffsetY = { it },
-                animationSpec = tween(500)
-            ) + fadeOut(animationSpec = tween(500))
-        }
-    ) {
-        LiveChatScreen(
-            onBackClicked = navigateBack
-        )
-    }
 }
 
 fun NavController.navigateToChat(sessionId: String? = null) {
@@ -119,13 +85,6 @@ fun NavController.navigateToChat(sessionId: String? = null) {
     }
 
     navigate(route) {
-        launchSingleTop = true
-        restoreState = true
-    }
-}
-
-fun NavController.navigateToLiveChat() {
-    navigate(Screen.LiveChat.route) {
         launchSingleTop = true
         restoreState = true
     }
