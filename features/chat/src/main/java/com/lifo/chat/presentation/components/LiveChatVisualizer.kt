@@ -19,7 +19,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.lifo.chat.domain.model.AIEmotion
 import com.lifo.chat.domain.model.ConnectionStatus
-import com.lifo.chat.domain.model.PTTState
+import com.lifo.chat.domain.model.TurnState
 
 /**
  * Live Chat Visualizer - Main orchestrator for all visual components
@@ -36,8 +36,8 @@ fun LiveChatVisualizer(
     aiEmotion: AIEmotion,
     audioLevel: Float, // AI audio level 0.0 to 1.0
     userAudioLevel: Float, // User audio level 0.0 to 1.0
-    pushToTalkState: PTTState,
-    isRecording: Boolean,
+    turnState: TurnState,
+    isChannelOpen: Boolean,
     modifier: Modifier = Modifier,
     useGeminiStyle: Boolean = true // Switch between Gemini-style and original liquid globe
 ) {
@@ -94,7 +94,7 @@ fun LiveChatVisualizer(
                 
                 // User audio level indicator overlay
                 androidx.compose.animation.AnimatedVisibility(
-                    visible = isRecording && pushToTalkState == PTTState.Listening,
+                    visible = isChannelOpen && turnState == TurnState.UserTurn,
                     enter = scaleIn(animationSpec = spring()) + fadeIn(),
                     exit = scaleOut(animationSpec = spring()) + fadeOut()
                 ) {
@@ -126,7 +126,7 @@ fun LiveChatVisualizer(
                 
                 // User audio level indicator positioned around the globe
                 androidx.compose.animation.AnimatedVisibility(
-                    visible = isRecording && pushToTalkState == PTTState.Listening,
+                    visible = isChannelOpen && turnState == TurnState.UserTurn,
                     enter = scaleIn(animationSpec = spring()) + fadeIn(),
                     exit = scaleOut(animationSpec = spring()) + fadeOut()
                 ) {
@@ -143,8 +143,8 @@ fun LiveChatVisualizer(
         StatusTextSection(
             connectionStatus = connectionStatus,
             aiEmotion = aiEmotion,
-            pushToTalkState = pushToTalkState,
-            isRecording = isRecording,
+            turnState = turnState,
+            isChannelOpen = isChannelOpen,
             audioLevel = audioLevel
         )
     }
@@ -276,16 +276,16 @@ private fun UserAudioLevelOverlay(
 private fun StatusTextSection(
     connectionStatus: ConnectionStatus,
     aiEmotion: AIEmotion,
-    pushToTalkState: PTTState,
-    isRecording: Boolean,
+    turnState: TurnState,
+    isChannelOpen: Boolean,
     audioLevel: Float
 ) {
     // Status text with smooth transitions
-    val statusText = remember(connectionStatus, aiEmotion, pushToTalkState, isRecording) {
+    val statusText = remember(connectionStatus, aiEmotion, turnState, isChannelOpen) {
         when {
             connectionStatus != ConnectionStatus.Connected -> "Connecting to AI..."
-            isRecording -> "Listening..."
-            pushToTalkState == PTTState.Processing -> "AI is processing..."
+            isChannelOpen -> "Listening..."
+            turnState == TurnState.AgentTurn -> "AI is responding..."
             audioLevel > 0.1f -> "AI is speaking"
             else -> when (aiEmotion) {
                 AIEmotion.Neutral -> "Ready to chat"
@@ -327,13 +327,13 @@ private fun StatusTextSection(
         
         // Recording indicator
         androidx.compose.animation.AnimatedVisibility(
-            visible = isRecording,
+            visible = isChannelOpen,
             enter = scaleIn() + fadeIn(),
             exit = scaleOut() + fadeOut()
         ) {
             LinearAudioLevelIndicator(
                 audioLevel = audioLevel,
-                isRecording = isRecording,
+                isRecording = isChannelOpen,
                 modifier = Modifier.width(80.dp)
             )
         }
@@ -384,8 +384,8 @@ fun CompactLiveChatVisualizer(
     aiEmotion: AIEmotion,
     audioLevel: Float,
     userAudioLevel: Float,
-    pushToTalkState: PTTState,
-    isRecording: Boolean,
+    turnState: TurnState,
+    isChannelOpen: Boolean,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -400,10 +400,10 @@ fun CompactLiveChatVisualizer(
         )
         
         // Compact audio indicator
-        if (isRecording) {
+        if (isChannelOpen) {
             CompactAudioLevelIndicator(
                 audioLevel = userAudioLevel,
-                isRecording = isRecording
+                isRecording = isChannelOpen
             )
         }
     }

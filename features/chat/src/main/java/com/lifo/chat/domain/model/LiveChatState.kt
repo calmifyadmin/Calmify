@@ -13,12 +13,12 @@ enum class ConnectionStatus {
 }
 
 /**
- * Push-to-talk states
+ * Server turn states
  */
-enum class PTTState {
-    Idle,
-    Listening,
-    Processing
+enum class TurnState {
+    UserTurn,      // User is speaking
+    AgentTurn,     // Agent is responding
+    WaitingForUser // Waiting for user to speak
 }
 
 /**
@@ -39,13 +39,14 @@ data class LiveChatUiState(
     val connectionStatus: ConnectionStatus = ConnectionStatus.Disconnected,
     val hasAudioPermission: Boolean = false,
     val hasCameraPermission: Boolean = false,
-    val pushToTalkState: PTTState = PTTState.Idle,
+    val isMuted: Boolean = false, // Mute/Unmute state
+    val turnState: TurnState = TurnState.WaitingForUser, // Server-driven turn state
     val aiEmotion: AIEmotion = AIEmotion.Neutral,
     val audioLevel: Float = 0f, // 0.0 to 1.0
     val sessionId: String? = null,
     val transcript: String = "",
+    val partialTranscript: String = "", // Partial transcript from server
     val error: String? = null,
-    val isRecording: Boolean = false,
-    val recordingDuration: Long = 0L,
+    val isChannelOpen: Boolean = false, // Channel always open state
     val isCameraActive: Boolean = false
 )

@@ -17,61 +17,6 @@ class AudioTestUtility @Inject constructor(
         private const val TAG = "AudioTest"
     }
 
-    /**
-     * Testa specificamente il GeminiLiveAudioManager migliorato
-     */
-    suspend fun testGeminiLiveAudio(audioManager: com.lifo.chat.data.audio.GeminiLiveAudioManager): TestResult {
-        Log.d(TAG, "🧪 Testing enhanced Gemini Live Audio system...")
-        
-        return withContext(Dispatchers.IO) {
-            val results = mutableListOf<String>()
-            var success = true
-            
-            try {
-                // Display audio configuration
-                results.add("📊 AUDIO CONFIGURATION:")
-                results.addAll(audioManager.getAudioConfig().split("\n"))
-                
-                // Display system status
-                results.add("\n📈 SYSTEM STATUS:")
-                results.addAll(audioManager.getSystemStatus().split("\n"))
-                
-                // Test recording initialization
-                results.add("\n🎤 Testing recording initialization...")
-                audioManager.startRecording()
-                delay(100) // Allow initialization
-                
-                if (audioManager.recordingState.value) {
-                    results.add("✅ Recording started successfully")
-                    
-                    // Let it record for a short time
-                    delay(500)
-                    
-                    audioManager.stopRecording()
-                    delay(100)
-                    
-                    if (!audioManager.recordingState.value) {
-                        results.add("✅ Recording stopped successfully")
-                    } else {
-                        results.add("⚠️ Recording stop may have failed")
-                        success = false
-                    }
-                } else {
-                    results.add("❌ Recording failed to start")
-                    success = false
-                }
-                
-            } catch (e: SecurityException) {
-                results.add("❌ Security Exception (missing audio permissions): ${e.message}")
-                success = false
-            } catch (e: Exception) {
-                results.add("❌ Unexpected error: ${e.message}")
-                success = false
-            }
-            
-            TestResult(success, results)
-        }
-    }
     
     /**
      * Esegue un test rapido del sistema audio

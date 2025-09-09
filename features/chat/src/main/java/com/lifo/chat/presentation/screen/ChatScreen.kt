@@ -59,7 +59,7 @@ import com.lifo.chat.presentation.viewmodel.ChatViewModel
 import com.lifo.chat.presentation.viewmodel.LiveChatViewModel
 import com.lifo.chat.domain.model.AIEmotion
 import com.lifo.chat.domain.model.ConnectionStatus
-import com.lifo.chat.domain.model.PTTState
+import com.lifo.chat.domain.model.TurnState
 import com.lifo.util.model.ChatEmotion
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -337,16 +337,16 @@ fun ChatScreen(
                     )
                 }
 
-                // Conditional input: Push-to-talk for live mode, regular input for normal mode
+                // Conditional input: Mute/Unmute for live mode, regular input for normal mode
                 if (isLiveChatMode) {
-                    LiveChatPushToTalkSection(
+                    LiveChatMuteUnmuteSection(
                         connectionStatus = liveChatState.connectionStatus,
-                        pushToTalkState = liveChatState.pushToTalkState,
-                        isRecording = liveChatState.isRecording,
+                        isMuted = liveChatState.isMuted,
+                        turnState = liveChatState.turnState,
+                        isChannelOpen = liveChatState.isChannelOpen,
+                        partialTranscript = liveChatState.partialTranscript,
                         error = liveChatState.error,
-                        onPushToTalkPressed = liveChatViewModel::onPushToTalkPressed,
-                        onPushToTalkReleased = liveChatViewModel::onPushToTalkReleased,
-                        onCancelPushToTalk = liveChatViewModel::cancelPushToTalk,
+                        onToggleMute = liveChatViewModel::toggleMute,
                         onRetryConnection = liveChatViewModel::retryConnection,
                         onClearError = liveChatViewModel::clearError
                     )
@@ -824,14 +824,14 @@ private fun NaturalAnimatedEmptyState(
 
 
 @Composable
-private fun LiveChatPushToTalkSection(
+private fun LiveChatMuteUnmuteSection(
     connectionStatus: ConnectionStatus,
-    pushToTalkState: PTTState,
-    isRecording: Boolean,
+    isMuted: Boolean,
+    turnState: TurnState,
+    isChannelOpen: Boolean,
+    partialTranscript: String,
     error: String?,
-    onPushToTalkPressed: () -> Unit,
-    onPushToTalkReleased: () -> Unit,
-    onCancelPushToTalk: () -> Unit,
+    onToggleMute: () -> Unit,
     onRetryConnection: () -> Unit,
     onClearError: () -> Unit
 ) {
@@ -886,56 +886,104 @@ private fun LiveChatPushToTalkSection(
             }
         }
 
-        // Instructions
-        Text(
-            text = when {
-                connectionStatus == ConnectionStatus.Disconnected -> "Starting Gemini Live..."
-                connectionStatus == ConnectionStatus.Connecting -> "Connecting to Gemini Live API..."
-                connectionStatus == ConnectionStatus.Error -> "Connection error"
-                connectionStatus == ConnectionStatus.Connected && pushToTalkState == PTTState.Idle -> "Hold to talk with Gemini Live"
-                pushToTalkState == PTTState.Listening -> "Release to send to AI"
-                pushToTalkState == PTTState.Processing -> "Gemini is thinking..."
-                else -> "Ready"
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-
-        // Main push-to-talk button
-        Box(
-            modifier = Modifier
-                .size(72.dp)
-                .pointerInput(connectionStatus) {
-                    detectTapGestures(
-                        onPress = {
-                            if (connectionStatus == ConnectionStatus.Connected) {
-                                onPushToTalkPressed()
-                                tryAwaitRelease()
-                                onPushToTalkReleased()
-                            }
-                        }
+        // VAD Status & Instructions
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Connection status
+            Text(
+                text = when (connectionStatus) {
+                    ConnectionStatus.Disconnected -> "Starting Gemini Live..."
+                    ConnectionStatus.Connecting -> "Connecting with VAD..."
+                    ConnectionStatus.Error -> "Connection error"
+                    ConnectionStatus.Connected -> when (turnState) {
+                        TurnState.UserTurn -> "🎤 Parla ora"
+                        TurnState.AgentTurn -> "🤖 Gemini sta rispondendo"
+                        TurnState.WaitingForUser -> if (isMuted) "🔇 Microfono mutato" else "🎤 In ascolto..."
+                    }
+                },
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+            
+            // Show partial transcript while speaking
+            AnimatedVisibility(
+                visible = partialTranscript.isNotEmpty(),
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = partialTranscript,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(8.dp)
                     )
                 }
-                .background(
-                    color = when {
-                        connectionStatus != ConnectionStatus.Connected -> MaterialTheme.colorScheme.surfaceVariant
-                        isRecording -> MaterialTheme.colorScheme.error
-                        else -> MaterialTheme.colorScheme.primary
-                    },
-                    shape = CircleShape
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Mic,
-                contentDescription = "Push to talk with Gemini Live",
-                modifier = Modifier.size(36.dp),
-                tint = when {
-                    connectionStatus != ConnectionStatus.Connected -> MaterialTheme.colorScheme.onSurfaceVariant
-                    else -> Color.White
-                }
+            }
+        }
+
+        // Mute/Unmute toggle button
+        FilledTonalButton(
+            onClick = onToggleMute,
+            enabled = connectionStatus == ConnectionStatus.Connected && isChannelOpen,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            colors = ButtonDefaults.filledTonalButtonColors(
+                containerColor = if (isMuted) 
+                    MaterialTheme.colorScheme.errorContainer 
+                else 
+                    MaterialTheme.colorScheme.primaryContainer
             )
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = if (isMuted) Icons.Outlined.VolumeOff else Icons.Default.Mic,
+                    contentDescription = if (isMuted) "Unmute" else "Mute",
+                    tint = if (isMuted) 
+                        MaterialTheme.colorScheme.onErrorContainer 
+                    else 
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Text(
+                    text = if (isMuted) "Unmute Microphone" else "Mute Microphone",
+                    style = MaterialTheme.typography.labelLarge
+                )
+            }
+        }
+        
+        // VAD indicator
+        if (connectionStatus == ConnectionStatus.Connected && isChannelOpen) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(
+                            color = if (!isMuted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                            shape = CircleShape
+                        )
+                )
+                Text(
+                    text = "VAD ${if (!isMuted) "Active" else "Paused"}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }

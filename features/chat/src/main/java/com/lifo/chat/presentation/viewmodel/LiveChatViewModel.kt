@@ -41,14 +41,15 @@ class LiveChatViewModel @Inject constructor(
             hasAudioPermission = checkAudioPermission(),
             hasCameraPermission = checkCameraPermission(),
             isCameraActive = false,
-            pushToTalkState = PTTState.Idle,
-            isRecording = false,
+            isMuted = false,
+            turnState = TurnState.WaitingForUser,
             audioLevel = 0f,
             transcript = "",
+            partialTranscript = "",
             error = null,
             aiEmotion = AIEmotion.Neutral,
             sessionId = null,
-            recordingDuration = 0L
+            isChannelOpen = false
         )
     )
     val uiState: StateFlow<LiveChatUiState> = _uiState.asStateFlow()
@@ -56,6 +57,9 @@ class LiveChatViewModel @Inject constructor(
     // Current transcript from AI
     private val _currentTranscript = MutableStateFlow("")
     val currentTranscript: StateFlow<String> = _currentTranscript.asStateFlow()
+    
+    // Track if audio channel is open
+    private var isAudioChannelOpen = false
 
     init {
         Log.d(TAG, "🎙️ Initializing LiveChatViewModel...")
@@ -95,14 +99,13 @@ class LiveChatViewModel @Inject constructor(
             }
         }
 
-        // Observe recording state
+        // Observe recording state (channel always open)
         viewModelScope.launch {
             geminiAudioManager.recordingState.collectLatest { isRecording ->
                 _uiState.update {
                     it.copy(
-                        isRecording = isRecording,
-                        pushToTalkState = if (isRecording) PTTState.Listening else PTTState.Idle,
-                        aiEmotion = if (isRecording) AIEmotion.Thinking else AIEmotion.Neutral
+                        isChannelOpen = isRecording,
+                        aiEmotion = if (!it.isMuted && isRecording) AIEmotion.Thinking else AIEmotion.Neutral
                     )
                 }
             }
@@ -127,7 +130,40 @@ class LiveChatViewModel @Inject constructor(
         }
     }
 
+    // In LiveChatViewModel.kt
+
     private fun setupGeminiCallbacks() {
+        // Handle partial transcript from user speech
+        geminiWebSocketClient.onPartialTranscript = { partial ->
+            Log.d(TAG, "🎤 Partial transcript: $partial")
+            _uiState.update { it.copy(partialTranscript = partial) }
+        }
+
+        // Handle final transcript from user speech
+        geminiWebSocketClient.onFinalTranscript = { final ->
+            Log.d(TAG, "🎤 Final transcript: $final")
+            _uiState.update { it.copy(transcript = final, partialTranscript = "") }
+        }
+
+        // Handle turn started (AI is responding)
+        geminiWebSocketClient.onTurnStarted = {
+            Log.d(TAG, "🤖 AI turn started")
+            _uiState.update { it.copy(turnState = TurnState.AgentTurn, aiEmotion = AIEmotion.Speaking) }
+        }
+
+        // Handle turn completed
+        geminiWebSocketClient.onTurnCompleted = {
+            Log.d(TAG, "✅ Turn completed")
+            _uiState.update { it.copy(turnState = TurnState.WaitingForUser, aiEmotion = AIEmotion.Neutral) }
+        }
+
+        // Handle interruption - AGGIUNGI QUI
+        geminiWebSocketClient.onInterrupted = {
+            Log.d(TAG, "⚠️ AI interrupted by user")
+            geminiAudioManager.handleInterruption() // Pulisci la coda audio
+            _uiState.update { it.copy(turnState = TurnState.UserTurn) }
+        }
+
         // Handle text from Gemini
         geminiWebSocketClient.onTextReceived = { text ->
             Log.d(TAG, "📝 Text from Gemini: $text")
@@ -263,7 +299,7 @@ class LiveChatViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                Log.d(TAG, "🔌 Connecting to Gemini Live...")
+                Log.d(TAG, "🔌 Connecting to Gemini Live with VAD...")
                 _uiState.update {
                     it.copy(
                         connectionStatus = ConnectionStatus.Connecting,
@@ -278,6 +314,12 @@ class LiveChatViewModel @Inject constructor(
 
                 Log.d(TAG, "🔑 Using API key: ${apiKey.take(10)}...")
                 geminiWebSocketClient.connect(apiKey)
+                
+                // Wait for connection then start audio channel
+                delay(500)
+                if (_uiState.value.connectionStatus == ConnectionStatus.Connected) {
+                    startAudioChannel()
+                }
 
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Connection failed", e)
@@ -295,6 +337,7 @@ class LiveChatViewModel @Inject constructor(
         viewModelScope.launch {
             Log.d(TAG, "🔌 Disconnecting...")
 
+            isAudioChannelOpen = false
             geminiAudioManager.stopRecording()
             geminiAudioManager.stopPlayback()
             geminiCameraManager.stopCameraPreview()
@@ -303,10 +346,12 @@ class LiveChatViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     connectionStatus = ConnectionStatus.Disconnected,
-                    pushToTalkState = PTTState.Idle,
-                    isRecording = false,
+                    turnState = TurnState.WaitingForUser,
+                    isMuted = false,
+                    isChannelOpen = false,
                     audioLevel = 0f,
                     transcript = "",
+                    partialTranscript = "",
                     error = null,
                     aiEmotion = AIEmotion.Neutral,
                     isCameraActive = false
@@ -317,87 +362,43 @@ class LiveChatViewModel @Inject constructor(
         }
     }
 
-    fun onPushToTalkPressed() {
-        Log.d(TAG, "🎤 Push-to-talk PRESSED")
-
-        if (_uiState.value.connectionStatus != ConnectionStatus.Connected) {
-            Log.w(TAG, "Not connected - current status: ${_uiState.value.connectionStatus}")
-            return
-        }
-
-        try {
-            geminiAudioManager.startRecording()
-            _uiState.update {
-                it.copy(
-                    pushToTalkState = PTTState.Listening,
-                    aiEmotion = AIEmotion.Thinking,
-                    error = null
-                )
+    /**
+     * Start the audio channel (always open with VAD)
+     */
+    private fun startAudioChannel() {
+        if (!isAudioChannelOpen && _uiState.value.connectionStatus == ConnectionStatus.Connected) {
+            Log.d(TAG, "🎤 Starting always-open audio channel with VAD")
+            try {
+                geminiAudioManager.startRecording()
+                isAudioChannelOpen = true
+                _uiState.update { it.copy(isChannelOpen = true) }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to start audio channel", e)
+                _uiState.update { it.copy(error = "Failed to start audio: ${e.message}") }
             }
-
-            // Start tracking recording duration
-            viewModelScope.launch {
-                val startTime = System.currentTimeMillis()
-                while (_uiState.value.isRecording) {
-                    _uiState.update {
-                        it.copy(recordingDuration = System.currentTimeMillis() - startTime)
-                    }
-                    delay(100)
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to start recording", e)
-            _uiState.update { it.copy(error = "Recording failed: ${e.message}") }
         }
     }
-
-    fun onPushToTalkReleased() {
-        Log.d(TAG, "🎤 Push-to-talk RELEASED")
-
-        try {
-            geminiAudioManager.stopRecording()
+    
+    /**
+     * Toggle mute/unmute state
+     */
+    fun toggleMute() {
+        val newMuteState = !_uiState.value.isMuted
+        Log.d(TAG, if (newMuteState) "🔇 Muting microphone" else "🎤 Unmuting microphone")
+        
+        _uiState.update { it.copy(isMuted = newMuteState) }
+        
+        if (newMuteState) {
+            // When muting, send audioStreamEnd to flush VAD buffer
             geminiWebSocketClient.sendEndOfStream()
-
-            _uiState.update {
-                it.copy(
-                    pushToTalkState = PTTState.Processing,
-                    aiEmotion = AIEmotion.Thinking,
-                    recordingDuration = 0L
-                )
-            }
-
-            // Reset to idle after processing
-            viewModelScope.launch {
-                delay(1500)
-                if (_uiState.value.pushToTalkState == PTTState.Processing) {
-                    _uiState.update {
-                        it.copy(pushToTalkState = PTTState.Idle)
-                    }
-                }
-            }
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to stop recording", e)
-            _uiState.update { it.copy(error = "Stop failed: ${e.message}") }
         }
+        // Note: We don't stop recording, channel stays open
     }
-
-    fun cancelPushToTalk() {
-        Log.d(TAG, "❌ Cancelling push-to-talk")
-        try {
-            geminiAudioManager.stopRecording()
-            _uiState.update {
-                it.copy(
-                    pushToTalkState = PTTState.Idle,
-                    aiEmotion = AIEmotion.Neutral,
-                    isRecording = false,
-                    recordingDuration = 0L
-                )
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to cancel recording", e)
-        }
-    }
+    
+    /**
+     * Get current mute state
+     */
+    fun isMuted(): Boolean = _uiState.value.isMuted
 
     fun clearError() {
         _uiState.update { it.copy(error = null) }

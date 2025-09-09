@@ -12,42 +12,41 @@ import kotlinx.coroutines.flow.StateFlow
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.Collections
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
-
 @Singleton
 class GeminiLiveAudioManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-
     companion object {
         private const val TAG = "GeminiAudioManager"
-        
-        // GEMINI LIVE API SPECIFICATIONS:
-        // Input: 16kHz, 16-bit PCM, mono (as required by Gemini API)
-        // Output: 24kHz for high quality playback
-        private const val INPUT_SAMPLE_RATE = 16000  // Gemini API requirement
-        private const val OUTPUT_SAMPLE_RATE = 24000 // High quality output
+        private const val INPUT_SAMPLE_RATE = 16000
+        private const val OUTPUT_SAMPLE_RATE = 24000
         private const val AUDIO_CHANNEL_IN = AudioFormat.CHANNEL_IN_MONO
         private const val AUDIO_CHANNEL_OUT = AudioFormat.CHANNEL_OUT_MONO
         private const val AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT
+        private const val INPUT_CHUNK_SIZE_SAMPLES = 320
+        private const val SEND_INTERVAL_MS = 20L
+        private const val BUFFER_SIZE_MULTIPLIER = 4
 
-        // OPTIMIZED CHUNK SIZES:
-        // Input: 320 samples = 20ms at 16kHz (optimal for real-time processing)
-        // Buffer management for smoother audio flow
-        private const val INPUT_CHUNK_SIZE_SAMPLES = 320 // 20ms at 16kHz
-        private const val SEND_INTERVAL_MS = 20L // Send every 20ms for lower latency
-        private const val BUFFER_SIZE_MULTIPLIER = 4 // 4x min buffer for stability
+        // NUOVO: Limiti per evitare overflow
+        private const val MAX_QUEUE_SIZE = 50 // Max chunks in coda
+        private const val MAX_QUEUE_BYTES = 500_000 // ~500KB max
     }
 
     private var audioRecord: AudioRecord? = null
+
+    // IMPORTANTE: Sincronizzazione thread-safe per AudioTrack
+    private val audioTrackLock = Any()
     private var audioTrack: AudioTrack? = null
+
     private var recordingJob: Job? = null
+    private var playbackJob: Job? = null
     private var isRecording = false
 
-    // Audio system management
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-
     private val pcmData = Collections.synchronizedList(mutableListOf<Short>())
 
     private val _recordingState = MutableStateFlow(false)
@@ -56,50 +55,14 @@ class GeminiLiveAudioManager @Inject constructor(
     private val _playbackState = MutableStateFlow(false)
     val playbackState: StateFlow<Boolean> = _playbackState
 
+    // MIGLIORATO: Thread-safe queue con limite di dimensione
     private val audioQueue = Collections.synchronizedList(mutableListOf<ByteArray>())
-    private var isPlaying = false
+    private var totalQueueBytes = AtomicInteger(0)
+
+    private var isPlaying = AtomicBoolean(false)
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     var onAudioChunkReady: ((String) -> Unit)? = null
-
-    /**
-     * Configure audio routing to ensure high-quality speaker output
-     */
-    private fun configureAudioForSpeakerOutput() {
-        try {
-            // Ensure audio is routed to speakers, not earpiece
-            audioManager.isSpeakerphoneOn = true
-            audioManager.mode = AudioManager.MODE_NORMAL // Normal media mode, not call mode
-            
-            // Set volume to appropriate level for media
-            val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-            val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-            
-            // If volume is too low, set it to 70% of max for good audibility
-            if (currentVolume < maxVolume * 0.3) {
-                val recommendedVolume = (maxVolume * 0.7).toInt()
-                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, recommendedVolume, 0)
-                Log.d(TAG, "🔊 Audio volume set to $recommendedVolume/$maxVolume for better playback")
-            }
-            
-            Log.d(TAG, "🔊 Audio configured for high-quality speaker output")
-        } catch (e: Exception) {
-            Log.w(TAG, "Could not configure audio routing", e)
-        }
-    }
-
-    /**
-     * Reset audio configuration to normal state
-     */
-    private fun resetAudioConfiguration() {
-        try {
-            audioManager.isSpeakerphoneOn = false
-            audioManager.mode = AudioManager.MODE_NORMAL
-            Log.d(TAG, "🔊 Audio configuration reset to normal")
-        } catch (e: Exception) {
-            Log.w(TAG, "Could not reset audio configuration", e)
-        }
-    }
 
     @SuppressLint("MissingPermission")
     fun startRecording() {
@@ -108,80 +71,84 @@ class GeminiLiveAudioManager @Inject constructor(
             return
         }
 
-        // OPTIMIZED AUDIO RECORDING CONFIGURATION
         val minBufferSize = AudioRecord.getMinBufferSize(
             INPUT_SAMPLE_RATE,
             AUDIO_CHANNEL_IN,
             AUDIO_ENCODING
         )
-        
+
         if (minBufferSize == AudioRecord.ERROR_BAD_VALUE) {
             Log.e(TAG, "Invalid audio recording parameters")
             return
         }
-        
+
         val bufferSize = minBufferSize * BUFFER_SIZE_MULTIPLIER
 
-        audioRecord = AudioRecord(
-            MediaRecorder.AudioSource.VOICE_COMMUNICATION, // Echo cancellation + noise suppression
-            INPUT_SAMPLE_RATE,
-            AUDIO_CHANNEL_IN,
-            AUDIO_ENCODING,
-            bufferSize
-        )
+        try {
+            audioRecord = AudioRecord(
+                MediaRecorder.AudioSource.VOICE_COMMUNICATION,
+                INPUT_SAMPLE_RATE,
+                AUDIO_CHANNEL_IN,
+                AUDIO_ENCODING,
+                bufferSize
+            )
 
-        if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
-            Log.e(TAG, "AudioRecord initialization failed")
-            return
-        }
+            if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
+                Log.e(TAG, "AudioRecord initialization failed")
+                audioRecord?.release()
+                audioRecord = null
+                return
+            }
 
-        audioRecord?.startRecording()
-        isRecording = true
-        _recordingState.value = true
-        Log.d(TAG, "🎤 Start Recording - buffer size: $bufferSize")
+            audioRecord?.startRecording()
+            isRecording = true
+            _recordingState.value = true
+            Log.d(TAG, "🎤 Recording started - buffer size: $bufferSize")
 
-        // RECORDING THREAD - Optimized for 16kHz input
-        recordingJob = scope.launch {
-            val buffer = ShortArray(INPUT_CHUNK_SIZE_SAMPLES)
-            Log.d(TAG, "🎤 Recording thread started - chunk size: $INPUT_CHUNK_SIZE_SAMPLES samples")
+            // Recording thread
+            recordingJob = scope.launch {
+                val buffer = ShortArray(INPUT_CHUNK_SIZE_SAMPLES)
 
-            while (isRecording) {
-                try {
-                    val readSize = audioRecord?.read(buffer, 0, buffer.size) ?: 0
+                while (isRecording && isActive) {
+                    try {
+                        val readSize = audioRecord?.read(buffer, 0, buffer.size) ?: 0
 
-                    when {
-                        readSize > 0 -> {
-                            synchronized(pcmData) {
-                                pcmData.addAll(buffer.take(readSize).toList())
+                        when {
+                            readSize > 0 -> {
+                                synchronized(pcmData) {
+                                    // Limita la dimensione del buffer
+                                    if (pcmData.size < 10000) {
+                                        pcmData.addAll(buffer.take(readSize).toList())
+                                    }
+                                }
+                            }
+                            readSize == AudioRecord.ERROR_INVALID_OPERATION -> {
+                                Log.e(TAG, "AudioRecord invalid operation")
+                                break
+                            }
+                            readSize == AudioRecord.ERROR_BAD_VALUE -> {
+                                Log.e(TAG, "AudioRecord bad value")
+                                break
                             }
                         }
-                        readSize == AudioRecord.ERROR_INVALID_OPERATION -> {
-                            Log.e(TAG, "AudioRecord invalid operation")
-                            break
-                        }
-                        readSize == AudioRecord.ERROR_BAD_VALUE -> {
-                            Log.e(TAG, "AudioRecord bad value error")
-                            break
-                        }
-                        else -> {
-                            // Continue reading
-                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error in recording loop", e)
+                        break
                     }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error in recording loop", e)
-                    break
                 }
             }
-            
-            Log.d(TAG, "🎤 Recording thread ended")
-        }
 
-        // Thread separato per l'invio periodico
-        scope.launch {
-            while (isRecording) {
-                delay(SEND_INTERVAL_MS)
-                sendAccumulatedData()
+            // Send thread
+            scope.launch {
+                while (isRecording && isActive) {
+                    delay(SEND_INTERVAL_MS)
+                    sendAccumulatedData()
+                }
             }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start recording", e)
+            stopRecording()
         }
     }
 
@@ -193,275 +160,264 @@ class GeminiLiveAudioManager @Inject constructor(
                     pcmData.removeAt(0)
                 }
                 copy
-            } else if (pcmData.isNotEmpty()) {
-                // Send partial data to reduce latency
-                val copy = pcmData.toList()
-                pcmData.clear()
-                copy
-            } else {
-                null
-            }
+            } else null
         }
 
         dataCopy?.let {
             scope.launch {
-                val buffer = ByteBuffer.allocate(it.size * 2).order(ByteOrder.LITTLE_ENDIAN)
-                it.forEach { value ->
-                    buffer.putShort(value)
+                try {
+                    val buffer = ByteBuffer.allocate(it.size * 2).order(ByteOrder.LITTLE_ENDIAN)
+                    it.forEach { value -> buffer.putShort(value) }
+                    val byteArray = buffer.array()
+                    val base64 = Base64.encodeToString(byteArray, Base64.DEFAULT or Base64.NO_WRAP)
+                    Log.v(TAG, "🎤 Sending ${it.size} samples")
+                    onAudioChunkReady?.invoke(base64)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error sending audio", e)
                 }
-
-                val byteArray = buffer.array()
-                val base64 = Base64.encodeToString(byteArray, Base64.DEFAULT or Base64.NO_WRAP)
-
-                Log.d(TAG, "🎤 Send Audio Chunk (${it.size} samples)")
-                onAudioChunkReady?.invoke(base64)
             }
         }
     }
 
     fun stopRecording() {
-        Log.d(TAG, "Stop Recording")
-
-        // Invia gli ultimi dati rimasti
-        sendAccumulatedData()
+        Log.d(TAG, "Stopping recording...")
 
         isRecording = false
         _recordingState.value = false
+
         recordingJob?.cancel()
         recordingJob = null
 
-        audioRecord?.stop()
-        audioRecord?.release()
-        audioRecord = null
+        try {
+            audioRecord?.stop()
+            audioRecord?.release()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error stopping AudioRecord", e)
+        } finally {
+            audioRecord = null
+        }
 
         synchronized(pcmData) {
             pcmData.clear()
         }
     }
 
-    fun queueAudioForPlayback(audioBase64: String, inputSampleRate: Int = OUTPUT_SAMPLE_RATE) {
+    fun queueAudioForPlayback(audioBase64: String) {
         scope.launch {
             try {
                 val arrayBuffer = Base64.decode(audioBase64, Base64.DEFAULT)
-                
-                // SAMPLE RATE CONVERSION if needed
-                val processedBuffer = if (inputSampleRate != OUTPUT_SAMPLE_RATE) {
-                    Log.d(TAG, "🔄 Converting audio from ${inputSampleRate}Hz to ${OUTPUT_SAMPLE_RATE}Hz")
-                    resampleAudio(arrayBuffer, inputSampleRate, OUTPUT_SAMPLE_RATE)
-                } else {
-                    arrayBuffer
-                }
-                
-                audioQueue.add(processedBuffer)
 
-                if (!isPlaying) {
+                // IMPORTANTE: Controllo overflow della coda
+                val currentSize = totalQueueBytes.get()
+                if (audioQueue.size >= MAX_QUEUE_SIZE || currentSize >= MAX_QUEUE_BYTES) {
+                    Log.w(TAG, "⚠️ Audio queue full, dropping oldest chunks")
+                    // Rimuovi i chunks più vecchi
+                    while (audioQueue.size > MAX_QUEUE_SIZE / 2 && audioQueue.isNotEmpty()) {
+                        val removed = audioQueue.removeAt(0)
+                        totalQueueBytes.addAndGet(-removed.size)
+                    }
+                }
+
+                audioQueue.add(arrayBuffer)
+                totalQueueBytes.addAndGet(arrayBuffer.size)
+
+                if (!isPlaying.get()) {
                     playNextAudioChunk()
                 }
-                
-                Log.v(TAG, "✅ Queued audio: ${processedBuffer.size} bytes")
+
+                Log.v(TAG, "✅ Queued audio: ${arrayBuffer.size} bytes (queue: ${audioQueue.size} chunks)")
             } catch (e: Exception) {
-                Log.e(TAG, "Error processing audio chunk", e)
+                Log.e(TAG, "Error queueing audio", e)
             }
         }
     }
 
     private fun playNextAudioChunk() {
-        scope.launch {
-            while (audioQueue.isNotEmpty()) {
-                isPlaying = true
+        if (playbackJob?.isActive == true) {
+            return // Già in riproduzione
+        }
+
+        playbackJob = scope.launch {
+            while (audioQueue.isNotEmpty() && isActive) {
+                isPlaying.set(true)
                 _playbackState.value = true
 
-                // Accumula alcuni chunk prima di riprodurre per smoother playback
-                val chunksToPlay = mutableListOf<ByteArray>()
-                repeat(3.coerceAtMost(audioQueue.size)) {
-                    if (audioQueue.isNotEmpty()) {
-                        chunksToPlay.add(audioQueue.removeAt(0))
-                    }
-                }
+                try {
+                    // Prendi il prossimo chunk
+                    val chunk = audioQueue.removeAt(0)
+                    totalQueueBytes.addAndGet(-chunk.size)
 
-                if (chunksToPlay.isNotEmpty()) {
-                    val combined = ByteArray(chunksToPlay.sumOf { it.size })
-                    var offset = 0
-                    chunksToPlay.forEach { chunk ->
-                        chunk.copyInto(combined, offset)
-                        offset += chunk.size
-                    }
-                    playAudio(combined)
+                    playAudio(chunk)
+
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error playing audio chunk", e)
                 }
             }
 
-            isPlaying = false
+            isPlaying.set(false)
             _playbackState.value = false
         }
     }
 
     private suspend fun playAudio(byteArray: ByteArray) = withContext(Dispatchers.IO) {
-        if (audioTrack == null || audioTrack?.state != AudioTrack.STATE_INITIALIZED) {
-            // Configure audio system for high-quality speaker output
-            configureAudioForSpeakerOutput()
-            
-            val minBufferSize = AudioTrack.getMinBufferSize(
-                OUTPUT_SAMPLE_RATE,
-                AUDIO_CHANNEL_OUT,
-                AUDIO_ENCODING
-            )
-            
-            if (minBufferSize == AudioTrack.ERROR_BAD_VALUE) {
-                Log.e(TAG, "Invalid audio playback parameters")
-                return@withContext
+        synchronized(audioTrackLock) {
+            try {
+                // Verifica/inizializza AudioTrack
+                if (audioTrack?.state != AudioTrack.STATE_INITIALIZED) {
+                    initializeAudioTrack()
+                }
+
+                // IMPORTANTE: Ricontrolla dopo l'inizializzazione
+                val track = audioTrack
+                if (track == null || track.state != AudioTrack.STATE_INITIALIZED) {
+                    Log.e(TAG, "AudioTrack not initialized properly")
+                    return@withContext
+                }
+
+                // Scrivi audio
+                var offset = 0
+                val chunkSize = 1920 // 40ms a 24kHz
+
+                while (offset < byteArray.size && isActive) {
+                    val bytesToWrite = minOf(chunkSize, byteArray.size - offset)
+                    val bytesWritten = track.write(byteArray, offset, bytesToWrite)
+
+                    if (bytesWritten < 0) {
+                        Log.e(TAG, "AudioTrack write error: $bytesWritten")
+                        break
+                    }
+
+                    offset += bytesWritten
+                }
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in playAudio", e)
+                // Reset AudioTrack in caso di errore
+                releaseAudioTrack()
             }
-            
-            val bufferSize = minBufferSize * BUFFER_SIZE_MULTIPLIER
-
-            audioTrack?.release()
-
-            // HIGH-QUALITY AUDIO ATTRIBUTES FOR MEDIA CONTENT
-            val audioAttributes = AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_MEDIA) // High-quality media output to speakers
-                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC) // High-quality audio processing
-                .setFlags(AudioAttributes.FLAG_LOW_LATENCY) // Low latency for real-time
-                .build()
-
-            val audioFormat = AudioFormat.Builder()
-                .setSampleRate(OUTPUT_SAMPLE_RATE) // 24kHz for high quality output
-                .setEncoding(AUDIO_ENCODING)
-                .setChannelMask(AUDIO_CHANNEL_OUT)
-                .build()
-
-            audioTrack = AudioTrack.Builder()
-                .setAudioAttributes(audioAttributes)
-                .setAudioFormat(audioFormat)
-                .setBufferSizeInBytes(bufferSize)
-                .setTransferMode(AudioTrack.MODE_STREAM)
-                .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY) // Low latency mode
-                .build()
-
-            if (audioTrack?.state != AudioTrack.STATE_INITIALIZED) {
-                Log.e(TAG, "AudioTrack initialization failed")
-                return@withContext
-            }
-
-            audioTrack?.play()
-            Log.d(TAG, "🔊 AudioTrack initialized - Sample Rate: $OUTPUT_SAMPLE_RATE, Buffer: $bufferSize")
         }
+    }
 
-        // OPTIMIZED CHUNK WRITING - Prevent underruns and optimize for 24kHz playback
-        var offset = 0
-        val chunkSize = 1920 // 960 samples at 24kHz = 40ms chunks for smooth playback
-        
-        while (offset < byteArray.size) {
-            val bytesToWrite = minOf(chunkSize, byteArray.size - offset)
-            val bytesWritten = audioTrack?.write(byteArray, offset, bytesToWrite) ?: 0
-            
-            if (bytesWritten < 0) {
-                Log.e(TAG, "AudioTrack write error: $bytesWritten")
-                break
-            } else if (bytesWritten != bytesToWrite) {
-                Log.w(TAG, "Partial audio write: $bytesWritten/$bytesToWrite bytes")
+    private fun initializeAudioTrack() {
+        synchronized(audioTrackLock) {
+            try {
+                // Rilascia track esistente
+                releaseAudioTrack()
+
+                val minBufferSize = AudioTrack.getMinBufferSize(
+                    OUTPUT_SAMPLE_RATE,
+                    AUDIO_CHANNEL_OUT,
+                    AUDIO_ENCODING
+                )
+
+                if (minBufferSize == AudioTrack.ERROR_BAD_VALUE) {
+                    Log.e(TAG, "Invalid audio playback parameters")
+                    return
+                }
+
+                val bufferSize = minBufferSize * BUFFER_SIZE_MULTIPLIER
+
+                // Configura audio per speakers
+                configureAudioForSpeakerOutput()
+
+                val audioAttributes = AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .build()
+
+                val audioFormat = AudioFormat.Builder()
+                    .setSampleRate(OUTPUT_SAMPLE_RATE)
+                    .setEncoding(AUDIO_ENCODING)
+                    .setChannelMask(AUDIO_CHANNEL_OUT)
+                    .build()
+
+                audioTrack = AudioTrack.Builder()
+                    .setAudioAttributes(audioAttributes)
+                    .setAudioFormat(audioFormat)
+                    .setBufferSizeInBytes(bufferSize)
+                    .setTransferMode(AudioTrack.MODE_STREAM)
+                    .build()
+
+                audioTrack?.play()
+                Log.d(TAG, "🔊 AudioTrack initialized - buffer: $bufferSize")
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to initialize AudioTrack", e)
+                audioTrack = null
             }
-            
-            offset += bytesWritten
+        }
+    }
+
+    private fun releaseAudioTrack() {
+        synchronized(audioTrackLock) {
+            try {
+                audioTrack?.stop()
+                audioTrack?.release()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error releasing AudioTrack", e)
+            } finally {
+                audioTrack = null
+            }
         }
     }
 
     fun stopPlayback() {
-        isPlaying = false
+        Log.d(TAG, "Stopping playback...")
+
+        isPlaying.set(false)
         _playbackState.value = false
 
-        audioTrack?.stop()
-        audioTrack?.release()
-        audioTrack = null
+        playbackJob?.cancel()
+        playbackJob = null
 
+        // Pulisci la coda
         audioQueue.clear()
-        
-        // Reset audio configuration when playback stops
+        totalQueueBytes.set(0)
+
+        // Rilascia AudioTrack
+        releaseAudioTrack()
         resetAudioConfiguration()
     }
 
-    /**
-     * Get current audio configuration information
-     */
-    fun getAudioConfig(): String {
-        return """
-            ═══ GEMINI LIVE AUDIO CONFIG ═══
-            📡 Input:  ${INPUT_SAMPLE_RATE}Hz, 16-bit PCM, Mono
-            🔊 Output: ${OUTPUT_SAMPLE_RATE}Hz, 16-bit PCM, Mono  
-            🎤 Source: VOICE_COMMUNICATION (Echo Cancellation ON)
-            🔊 Playback: USAGE_MEDIA + CONTENT_TYPE_MUSIC (High-Quality Speakers)
-            📦 Chunk Size: $INPUT_CHUNK_SIZE_SAMPLES samples (${INPUT_CHUNK_SIZE_SAMPLES * 1000 / INPUT_SAMPLE_RATE}ms)
-            🔄 Send Interval: ${SEND_INTERVAL_MS}ms
-            💾 Buffer Multiplier: ${BUFFER_SIZE_MULTIPLIER}x
-            🎯 Performance: LOW_LATENCY mode
-            🔊 Volume: Auto-configured for optimal media playback
-        """.trimIndent()
+    // NUOVO: Metodo per gestire interruzioni da VAD
+    fun handleInterruption() {
+        Log.d(TAG, "⚠️ Handling VAD interruption - clearing audio queue")
+
+        // Ferma playback corrente
+        playbackJob?.cancel()
+
+        // Pulisci coda audio
+        audioQueue.clear()
+        totalQueueBytes.set(0)
+
+        // Reset stato
+        isPlaying.set(false)
+        _playbackState.value = false
     }
-    
-    /**
-     * Get current system status
-     */
-    fun getSystemStatus(): String {
-        return """
-            ═══ SYSTEM STATUS ═══
-            🎤 Recording: ${if (isRecording) "ACTIVE" else "INACTIVE"}
-            🔊 Playing: ${if (isPlaying) "ACTIVE" else "INACTIVE"}
-            📊 Queue Size: ${audioQueue.size} chunks
-            ⚡ PCM Buffer: ${pcmData.size} samples
-        """.trimIndent()
+
+    private fun configureAudioForSpeakerOutput() {
+        try {
+            audioManager.isSpeakerphoneOn = true
+            audioManager.mode = AudioManager.MODE_NORMAL
+            Log.d(TAG, "🔊 Audio configured for speaker output")
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not configure audio", e)
+        }
+    }
+
+    private fun resetAudioConfiguration() {
+        try {
+            audioManager.isSpeakerphoneOn = false
+            audioManager.mode = AudioManager.MODE_NORMAL
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not reset audio", e)
+        }
     }
 
     fun release() {
-        Log.i(TAG, "🔄 Releasing GeminiLiveAudioManager resources...")
+        Log.i(TAG, "Releasing audio manager...")
         stopRecording()
         stopPlayback()
-        resetAudioConfiguration()
         scope.cancel()
-        Log.i(TAG, "✅ GeminiLiveAudioManager released")
-    }
-    
-    /**
-     * HIGH-QUALITY SAMPLE RATE CONVERSION using linear interpolation
-     * Converts 16-bit PCM audio from input sample rate to output sample rate
-     */
-    private fun resampleAudio(inputBuffer: ByteArray, inputSampleRate: Int, outputSampleRate: Int): ByteArray {
-        if (inputSampleRate == outputSampleRate) return inputBuffer
-        
-        // Convert bytes to 16-bit samples
-        val inputSamples = ShortArray(inputBuffer.size / 2)
-        val inputByteBuffer = ByteBuffer.wrap(inputBuffer).order(ByteOrder.LITTLE_ENDIAN)
-        for (i in inputSamples.indices) {
-            inputSamples[i] = inputByteBuffer.getShort()
-        }
-        
-        // Calculate conversion ratio and output size
-        val ratio = outputSampleRate.toDouble() / inputSampleRate.toDouble()
-        val outputLength = (inputSamples.size * ratio).toInt()
-        val outputSamples = ShortArray(outputLength)
-        
-        // LINEAR INTERPOLATION RESAMPLING - Better quality than nearest neighbor
-        for (i in outputSamples.indices) {
-            val inputIndex = i / ratio
-            val inputIndexFloor = inputIndex.toInt()
-            val fraction = inputIndex - inputIndexFloor
-            
-            if (inputIndexFloor >= inputSamples.size - 1) {
-                // Handle edge case
-                outputSamples[i] = inputSamples[inputSamples.size - 1]
-            } else {
-                // Linear interpolation between two adjacent samples
-                val sample1 = inputSamples[inputIndexFloor].toDouble()
-                val sample2 = inputSamples[inputIndexFloor + 1].toDouble()
-                val interpolated = sample1 + fraction * (sample2 - sample1)
-                outputSamples[i] = interpolated.toInt().coerceIn(-32768, 32767).toShort()
-            }
-        }
-        
-        // Convert back to byte array
-        val outputBuffer = ByteBuffer.allocate(outputSamples.size * 2).order(ByteOrder.LITTLE_ENDIAN)
-        for (sample in outputSamples) {
-            outputBuffer.putShort(sample)
-        }
-        
-        Log.d(TAG, "🔄 Resampled: ${inputSamples.size} -> ${outputSamples.size} samples (${inputSampleRate}Hz -> ${outputSampleRate}Hz)")
-        return outputBuffer.array()
     }
 }
