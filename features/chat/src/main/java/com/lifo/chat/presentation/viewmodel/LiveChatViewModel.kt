@@ -53,7 +53,7 @@ class LiveChatViewModel @Inject constructor(
         )
     )
     val uiState: StateFlow<LiveChatUiState> = _uiState.asStateFlow()
-
+    private var aiSpeaking: Boolean = false
     // Current transcript from AI
     private val _currentTranscript = MutableStateFlow("")
     val currentTranscript: StateFlow<String> = _currentTranscript.asStateFlow()
@@ -111,9 +111,17 @@ class LiveChatViewModel @Inject constructor(
             }
         }
 
-        // Observe playback state
+        // Observe playback state (gating half-duplex + flush quando parte il TTS)
         viewModelScope.launch {
+            var lastIsPlaying = false
             geminiAudioManager.playbackState.collectLatest { isPlaying ->
+                // Quando inizia a parlare l'AI, chiudiamo il turno utente lato server
+                if (isPlaying && !lastIsPlaying) {
+                    geminiWebSocketClient.sendEndOfStream()
+                }
+                aiSpeaking = isPlaying
+                lastIsPlaying = isPlaying
+
                 _uiState.update {
                     it.copy(aiEmotion = if (isPlaying) AIEmotion.Speaking else AIEmotion.Neutral)
                 }
@@ -127,6 +135,7 @@ class LiveChatViewModel @Inject constructor(
             }
         }
     }
+
 
     private fun setupGeminiCallbacks() {
         // Partial transcript from user speech

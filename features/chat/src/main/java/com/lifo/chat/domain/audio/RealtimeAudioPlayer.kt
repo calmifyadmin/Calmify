@@ -18,12 +18,12 @@ import kotlin.math.max
 class RealtimeAudioPlayer @Inject constructor() {
     companion object {
         private const val TAG = "RealtimeAudioPlayer"
-        
-        // OpenAI Realtime API provides 24kHz, 16-bit, mono PCM
+
+        // Gemini Live TTS: 24 kHz, 16-bit, mono PCM
         private const val SAMPLE_RATE = 24000
         private const val CHANNEL_CONFIG = AudioFormat.CHANNEL_OUT_MONO
         private const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
-        private const val BUFFER_SIZE_FACTOR = 4 // Larger buffer for smoother playback
+        private const val BUFFER_SIZE_FACTOR = 4 // buffer più ampio per playback fluido
     }
 
     private var audioTrack: AudioTrack? = null
@@ -35,9 +35,7 @@ class RealtimeAudioPlayer @Inject constructor() {
     private val _playbackState = MutableStateFlow<PlaybackState>(PlaybackState.Idle)
     val playbackState = _playbackState.asStateFlow()
 
-    /**
-     * Start audio playback
-     */
+    /** Start audio playback */
     suspend fun startPlayback(): Boolean = withContext(Dispatchers.IO) {
         if (isPlaying) {
             Log.w(TAG, "Playback already active")
@@ -49,10 +47,7 @@ class RealtimeAudioPlayer @Inject constructor() {
             isPlaying = true
             _playbackState.value = PlaybackState.Playing(0f)
 
-            // Start playback coroutine
-            playbackJob = launch {
-                playAudioQueue()
-            }
+            playbackJob = launch { playAudioQueue() }
 
             Log.d(TAG, "Audio playback started")
             true
@@ -63,20 +58,16 @@ class RealtimeAudioPlayer @Inject constructor() {
         }
     }
 
-    /**
-     * Stop audio playback
-     */
+    /** Stop audio playback */
     fun stopPlayback() {
         Log.d(TAG, "Stopping audio playback")
-        
+
         isPlaying = false
         playbackJob?.cancel()
-        
+
         try {
             audioTrack?.apply {
-                if (playState == AudioTrack.PLAYSTATE_PLAYING) {
-                    stop()
-                }
+                if (playState == AudioTrack.PLAYSTATE_PLAYING) stop()
                 flush()
                 release()
             }
@@ -89,10 +80,7 @@ class RealtimeAudioPlayer @Inject constructor() {
         }
     }
 
-    /**
-     * Queue audio data for playback
-     * @param base64Audio Base64 encoded PCM16 audio data from OpenAI
-     */
+    /** Queue audio data for playback (base64 PCM16) */
     fun queueAudio(base64Audio: String) {
         if (!isPlaying) {
             Log.w(TAG, "Cannot queue audio: playback not started")
@@ -103,7 +91,7 @@ class RealtimeAudioPlayer @Inject constructor() {
             val audioData = Base64.decode(base64Audio, Base64.DEFAULT)
             val audioLevel = calculateAudioLevel(audioData)
             val chunk = AudioChunk(audioData, audioLevel)
-            
+
             if (!audioQueue.offer(chunk)) {
                 Log.w(TAG, "Audio queue is full, dropping audio chunk")
             } else {
@@ -114,9 +102,7 @@ class RealtimeAudioPlayer @Inject constructor() {
         }
     }
 
-    /**
-     * Queue raw PCM audio data
-     */
+    /** Queue raw PCM audio data */
     fun queueRawAudio(audioData: ByteArray) {
         if (!isPlaying) {
             Log.w(TAG, "Cannot queue audio: playback not started")
@@ -125,7 +111,7 @@ class RealtimeAudioPlayer @Inject constructor() {
 
         val audioLevel = calculateAudioLevel(audioData)
         val chunk = AudioChunk(audioData, audioLevel)
-        
+
         if (!audioQueue.offer(chunk)) {
             Log.w(TAG, "Audio queue is full, dropping audio chunk")
         } else {
@@ -133,27 +119,19 @@ class RealtimeAudioPlayer @Inject constructor() {
         }
     }
 
-    /**
-     * Clear all queued audio
-     */
+    /** Clear all queued audio */
     fun clearQueue() {
         audioQueue.clear()
         Log.d(TAG, "Audio queue cleared")
     }
 
-    /**
-     * Get current queue size
-     */
+    /** Get current queue size */
     fun getQueueSize(): Int = audioQueue.size
 
-    /**
-     * Check if currently playing
-     */
+    /** Is currently playing */
     fun isPlaying(): Boolean = isPlaying
 
-    /**
-     * Get audio configuration
-     */
+    /** Get audio configuration */
     fun getAudioConfig(): AudioConfig {
         return AudioConfig(
             sampleRate = SAMPLE_RATE,
@@ -178,8 +156,9 @@ class RealtimeAudioPlayer @Inject constructor() {
 
         Log.d(TAG, "Initializing AudioTrack - Sample Rate: $SAMPLE_RATE, Buffer Size: $bufferSize")
 
+        // ⚙️ Attributi "voce" per ridurre auto-ascolto e migliorare routing/ducking
         val audioAttributes = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_MEDIA)
+            .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
             .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
             .build()
 
@@ -216,22 +195,14 @@ class RealtimeAudioPlayer @Inject constructor() {
     private suspend fun playAudioQueue() {
         while (isPlaying && currentCoroutineContext().isActive) {
             try {
-                // Wait for audio data with timeout
                 val chunk = withTimeoutOrNull(100) {
-                    withContext(Dispatchers.IO) {
-                        audioQueue.take()
-                    }
+                    withContext(Dispatchers.IO) { audioQueue.take() }
                 }
 
                 chunk?.let { audioChunk ->
                     val track = audioTrack
                     if (track != null && track.playState == AudioTrack.PLAYSTATE_PLAYING) {
-                        val bytesWritten = track.write(
-                            audioChunk.data, 
-                            0, 
-                            audioChunk.data.size
-                        )
-
+                        val bytesWritten = track.write(audioChunk.data, 0, audioChunk.data.size)
                         if (bytesWritten < 0) {
                             Log.e(TAG, "AudioTrack write error: $bytesWritten")
                         } else {
@@ -241,9 +212,7 @@ class RealtimeAudioPlayer @Inject constructor() {
                     }
                 }
             } catch (e: Exception) {
-                if (isPlaying) { // Only log if we're still supposed to be playing
-                    Log.e(TAG, "Error in playback loop", e)
-                }
+                if (isPlaying) Log.e(TAG, "Error in playback loop", e)
             }
         }
 
@@ -254,36 +223,28 @@ class RealtimeAudioPlayer @Inject constructor() {
         if (audioData.isEmpty()) return 0f
 
         var sum = 0.0
-        val sampleCount = audioData.size / 2 // 16-bit samples
+        val sampleCount = audioData.size / 2 // 16-bit
 
-        for (i in audioData.indices step 2) {
-            if (i + 1 < audioData.size) {
-                // Convert little-endian bytes to 16-bit sample
-                val sample = (audioData[i].toInt() and 0xFF) or 
-                           ((audioData[i + 1].toInt() and 0xFF) shl 8)
-                
-                // Convert to signed value
-                val signedSample = if (sample > 32767) sample - 65536 else sample
-                sum += kotlin.math.abs(signedSample)
-            }
+        var i = 0
+        while (i + 1 < audioData.size) {
+            val sample = (audioData[i].toInt() and 0xFF) or ((audioData[i + 1].toInt() and 0xFF) shl 8)
+            val signedSample = if (sample > 32767) sample - 65536 else sample
+            sum += kotlin.math.abs(signedSample)
+            i += 2
         }
 
-        val average = sum / sampleCount
+        val average = if (sampleCount > 0) sum / sampleCount else 0.0
         return (average / 32767.0).toFloat().coerceIn(0f, 1f)
     }
 }
 
-/**
- * Audio chunk data class
- */
+/** Audio chunk */
 private data class AudioChunk(
     val data: ByteArray,
     val level: Float
 )
 
-/**
- * Playback state sealed class
- */
+/** Playback state */
 sealed class PlaybackState {
     object Idle : PlaybackState()
     data class Playing(val audioLevel: Float = 0f) : PlaybackState()
