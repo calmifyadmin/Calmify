@@ -57,7 +57,7 @@ class LiveChatViewModel @Inject constructor(
     // Current transcript from AI
     private val _currentTranscript = MutableStateFlow("")
     val currentTranscript: StateFlow<String> = _currentTranscript.asStateFlow()
-    
+
     // Track if audio channel is open
     private var isAudioChannelOpen = false
 
@@ -123,55 +123,50 @@ class LiveChatViewModel @Inject constructor(
         // Observe camera state
         viewModelScope.launch {
             geminiCameraManager.isCameraActive.collectLatest { isActive ->
-                _uiState.update {
-                    it.copy(isCameraActive = isActive)
-                }
+                _uiState.update { it.copy(isCameraActive = isActive) }
             }
         }
     }
 
-    // In LiveChatViewModel.kt
-
     private fun setupGeminiCallbacks() {
-        // Handle partial transcript from user speech
+        // Partial transcript from user speech
         geminiWebSocketClient.onPartialTranscript = { partial ->
             Log.d(TAG, "🎤 Partial transcript: $partial")
             _uiState.update { it.copy(partialTranscript = partial) }
         }
 
-        // Handle final transcript from user speech
+        // Final transcript from user speech
         geminiWebSocketClient.onFinalTranscript = { final ->
             Log.d(TAG, "🎤 Final transcript: $final")
             _uiState.update { it.copy(transcript = final, partialTranscript = "") }
         }
 
-        // Handle turn started (AI is responding)
+        // AI turn started
         geminiWebSocketClient.onTurnStarted = {
             Log.d(TAG, "🤖 AI turn started")
             _uiState.update { it.copy(turnState = TurnState.AgentTurn, aiEmotion = AIEmotion.Speaking) }
         }
 
-        // Handle turn completed
+        // Turn completed
         geminiWebSocketClient.onTurnCompleted = {
             Log.d(TAG, "✅ Turn completed")
             _uiState.update { it.copy(turnState = TurnState.WaitingForUser, aiEmotion = AIEmotion.Neutral) }
         }
 
-        // Handle interruption - AGGIUNGI QUI
+        // Interruption (barge-in)
         geminiWebSocketClient.onInterrupted = {
-            Log.d(TAG, "⚠️ AI interrupted by user")
-            geminiAudioManager.handleInterruption() // Pulisci la coda audio
-            _uiState.update { it.copy(turnState = TurnState.UserTurn) }
+            Log.d(TAG, "⚠️ AI interrupted by user (barge-in detected)")
+            handleBargeIn()
         }
 
-        // Handle text from Gemini
+        // Text from Gemini
         geminiWebSocketClient.onTextReceived = { text ->
             Log.d(TAG, "📝 Text from Gemini: $text")
             _currentTranscript.value = text
             _uiState.update { it.copy(transcript = text) }
         }
 
-        // Handle audio from Gemini
+        // Audio from Gemini
         geminiWebSocketClient.onAudioReceived = { audioBase64 ->
             Log.d(TAG, "🔊 Audio from Gemini (${audioBase64.length} chars)")
             geminiAudioManager.queueAudioForPlayback(audioBase64)
@@ -186,7 +181,7 @@ class LiveChatViewModel @Inject constructor(
             }
         }
 
-        // Handle errors
+        // Errors
         geminiWebSocketClient.onError = { error ->
             Log.e(TAG, "❌ Error: $error")
             _uiState.update {
@@ -197,14 +192,16 @@ class LiveChatViewModel @Inject constructor(
             }
         }
 
-        // Send audio chunks to Gemini
+        // Send audio chunks to Gemini (streaming incrementale, senza commit)
         geminiAudioManager.onAudioChunkReady = { audioBase64 ->
-            geminiWebSocketClient.sendAudioData(audioBase64)
+            if (!_uiState.value.isMuted) {
+                geminiWebSocketClient.sendAudioData(audioBase64)
+            }
         }
     }
 
     private fun setupCameraIntegration() {
-        // Setup camera callback to send images to Gemini
+        // Send images to Gemini
         geminiCameraManager.onImageCaptured = { imageBase64 ->
             Log.d(TAG, "📸 Sending image to Gemini Live (${imageBase64.length} chars)")
             viewModelScope.launch {
@@ -212,9 +209,7 @@ class LiveChatViewModel @Inject constructor(
                     geminiWebSocketClient.sendImageData(imageBase64)
                 } catch (e: Exception) {
                     Log.e(TAG, "❌ Failed to send image to Gemini", e)
-                    _uiState.update {
-                        it.copy(error = "Failed to send image: ${e.message}")
-                    }
+                    _uiState.update { it.copy(error = "Failed to send image: ${e.message}") }
                 }
             }
         }
@@ -257,24 +252,21 @@ class LiveChatViewModel @Inject constructor(
         Log.d(TAG, "🔍 hasCameraPermission: ${_uiState.value.hasCameraPermission}")
         Log.d(TAG, "🔍 isCameraActive: ${_uiState.value.isCameraActive}")
         Log.d(TAG, "🔍 surfaceTexture: $surfaceTexture")
-        
+
         if (!_uiState.value.hasCameraPermission) {
             Log.w(TAG, "❌ Cannot start camera without permission")
             return
         }
-        
+
         Log.d(TAG, "📸 Starting camera preview - launching coroutine...")
         viewModelScope.launch {
             try {
                 Log.d(TAG, "📸 Calling geminiCameraManager.startCameraPreview()...")
                 geminiCameraManager.startCameraPreview(surfaceTexture)
                 Log.d(TAG, "📸 geminiCameraManager.startCameraPreview() completed")
-                // State will be updated automatically through the observer
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Failed to start camera preview", e)
-                _uiState.update {
-                    it.copy(error = "Failed to start camera: ${e.message}")
-                }
+                _uiState.update { it.copy(error = "Failed to start camera: ${e.message}") }
             }
         }
     }
@@ -284,7 +276,6 @@ class LiveChatViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 geminiCameraManager.stopCameraPreview()
-                // State will be updated automatically through the observer
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Failed to stop camera preview", e)
             }
@@ -300,12 +291,7 @@ class LiveChatViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 Log.d(TAG, "🔌 Connecting to Gemini Live with VAD...")
-                _uiState.update {
-                    it.copy(
-                        connectionStatus = ConnectionStatus.Connecting,
-                        error = null
-                    )
-                }
+                _uiState.update { it.copy(connectionStatus = ConnectionStatus.Connecting, error = null) }
 
                 val apiKey = apiConfigManager.getGeminiApiKey()
                 if (apiKey.isEmpty()) {
@@ -314,13 +300,12 @@ class LiveChatViewModel @Inject constructor(
 
                 Log.d(TAG, "🔑 Using API key: ${apiKey.take(10)}...")
                 geminiWebSocketClient.connect(apiKey)
-                
-                // Wait for connection then start audio channel
+
+                // Avvio canale audio dopo la connessione
                 delay(500)
                 if (_uiState.value.connectionStatus == ConnectionStatus.Connected) {
                     startAudioChannel()
                 }
-
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Connection failed", e)
                 _uiState.update {
@@ -363,11 +348,11 @@ class LiveChatViewModel @Inject constructor(
     }
 
     /**
-     * Start the audio channel (always open with VAD)
+     * Avvia il canale audio (always-on con VAD server). Niente commit periodico.
      */
     private fun startAudioChannel() {
         if (!isAudioChannelOpen && _uiState.value.connectionStatus == ConnectionStatus.Connected) {
-            Log.d(TAG, "🎤 Starting always-open audio channel with VAD")
+            Log.d(TAG, "🎤 Starting always-open audio channel with VAD (no commit)")
             try {
                 geminiAudioManager.startRecording()
                 isAudioChannelOpen = true
@@ -378,26 +363,41 @@ class LiveChatViewModel @Inject constructor(
             }
         }
     }
-    
-    /**
-     * Toggle mute/unmute state
-     */
+
+    /** Gestisce barge-in (interruzione utente durante risposta AI) */
+    private fun handleBargeIn() {
+        Log.d(TAG, "💯 Handling barge-in: stopping AI, switching to user turn")
+
+        // ✅ Ferma subito la riproduzione TTS locale
+        geminiAudioManager.handleInterruption()
+
+        // ✅ Aggiorna la UI: ora è turno utente
+        _uiState.update {
+            it.copy(
+                turnState = TurnState.UserTurn,
+                aiEmotion = AIEmotion.Neutral
+            )
+        }
+    }
+
+
+    /** Toggle mute/unmute con gestione VAD (flush su mute) */
     fun toggleMute() {
         val newMuteState = !_uiState.value.isMuted
-        Log.d(TAG, if (newMuteState) "🔇 Muting microphone" else "🎤 Unmuting microphone")
-        
+        Log.d(TAG, if (newMuteState) "🔇 Muting microphone - flushing VAD buffer" else "🎤 Unmuting microphone - resuming VAD")
+
         _uiState.update { it.copy(isMuted = newMuteState) }
-        
+
         if (newMuteState) {
-            // When muting, send audioStreamEnd to flush VAD buffer
+            // Quando si muta, invia audioStreamEnd per svuotare buffer VAD
             geminiWebSocketClient.sendEndOfStream()
+            _uiState.update { it.copy(turnState = TurnState.WaitingForUser) }
+        } else {
+            _uiState.update { it.copy(turnState = TurnState.WaitingForUser) }
         }
-        // Note: We don't stop recording, channel stays open
+        // Il canale resta sempre aperto: non fermiamo la registrazione
     }
-    
-    /**
-     * Get current mute state
-     */
+
     fun isMuted(): Boolean = _uiState.value.isMuted
 
     fun clearError() {

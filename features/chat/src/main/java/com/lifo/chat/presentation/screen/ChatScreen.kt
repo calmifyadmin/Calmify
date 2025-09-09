@@ -195,6 +195,8 @@ fun ChatScreen(
                     isVoiceChatMode = isVoiceChatMode,
                     isLiveChatMode = isLiveChatMode,
                     liveChatConnectionStatus = liveChatState.connectionStatus,
+                    liveChatTurnState = liveChatState.turnState,
+                    isLiveChatMuted = liveChatState.isMuted,
                     onNavigateBack = {
                         haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         if (isVoiceChatMode) {
@@ -451,6 +453,8 @@ private fun MinimalTopBar(
     isVoiceChatMode: Boolean,
     isLiveChatMode: Boolean,
     liveChatConnectionStatus: ConnectionStatus,
+    liveChatTurnState: TurnState,
+    isLiveChatMuted: Boolean,
     onNavigateBack: () -> Unit,
     onStopVoice: () -> Unit,
     onToggleVoiceChat: () -> Unit,
@@ -473,43 +477,75 @@ private fun MinimalTopBar(
                 // Status chips
                 when {
                     isLiveChatMode -> {
-                        // Live chat connection status
+                        // Enhanced Live chat status with turn-taking indicator
                         Surface(
                             shape = MaterialTheme.shapes.small,
                             color = when (liveChatConnectionStatus) {
-                                ConnectionStatus.Connected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                ConnectionStatus.Connected -> when (liveChatTurnState) {
+                                    TurnState.UserTurn -> MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                                    TurnState.AgentTurn -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
+                                    TurnState.WaitingForUser -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
+                                }
                                 ConnectionStatus.Connecting -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
                                 ConnectionStatus.Error -> MaterialTheme.colorScheme.error.copy(alpha = 0.2f)
                                 ConnectionStatus.Disconnected -> MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                             },
-                            modifier = Modifier.height(20.dp)
+                            modifier = Modifier.height(24.dp)
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
+                                // Animated status indicator
+                                val statusInfiniteTransition = rememberInfiniteTransition(label = "statusAnimation")
+                                val shouldAnimate = (liveChatConnectionStatus == ConnectionStatus.Connected && 
+                                                   (liveChatTurnState == TurnState.UserTurn || liveChatTurnState == TurnState.AgentTurn)) ||
+                                                   liveChatConnectionStatus == ConnectionStatus.Connecting
+                                
+                                val statusPulse by statusInfiniteTransition.animateFloat(
+                                    initialValue = if (shouldAnimate) 0.5f else 1f,
+                                    targetValue = if (shouldAnimate) 1f else 1f,
+                                    animationSpec = infiniteRepeatable(
+                                        animation = tween(1200),
+                                        repeatMode = RepeatMode.Reverse
+                                    ),
+                                    label = "statusPulse"
+                                )
+                                
                                 Box(
                                     modifier = Modifier
-                                        .size(6.dp)
+                                        .size(8.dp)
                                         .background(
                                             when (liveChatConnectionStatus) {
-                                                ConnectionStatus.Connected -> MaterialTheme.colorScheme.primary
-                                                ConnectionStatus.Connecting -> MaterialTheme.colorScheme.tertiary
+                                                ConnectionStatus.Connected -> when (liveChatTurnState) {
+                                                    TurnState.UserTurn -> MaterialTheme.colorScheme.primary.copy(alpha = statusPulse)
+                                                    TurnState.AgentTurn -> MaterialTheme.colorScheme.secondary.copy(alpha = statusPulse)
+                                                    TurnState.WaitingForUser -> MaterialTheme.colorScheme.tertiary
+                                                }
+                                                ConnectionStatus.Connecting -> MaterialTheme.colorScheme.tertiary.copy(alpha = statusPulse)
                                                 ConnectionStatus.Error -> MaterialTheme.colorScheme.error
                                                 ConnectionStatus.Disconnected -> MaterialTheme.colorScheme.outline
                                             },
                                             shape = CircleShape
                                         )
                                 )
+                                
                                 Text(
                                     text = when (liveChatConnectionStatus) {
-                                        ConnectionStatus.Connected -> "Live"
-                                        ConnectionStatus.Connecting -> "Connecting"
-                                        ConnectionStatus.Error -> "Error"
+                                        ConnectionStatus.Connected -> when (liveChatTurnState) {
+                                            TurnState.UserTurn -> "Tu parli"
+                                            TurnState.AgentTurn -> "AI parla"
+                                            TurnState.WaitingForUser -> if (isLiveChatMuted) "Mutato" else "Live"
+                                        }
+                                        ConnectionStatus.Connecting -> "Setup VAD"
+                                        ConnectionStatus.Error -> "Errore"
                                         ConnectionStatus.Disconnected -> "Offline"
                                     },
-                                    style = MaterialTheme.typography.labelSmall
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = if (liveChatConnectionStatus == ConnectionStatus.Connected && 
+                                                   liveChatTurnState != TurnState.WaitingForUser) 
+                                        FontWeight.Medium else FontWeight.Normal
                                 )
                             }
                         }
@@ -553,22 +589,54 @@ private fun MinimalTopBar(
             }
         },
         actions = {
-            // Live Chat toggle button
+            // Enhanced Live Chat toggle with visual feedback
             IconButton(
                 onClick = onToggleLiveChatMode,
                 colors = IconButtonDefaults.iconButtonColors(
-                    containerColor = if (isLiveChatMode) 
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) 
-                    else Color.Transparent,
-                    contentColor = if (isLiveChatMode) 
-                        MaterialTheme.colorScheme.primary 
-                    else MaterialTheme.colorScheme.onSurface
+                    containerColor = if (isLiveChatMode) {
+                        when (liveChatConnectionStatus) {
+                            ConnectionStatus.Connected -> when (liveChatTurnState) {
+                                TurnState.UserTurn -> MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                                TurnState.AgentTurn -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
+                                else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                            }
+                            ConnectionStatus.Connecting -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
+                            else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                        }
+                    } else Color.Transparent,
+                    contentColor = if (isLiveChatMode) {
+                        when (liveChatConnectionStatus) {
+                            ConnectionStatus.Connected -> when (liveChatTurnState) {
+                                TurnState.UserTurn -> MaterialTheme.colorScheme.primary
+                                TurnState.AgentTurn -> MaterialTheme.colorScheme.secondary
+                                else -> MaterialTheme.colorScheme.primary
+                            }
+                            else -> MaterialTheme.colorScheme.primary
+                        }
+                    } else MaterialTheme.colorScheme.onSurface
                 )
             ) {
+                // Animated microphone icon based on turn state
+                val micScale by animateFloatAsState(
+                    targetValue = if (isLiveChatMode && liveChatConnectionStatus == ConnectionStatus.Connected && 
+                                    liveChatTurnState == TurnState.UserTurn && !isLiveChatMuted) 1.2f else 1f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMedium
+                    ),
+                    label = "micScale"
+                )
+                
                 Icon(
-                    imageVector = Icons.Default.Mic,
-                    contentDescription = if (isLiveChatMode) "Live Chat Active" else "Activate Live Chat",
-                    tint = if (isLiveChatMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                    imageVector = if (isLiveChatMode && isLiveChatMuted) 
+                        Icons.Outlined.VolumeOff 
+                    else 
+                        Icons.Default.Mic,
+                    contentDescription = if (isLiveChatMode) "Live Chat Attiva" else "Attiva Live Chat",
+                    modifier = Modifier.graphicsLayer {
+                        scaleX = micScale
+                        scaleY = micScale
+                    }
                 )
             }
 
@@ -886,27 +954,73 @@ private fun LiveChatMuteUnmuteSection(
             }
         }
 
-        // VAD Status & Instructions
+        // VAD Status & Instructions with enhanced visual feedback
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Connection status
-            Text(
-                text = when (connectionStatus) {
-                    ConnectionStatus.Disconnected -> "Starting Gemini Live..."
-                    ConnectionStatus.Connecting -> "Connecting with VAD..."
-                    ConnectionStatus.Error -> "Connection error"
+            // Main conversation status with animated indicators
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Status indicator circle with animation
+                val indicatorColor = when (connectionStatus) {
+                    ConnectionStatus.Disconnected -> MaterialTheme.colorScheme.outline
+                    ConnectionStatus.Connecting -> MaterialTheme.colorScheme.tertiary
+                    ConnectionStatus.Error -> MaterialTheme.colorScheme.error
                     ConnectionStatus.Connected -> when (turnState) {
-                        TurnState.UserTurn -> "🎤 Parla ora"
-                        TurnState.AgentTurn -> "🤖 Gemini sta rispondendo"
-                        TurnState.WaitingForUser -> if (isMuted) "🔇 Microfono mutato" else "🎤 In ascolto..."
+                        TurnState.UserTurn -> MaterialTheme.colorScheme.primary
+                        TurnState.AgentTurn -> MaterialTheme.colorScheme.secondary
+                        TurnState.WaitingForUser -> if (isMuted) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
                     }
-                },
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
+                }
+                
+                // Animated pulsing indicator for active states
+                val shouldPulse = (connectionStatus == ConnectionStatus.Connected && 
+                                 (turnState == TurnState.UserTurn || turnState == TurnState.AgentTurn)) ||
+                                 connectionStatus == ConnectionStatus.Connecting
+                
+                val infiniteTransition = rememberInfiniteTransition(label = "statusPulse")
+                val pulseAlpha by infiniteTransition.animateFloat(
+                    initialValue = if (shouldPulse) 0.3f else 1f,
+                    targetValue = if (shouldPulse) 1f else 1f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(1000),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "pulseAlpha"
+                )
+                
+                Box(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .background(
+                            indicatorColor.copy(alpha = pulseAlpha),
+                            shape = CircleShape
+                        )
+                )
+                
+                // Status text with enhanced messaging
+                Text(
+                    text = when (connectionStatus) {
+                        ConnectionStatus.Disconnected -> "Inizializzazione Gemini Live..."
+                        ConnectionStatus.Connecting -> "Configurazione VAD in corso..."
+                        ConnectionStatus.Error -> "⚠️ Errore di connessione"
+                        ConnectionStatus.Connected -> when (turnState) {
+                            TurnState.UserTurn -> "🎤 È il tuo turno - Parla ora"
+                            TurnState.AgentTurn -> "🤖 Gemini sta rispondendo..."
+                            TurnState.WaitingForUser -> if (isMuted) 
+                                "🔇 Microfono disattivato - Premi per attivare" 
+                            else 
+                                "🎤 In ascolto - VAD attivo"
+                        }
+                    },
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
             
             // Show partial transcript while speaking
             AnimatedVisibility(
@@ -931,13 +1045,13 @@ private fun LiveChatMuteUnmuteSection(
             }
         }
 
-        // Mute/Unmute toggle button
+        // Enhanced Mute/Unmute toggle with visual feedback
         FilledTonalButton(
             onClick = onToggleMute,
             enabled = connectionStatus == ConnectionStatus.Connected && isChannelOpen,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp),
+                .height(64.dp),
             colors = ButtonDefaults.filledTonalButtonColors(
                 containerColor = if (isMuted) 
                     MaterialTheme.colorScheme.errorContainer 
@@ -946,43 +1060,152 @@ private fun LiveChatMuteUnmuteSection(
             )
         ) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Animated microphone icon
+                val micScale by animateFloatAsState(
+                    targetValue = if (turnState == TurnState.UserTurn && !isMuted) 1.2f else 1f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessLow
+                    ),
+                    label = "micScale"
+                )
+                
                 Icon(
                     imageVector = if (isMuted) Icons.Outlined.VolumeOff else Icons.Default.Mic,
-                    contentDescription = if (isMuted) "Unmute" else "Mute",
+                    contentDescription = if (isMuted) "Attiva microfono" else "Disattiva microfono",
                     tint = if (isMuted) 
                         MaterialTheme.colorScheme.onErrorContainer 
                     else 
-                        MaterialTheme.colorScheme.onPrimaryContainer
+                        MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.graphicsLayer {
+                        scaleX = micScale
+                        scaleY = micScale
+                    }
                 )
-                Text(
-                    text = if (isMuted) "Unmute Microphone" else "Mute Microphone",
-                    style = MaterialTheme.typography.labelLarge
-                )
+                
+                Column {
+                    Text(
+                        text = if (isMuted) "Attiva Microfono" else "Disattiva Microfono",
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                    
+                    // Subtitle with turn-taking hint
+                    Text(
+                        text = when {
+                            isMuted -> "VAD in pausa"
+                            turnState == TurnState.UserTurn -> "Parla liberamente"
+                            turnState == TurnState.AgentTurn -> "AI sta rispondendo"
+                            else -> "Sempre in ascolto"
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
             }
         }
         
-        // VAD indicator
+        // Enhanced VAD and turn-taking indicators
         if (connectionStatus == ConnectionStatus.Connected && isChannelOpen) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .background(
-                            color = if (!isMuted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                            shape = CircleShape
+                // VAD status row
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // VAD status indicator with pulse animation
+                    val vadInfiniteTransition = rememberInfiniteTransition(label = "vadPulse")
+                    val vadPulseAlpha by vadInfiniteTransition.animateFloat(
+                        initialValue = if (!isMuted && turnState == TurnState.UserTurn) 0.4f else 1f,
+                        targetValue = if (!isMuted && turnState == TurnState.UserTurn) 1f else 1f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(800),
+                            repeatMode = RepeatMode.Reverse
+                        ),
+                        label = "vadPulseAlpha"
+                    )
+                    
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .background(
+                                color = if (!isMuted) 
+                                    MaterialTheme.colorScheme.primary.copy(alpha = vadPulseAlpha)
+                                else 
+                                    MaterialTheme.colorScheme.outline,
+                                shape = CircleShape
+                            )
+                    )
+                    
+                    Text(
+                        text = "VAD: ${if (!isMuted) "Attivo" else "In pausa"}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                
+                // Turn-taking guide
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // User turn indicator
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .background(
+                                    if (turnState == TurnState.UserTurn) 
+                                        MaterialTheme.colorScheme.primary 
+                                    else 
+                                        MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                                    shape = CircleShape
+                                )
                         )
-                )
-                Text(
-                    text = "VAD ${if (!isMuted) "Active" else "Paused"}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                        Text(
+                            text = "Tu",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (turnState == TurnState.UserTurn) 
+                                MaterialTheme.colorScheme.primary 
+                            else 
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                    }
+                    
+                    // AI turn indicator
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .background(
+                                    if (turnState == TurnState.AgentTurn) 
+                                        MaterialTheme.colorScheme.secondary 
+                                    else 
+                                        MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                                    shape = CircleShape
+                                )
+                        )
+                        Text(
+                            text = "AI",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (turnState == TurnState.AgentTurn) 
+                                MaterialTheme.colorScheme.secondary 
+                            else 
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                    }
+                }
             }
         }
     }

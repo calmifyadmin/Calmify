@@ -1,6 +1,5 @@
 package com.lifo.chat.data.websocket
 
-import android.util.Base64
 import android.util.Log
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +19,7 @@ class GeminiLiveWebSocketClient @Inject constructor() {
 
     companion object {
         private const val TAG = "GeminiLiveWebSocket"
+        // Modello supportato per Live API realtime
         private const val MODEL = "models/gemini-2.0-flash-exp"
         private const val HOST = "generativelanguage.googleapis.com"
     }
@@ -53,7 +53,8 @@ class GeminiLiveWebSocketClient @Inject constructor() {
             return
         }
 
-        val url = "wss://$HOST/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=$apiKey"
+        val url =
+            "wss://$HOST/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=$apiKey"
         Log.d(TAG, "🔌 Connecting to: $url")
 
         _connectionState.value = ConnectionState.CONNECTING
@@ -96,118 +97,92 @@ class GeminiLiveWebSocketClient @Inject constructor() {
     }
 
     private fun sendInitialSetupMessage() {
-        Log.d(TAG, "📤 Sending initial setup message with optimized VAD")
+        Log.d(TAG, "📤 Sending initial setup message (v1beta, camelCase)")
 
-        val setupMessage = JSONObject()
-        val setup = JSONObject()
-        val generationConfig = JSONObject()
-        val responseModalities = JSONArray().put("AUDIO")
+        val setup = JSONObject().apply {
+            // Modello
+            put("model", MODEL)
 
-        // 1) Modalità di risposta AUDIO
-        generationConfig.put("response_modalities", responseModalities)
+            // Generation config: UNA sola modality per sessione (AUDIO oppure TEXT)
+            val generationConfig = JSONObject().apply {
+                put("responseModalities", JSONArray().put("AUDIO"))
+                // Config TTS opzionale corretta (camelCase)
+                val speechConfig = JSONObject().apply {
+                    put("languageCode", "it-IT")
+                    // Opzionale: voce predefinita
+                     val voiceConfig = JSONObject().apply {
+                         put("prebuiltVoiceConfig", JSONObject().put("voiceName", "Aoede"))
+                     }
+                     put("voiceConfig", voiceConfig)
+                }
+                put("speechConfig", speechConfig)
+            }
+            put("generationConfig", generationConfig)
 
-        // 2) Configurazione voce italiana
-        val prebuiltVoice = JSONObject().put("voice_name", "Kore")
-        val voiceConfig = JSONObject().put("prebuilt_voice_config", prebuiltVoice)
-        val speechConfig = JSONObject()
-            .put("voice_config", voiceConfig)
-            .put("language_code", "it-IT")
-        generationConfig.put("speech_config", speechConfig)
+            // System instruction (solo testo)
+            val systemInstruction = JSONObject().apply {
+                put("parts", JSONArray().put(JSONObject().put("text",
+                    "Parla in italiano con voce dolce, allegra e affettuosa. " +
+                            "Mantieni un tono caldo, sorridente e carina. " +
+                            "Usa frasi brevi e naturali.")
+                ))
+            }
+            put("systemInstruction", systemInstruction)
 
-        // 3) Aggiungi generation_config a setup
-        setup.put("generation_config", generationConfig)
+            // Realtime input config: VAD server ON con nomi camelCase
+            val realtimeInputConfig = JSONObject().apply {
+                val aad = JSONObject().apply {
+                    put("disabled", false)
+                    put("prefixPaddingMs", 100)   // cattura attacchi
+                    put("silenceDurationMs", 300) // chiusura turno reattiva
+                }
+                put("automaticActivityDetection", aad)
+                // Gestione attività: barge-in interrompe la generazione
+                put("activityHandling", "START_OF_ACTIVITY_INTERRUPTS")
+            }
+            put("realtimeInputConfig", realtimeInputConfig)
 
-        // 4) Modello
-        setup.put("model", MODEL)
+            // Trascrizioni (abilitate)
+            put("inputAudioTranscription", JSONObject())
+            put("outputAudioTranscription", JSONObject())
+        }
 
-        // 5) System instructions
-        val systemInstruction = JSONObject()
-            .put("parts", JSONArray().put(JSONObject().put("text",
-                "Rispondi sempre in italiano. Sei un'assistente che parla solo italiano.")))
-        setup.put("system_instruction", systemInstruction)
-
-        // ========================================================================
-        // 6) CONFIGURAZIONE VAD OTTIMALE - BEST PRACTICE
-        // ========================================================================
-        val realtimeInputConfig = JSONObject()
-        val automaticActivityDetection = JSONObject()
-            .put("disabled", false)  // VAD automatico attivo
-
-            // SENSIBILITÀ OTTIMALE PER RILEVARE ANCHE FRASI BREVI
-            .put("start_of_speech_sensitivity", 1)  // LOW (1) - Massima sensibilità all'inizio
-            // Nella documentazione ufficiale questo corrisponde a START_SENSITIVITY_LOW
-
-            .put("end_of_speech_sensitivity", 2)    // MEDIUM (2) - Bilanciato per fine parlato
-            // Evita che tagli troppo presto ma non aspetta troppo
-
-            // PADDING E TIMING OTTIMALI (da documentazione e best practice)
-            .put("prefix_padding_ms", 300)          // 300ms - Cattura più audio prima del VAD
-            // Questo è CRUCIALE per non perdere l'inizio delle parole brevi
-            // Valore più alto del default (20ms) ma ottimale per brevi utteranze
-
-            .put("silence_duration_ms", 400)        // 400ms - Quanto silenzio prima di terminare
-        // Bilanciato: abbastanza veloce ma non taglia frasi con pause naturali
-
-        realtimeInputConfig.put("automatic_activity_detection", automaticActivityDetection)
-        setup.put("realtime_input_config", realtimeInputConfig)
-
-        // 7) Transcription config per debug e feedback
-        setup.put("output_audio_transcription", JSONObject()) // trascrizione output audio
-        setup.put("input_audio_transcription", JSONObject())  // trascrizione input utente
-
-        setupMessage.put("setup", setup)
-
-        Log.d(TAG, "📤 VAD Config: sensitivity(1,2), padding(300ms), silence(400ms)")
+        val setupMessage = JSONObject().put("setup", setup)
         webSocket?.send(setupMessage.toString())
+        Log.d(TAG, "📤 Setup sent")
     }
 
-
+    /** Invia chunk audio PCM 16k mono 16-bit in base64 */
     fun sendAudioData(audioBase64: String) {
         if (_connectionState.value != ConnectionState.CONNECTED) {
             Log.w(TAG, "Cannot send audio - not connected")
             return
         }
-
         try {
-            // CRITICAL FIX: Use "audio/pcm" NOT "audio/pcm;rate=24000"
-            val msg = JSONObject()
-            val realtimeInput = JSONObject()
-            val mediaChunks = JSONArray()
-
-            val audioChunk = JSONObject()
-            audioChunk.put("mime_type", "audio/pcm")  // <-- FIX HERE! No rate!
-            audioChunk.put("data", audioBase64)
-            mediaChunks.put(audioChunk)
-
-            realtimeInput.put("media_chunks", mediaChunks)
-            msg.put("realtime_input", realtimeInput)
-
+            val audioBlob = JSONObject().apply {
+                put("mimeType", "audio/pcm;rate=16000")
+                put("data", audioBase64)
+            }
+            val msg = JSONObject().put("realtimeInput", JSONObject().put("audio", audioBlob))
             webSocket?.send(msg.toString())
         } catch (e: Exception) {
             Log.e(TAG, "Error sending audio", e)
         }
     }
 
+    /** Invia immagine (jpeg) in tempo reale */
     fun sendImageData(imageBase64: String) {
         if (_connectionState.value != ConnectionState.CONNECTED) {
             Log.w(TAG, "Cannot send image - not connected")
             return
         }
-
         try {
             Log.d(TAG, "📸 Sending image data (${imageBase64.length} chars)")
-            val msg = JSONObject()
-            val realtimeInput = JSONObject()
-            val mediaChunks = JSONArray()
-
-            val imageChunk = JSONObject()
-            imageChunk.put("mime_type", "image/jpeg")
-            imageChunk.put("data", imageBase64)
-            mediaChunks.put(imageChunk)
-
-            realtimeInput.put("media_chunks", mediaChunks)
-            msg.put("realtime_input", realtimeInput)
-
+            val imageBlob = JSONObject().apply {
+                put("mimeType", "image/jpeg")
+                put("data", imageBase64)
+            }
+            val msg = JSONObject().put("realtimeInput", JSONObject().put("image", imageBlob))
             webSocket?.send(msg.toString())
             Log.d(TAG, "📤 Image sent successfully")
         } catch (e: Exception) {
@@ -215,21 +190,17 @@ class GeminiLiveWebSocketClient @Inject constructor() {
         }
     }
 
+    /**
+     * Fine turno: svuota buffer VAD (mute/unmute, pausa, fine frase)
+     */
     fun sendEndOfStream() {
         if (_connectionState.value != ConnectionState.CONNECTED) return
-
         try {
-            val msg = JSONObject()
-            val realtimeInput = JSONObject()
-            val mediaChunks = JSONArray()
-
-            realtimeInput.put("media_chunks", mediaChunks)
-            msg.put("realtime_input", realtimeInput)
-
+            val msg = JSONObject().put("realtimeInput", JSONObject().put("audioStreamEnd", true))
             webSocket?.send(msg.toString())
-            Log.d(TAG, "🔚 End of stream sent")
+            Log.d(TAG, "🔚 audioStreamEnd sent")
         } catch (e: Exception) {
-            Log.e(TAG, "Error sending end of stream", e)
+            Log.e(TAG, "Error sending audioStreamEnd", e)
         }
     }
 
@@ -238,59 +209,47 @@ class GeminiLiveWebSocketClient @Inject constructor() {
 
         try {
             val messageData = JSONObject(message)
+            Log.d(TAG, "📨 Message keys: ${messageData.keys().asSequence().joinToString()}")
 
-            // Log all message types for debugging
-            Log.d(TAG, "📨 Message type: ${messageData.keys().asSequence().joinToString()}")
-
-            // Handle VAD-related events
+            // Setup completo
             if (messageData.has("setupComplete")) {
-                Log.d(TAG, "✅ Setup complete - VAD configured")
+                Log.d(TAG, "✅ Setup complete - VAD configured and ready")
+                onTurnCompleted?.invoke()
             }
 
-            // Handle realtime input events (VAD detection)
-            if (messageData.has("realtimeInput")) {
-                val realtimeInput = messageData.getJSONObject("realtimeInput")
-                
-                // Partial transcript during user speech
-                if (realtimeInput.has("inputAudioTranscription")) {
-                    val transcription = realtimeInput.getJSONObject("inputAudioTranscription")
-                    val partial = transcription.optString("partialTranscript", "")
-                    val final = transcription.optString("finalTranscript", "")
-                    
-                    if (partial.isNotEmpty()) {
-                        Log.d(TAG, "🎤 Partial transcript: $partial")
-                        onPartialTranscript?.invoke(partial)
-                    }
-                    if (final.isNotEmpty()) {
-                        Log.d(TAG, "🎤 Final transcript: $final")
-                        onFinalTranscript?.invoke(final)
-                    }
-                }
+            // Trascrizioni top-level (possono arrivare indipendenti)
+            if (messageData.has("inputTranscription")) {
+                val t = messageData.getJSONObject("inputTranscription")
+                val text = t.optString("text", "")
+                if (text.isNotEmpty()) onPartialTranscript?.invoke(text)
+            }
+            if (messageData.has("outputTranscription")) {
+                val t = messageData.getJSONObject("outputTranscription")
+                val text = t.optString("text", "")
+                if (text.isNotEmpty()) onTextReceived?.invoke(text)
             }
 
+            // Contenuti dal server (turni, output, audio)
             if (messageData.has("serverContent")) {
                 val serverContent = messageData.getJSONObject("serverContent")
 
-                // Check for turn complete
                 val turnComplete = serverContent.optBoolean("turnComplete", false)
                 if (turnComplete) {
                     Log.d(TAG, "✅ Turn complete")
                     onTurnCompleted?.invoke()
                 }
 
-                // Check for interrupted state
                 val interrupted = serverContent.optBoolean("interrupted", false)
                 if (interrupted) {
-                    Log.d(TAG, "⚠️ Response interrupted by user")
+                    Log.d(TAG, "⚠️ Response interrupted by user (barge-in detected)")
                     onInterrupted?.invoke()
                 }
 
                 if (serverContent.has("modelTurn")) {
                     val modelTurn = serverContent.getJSONObject("modelTurn")
-                    
-                    // Model started responding
+                    Log.d(TAG, "🤖 AI turn started - user should stop speaking")
                     onTurnStarted?.invoke()
-                    
+
                     if (modelTurn.has("parts")) {
                         val parts = modelTurn.getJSONArray("parts")
                         for (i in 0 until parts.length()) {
@@ -305,10 +264,9 @@ class GeminiLiveWebSocketClient @Inject constructor() {
                             if (part.has("inlineData")) {
                                 val inlineData = part.getJSONObject("inlineData")
                                 val mimeType = inlineData.optString("mimeType", "")
-
-                                if (mimeType == "audio/pcm;rate=24000") {
+                                if (mimeType.startsWith("audio/pcm")) {
                                     val audioData = inlineData.getString("data")
-                                    Log.d(TAG, "🔊 Audio received: ${audioData.length} chars")
+                                    Log.d(TAG, "🔊 Audio received: ${audioData.length} chars ($mimeType)")
                                     onAudioReceived?.invoke(audioData)
                                 }
                             }
@@ -316,7 +274,7 @@ class GeminiLiveWebSocketClient @Inject constructor() {
                     }
                 }
 
-                // Handle output audio transcription
+                // Output transcript dentro serverContent (se presente)
                 if (serverContent.has("outputAudioTranscription")) {
                     val transcription = serverContent.getJSONObject("outputAudioTranscription")
                     val text = transcription.optString("text", "")
@@ -327,7 +285,6 @@ class GeminiLiveWebSocketClient @Inject constructor() {
                 }
             }
 
-            // Log other message types for debugging
             if (messageData.has("toolCall")) {
                 Log.d(TAG, "🔧 Tool call received")
             }
