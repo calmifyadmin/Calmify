@@ -224,6 +224,12 @@ class GeminiLiveCameraManager @Inject constructor(
     private val cameraCaptureSessionCallback = object : CameraCaptureSession.StateCallback() {
         override fun onConfigured(session: CameraCaptureSession) {
             Log.d(TAG, "📸✅ Camera session configured successfully!")
+            // Verifica che la camera sia ancora disponibile
+            if (cameraDevice == null) {
+                Log.w(TAG, "📸⚠️ Camera was disconnected during configuration, skipping preview update")
+                session.close()
+                return
+            }
             cameraCaptureSession = session
             Log.d(TAG, "📸 Calling updatePreview()...")
             updatePreview()

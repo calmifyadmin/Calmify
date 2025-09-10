@@ -121,6 +121,9 @@ class LiveChatViewModel @Inject constructor(
                 }
                 aiSpeaking = isPlaying
                 lastIsPlaying = isPlaying
+                
+                // NUOVO: Notifica al audio manager per barge-in detection
+                geminiAudioManager.setAiSpeaking(isPlaying)
 
                 _uiState.update {
                     it.copy(aiEmotion = if (isPlaying) AIEmotion.Speaking else AIEmotion.Neutral)
@@ -201,11 +204,17 @@ class LiveChatViewModel @Inject constructor(
             }
         }
 
-        // Send audio chunks to Gemini (streaming incrementale, senza commit)
+        // Send audio chunks to Gemini (con gating per half-duplex)
         geminiAudioManager.onAudioChunkReady = { audioBase64 ->
-            if (!_uiState.value.isMuted) {
+            if (!_uiState.value.isMuted && !aiSpeaking) {
                 geminiWebSocketClient.sendAudioData(audioBase64)
             }
+        }
+        
+        // NUOVO: Gestione barge-in smart
+        geminiAudioManager.onBargeInDetected = {
+            Log.d(TAG, "🗣️ Smart barge-in detected - interrupting AI")
+            handleSmartBargeIn()
         }
     }
 
@@ -385,6 +394,25 @@ class LiveChatViewModel @Inject constructor(
             it.copy(
                 turnState = TurnState.UserTurn,
                 aiEmotion = AIEmotion.Neutral
+            )
+        }
+    }
+    
+    /** NUOVO: Gestisce smart barge-in (rilevato localmente) */
+    private fun handleSmartBargeIn() {
+        Log.d(TAG, "🎯 Smart barge-in: immediate TTS stop, user audio resumes")
+        
+        // ✅ Stop immediato TTS locale
+        geminiAudioManager.handleInterruption()
+        
+        // ✅ Reset stato AI speaking (permette invio audio utente)
+        aiSpeaking = false
+        
+        // ✅ UI feedback immediato
+        _uiState.update {
+            it.copy(
+                turnState = TurnState.UserTurn,
+                aiEmotion = AIEmotion.Thinking
             )
         }
     }

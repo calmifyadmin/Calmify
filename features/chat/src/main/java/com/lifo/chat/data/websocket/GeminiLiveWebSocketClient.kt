@@ -178,13 +178,21 @@ class GeminiLiveWebSocketClient @Inject constructor() {
         }
         try {
             Log.d(TAG, "📸 Sending image data (${imageBase64.length} chars)")
-            val imageBlob = JSONObject().apply {
-                put("mimeType", "image/jpeg")
-                put("data", imageBase64)
+            
+            // Costruzione del messaggio con il formato corretto per Gemini Live API
+            val msg = JSONObject().apply {
+                put("realtimeInput", JSONObject().apply {
+                    put("mediaChunks", org.json.JSONArray().apply {
+                        put(JSONObject().apply {
+                            put("mimeType", "image/jpeg")
+                            put("data", imageBase64)
+                        })
+                    })
+                })
             }
-            val msg = JSONObject().put("realtimeInput", JSONObject().put("image", imageBlob))
+            
             webSocket?.send(msg.toString())
-            Log.d(TAG, "📤 Image sent successfully")
+            Log.d(TAG, "📤 Image sent successfully via mediaChunks")
         } catch (e: Exception) {
             Log.e(TAG, "Error sending image", e)
         }

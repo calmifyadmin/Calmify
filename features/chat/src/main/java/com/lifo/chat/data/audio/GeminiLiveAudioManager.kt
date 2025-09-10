@@ -3,6 +3,7 @@ package com.lifo.chat.data.audio
 import android.annotation.SuppressLint
 import android.content.Context
 import android.media.*
+import android.media.audiofx.*
 import android.util.Base64
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -27,13 +28,17 @@ class GeminiLiveAudioManager @Inject constructor(
         private const val AUDIO_CHANNEL_IN = AudioFormat.CHANNEL_IN_MONO
         private const val AUDIO_CHANNEL_OUT = AudioFormat.CHANNEL_OUT_MONO
         private const val AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT
-        private const val INPUT_CHUNK_SIZE_SAMPLES = 320
+        private const val INPUT_CHUNK_SIZE_SAMPLES = 320 // 20ms chunks
         private const val SEND_INTERVAL_MS = 20L
         private const val BUFFER_SIZE_MULTIPLIER = 4
 
         // NUOVO: Limiti per evitare overflow
         private const val MAX_QUEUE_SIZE = 50 // Max chunks in coda
         private const val MAX_QUEUE_BYTES = 500_000 // ~500KB max
+        
+        // NUOVO: Barge-in detection
+        private const val SPEECH_THRESHOLD = 0.08f // Soglia per rilevare voce
+        private const val HOT_FRAMES_TO_BARGE = 4 // Frame consecutivi per barge-in (~80ms)
     }
 
     private var audioRecord: AudioRecord? = null
@@ -54,6 +59,10 @@ class GeminiLiveAudioManager @Inject constructor(
 
     private val _playbackState = MutableStateFlow(false)
     val playbackState: StateFlow<Boolean> = _playbackState
+    
+    // NUOVO: Barge-in detection
+    private var hotFrameCount = 0
+    private var aiCurrentlySpeaking = false
 
     // MIGLIORATO: Thread-safe queue con limite di dimensione
     private val audioQueue = Collections.synchronizedList(mutableListOf<ByteArray>())
@@ -63,6 +72,15 @@ class GeminiLiveAudioManager @Inject constructor(
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     var onAudioChunkReady: ((String) -> Unit)? = null
+    var onBargeInDetected: (() -> Unit)? = null
+    
+    // NUOVO: Funzione per notificare quando l'AI sta parlando
+    fun setAiSpeaking(speaking: Boolean) {
+        aiCurrentlySpeaking = speaking
+        if (!speaking) {
+            hotFrameCount = 0 // Reset barge-in counter
+        }
+    }
 
     @SuppressLint("MissingPermission")
     fun startRecording() {
@@ -70,6 +88,9 @@ class GeminiLiveAudioManager @Inject constructor(
             Log.w(TAG, "Already recording")
             return
         }
+
+        // NUOVO: Configura audio per comunicazione full-duplex
+        configureAudioForCommunication()
 
         val minBufferSize = AudioRecord.getMinBufferSize(
             INPUT_SAMPLE_RATE,
@@ -85,20 +106,27 @@ class GeminiLiveAudioManager @Inject constructor(
         val bufferSize = minBufferSize * BUFFER_SIZE_MULTIPLIER
 
         try {
-            audioRecord = AudioRecord(
-                MediaRecorder.AudioSource.VOICE_COMMUNICATION,
-                INPUT_SAMPLE_RATE,
-                AUDIO_CHANNEL_IN,
-                AUDIO_ENCODING,
-                bufferSize
-            )
+            val audioRecord = AudioRecord.Builder()
+                .setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)
+                .setAudioFormat(
+                    AudioFormat.Builder()
+                        .setEncoding(AUDIO_ENCODING)
+                        .setSampleRate(INPUT_SAMPLE_RATE)
+                        .setChannelMask(AUDIO_CHANNEL_IN)
+                        .build()
+                ).setBufferSizeInBytes(bufferSize)
+                .build()
+            
+            this.audioRecord = audioRecord
 
             if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
                 Log.e(TAG, "AudioRecord initialization failed")
                 audioRecord?.release()
-                audioRecord = null
                 return
             }
+            
+            // NUOVO: Abilita effetti audio se disponibili
+            enableAudioEffects(audioRecord)
 
             audioRecord?.startRecording()
             isRecording = true
@@ -115,6 +143,21 @@ class GeminiLiveAudioManager @Inject constructor(
 
                         when {
                             readSize > 0 -> {
+                                // NUOVO: Barge-in detection durante TTS
+                                if (aiCurrentlySpeaking) {
+                                    val audioLevel = calculatePcmLevel(buffer, readSize)
+                                    if (audioLevel > SPEECH_THRESHOLD) {
+                                        hotFrameCount++
+                                        if (hotFrameCount >= HOT_FRAMES_TO_BARGE) {
+                                            Log.d(TAG, "🗣️ Barge-in detected! Level: $audioLevel")
+                                            onBargeInDetected?.invoke()
+                                            hotFrameCount = 0
+                                        }
+                                    } else {
+                                        hotFrameCount = 0
+                                    }
+                                }
+                                
                                 synchronized(pcmData) {
                                     // Limita la dimensione del buffer
                                     if (pcmData.size < 10000) {
@@ -317,12 +360,10 @@ class GeminiLiveAudioManager @Inject constructor(
 
                 val bufferSize = minBufferSize * BUFFER_SIZE_MULTIPLIER
 
-                // Configura audio per speakers
-                configureAudioForSpeakerOutput()
-
+                // NUOVO: Attributi "voce" per migliorare AEC/ducking
                 val audioAttributes = AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                     .build()
 
                 val audioFormat = AudioFormat.Builder()
@@ -395,14 +436,75 @@ class GeminiLiveAudioManager @Inject constructor(
         _playbackState.value = false
     }
 
-    private fun configureAudioForSpeakerOutput() {
+    // NUOVO: Configurazione audio per comunicazione full-duplex
+    private fun configureAudioForCommunication() {
         try {
-            audioManager.isSpeakerphoneOn = true
-            audioManager.mode = AudioManager.MODE_NORMAL
-            Log.d(TAG, "🔊 Audio configured for speaker output")
+            audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+            audioManager.isSpeakerphoneOn = true // Default speaker
+            
+            // NUOVO: Configurazione Bluetooth SCO se disponibile
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                configureBluetooth()
+            }
+            
+            Log.d(TAG, "🔊 Audio configured for full-duplex communication")
         } catch (e: Exception) {
             Log.w(TAG, "Could not configure audio", e)
         }
+    }
+    
+    @Suppress("NewApi")
+    private fun configureBluetooth() {
+        try {
+            val communicationDevices = audioManager.availableCommunicationDevices
+            val scoDevice = communicationDevices.firstOrNull { 
+                it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO 
+            }
+            scoDevice?.let {
+                audioManager.setCommunicationDevice(it)
+                Log.d(TAG, "🎧 Bluetooth SCO configured")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not configure Bluetooth", e)
+        }
+    }
+    
+    // NUOVO: Abilita effetti audio se disponibili
+    private fun enableAudioEffects(audioRecord: AudioRecord) {
+        try {
+            val sessionId = audioRecord.audioSessionId
+            
+            if (AcousticEchoCanceler.isAvailable()) {
+                val aec = AcousticEchoCanceler.create(sessionId)
+                aec?.enabled = true
+                Log.d(TAG, "✅ AEC enabled")
+            }
+            
+            if (NoiseSuppressor.isAvailable()) {
+                val ns = NoiseSuppressor.create(sessionId)
+                ns?.enabled = true
+                Log.d(TAG, "✅ Noise suppressor enabled")
+            }
+            
+            if (AutomaticGainControl.isAvailable()) {
+                val agc = AutomaticGainControl.create(sessionId)
+                agc?.enabled = true
+                Log.d(TAG, "✅ AGC enabled")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not enable audio effects", e)
+        }
+    }
+    
+    // NUOVO: Calcola livello audio per barge-in
+    private fun calculatePcmLevel(buffer: ShortArray, length: Int): Float {
+        if (length == 0) return 0f
+        var sum = 0.0
+        for (i in 0 until length) {
+            sum += kotlin.math.abs(buffer[i].toInt())
+        }
+        val avg = sum / length
+        return (avg / 32767.0).toFloat().coerceIn(0f, 1f)
     }
 
     private fun resetAudioConfiguration() {
