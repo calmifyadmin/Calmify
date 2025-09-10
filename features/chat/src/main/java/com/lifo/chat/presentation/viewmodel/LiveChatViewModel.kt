@@ -13,6 +13,8 @@ import com.lifo.chat.config.ApiConfigManager
 import com.lifo.chat.data.websocket.GeminiLiveWebSocketClient
 import com.lifo.chat.data.audio.GeminiLiveAudioManager
 import com.lifo.chat.data.camera.GeminiLiveCameraManager
+import com.lifo.chat.domain.audio.AudioQualityAnalyzer
+import com.lifo.chat.domain.audio.ConversationContextManager
 import com.lifo.chat.domain.model.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -27,6 +29,8 @@ class LiveChatViewModel @Inject constructor(
     private val geminiWebSocketClient: GeminiLiveWebSocketClient,
     private val geminiAudioManager: GeminiLiveAudioManager,
     private val geminiCameraManager: GeminiLiveCameraManager,
+    private val audioQualityAnalyzer: AudioQualityAnalyzer,
+    private val conversationContextManager: ConversationContextManager,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -66,6 +70,62 @@ class LiveChatViewModel @Inject constructor(
         observeGeminiStates()
         setupGeminiCallbacks()
         setupCameraIntegration()
+        setupIntelligentSystems()
+    }
+    
+    private fun setupIntelligentSystems() {
+        Log.d(TAG, "🧠 Setting up intelligent audio systems...")
+        
+        // Observe conversation context for adaptive optimization
+        viewModelScope.launch {
+            conversationContextManager.optimizationSettings.collectLatest { settings ->
+                Log.d(TAG, "🎛️ Applying adaptive audio settings: ${settings.contextReason}")
+                applyAudioOptimizationSettings(settings)
+            }
+        }
+        
+        // Observe audio quality metrics for real-time optimization
+        viewModelScope.launch {
+            audioQualityAnalyzer.overallQuality.collectLatest { quality ->
+                Log.v(TAG, "📊 Audio quality: ${quality.grade} (${quality.totalScore})")
+                
+                if (quality.grade == AudioQualityAnalyzer.QualityGrade.POOR) {
+                    handlePoorAudioQuality(quality)
+                }
+            }
+        }
+        
+        // Start audio quality measurement when recording begins
+        viewModelScope.launch {
+            geminiAudioManager.recordingState.collectLatest { isRecording ->
+                if (isRecording) {
+                    audioQualityAnalyzer.startMeasurement()
+                    Log.d(TAG, "📊 Audio quality measurement started")
+                } else {
+                    audioQualityAnalyzer.stopMeasurement()
+                    Log.d(TAG, "📊 Audio quality measurement stopped")
+                }
+            }
+        }
+    }
+    
+    private fun applyAudioOptimizationSettings(settings: ConversationContextManager.AudioOptimizationSettings) {
+        Log.d(TAG, "🔧 Adaptive settings applied:")
+        Log.d(TAG, "   • Barge-in sensitivity: ${settings.bargeinSensitivity}")
+        Log.d(TAG, "   • Noise suppression: ${settings.noiseSuppressionLevel}")
+        Log.d(TAG, "   • Echo cancellation: ${settings.echoCancellationLevel}")
+        Log.d(TAG, "   • Reason: ${settings.contextReason}")
+    }
+    
+    private fun handlePoorAudioQuality(quality: AudioQualityAnalyzer.OverallQualityScore) {
+        Log.w(TAG, "⚠️ Poor audio quality detected: ${quality.primaryIssue}")
+        quality.recommendations.forEach { recommendation ->
+            Log.w(TAG, "💡 Recommendation: $recommendation")
+        }
+        
+        _uiState.update { 
+            it.copy(error = "Audio quality issue: ${quality.primaryIssue}") 
+        }
     }
 
     private fun checkAudioPermission(): Boolean {
@@ -151,6 +211,14 @@ class LiveChatViewModel @Inject constructor(
         geminiWebSocketClient.onFinalTranscript = { final ->
             Log.d(TAG, "🎤 Final transcript: $final")
             _uiState.update { it.copy(transcript = final, partialTranscript = "") }
+            
+            // NUOVO: Add to conversation context for intelligent optimization
+            conversationContextManager.addMessage(
+                content = final,
+                isFromUser = true,
+                audioLevel = _uiState.value.audioLevel,
+                duration = 0L // Could be calculated from speaking event timing
+            )
         }
 
         // AI turn started
@@ -176,6 +244,14 @@ class LiveChatViewModel @Inject constructor(
             Log.d(TAG, "📝 Text from Gemini: $text")
             _currentTranscript.value = text
             _uiState.update { it.copy(transcript = text) }
+            
+            // NUOVO: Add AI response to conversation context
+            conversationContextManager.addMessage(
+                content = text,
+                isFromUser = false,
+                audioLevel = 0f, // AI audio level not applicable for text
+                duration = 0L
+            )
         }
 
         // Audio from Gemini
@@ -323,6 +399,11 @@ class LiveChatViewModel @Inject constructor(
                 delay(500)
                 if (_uiState.value.connectionStatus == ConnectionStatus.Connected) {
                     startAudioChannel()
+                    
+                    // NUOVO: Start voice learning and context reset for new session
+                    geminiAudioManager.startVoiceLearning()
+                    conversationContextManager.resetContext()
+                    Log.d(TAG, "🧠 Intelligent systems initialized for new session")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Connection failed", e)

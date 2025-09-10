@@ -6,6 +6,7 @@ import android.media.*
 import android.media.audiofx.*
 import android.util.Base64
 import android.util.Log
+import com.lifo.chat.domain.audio.AdaptiveBargeinDetector
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +20,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 @Singleton
 class GeminiLiveAudioManager @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val adaptiveBargeinDetector: AdaptiveBargeinDetector
 ) {
     companion object {
         private const val TAG = "GeminiAudioManager"
@@ -80,6 +82,17 @@ class GeminiLiveAudioManager @Inject constructor(
         if (!speaking) {
             hotFrameCount = 0 // Reset barge-in counter
         }
+    }
+    
+    // NUOVO: Start voice learning per calibrazione iniziale
+    fun startVoiceLearning() {
+        Log.d(TAG, "🎓 Starting adaptive voice learning")
+        adaptiveBargeinDetector.startVoiceLearning()
+    }
+    
+    // NUOVO: Get detection stats per analytics
+    fun getAdaptiveDetectionStats(): Map<String, Any> {
+        return adaptiveBargeinDetector.getDetectionStats()
     }
 
     @SuppressLint("MissingPermission")
@@ -143,19 +156,21 @@ class GeminiLiveAudioManager @Inject constructor(
 
                         when {
                             readSize > 0 -> {
-                                // NUOVO: Barge-in detection durante TTS
+                                // NUOVO: Adaptive Barge-in detection durante TTS
                                 if (aiCurrentlySpeaking) {
-                                    val audioLevel = calculatePcmLevel(buffer, readSize)
-                                    if (audioLevel > SPEECH_THRESHOLD) {
-                                        hotFrameCount++
-                                        if (hotFrameCount >= HOT_FRAMES_TO_BARGE) {
-                                            Log.d(TAG, "🗣️ Barge-in detected! Level: $audioLevel")
-                                            onBargeInDetected?.invoke()
-                                            hotFrameCount = 0
-                                        }
-                                    } else {
-                                        hotFrameCount = 0
+                                    val result = adaptiveBargeinDetector.processAudioFrame(
+                                        buffer, readSize, INPUT_SAMPLE_RATE
+                                    )
+                                    
+                                    if (result.shouldTrigger) {
+                                        Log.d(TAG, "🧠 Adaptive barge-in triggered! Confidence: ${result.confidence}, Reason: ${result.reason}")
+                                        onBargeInDetected?.invoke()
                                     }
+                                } else {
+                                    // Continue learning voice profile when user speaks normally
+                                    adaptiveBargeinDetector.processAudioFrame(
+                                        buffer, readSize, INPUT_SAMPLE_RATE
+                                    )
                                 }
                                 
                                 synchronized(pcmData) {
