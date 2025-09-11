@@ -9,6 +9,7 @@ import android.graphics.BitmapFactory
 import android.graphics.ImageFormat
 import android.graphics.SurfaceTexture
 import android.hardware.camera2.*
+import android.hardware.camera2.params.StreamConfigurationMap
 import android.media.ImageReader
 import android.os.Handler
 import android.os.HandlerThread
@@ -119,20 +120,25 @@ class GeminiLiveCameraManager @Inject constructor(
                 return
             }
             
+            // Smart size selection with fallback strategy
             val outputSizes = map.getOutputSizes(SurfaceTexture::class.java)
             Log.d(TAG, "📸 Available output sizes: ${outputSizes.contentToString()}")
-            previewSize = outputSizes[0]
+            
+            previewSize = chooseOptimalSize(outputSizes, 1280, 960)
             Log.d(TAG, "📸 Selected preview size: ${previewSize.width}x${previewSize.height}")
             
-            // Setup ImageReader for capturing frames
-            Log.d(TAG, "📸 Creating ImageReader...")
+            // Smart ImageReader setup with compatible formats
+            Log.d(TAG, "📸 Creating ImageReader with compatibility check...")
+            val imageFormat = getCompatibleImageFormat(map)
+            val imageSize = chooseOptimalSize(map.getOutputSizes(imageFormat), MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION)
+            
             imageReader = ImageReader.newInstance(
-                MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION,
-                ImageFormat.JPEG, 2
+                imageSize.width, imageSize.height,
+                imageFormat, 2
             ).apply {
                 setOnImageAvailableListener(imageAvailableListener, cameraHandler)
             }
-            Log.d(TAG, "📸 ImageReader created successfully")
+            Log.d(TAG, "📸 ImageReader created: ${imageSize.width}x${imageSize.height}, format=$imageFormat")
             
             Log.d(TAG, "📸 Opening camera device...")
             cameraManager.openCamera(cameraId, cameraStateCallback, cameraHandler)
@@ -181,43 +187,80 @@ class GeminiLiveCameraManager @Inject constructor(
     }
     
     private fun createCameraPreviewSession() {
-        Log.d(TAG, "📸 createCameraPreviewSession() called")
+        Log.d(TAG, "📸 createCameraPreviewSession() called with robust fallback strategy")
+        createCameraPreviewSessionWithFallback()
+    }
+    
+    /**
+     * Enhanced camera session creation with intelligent fallback
+     */
+    private fun createCameraPreviewSessionWithFallback() {
+        Log.d(TAG, "📸 createCameraPreviewSessionWithFallback() called")
         try {
-            Log.d(TAG, "📸 SurfaceTexture: $surfaceTexture")
             if (surfaceTexture == null) {
                 Log.e(TAG, "📸❌ SurfaceTexture is null - cannot create session")
                 return
             }
             
-            Log.d(TAG, "📸 Setting buffer size: ${previewSize.width}x${previewSize.height}")
-            surfaceTexture?.setDefaultBufferSize(previewSize.width, previewSize.height)
-            
-            val previewSurface = Surface(surfaceTexture)
-            Log.d(TAG, "📸 Preview surface created: $previewSurface")
-            
-            Log.d(TAG, "📸 Creating capture request...")
-            captureRequestBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)?.apply {
-                Log.d(TAG, "📸 Adding preview surface target")
-                addTarget(previewSurface)
-                imageReader?.surface?.let { 
-                    Log.d(TAG, "📸 Adding image reader surface target")
-                    addTarget(it) 
-                }
-            }
-            
-            if (captureRequestBuilder == null) {
-                Log.e(TAG, "📸❌ Failed to create capture request builder")
+            // Try original configuration first
+            if (tryCreateSession(previewSize)) {
+                Log.d(TAG, "📸✅ Session created with optimal configuration")
                 return
             }
             
-            val surfaces = listOfNotNull(previewSurface, imageReader?.surface)
-            Log.d(TAG, "📸 Creating capture session with ${surfaces.size} surfaces...")
-            cameraDevice?.createCaptureSession(surfaces, cameraCaptureSessionCallback, cameraHandler)
+            // Fallback to smaller sizes
+            val fallbackSizes = listOf(
+                Size(1280, 720),   // HD
+                Size(1024, 768),   // XGA
+                Size(800, 600),    // SVGA
+                Size(640, 480),    // VGA
+                Size(320, 240)     // QVGA - last resort
+            )
             
-        } catch (e: CameraAccessException) {
-            Log.e(TAG, "📸❌ Error creating preview session", e)
+            for (fallbackSize in fallbackSizes) {
+                Log.d(TAG, "📸 Trying fallback size: ${fallbackSize.width}x${fallbackSize.height}")
+                if (tryCreateSession(fallbackSize)) {
+                    previewSize = fallbackSize
+                    Log.d(TAG, "📸✅ Session created with fallback: ${fallbackSize.width}x${fallbackSize.height}")
+                    return
+                }
+            }
+            
+            Log.e(TAG, "📸❌ All fallback attempts failed")
+            
         } catch (e: Exception) {
-            Log.e(TAG, "📸❌ Unexpected error creating preview session", e)
+            Log.e(TAG, "📸❌ Exception in createCameraPreviewSessionWithFallback", e)
+        }
+    }
+    
+    /**
+     * Try to create camera session with specific size
+     */
+    private fun tryCreateSession(size: Size): Boolean {
+        return try {
+            Log.d(TAG, "📸 Attempting session with ${size.width}x${size.height}")
+            surfaceTexture?.setDefaultBufferSize(size.width, size.height)
+            val previewSurface = Surface(surfaceTexture)
+            
+            captureRequestBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)?.apply {
+                addTarget(previewSurface)
+                imageReader?.surface?.let { addTarget(it) }
+            }
+            
+            if (captureRequestBuilder == null) {
+                Log.e(TAG, "📸❌ Failed to create capture request builder for ${size.width}x${size.height}")
+                return false
+            }
+            
+            val surfaces = listOfNotNull(previewSurface, imageReader?.surface)
+            Log.d(TAG, "📸 Creating session with ${surfaces.size} surfaces (${size.width}x${size.height})")
+            
+            cameraDevice?.createCaptureSession(surfaces, cameraCaptureSessionCallback, cameraHandler)
+            true
+            
+        } catch (e: Exception) {
+            Log.w(TAG, "📸⚠️ Failed to create session with ${size.width}x${size.height}: ${e.message}")
+            false
         }
     }
     
@@ -371,6 +414,67 @@ class GeminiLiveCameraManager @Inject constructor(
         } catch (e: Exception) {
             Log.e(TAG, "Error closing camera", e)
         }
+    }
+    
+    /**
+     * Choose optimal camera resolution with fallback strategy
+     */
+    private fun chooseOptimalSize(choices: Array<Size>, targetWidth: Int, targetHeight: Int): Size {
+        Log.d(TAG, "📸 Choosing optimal size from ${choices.size} options")
+        
+        // Find exact match first
+        val exactMatch = choices.find { it.width == targetWidth && it.height == targetHeight }
+        if (exactMatch != null) {
+            Log.d(TAG, "📸 Found exact match: ${exactMatch.width}x${exactMatch.height}")
+            return exactMatch
+        }
+        
+        // Find closest aspect ratio with reasonable size
+        val targetAspectRatio = targetWidth.toDouble() / targetHeight
+        var bestSize = choices[0]
+        var bestDifference = Double.MAX_VALUE
+        
+        for (size in choices) {
+            val aspectRatio = size.width.toDouble() / size.height
+            val aspectDifference = kotlin.math.abs(aspectRatio - targetAspectRatio)
+            val sizeDifference = kotlin.math.abs(size.width - targetWidth) + kotlin.math.abs(size.height - targetHeight)
+            val totalDifference = aspectDifference * 1000 + sizeDifference
+            
+            if (totalDifference < bestDifference && size.width <= targetWidth * 2 && size.height <= targetHeight * 2) {
+                bestDifference = totalDifference
+                bestSize = size
+            }
+        }
+        
+        Log.d(TAG, "📸 Selected optimal size: ${bestSize.width}x${bestSize.height}")
+        return bestSize
+    }
+    
+    /**
+     * Get compatible image format with fallback
+     */
+    private fun getCompatibleImageFormat(map: StreamConfigurationMap): Int {
+        Log.d(TAG, "📸 Finding compatible image format...")
+        
+        // Priority order: JPEG (most compatible) -> YUV_420_888 -> others
+        val preferredFormats = listOf(
+            ImageFormat.JPEG,
+            ImageFormat.YUV_420_888,
+            ImageFormat.NV21,
+            ImageFormat.YV12
+        )
+        
+        for (format in preferredFormats) {
+            val sizes = map.getOutputSizes(format)
+            if (sizes != null && sizes.isNotEmpty()) {
+                Log.d(TAG, "📸 Selected format: $format (${sizes.size} sizes available)")
+                return format
+            }
+        }
+        
+        // Ultimate fallback
+        Log.w(TAG, "📸 No preferred format found, using JPEG")
+        return ImageFormat.JPEG
     }
     
     fun release() {
