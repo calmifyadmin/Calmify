@@ -62,6 +62,19 @@ class LiveChatViewModel @Inject constructor(
     private val _currentTranscript = MutableStateFlow("")
     val currentTranscript: StateFlow<String> = _currentTranscript.asStateFlow()
 
+    // Advanced audio intelligence properties for liquid visualizer
+    private val _userVoiceLevel = MutableStateFlow(0f)
+    val userVoiceLevel: StateFlow<Float> = _userVoiceLevel.asStateFlow()
+    
+    private val _aiVoiceLevel = MutableStateFlow(0f)
+    val aiVoiceLevel: StateFlow<Float> = _aiVoiceLevel.asStateFlow()
+    
+    private val _emotionalIntensity = MutableStateFlow(0.5f)
+    val emotionalIntensity: StateFlow<Float> = _emotionalIntensity.asStateFlow()
+    
+    private val _conversationMode = MutableStateFlow("casual")
+    val conversationMode: StateFlow<String> = _conversationMode.asStateFlow()
+
     // Track if audio channel is open
     private var isAudioChannelOpen = false
 
@@ -105,6 +118,32 @@ class LiveChatViewModel @Inject constructor(
                     audioQualityAnalyzer.stopMeasurement()
                     Log.d(TAG, "📊 Audio quality measurement stopped")
                 }
+            }
+        }
+        
+        // Real-time audio level updates for liquid visualizer
+        viewModelScope.launch {
+            geminiAudioManager.userAudioLevel.collectLatest { userLevel ->
+                _userVoiceLevel.value = userLevel
+                
+                // Update emotional intensity based on conversation context
+                val intensity = conversationContextManager.getCurrentEmotionalIntensity()
+                _emotionalIntensity.value = intensity
+            }
+        }
+        
+        // AI voice level from real audio playback
+        viewModelScope.launch {
+            geminiAudioManager.aiAudioLevel.collectLatest { aiLevel ->
+                _aiVoiceLevel.value = aiLevel
+            }
+        }
+        
+        // Conversation mode updates
+        viewModelScope.launch {
+            conversationContextManager.currentModeString.collectLatest { mode ->
+                _conversationMode.value = mode
+                Log.v(TAG, "🎭 Conversation mode updated: $mode")
             }
         }
     }

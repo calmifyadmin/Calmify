@@ -6,6 +6,15 @@ uniform float3 backgroundColor;
 uniform float3 primaryColor;
 uniform float3 secondaryColor;
 
+// Advanced audio intelligence uniforms
+uniform float userVoiceLevel;
+uniform float aiVoiceLevel;
+uniform float emotionalIntensity;
+uniform float spatialPosition;
+uniform float isUserSpeaking;
+uniform float isAiSpeaking;
+uniform float conversationMode;
+
 half4 main(float2 fragCoord) {
     float2 uv = fragCoord / resolution;
     
@@ -29,10 +38,15 @@ half4 main(float2 fragCoord) {
         uv.y * uv.y
     );
     
-    // Multiple wave layers for liquid effect (MUCH slower for smoothness)
-    float wave1 = sin(uv.x * 3.0 + time * 0.05) * 0.08 * amplitude;
-    float wave2 = sin(uv.x * 5.0 - time * 0.03) * 0.06 * amplitude;
-    float wave3 = sin(uv.x * 2.0 + time * 0.02) * 0.1 * amplitude;
+    // INTELLIGENT: Dynamic wave parameters based on voice levels
+    float userWaveIntensity = 1.0 + userVoiceLevel * 2.0;
+    float aiWaveIntensity = 1.0 + aiVoiceLevel * 1.5;
+    float emotionalMultiplier = 0.5 + emotionalIntensity * 1.5;
+    
+    // Multiple wave layers for liquid effect with intelligence
+    float wave1 = sin(uv.x * 3.0 + time * 0.05 + spatialPosition) * 0.08 * amplitude * userWaveIntensity;
+    float wave2 = sin(uv.x * 5.0 - time * 0.03 - spatialPosition * 0.5) * 0.06 * amplitude * aiWaveIntensity;
+    float wave3 = sin(uv.x * 2.0 + time * 0.02) * 0.1 * amplitude * emotionalMultiplier;
     float wave4 = cos(uv.x * 4.0 + time * 0.04) * 0.05 * amplitude;
     
     // Combine waves for complex liquid motion with more layers
@@ -49,12 +63,17 @@ half4 main(float2 fragCoord) {
     float liquidMask = smoothstep(waveY - 0.15, waveY + 0.15, uv.y);
     float liquidMask2 = smoothstep(waveY - 0.3, waveY + 0.3, uv.y) * 0.5;
     
-    // Multiple glow layers for extreme blur effect
+    // INTELLIGENT: Dynamic glow based on conversation state and voice levels
+    float totalVoiceActivity = userVoiceLevel + aiVoiceLevel;
+    float speakingBoost = isUserSpeaking * 1.5 + isAiSpeaking * 1.2;
+    float contextIntensity = intensity * (1.0 + emotionalIntensity * 0.8) * (1.0 + speakingBoost);
+    
+    // Multiple glow layers for extreme blur effect with intelligence
     float glowDistance = abs(uv.y - waveY);
-    float innerGlow = exp(-glowDistance * 20.0 * (2.0 - amplitude)) * intensity;
-    float midGlow = exp(-glowDistance * 10.0 * (2.0 - amplitude)) * intensity * 0.7;
-    float outerGlow = exp(-glowDistance * 5.0 * (2.0 - amplitude)) * intensity * 0.4;
-    float superOuterGlow = exp(-glowDistance * 2.0 * (2.0 - amplitude)) * intensity * 0.2;
+    float innerGlow = exp(-glowDistance * 20.0 * (2.0 - amplitude)) * contextIntensity;
+    float midGlow = exp(-glowDistance * 10.0 * (2.0 - amplitude)) * contextIntensity * 0.7;
+    float outerGlow = exp(-glowDistance * 5.0 * (2.0 - amplitude)) * contextIntensity * 0.4;
+    float superOuterGlow = exp(-glowDistance * 2.0 * (2.0 - amplitude)) * contextIntensity * 0.2;
     
     // Surface highlights that move with the wave (ultra slow and blurred)
     float highlight = exp(-abs(uv.y - (waveY + 0.03)) * 40.0) * intensity * 0.3;
@@ -74,10 +93,29 @@ half4 main(float2 fragCoord) {
     totalEffect = clamp(totalEffect, 0.0, 1.0);
     finalColor = mix(backgroundColor, waveColor, totalEffect);
     
-    // Add VERY subtle color variation (ultra slow for smoothness)
-    finalColor.r += sin(uv.x * 5.0 + time * 0.03) * 0.05 * intensity;
-    finalColor.g += cos(uv.x * 4.0 - time * 0.025) * 0.05 * intensity;
-    finalColor.b += sin(uv.x * 6.0 + time * 0.02) * 0.05 * intensity;
+    // INTELLIGENT: Context-aware color variations
+    float colorVariationStrength = 0.05 * contextIntensity;
+    
+    // Conversation mode color adjustments
+    float modeColorShift = 0.0;
+    if (conversationMode == 1.0) { // business
+        modeColorShift = -0.1; // Cooler, more professional
+        colorVariationStrength *= 0.7;
+    } else if (conversationMode == 2.0) { // presentation
+        modeColorShift = -0.2; // Very subtle
+        colorVariationStrength *= 0.3;
+    } else if (conversationMode == 3.0) { // brainstorm
+        modeColorShift = 0.2; // Warmer, more energetic
+        colorVariationStrength *= 1.5;
+    } else if (conversationMode == 4.0) { // intimate
+        modeColorShift = 0.1; // Slightly warmer
+        colorVariationStrength *= 1.2;
+    }
+    
+    // Add intelligent color variation
+    finalColor.r += sin(uv.x * 5.0 + time * 0.03 + spatialPosition) * colorVariationStrength + modeColorShift;
+    finalColor.g += cos(uv.x * 4.0 - time * 0.025) * colorVariationStrength;
+    finalColor.b += sin(uv.x * 6.0 + time * 0.02 - spatialPosition) * colorVariationStrength - modeColorShift;
     
     // Additional color blending for fusion effect
     float blendFactor = sin(time * 0.01) * 0.5 + 0.5;

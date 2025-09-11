@@ -62,6 +62,13 @@ class GeminiLiveAudioManager @Inject constructor(
     private val _playbackState = MutableStateFlow(false)
     val playbackState: StateFlow<Boolean> = _playbackState
     
+    // NUOVO: Real-time audio levels for liquid visualizer
+    private val _userAudioLevel = MutableStateFlow(0f)
+    val userAudioLevel: StateFlow<Float> = _userAudioLevel
+    
+    private val _aiAudioLevel = MutableStateFlow(0f)
+    val aiAudioLevel: StateFlow<Float> = _aiAudioLevel
+    
     // NUOVO: Barge-in detection
     private var hotFrameCount = 0
     private var aiCurrentlySpeaking = false
@@ -173,6 +180,10 @@ class GeminiLiveAudioManager @Inject constructor(
                                     )
                                 }
                                 
+                                // NUOVO: Calculate real-time audio level for visualizer
+                                val audioLevel = calculateAudioLevel(buffer, readSize)
+                                _userAudioLevel.value = audioLevel
+                                
                                 synchronized(pcmData) {
                                     // Limita la dimensione del buffer
                                     if (pcmData.size < 10000) {
@@ -242,6 +253,8 @@ class GeminiLiveAudioManager @Inject constructor(
 
         isRecording = false
         _recordingState.value = false
+        // Reset user audio level when recording stops
+        _userAudioLevel.value = 0f
 
         recordingJob?.cancel()
         recordingJob = null
@@ -306,6 +319,10 @@ class GeminiLiveAudioManager @Inject constructor(
                     totalQueueBytes.addAndGet(-chunk.size)
 
                     playAudio(chunk)
+                    
+                    // NUOVO: Calculate real-time AI audio level for visualizer
+                    val aiLevel = calculateAudioLevelFromBytes(chunk)
+                    _aiAudioLevel.value = aiLevel
 
                 } catch (e: Exception) {
                     Log.e(TAG, "Error playing audio chunk", e)
@@ -314,6 +331,8 @@ class GeminiLiveAudioManager @Inject constructor(
 
             isPlaying.set(false)
             _playbackState.value = false
+            // Reset AI audio level when playback stops
+            _aiAudioLevel.value = 0f
         }
     }
 
@@ -520,6 +539,44 @@ class GeminiLiveAudioManager @Inject constructor(
         }
         val avg = sum / length
         return (avg / 32767.0).toFloat().coerceIn(0f, 1f)
+    }
+
+    /**
+     * Calculate real-time audio level from PCM samples for visualizer
+     */
+    private fun calculateAudioLevel(buffer: ShortArray, length: Int): Float {
+        if (length == 0) return 0f
+        
+        // Calculate RMS (Root Mean Square) for better audio level representation
+        var sum = 0.0
+        for (i in 0 until length) {
+            val sample = buffer[i].toDouble()
+            sum += sample * sample
+        }
+        
+        val rms = kotlin.math.sqrt(sum / length)
+        // Normalize to 0-1 range (16-bit PCM max is 32767)
+        return (rms / 32767.0).toFloat().coerceIn(0f, 1f)
+    }
+
+    /**
+     * Calculate real-time audio level from AI audio bytes for visualizer
+     */
+    private fun calculateAudioLevelFromBytes(audioBytes: ByteArray): Float {
+        if (audioBytes.isEmpty()) return 0f
+        
+        // Convert bytes to shorts (16-bit PCM)
+        val buffer = ShortArray(audioBytes.size / 2)
+        val byteBuffer = java.nio.ByteBuffer.wrap(audioBytes)
+        byteBuffer.order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        
+        for (i in buffer.indices) {
+            if (byteBuffer.remaining() >= 2) {
+                buffer[i] = byteBuffer.short
+            }
+        }
+        
+        return calculateAudioLevel(buffer, buffer.size)
     }
 
     private fun resetAudioConfiguration() {

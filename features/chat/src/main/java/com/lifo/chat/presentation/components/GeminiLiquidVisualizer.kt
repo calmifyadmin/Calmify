@@ -16,16 +16,18 @@ import androidx.compose.ui.unit.dp
 import com.lifo.chat.R
 
 /**
- * Gemini-style Liquid Visualizer using GLSL shaders
+ * Intelligent Dual-Voice Liquid Visualizer using GLSL shaders
  *
- * This component creates a liquid wave effect similar to Gemini Live,
- * responding to voice activity states without requiring real-time audio analysis.
+ * Enhanced Gemini-style liquid wave effect with real-time audio intelligence.
+ * Responds to actual voice levels, conversation context, and emotional intensity.
  *
  * Features:
  * - GLSL shader-based liquid wave animation
- * - Smooth transitions between speaking/idle states
+ * - Real-time audio level visualization (User + AI separate)
+ * - Conversation context awareness
+ * - Emotional intensity mapping
+ * - Spatial voice positioning
  * - GPU-accelerated rendering for 60fps performance
- * - Customizable amplitude and intensity parameters
  * - Compatible with Android API 33+ (RuntimeShader)
  */
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
@@ -35,7 +37,14 @@ fun GeminiLiquidVisualizer(
     modifier: Modifier = Modifier,
     primaryColor: Color = MaterialTheme.colorScheme.primary,
     secondaryColor: Color = MaterialTheme.colorScheme.secondary,
-    backgroundColor: Color = Color.Black
+    backgroundColor: Color = Color.Black,
+    // NEW: Advanced audio intelligence parameters
+    userVoiceLevel: Float = 0f,
+    aiVoiceLevel: Float = 0f,
+    emotionalIntensity: Float = 0.5f,
+    conversationMode: String = "casual",
+    isUserSpeaking: Boolean = false,
+    isAiSpeaking: Boolean = false
 ) {
     val context = LocalContext.current
 
@@ -66,24 +75,97 @@ fun GeminiLiquidVisualizer(
         label = "time"
     )
 
-    // Amplitude animation based on speaking state (slower transitions)
+    // INTELLIGENT: Calculate dynamic amplitude based on real audio levels
+    val intelligentAmplitude = remember(userVoiceLevel, aiVoiceLevel, emotionalIntensity) {
+        val baseAmplitude = when {
+            isUserSpeaking && isAiSpeaking -> 2.5f + (userVoiceLevel + aiVoiceLevel) * 1.5f // Overlapping speech - high energy
+            isUserSpeaking -> 1.8f + userVoiceLevel * 2.0f // User speaking - responsive to user energy
+            isAiSpeaking -> 1.6f + aiVoiceLevel * 1.8f // AI speaking - slightly calmer but responsive
+            else -> 0.4f + (userVoiceLevel + aiVoiceLevel) * 0.8f // Background activity
+        }
+        
+        // Apply emotional intensity multiplier
+        val emotionalMultiplier = 0.7f + emotionalIntensity * 0.6f
+        
+        // Apply conversation mode modifier
+        val modeMultiplier = when (conversationMode.lowercase()) {
+            "business", "meeting" -> 0.8f // More subdued for professional contexts
+            "presentation" -> 0.6f // Minimal distraction during presentations  
+            "brainstorm", "excited" -> 1.3f // High energy for creative sessions
+            "intimate", "calm" -> 0.7f // Gentle for personal conversations
+            else -> 1.0f // Default casual
+        }
+        
+        (baseAmplitude * emotionalMultiplier * modeMultiplier).coerceIn(0.2f, 4.0f)
+    }
+
+    // Smooth amplitude transitions with context-aware timing
     val amplitude by animateFloatAsState(
-        targetValue = if (isSpeaking) 2.0f else 0.6f,
+        targetValue = intelligentAmplitude,
         animationSpec = tween(
-            durationMillis = 2000, // 2 second transition for smoothness
-            easing = FastOutSlowInEasing
+            durationMillis = when {
+                isUserSpeaking && !isAiSpeaking -> 300 // Quick response to user
+                isAiSpeaking && !isUserSpeaking -> 800 // Smoother for AI
+                conversationMode == "presentation" -> 3000 // Very slow for presentations
+                else -> 1200 // Balanced default
+            },
+            easing = when {
+                emotionalIntensity > 0.7f -> FastOutSlowInEasing // High energy
+                conversationMode == "business" -> FastOutSlowInEasing // Professional smoothness
+                else -> FastOutSlowInEasing
+            }
         ),
-        label = "amplitude"
+        label = "intelligent_amplitude"
     )
 
-    // Intensity animation for glow and brightness (slower transitions)
+    // INTELLIGENT: Dynamic intensity based on conversation context
+    val intelligentIntensity = remember(emotionalIntensity, conversationMode, userVoiceLevel, aiVoiceLevel) {
+        val baseIntensity = when {
+            isUserSpeaking && isAiSpeaking -> 2.0f // Maximum intensity for overlapping speech
+            isUserSpeaking -> 1.2f + userVoiceLevel * 0.8f // User-driven intensity
+            isAiSpeaking -> 1.0f + aiVoiceLevel * 0.6f // AI-driven intensity  
+            else -> 0.6f + emotionalIntensity * 0.4f // Ambient based on emotion
+        }
+        
+        // Context-aware intensity modulation
+        val contextMultiplier = when (conversationMode.lowercase()) {
+            "business", "meeting" -> 0.9f // Slightly subdued professionalism
+            "presentation" -> 0.7f // Minimal glow during presentations
+            "brainstorm" -> 1.4f // High energy creativity
+            "intimate" -> 1.1f // Warm, inviting glow
+            else -> 1.0f
+        }
+        
+        (baseIntensity * contextMultiplier * (0.8f + emotionalIntensity * 0.4f)).coerceIn(0.5f, 2.5f)
+    }
+
+    // Smooth intensity transitions
     val intensity by animateFloatAsState(
-        targetValue = if (isSpeaking) 1.5f else 0.8f,
+        targetValue = intelligentIntensity,
         animationSpec = tween(
-            durationMillis = 2000, // 2 second transition
+            durationMillis = 1500,
             easing = FastOutSlowInEasing
         ),
-        label = "intensity"
+        label = "intelligent_intensity"
+    )
+    
+    // SPATIAL: Calculate voice positioning for dual-voice separation
+    val voicePosition = remember(isUserSpeaking, isAiSpeaking, userVoiceLevel, aiVoiceLevel) {
+        when {
+            isUserSpeaking && !isAiSpeaking -> -0.3f + userVoiceLevel * 0.4f // User left-center
+            isAiSpeaking && !isUserSpeaking -> 0.3f + aiVoiceLevel * 0.4f // AI right-center  
+            isUserSpeaking && isAiSpeaking -> 0f // Center when both speaking
+            else -> 0f // Neutral center
+        }.coerceIn(-0.7f, 0.7f)
+    }
+    
+    val spatialPosition by animateFloatAsState(
+        targetValue = voicePosition,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "spatial_position"
     )
 
     // Fallback when shader is not available (API < 33 or loading failed)
@@ -106,13 +188,33 @@ fun GeminiLiquidVisualizer(
         Canvas(
             modifier = Modifier.fillMaxSize()
         ) {
-            // Update shader uniforms
+            // Update basic shader uniforms
             shader.setFloatUniform("resolution", size.width, size.height)
             shader.setFloatUniform("time", time)
             shader.setFloatUniform("amplitude", amplitude)
             shader.setFloatUniform("intensity", intensity)
 
-            // Pass background color to shader (convert Color to RGB floats)
+            // NEW: Advanced audio intelligence uniforms
+            shader.setFloatUniform("userVoiceLevel", userVoiceLevel)
+            shader.setFloatUniform("aiVoiceLevel", aiVoiceLevel)
+            shader.setFloatUniform("emotionalIntensity", emotionalIntensity)
+            shader.setFloatUniform("spatialPosition", spatialPosition)
+            
+            // Voice state indicators for shader logic
+            shader.setFloatUniform("isUserSpeaking", if (isUserSpeaking) 1.0f else 0.0f)
+            shader.setFloatUniform("isAiSpeaking", if (isAiSpeaking) 1.0f else 0.0f)
+            
+            // Conversation mode as numeric value for shader
+            val modeValue = when (conversationMode.lowercase()) {
+                "business", "meeting" -> 1.0f
+                "presentation" -> 2.0f
+                "brainstorm", "excited" -> 3.0f
+                "intimate", "calm" -> 4.0f
+                else -> 0.0f // casual
+            }
+            shader.setFloatUniform("conversationMode", modeValue)
+
+            // Pass color uniforms (existing)
             shader.setFloatUniform(
                 "backgroundColor",
                 backgroundColor.red,
@@ -120,7 +222,6 @@ fun GeminiLiquidVisualizer(
                 backgroundColor.blue
             )
 
-            // Pass primary color to shader
             shader.setFloatUniform(
                 "primaryColor",
                 primaryColor.red,
@@ -128,7 +229,6 @@ fun GeminiLiquidVisualizer(
                 primaryColor.blue
             )
 
-            // Pass secondary color to shader
             shader.setFloatUniform(
                 "secondaryColor",
                 secondaryColor.red,
@@ -136,7 +236,7 @@ fun GeminiLiquidVisualizer(
                 secondaryColor.blue
             )
 
-            // Draw the shader to fill entire canvas
+            // Draw the intelligent shader to fill entire canvas
             drawRect(
                 brush = ShaderBrush(shader),
                 size = size

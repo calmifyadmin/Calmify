@@ -85,6 +85,12 @@ fun ChatScreen(
     val liveChatState by liveChatViewModel.uiState.collectAsStateWithLifecycle()
     val currentTranscript by liveChatViewModel.currentTranscript.collectAsStateWithLifecycle()
     
+    // Advanced audio intelligence states for liquid visualizer
+    val userVoiceLevel by liveChatViewModel.userVoiceLevel.collectAsStateWithLifecycle()
+    val aiVoiceLevel by liveChatViewModel.aiVoiceLevel.collectAsStateWithLifecycle()
+    val emotionalIntensity by liveChatViewModel.emotionalIntensity.collectAsStateWithLifecycle()
+    val conversationMode by liveChatViewModel.conversationMode.collectAsStateWithLifecycle()
+    
     // Track chat modes - regular voice vs live chat mode
     var isVoiceChatMode by remember { mutableStateOf(false) }
     var isLiveChatMode by remember { mutableStateOf(false) }
@@ -153,7 +159,7 @@ fun ChatScreen(
     Box(
         modifier = modifier.fillMaxSize()
     ) {
-        // Liquid wave background covering the ENTIRE screen
+        // Intelligent liquid wave background with real-time audio analytics
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             GeminiLiquidVisualizer(
                 isSpeaking = voiceState.isSpeaking || 
@@ -164,7 +170,22 @@ fun ChatScreen(
                 modifier = Modifier.fillMaxSize(),
                 primaryColor = MaterialTheme.colorScheme.primary,
                 secondaryColor = MaterialTheme.colorScheme.tertiary,
-                backgroundColor = MaterialTheme.colorScheme.surface
+                backgroundColor = MaterialTheme.colorScheme.surface,
+                // NEW: Real-time audio intelligence integration
+                userVoiceLevel = if (isLiveChatMode) userVoiceLevel else 0f,
+                aiVoiceLevel = if (isLiveChatMode) aiVoiceLevel else if (voiceState.isSpeaking) 0.8f else 0f,
+                emotionalIntensity = if (isLiveChatMode) emotionalIntensity else when(voiceEmotion) {
+                    com.lifo.chat.audio.GeminiNativeVoiceSystem.Emotion.HAPPY -> 0.9f
+                    com.lifo.chat.audio.GeminiNativeVoiceSystem.Emotion.EXCITED -> 1.0f
+                    com.lifo.chat.audio.GeminiNativeVoiceSystem.Emotion.SAD -> 0.2f
+                    com.lifo.chat.audio.GeminiNativeVoiceSystem.Emotion.THOUGHTFUL -> 0.6f
+                    com.lifo.chat.audio.GeminiNativeVoiceSystem.Emotion.EMPATHETIC -> 0.7f
+                    com.lifo.chat.audio.GeminiNativeVoiceSystem.Emotion.CURIOUS -> 0.8f
+                    com.lifo.chat.audio.GeminiNativeVoiceSystem.Emotion.NEUTRAL -> 0.5f
+                },
+                conversationMode = if (isLiveChatMode) conversationMode else "casual",
+                isUserSpeaking = isLiveChatMode && liveChatState.turnState == TurnState.UserTurn && !liveChatState.isMuted,
+                isAiSpeaking = (isLiveChatMode && liveChatState.aiEmotion == AIEmotion.Speaking) || voiceState.isSpeaking
             )
         } else {
             // Fallback gradient background
@@ -180,6 +201,58 @@ fun ChatScreen(
                         )
                     )
             )
+        }
+
+        // DEBUG: Audio levels overlay
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(16.dp)
+                .background(
+                    Color.Black.copy(alpha = 0.8f),
+                    RoundedCornerShape(8.dp)
+                )
+                .padding(12.dp)
+        ) {
+            Column {
+                Text(
+                    text = "🎙️ AUDIO DEBUG",
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "User: ${String.format("%.2f", userVoiceLevel)}",
+                    color = if (userVoiceLevel > 0.1f) Color.Green else Color.Gray,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    text = "AI: ${String.format("%.2f", aiVoiceLevel)}",
+                    color = if (aiVoiceLevel > 0.1f) Color.Blue else Color.Gray,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    text = "Emotion: ${String.format("%.2f", emotionalIntensity)}",
+                    color = Color.Yellow,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    text = "Mode: $conversationMode",
+                    color = Color.Cyan,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    text = "Speaking: ${if (isLiveChatMode && liveChatState.turnState == TurnState.UserTurn && !liveChatState.isMuted) "USER" else if ((isLiveChatMode && liveChatState.aiEmotion == AIEmotion.Speaking) || voiceState.isSpeaking) "AI" else "NONE"}",
+                    color = if (isLiveChatMode && liveChatState.turnState == TurnState.UserTurn && !liveChatState.isMuted) Color.Green else if ((isLiveChatMode && liveChatState.aiEmotion == AIEmotion.Speaking) || voiceState.isSpeaking) Color.Blue else Color.Gray,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    text = "Live Mode: ${if (isLiveChatMode) "ON" else "OFF"}",
+                    color = if (isLiveChatMode) Color.Green else Color.Red,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
         }
 
         // Scaffold on top of the background

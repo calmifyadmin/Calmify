@@ -3,6 +3,12 @@ package com.lifo.chat.domain.audio
 import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.*
@@ -24,6 +30,9 @@ import kotlin.math.*
  */
 @Singleton
 class ConversationContextManager @Inject constructor() {
+    
+    // Coroutine scope for StateFlow transformations
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     
     companion object {
         private const val TAG = "ConversationContext"
@@ -621,4 +630,30 @@ class ConversationContextManager @Inject constructor() {
             )
         )
     }
+    
+    /**
+     * Get current emotional intensity for liquid visualizer
+     */
+    fun getCurrentEmotionalIntensity(): Float {
+        return _conversationMetrics.value.emotionalIntensity
+    }
+    
+    /**
+     * Get current conversation mode as string for liquid visualizer
+     */
+    val currentModeString: StateFlow<String> = _conversationMode.map { mode ->
+        when (mode) {
+            ConversationMode.BUSINESS_MEETING -> "business"
+            ConversationMode.PRESENTATION -> "presentation"
+            ConversationMode.BRAINSTORM -> "brainstorm"
+            ConversationMode.INTIMATE -> "intimate"
+            ConversationMode.NOISY_ENVIRONMENT -> "noisy"
+            ConversationMode.CASUAL_CHAT -> "casual"
+            ConversationMode.UNKNOWN -> "casual"
+        }
+    }.stateIn(
+        scope = scope,
+        started = SharingStarted.Eagerly,
+        initialValue = "casual"
+    )
 }
