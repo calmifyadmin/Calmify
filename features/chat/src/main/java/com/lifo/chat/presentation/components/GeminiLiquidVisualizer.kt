@@ -75,44 +75,44 @@ fun GeminiLiquidVisualizer(
         label = "time"
     )
 
-    // INTELLIGENT: Calculate dynamic amplitude based on real audio levels
+    // BALANCED: Responsive but elegant amplitude calculation
     val intelligentAmplitude = remember(userVoiceLevel, aiVoiceLevel, emotionalIntensity) {
         val baseAmplitude = when {
-            isUserSpeaking && isAiSpeaking -> 2.5f + (userVoiceLevel + aiVoiceLevel) * 1.5f // Overlapping speech - high energy
-            isUserSpeaking -> 1.8f + userVoiceLevel * 2.0f // User speaking - responsive to user energy
-            isAiSpeaking -> 1.6f + aiVoiceLevel * 1.8f // AI speaking - slightly calmer but responsive
-            else -> 0.4f + (userVoiceLevel + aiVoiceLevel) * 0.8f // Background activity
+            isUserSpeaking && isAiSpeaking -> 2.2f + (userVoiceLevel + aiVoiceLevel) * 1.8f // Noticeable for overlapping speech
+            isUserSpeaking -> 1.5f + userVoiceLevel * 2.2f // Good user speaking response
+            isAiSpeaking -> 1.4f + aiVoiceLevel * 2.0f // Good AI speaking response
+            else -> 0.5f + (userVoiceLevel + aiVoiceLevel) * 1.2f // Subtle background activity
         }
         
         // Apply emotional intensity multiplier
-        val emotionalMultiplier = 0.7f + emotionalIntensity * 0.6f
+        val emotionalMultiplier = 0.8f + emotionalIntensity * 0.7f // Moderate emotional response
         
         // Apply conversation mode modifier
         val modeMultiplier = when (conversationMode.lowercase()) {
-            "business", "meeting" -> 0.8f // More subdued for professional contexts
-            "presentation" -> 0.6f // Minimal distraction during presentations  
-            "brainstorm", "excited" -> 1.3f // High energy for creative sessions
-            "intimate", "calm" -> 0.7f // Gentle for personal conversations
-            else -> 1.0f // Default casual
+            "business", "meeting" -> 0.85f // Professional but visible
+            "presentation" -> 0.7f // Minimal but present
+            "brainstorm", "excited" -> 1.3f // Higher energy but controlled
+            "intimate", "calm" -> 0.8f // Gentle and elegant
+            else -> 1.0f // Balanced default
         }
         
-        (baseAmplitude * emotionalMultiplier * modeMultiplier).coerceIn(0.2f, 4.0f)
+        (baseAmplitude * emotionalMultiplier * modeMultiplier).coerceIn(0.3f, 4.5f) // Elegant range that stays on screen
     }
 
-    // Smooth amplitude transitions with context-aware timing
+    // Smooth amplitude transitions with fluid interpolation
     val amplitude by animateFloatAsState(
         targetValue = intelligentAmplitude,
-        animationSpec = tween(
-            durationMillis = when {
-                isUserSpeaking && !isAiSpeaking -> 300 // Quick response to user
-                isAiSpeaking && !isUserSpeaking -> 800 // Smoother for AI
-                conversationMode == "presentation" -> 3000 // Very slow for presentations
-                else -> 1200 // Balanced default
+        animationSpec = spring(
+            dampingRatio = when {
+                isUserSpeaking && !isAiSpeaking -> Spring.DampingRatioMediumBouncy // Responsive for user
+                isAiSpeaking && !isUserSpeaking -> Spring.DampingRatioMediumBouncy // More responsive for AI
+                conversationMode == "presentation" -> Spring.DampingRatioLowBouncy // Still smooth but more responsive
+                else -> Spring.DampingRatioMediumBouncy // Balanced default
             },
-            easing = when {
-                emotionalIntensity > 0.7f -> FastOutSlowInEasing // High energy
-                conversationMode == "business" -> FastOutSlowInEasing // Professional smoothness
-                else -> FastOutSlowInEasing
+            stiffness = when {
+                emotionalIntensity > 0.7f -> Spring.StiffnessMediumLow // Enhanced responsiveness for high energy
+                conversationMode == "business" -> Spring.StiffnessMediumLow // More responsive for business
+                else -> Spring.StiffnessMediumLow // Enhanced balanced response
             }
         ),
         label = "intelligent_amplitude"
@@ -139,12 +139,12 @@ fun GeminiLiquidVisualizer(
         (baseIntensity * contextMultiplier * (0.8f + emotionalIntensity * 0.4f)).coerceIn(0.5f, 2.5f)
     }
 
-    // Smooth intensity transitions
+    // Smooth intensity transitions with spring physics
     val intensity by animateFloatAsState(
         targetValue = intelligentIntensity,
-        animationSpec = tween(
-            durationMillis = 1500,
-            easing = FastOutSlowInEasing
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow // Slow, smooth transitions for intensity
         ),
         label = "intelligent_intensity"
     )
@@ -162,8 +162,8 @@ fun GeminiLiquidVisualizer(
     val spatialPosition by animateFloatAsState(
         targetValue = voicePosition,
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
+            dampingRatio = Spring.DampingRatioLowBouncy, // More smooth, less bouncy
+            stiffness = Spring.StiffnessVeryLow // Very slow, fluid transitions between speakers
         ),
         label = "spatial_position"
     )

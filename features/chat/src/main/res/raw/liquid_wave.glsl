@@ -38,14 +38,17 @@ half4 main(float2 fragCoord) {
         uv.y * uv.y
     );
     
-    // INTELLIGENT: Dynamic wave parameters based on voice levels
-    float userWaveIntensity = 1.0 + userVoiceLevel * 2.0;
-    float aiWaveIntensity = 1.0 + aiVoiceLevel * 1.5;
-    float emotionalMultiplier = 0.5 + emotionalIntensity * 1.5;
+    // BALANCED: Noticeable but elegant wave parameters
+    float userWaveIntensity = 1.0 + smoothstep(0.0, 1.0, userVoiceLevel) * 2.8; // Balanced responsiveness
+    float aiWaveIntensity = 1.0 + smoothstep(0.0, 1.0, aiVoiceLevel) * 2.5;     // Balanced responsiveness  
+    float emotionalMultiplier = 0.7 + smoothstep(0.0, 1.0, emotionalIntensity) * 1.8; // Moderate range
     
-    // Multiple wave layers for liquid effect with intelligence
-    float wave1 = sin(uv.x * 3.0 + time * 0.05 + spatialPosition) * 0.08 * amplitude * userWaveIntensity;
-    float wave2 = sin(uv.x * 5.0 - time * 0.03 - spatialPosition * 0.5) * 0.06 * amplitude * aiWaveIntensity;
+    // SMOOTHING: Smooth spatial positioning transitions
+    float smoothSpatialPosition = spatialPosition * smoothstep(0.0, 1.0, abs(spatialPosition));
+    
+    // Multiple wave layers for liquid effect with intelligence and smooth transitions
+    float wave1 = sin(uv.x * 3.0 + time * 0.05 + smoothSpatialPosition) * 0.08 * amplitude * userWaveIntensity;
+    float wave2 = sin(uv.x * 5.0 - time * 0.03 - smoothSpatialPosition * 0.5) * 0.06 * amplitude * aiWaveIntensity;
     float wave3 = sin(uv.x * 2.0 + time * 0.02) * 0.1 * amplitude * emotionalMultiplier;
     float wave4 = cos(uv.x * 4.0 + time * 0.04) * 0.05 * amplitude;
     
@@ -63,10 +66,11 @@ half4 main(float2 fragCoord) {
     float liquidMask = smoothstep(waveY - 0.15, waveY + 0.15, uv.y);
     float liquidMask2 = smoothstep(waveY - 0.3, waveY + 0.3, uv.y) * 0.5;
     
-    // INTELLIGENT: Dynamic glow based on conversation state and voice levels
+    // BALANCED: Elegant glow based on conversation state and voice levels
     float totalVoiceActivity = userVoiceLevel + aiVoiceLevel;
-    float speakingBoost = isUserSpeaking * 1.5 + isAiSpeaking * 1.2;
-    float contextIntensity = intensity * (1.0 + emotionalIntensity * 0.8) * (1.0 + speakingBoost);
+    float speakingBoost = isUserSpeaking * 1.8 + isAiSpeaking * 1.5; // Moderate boost
+    float voiceActivityBoost = totalVoiceActivity * 1.2; // Moderate extra boost from actual voice levels
+    float contextIntensity = intensity * (1.0 + emotionalIntensity * 0.9) * (1.0 + speakingBoost + voiceActivityBoost);
     
     // Multiple glow layers for extreme blur effect with intelligence
     float glowDistance = abs(uv.y - waveY);

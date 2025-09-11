@@ -203,57 +203,6 @@ fun ChatScreen(
             )
         }
 
-        // DEBUG: Audio levels overlay
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(16.dp)
-                .background(
-                    Color.Black.copy(alpha = 0.8f),
-                    RoundedCornerShape(8.dp)
-                )
-                .padding(12.dp)
-        ) {
-            Column {
-                Text(
-                    text = "🎙️ AUDIO DEBUG",
-                    color = Color.White,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "User: ${String.format("%.2f", userVoiceLevel)}",
-                    color = if (userVoiceLevel > 0.1f) Color.Green else Color.Gray,
-                    style = MaterialTheme.typography.bodySmall
-                )
-                Text(
-                    text = "AI: ${String.format("%.2f", aiVoiceLevel)}",
-                    color = if (aiVoiceLevel > 0.1f) Color.Blue else Color.Gray,
-                    style = MaterialTheme.typography.bodySmall
-                )
-                Text(
-                    text = "Emotion: ${String.format("%.2f", emotionalIntensity)}",
-                    color = Color.Yellow,
-                    style = MaterialTheme.typography.bodySmall
-                )
-                Text(
-                    text = "Mode: $conversationMode",
-                    color = Color.Cyan,
-                    style = MaterialTheme.typography.bodySmall
-                )
-                Text(
-                    text = "Speaking: ${if (isLiveChatMode && liveChatState.turnState == TurnState.UserTurn && !liveChatState.isMuted) "USER" else if ((isLiveChatMode && liveChatState.aiEmotion == AIEmotion.Speaking) || voiceState.isSpeaking) "AI" else "NONE"}",
-                    color = if (isLiveChatMode && liveChatState.turnState == TurnState.UserTurn && !liveChatState.isMuted) Color.Green else if ((isLiveChatMode && liveChatState.aiEmotion == AIEmotion.Speaking) || voiceState.isSpeaking) Color.Blue else Color.Gray,
-                    style = MaterialTheme.typography.bodySmall
-                )
-                Text(
-                    text = "Live Mode: ${if (isLiveChatMode) "ON" else "OFF"}",
-                    color = if (isLiveChatMode) Color.Green else Color.Red,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-        }
 
         // Scaffold on top of the background
         Scaffold(

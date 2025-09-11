@@ -69,6 +69,11 @@ class GeminiLiveAudioManager @Inject constructor(
     private val _aiAudioLevel = MutableStateFlow(0f)
     val aiAudioLevel: StateFlow<Float> = _aiAudioLevel
     
+    // SMOOTHING: Audio level smoothing for fluid transitions
+    private var userLevelSmoothing = 0f
+    private var aiLevelSmoothing = 0f
+    private val smoothingFactor = 0.25f // BALANCED: Good responsiveness with elegant smoothness
+    
     // NUOVO: Barge-in detection
     private var hotFrameCount = 0
     private var aiCurrentlySpeaking = false
@@ -180,9 +185,10 @@ class GeminiLiveAudioManager @Inject constructor(
                                     )
                                 }
                                 
-                                // NUOVO: Calculate real-time audio level for visualizer
-                                val audioLevel = calculateAudioLevel(buffer, readSize)
-                                _userAudioLevel.value = audioLevel
+                                // NUOVO: Calculate real-time audio level for visualizer with smoothing
+                                val rawLevel = calculateAudioLevel(buffer, readSize)
+                                userLevelSmoothing = userLevelSmoothing * (1f - smoothingFactor) + rawLevel * smoothingFactor
+                                _userAudioLevel.value = userLevelSmoothing
                                 
                                 synchronized(pcmData) {
                                     // Limita la dimensione del buffer
@@ -253,8 +259,17 @@ class GeminiLiveAudioManager @Inject constructor(
 
         isRecording = false
         _recordingState.value = false
-        // Reset user audio level when recording stops
-        _userAudioLevel.value = 0f
+        
+        // SMOOTHING: Gradual fade-out for user audio level
+        scope.launch {
+            while (userLevelSmoothing > 0.01f) {
+                userLevelSmoothing *= 0.85f // Exponential decay
+                _userAudioLevel.value = userLevelSmoothing
+                delay(20) // 50fps smooth fade
+            }
+            userLevelSmoothing = 0f
+            _userAudioLevel.value = 0f
+        }
 
         recordingJob?.cancel()
         recordingJob = null
@@ -320,9 +335,10 @@ class GeminiLiveAudioManager @Inject constructor(
 
                     playAudio(chunk)
                     
-                    // NUOVO: Calculate real-time AI audio level for visualizer
-                    val aiLevel = calculateAudioLevelFromBytes(chunk)
-                    _aiAudioLevel.value = aiLevel
+                    // NUOVO: Calculate real-time AI audio level for visualizer with smoothing
+                    val rawAiLevel = calculateAudioLevelFromBytes(chunk)
+                    aiLevelSmoothing = aiLevelSmoothing * (1f - smoothingFactor) + rawAiLevel * smoothingFactor
+                    _aiAudioLevel.value = aiLevelSmoothing
 
                 } catch (e: Exception) {
                     Log.e(TAG, "Error playing audio chunk", e)
@@ -331,8 +347,17 @@ class GeminiLiveAudioManager @Inject constructor(
 
             isPlaying.set(false)
             _playbackState.value = false
-            // Reset AI audio level when playback stops
-            _aiAudioLevel.value = 0f
+            
+            // SMOOTHING: Gradual fade-out for AI audio level
+            scope.launch {
+                while (aiLevelSmoothing > 0.01f) {
+                    aiLevelSmoothing *= 0.85f // Exponential decay
+                    _aiAudioLevel.value = aiLevelSmoothing
+                    delay(20) // 50fps smooth fade
+                }
+                aiLevelSmoothing = 0f
+                _aiAudioLevel.value = 0f
+            }
         }
     }
 
@@ -543,6 +568,7 @@ class GeminiLiveAudioManager @Inject constructor(
 
     /**
      * Calculate real-time audio level from PCM samples for visualizer
+     * Enhanced with higher sensitivity and better dynamic range
      */
     private fun calculateAudioLevel(buffer: ShortArray, length: Int): Float {
         if (length == 0) return 0f
@@ -555,8 +581,17 @@ class GeminiLiveAudioManager @Inject constructor(
         }
         
         val rms = kotlin.math.sqrt(sum / length)
-        // Normalize to 0-1 range (16-bit PCM max is 32767)
-        return (rms / 32767.0).toFloat().coerceIn(0f, 1f)
+        
+        // BALANCED: Good sensitivity with controlled amplification
+        val normalized = (rms / 20000.0).toFloat() // Moderate sensitivity
+        
+        // BALANCED: Apply curve for natural visual response
+        val curved = Math.pow(normalized.toDouble(), 0.7).toFloat() // Moderate power curve
+        
+        // BALANCED: Controlled amplification for elegant response
+        val amplified = curved * 2.0f // 2.0x amplification
+        
+        return amplified.coerceIn(0f, 1f)
     }
 
     /**
