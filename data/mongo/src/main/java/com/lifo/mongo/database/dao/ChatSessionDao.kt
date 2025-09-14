@@ -24,4 +24,7 @@ interface ChatSessionDao {
 
     @Query("UPDATE $CHAT_SESSION_TABLE SET messageCount = messageCount + 1, lastMessageAt = :timestamp WHERE id = :sessionId")
     suspend fun incrementMessageCount(sessionId: String, timestamp: Long)
+
+    @Query("UPDATE $CHAT_SESSION_TABLE SET lastMessageAt = :timestamp WHERE id = :sessionId")
+    suspend fun updateLastMessage(sessionId: String, timestamp: Long)
 }

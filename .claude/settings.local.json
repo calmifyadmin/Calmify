@@ -15,7 +15,9 @@
       "Bash(git add:*)",
       "Bash(.gradlew:*)",
       "Bash(gradlew.bat :features:chat:build:*)",
-      "Bash(cmd.exe:*)"
+      "Bash(cmd.exe:*)",
+      "Bash(dir:*)",
+      "Bash(gradlew:*)"
     ],
     "deny": [],
     "ask": []

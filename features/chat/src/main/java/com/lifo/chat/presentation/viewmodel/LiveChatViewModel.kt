@@ -16,6 +16,12 @@ import com.lifo.chat.data.camera.GeminiLiveCameraManager
 import com.lifo.chat.domain.audio.AudioQualityAnalyzer
 import com.lifo.chat.domain.audio.ConversationContextManager
 import com.lifo.chat.domain.model.*
+import com.lifo.mongo.repository.ChatRepository
+import com.lifo.mongo.repository.MongoDB
+import kotlinx.coroutines.flow.first
+import org.json.JSONArray
+import org.json.JSONObject
+import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
@@ -31,6 +37,8 @@ class LiveChatViewModel @Inject constructor(
     private val geminiCameraManager: GeminiLiveCameraManager,
     private val audioQualityAnalyzer: AudioQualityAnalyzer,
     private val conversationContextManager: ConversationContextManager,
+    private val chatRepository: ChatRepository,
+    private val firebaseAuth: FirebaseAuth,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -78,12 +86,16 @@ class LiveChatViewModel @Inject constructor(
     // Track if audio channel is open
     private var isAudioChannelOpen = false
 
+    // Current Live session ID for unification with Chat
+    private var currentLiveSessionId: String? = null
+
     init {
         Log.d(TAG, "🎙️ Initializing LiveChatViewModel...")
         observeGeminiStates()
         setupGeminiCallbacks()
         setupCameraIntegration()
         setupIntelligentSystems()
+        setupFunctionCalling()
     }
     
     private fun setupIntelligentSystems() {
@@ -325,6 +337,19 @@ class LiveChatViewModel @Inject constructor(
                 geminiWebSocketClient.sendAudioData(audioBase64)
             }
         }
+
+        // Gestione salvataggio messaggi Live in Chat DB
+        geminiWebSocketClient.onChatMessageSaved = { sessionId, content, isUser ->
+            currentLiveSessionId = sessionId
+            viewModelScope.launch {
+                try {
+                    chatRepository.saveLiveMessage(sessionId, content, isUser)
+                    Log.d(TAG, "💾 Live message integrated into Chat DB")
+                } catch (e: Exception) {
+                    Log.e(TAG, "❌ Failed to save Live message to Chat DB", e)
+                }
+            }
+        }
         
         // NUOVO: Gestione barge-in smart
         geminiAudioManager.onBargeInDetected = {
@@ -437,8 +462,12 @@ class LiveChatViewModel @Inject constructor(
                 // Avvio canale audio dopo la connessione
                 delay(500)
                 if (_uiState.value.connectionStatus == ConnectionStatus.Connected) {
+                    // Genera ID sessione per unificare Live e Chat
+                    currentLiveSessionId = "live-${System.currentTimeMillis()}"
+                    Log.d(TAG, "🆔 Generated Live session ID: $currentLiveSessionId")
+
                     startAudioChannel()
-                    
+
                     // NUOVO: Start voice learning and context reset for new session
                     geminiAudioManager.startVoiceLearning()
                     conversationContextManager.resetContext()
@@ -482,6 +511,7 @@ class LiveChatViewModel @Inject constructor(
             }
 
             _currentTranscript.value = ""
+            currentLiveSessionId = null
         }
     }
 
@@ -564,6 +594,227 @@ class LiveChatViewModel @Inject constructor(
     fun retryConnection() {
         clearError()
         connectToRealtime()
+    }
+
+    /**
+     * Configura il function calling per l'accesso ai diari
+     */
+    private fun setupFunctionCalling() {
+        // Callback per fornire dati utente al WebSocket
+        geminiWebSocketClient.onNeedUserData = {
+            try {
+                val userName = firebaseAuth.currentUser?.displayName ?:
+                              firebaseAuth.currentUser?.email?.substringBefore("@") ?:
+                              "Utente"
+
+                // Recupera gli ultimi 4 diari per il context
+                val diariesSummary = getDiariesSummary()
+
+                Pair(userName, diariesSummary)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error getting user data", e)
+                Pair("Utente", "Nessun diario disponibile")
+            }
+        }
+
+        // Callback per eseguire le funzioni
+        geminiWebSocketClient.onExecuteFunction = { functionName, args ->
+            try {
+                when (functionName) {
+                    "get_recent_diaries" -> executeGetRecentDiariesFunction(args)
+                    "search_diary" -> executeSearchDiaryFunction(args)
+                    else -> JSONObject().apply {
+                        put("error", "Unknown function: $functionName")
+                        put("results", JSONArray())
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error executing function $functionName", e)
+                JSONObject().apply {
+                    put("error", "Function execution failed")
+                    put("message", e.message)
+                    put("results", JSONArray())
+                }
+            }
+        }
+    }
+
+    /**
+     * Ottiene un sommario dei diari recenti
+     */
+    private suspend fun getDiariesSummary(): String {
+        return try {
+            val diariesResult = MongoDB.getAllDiaries().first()
+            when (diariesResult) {
+                is com.lifo.util.model.RequestState.Success -> {
+                    val recentDiaries = diariesResult.data
+                        .flatMap { it.value }
+                        .sortedByDescending { diary ->
+                            val realmInstant = diary.date
+                            java.time.Instant.ofEpochSecond(
+                                realmInstant.epochSeconds,
+                                realmInstant.nanosecondsOfSecond.toLong()
+                            )
+                        }
+                        .take(4)
+
+                    recentDiaries.joinToString("\n") { diary ->
+                        "- ${diary.title} (${diary.mood}): ${diary.description.take(100)}..."
+                    }
+                }
+                else -> "Nessun diario disponibile"
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting diaries summary", e)
+            "Errore nel recuperare i diari"
+        }
+    }
+
+    /**
+     * Esegue la funzione get_recent_diaries
+     */
+    private suspend fun executeGetRecentDiariesFunction(args: JSONObject): JSONObject {
+        val limit = args.optInt("limit", 4).coerceAtMost(10)
+
+        return try {
+            val diariesResult = MongoDB.getAllDiaries().first()
+
+            when (diariesResult) {
+                is com.lifo.util.model.RequestState.Success -> {
+                    val recentDiaries = diariesResult.data
+                        .flatMap { it.value }
+                        .sortedByDescending { diary ->
+                            val realmInstant = diary.date
+                            java.time.Instant.ofEpochSecond(
+                                realmInstant.epochSeconds,
+                                realmInstant.nanosecondsOfSecond.toLong()
+                            )
+                        }
+                        .take(limit)
+
+                    Log.d(TAG, "📖 Retrieved ${recentDiaries.size} recent diaries for function call")
+
+                    JSONObject().apply {
+                        put("results", JSONArray().apply {
+                            recentDiaries.forEach { diary ->
+                                put(JSONObject().apply {
+                                    put("id", diary._id.toHexString())
+                                    put("dateISO", try {
+                                        val realmInstant = diary.date
+                                        java.time.Instant.ofEpochSecond(
+                                            realmInstant.epochSeconds,
+                                            realmInstant.nanosecondsOfSecond.toLong()
+                                        ).toString()
+                                    } catch (e: Exception) {
+                                        java.time.Instant.now().toString()
+                                    })
+                                    put("title", diary.title)
+                                    put("mood", diary.mood)
+                                    put("snippet", diary.description.take(200))
+                                })
+                            }
+                        })
+                        put("total", recentDiaries.size)
+                    }
+                }
+                else -> JSONObject().apply {
+                    put("error", "Failed to retrieve diaries")
+                    put("results", JSONArray())
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error executing get_recent_diaries", e)
+            JSONObject().apply {
+                put("error", "Function execution failed")
+                put("message", e.message)
+                put("results", JSONArray())
+            }
+        }
+    }
+
+    /**
+     * Esegue la funzione search_diary
+     */
+    private suspend fun executeSearchDiaryFunction(args: JSONObject): JSONObject {
+        val query = args.getString("query")
+        val k = args.optInt("k", 5).coerceAtMost(20)
+
+        return try {
+            val diariesResult = MongoDB.getAllDiaries().first()
+
+            when (diariesResult) {
+                is com.lifo.util.model.RequestState.Success -> {
+                    val allDiaries = diariesResult.data.flatMap { it.value }
+
+                    // Ricerca semplice nei titoli e descrizioni
+                    val searchResults = allDiaries.filter { diary ->
+                        diary.title.contains(query, ignoreCase = true) ||
+                        diary.description.contains(query, ignoreCase = true)
+                    }.sortedByDescending { diary ->
+                        val realmInstant = diary.date
+                        java.time.Instant.ofEpochSecond(
+                            realmInstant.epochSeconds,
+                            realmInstant.nanosecondsOfSecond.toLong()
+                        )
+                    }.take(k)
+
+                    Log.d(TAG, "🔍 Search for '$query' returned ${searchResults.size} results")
+
+                    JSONObject().apply {
+                        put("results", JSONArray().apply {
+                            searchResults.forEach { diary ->
+                                put(JSONObject().apply {
+                                    put("id", diary._id.toHexString())
+                                    put("dateISO", try {
+                                        val realmInstant = diary.date
+                                        java.time.Instant.ofEpochSecond(
+                                            realmInstant.epochSeconds,
+                                            realmInstant.nanosecondsOfSecond.toLong()
+                                        ).toString()
+                                    } catch (e: Exception) {
+                                        java.time.Instant.now().toString()
+                                    })
+                                    put("title", diary.title)
+                                    put("mood", diary.mood)
+                                    put("snippet", diary.description.take(200))
+                                    put("relevance", calculateRelevance(diary, query))
+                                })
+                            }
+                        })
+                        put("query", query)
+                        put("total", searchResults.size)
+                    }
+                }
+                else -> JSONObject().apply {
+                    put("error", "Failed to search diaries")
+                    put("results", JSONArray())
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error executing search_diary", e)
+            JSONObject().apply {
+                put("error", "Function execution failed")
+                put("message", e.message)
+                put("results", JSONArray())
+            }
+        }
+    }
+
+    /**
+     * Calcola la rilevanza di un diario rispetto alla query
+     */
+    private fun calculateRelevance(diary: com.lifo.util.model.Diary, query: String): Double {
+        val titleMatches = diary.title.contains(query, ignoreCase = true)
+        val descriptionMatches = diary.description.contains(query, ignoreCase = true)
+        val moodMatches = diary.mood.contains(query, ignoreCase = true)
+
+        return when {
+            titleMatches && descriptionMatches -> 1.0
+            titleMatches -> 0.8
+            descriptionMatches -> 0.6
+            moodMatches -> 0.4
+            else -> 0.2
+        }
     }
 
     override fun onCleared() {

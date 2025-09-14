@@ -43,8 +43,8 @@ dependencies {
     // Core
     implementation libs.core.ktx
 
-    // Realm
-    implementation libs.realm.sync
+    // Realm - usa 'api' per esporre le dipendenze ai moduli dipendenti
+    api libs.realm.sync
 
     // Room
     implementation libs.room.runtime
@@ -69,6 +69,7 @@ dependencies {
     implementation libs.coroutines.core
     implementation libs.coroutines.android
 
+    implementation libs.gson
     // Testing
     testImplementation libs.junit
     androidTestImplementation libs.junit.ext

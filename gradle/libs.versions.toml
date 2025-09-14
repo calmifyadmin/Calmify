@@ -8,6 +8,9 @@ ksp = "1.9.22-1.0.17"
 compose-bom = "2024.02.00"
 compose-compiler = "1.5.8"
 
+# Converters
+gson = "2.11.0"
+
 # AndroidX - ALL LATEST
 core-ktx = "1.12.0"
 lifecycle = "2.7.0"
@@ -156,6 +159,8 @@ espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref =
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 compose-ui-test = { module = "androidx.compose.ui:ui-test-junit4", version.ref = "junit4" }
+
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 
 [plugins]
 com-android-application = { id = "com.android.application", version.ref = "agp" }

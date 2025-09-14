@@ -28,4 +28,11 @@ interface ChatRepository {
 
     // Export operations
     suspend fun exportSessionToDiary(sessionId: String): RequestState<String>
+
+    // Live Chat integration
+    suspend fun saveLiveMessage(
+        sessionId: String,
+        content: String,
+        isUser: Boolean
+    ): RequestState<ChatMessage>
 }

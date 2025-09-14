@@ -155,6 +155,73 @@ class ChatRepositoryImpl @Inject constructor(
         }
     }
 
+    /**
+     * Salva un messaggio proveniente da Live Chat nel database
+     * Questo permette l'unificazione tra Chat e Live
+     */
+    override suspend fun saveLiveMessage(
+        sessionId: String,
+        content: String,
+        isUser: Boolean
+    ): RequestState<ChatMessage> {
+        return withContext(Dispatchers.IO) {
+            try {
+                Log.d(TAG, "💬 Saving Live message: ${content.take(50)}... (user: $isUser)")
+
+                // Crea o aggiorna la sessione se necessario
+                ensureLiveSession(sessionId)
+
+                val message = ChatMessage(
+                    sessionId = sessionId,
+                    content = content,
+                    isUser = isUser,
+                    status = MessageStatus.SENT,
+                    timestamp = Instant.now()
+                )
+
+                chatMessageDao.insertMessage(message.toEntity())
+                chatSessionDao.incrementMessageCount(sessionId, Instant.now().toEpochMilli())
+
+                Log.d(TAG, "✅ Live message saved successfully")
+                RequestState.Success(message)
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Error saving Live message", e)
+                RequestState.Error(e)
+            }
+        }
+    }
+
+    /**
+     * Assicura che esista una sessione per Live Chat
+     */
+    private suspend fun ensureLiveSession(sessionId: String) {
+        try {
+            val existingSession = chatSessionDao.getSession(sessionId, currentUserId)
+
+            if (existingSession == null) {
+                Log.d(TAG, "📱 Creating new Live session: $sessionId")
+
+                val liveSession = ChatSession(
+                    id = sessionId,
+                    title = "Conversazione Live - ${java.time.format.DateTimeFormatter.ofPattern("HH:mm").format(java.time.LocalTime.now())}",
+                    createdAt = Instant.now(),
+                    lastMessageAt = Instant.now(),
+                    aiModel = "gemini-2.0-flash-live",
+                    messageCount = 0,
+                    ownerId = currentUserId
+                )
+
+                chatSessionDao.insertSession(liveSession.toEntity())
+                Log.d(TAG, "✅ Live session created: ${liveSession.title}")
+            } else {
+                // Aggiorna solo il timestamp dell'ultima attività
+                chatSessionDao.updateLastMessage(sessionId, Instant.now().toEpochMilli())
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error ensuring Live session", e)
+        }
+    }
+
     override suspend fun deleteMessage(messageId: String): RequestState<Boolean> {
         return withContext(Dispatchers.IO) {
             try {

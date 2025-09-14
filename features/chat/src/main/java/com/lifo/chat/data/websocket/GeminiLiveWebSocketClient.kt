@@ -13,9 +13,12 @@ import java.net.URI
 import java.nio.ByteBuffer
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.google.firebase.auth.FirebaseAuth
 
 @Singleton
-class GeminiLiveWebSocketClient @Inject constructor() {
+class GeminiLiveWebSocketClient @Inject constructor(
+    private val firebaseAuth: FirebaseAuth
+) {
 
     companion object {
         private const val TAG = "GeminiLiveWebSocket"
@@ -38,6 +41,16 @@ class GeminiLiveWebSocketClient @Inject constructor() {
     var onTurnStarted: (() -> Unit)? = null
     var onTurnCompleted: (() -> Unit)? = null
     var onInterrupted: (() -> Unit)? = null
+    var onToolCallReceived: ((String) -> Unit)? = null
+    var onChatMessageSaved: ((String, String, Boolean) -> Unit)? = null
+
+    // Cache per i diari dell'utente (delegato al ViewModel)
+    private var cachedUserName: String = ""
+    private var cachedDiariesSummary: String = ""
+
+    // Callbacks per delegare operazioni al ViewModel
+    var onNeedUserData: (suspend () -> Pair<String, String>)? = null
+    var onExecuteFunction: (suspend (String, JSONObject) -> JSONObject)? = null
 
     enum class ConnectionState {
         DISCONNECTED,
@@ -66,7 +79,17 @@ class GeminiLiveWebSocketClient @Inject constructor() {
             override fun onOpen(handshakedata: ServerHandshake?) {
                 Log.d(TAG, "✅ Connected. Server handshake: ${handshakedata?.httpStatus}")
                 _connectionState.value = ConnectionState.CONNECTED
-                sendInitialSetupMessage()
+
+                // Prefetch dati utente
+                scope.launch {
+                    try {
+                        loadUserData()
+                        sendInitialSetupMessage()
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error during preload: ${e.message}", e)
+                        sendInitialSetupMessage() // Continua comunque
+                    }
+                }
             }
 
             override fun onMessage(message: String?) {
@@ -96,8 +119,35 @@ class GeminiLiveWebSocketClient @Inject constructor() {
         webSocket?.connect()
     }
 
+    /**
+     * Carica i dati utente tramite callback
+     */
+    private suspend fun loadUserData() {
+        Log.d(TAG, "🔄 Loading user data...")
+
+        try {
+            // Recupera nome utente da Firebase
+            cachedUserName = firebaseAuth.currentUser?.displayName ?:
+                           firebaseAuth.currentUser?.email?.substringBefore("@") ?:
+                           "Utente"
+
+            // Recupera diari tramite callback dal ViewModel
+            val userData = onNeedUserData?.invoke()
+            if (userData != null) {
+                cachedUserName = userData.first
+                cachedDiariesSummary = userData.second
+                Log.d(TAG, "✅ User data loaded: $cachedUserName")
+            } else {
+                Log.w(TAG, "⚠️ No user data callback provided")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error loading user data", e)
+            cachedDiariesSummary = "Nessun diario disponibile"
+        }
+    }
+
     private fun sendInitialSetupMessage() {
-        Log.d(TAG, "📤 Sending initial setup message (v1beta, camelCase)")
+        Log.d(TAG, "📤 Sending initial setup message with function calling support")
 
         val setup = JSONObject().apply {
             // Modello
@@ -119,15 +169,55 @@ class GeminiLiveWebSocketClient @Inject constructor() {
             }
             put("generationConfig", generationConfig)
 
-            // System instruction (solo testo)
+            // System instruction con contesto personalizzato
+            val systemInstructionText = buildSystemInstruction()
             val systemInstruction = JSONObject().apply {
-                put("parts", JSONArray().put(JSONObject().put("text",
-                    "Parla in italiano con voce dolce, allegra e affettuosa. " +
-                            "Mantieni un tono caldo, sorridente e carina. " +
-                            "Usa frasi brevi e naturali.")
-                ))
+                put("parts", JSONArray().put(JSONObject().put("text", systemInstructionText)))
             }
             put("systemInstruction", systemInstruction)
+
+            // Function declarations per accesso ai diari
+            val tools = JSONArray().apply {
+                put(JSONObject().apply {
+                    put("functionDeclarations", JSONArray().apply {
+                        // Function 1: get_recent_diaries
+                        put(JSONObject().apply {
+                            put("name", "get_recent_diaries")
+                            put("description", "Ritorna gli ultimi diari dell'utente per comprendere meglio il suo stato attuale")
+                            put("parameters", JSONObject().apply {
+                                put("type", "OBJECT")
+                                put("properties", JSONObject().apply {
+                                    put("limit", JSONObject().apply {
+                                        put("type", "INTEGER")
+                                        put("description", "Numero di diari da ritornare (max 10)")
+                                    })
+                                })
+                            })
+                        })
+
+                        // Function 2: search_diary
+                        put(JSONObject().apply {
+                            put("name", "search_diary")
+                            put("description", "Cerca tra tutti i diari dell'utente basandosi su una query specifica")
+                            put("parameters", JSONObject().apply {
+                                put("type", "OBJECT")
+                                put("properties", JSONObject().apply {
+                                    put("query", JSONObject().apply {
+                                        put("type", "STRING")
+                                        put("description", "Parola chiave o frase da cercare nei diari")
+                                    })
+                                    put("k", JSONObject().apply {
+                                        put("type", "INTEGER")
+                                        put("description", "Numero massimo di risultati da ritornare")
+                                    })
+                                })
+                                put("required", JSONArray().put("query"))
+                            })
+                        })
+                    })
+                })
+            }
+            put("tools", tools)
 
             // Realtime input config: VAD server ON con nomi camelCase
             val realtimeInputConfig = JSONObject().apply {
@@ -149,7 +239,30 @@ class GeminiLiveWebSocketClient @Inject constructor() {
 
         val setupMessage = JSONObject().put("setup", setup)
         webSocket?.send(setupMessage.toString())
-        Log.d(TAG, "📤 Setup sent")
+        Log.d(TAG, "📤 Setup sent with function calling")
+    }
+
+    /**
+     * Costruisce il system instruction personalizzato
+     */
+    private fun buildSystemInstruction(): String {
+        val diariesInfo = if (cachedDiariesSummary.isNotEmpty()) {
+            "\n\nULTIMI DIARI DI $cachedUserName:\n$cachedDiariesSummary"
+        } else {
+            "\n\nNessun diario recente disponibile."
+        }
+
+        return """Sei l'assistente personale di $cachedUserName.
+Conosci l'utente e i suoi ultimi diari.
+
+- Prima usa i diari in cache per rispondere.
+- Se mancano informazioni specifiche → chiama 'search_diary'.
+- Se servono più diari recenti → chiama 'get_recent_diaries'.
+- Rispondi sempre in italiano, tono naturale e affettuoso.
+- Cita data+titolo del diario quando lo usi.
+- Parla con voce dolce, allegra e affettuosa.
+- Mantieni un tono caldo, sorridente e carino.
+- Usa frasi brevi e naturali.$diariesInfo"""
     }
 
     /** Invia chunk audio PCM 16k mono 16-bit in base64 */
@@ -178,7 +291,7 @@ class GeminiLiveWebSocketClient @Inject constructor() {
         }
         try {
             Log.d(TAG, "📸 Sending image data (${imageBase64.length} chars)")
-            
+
             // Costruzione del messaggio con il formato corretto per Gemini Live API
             val msg = JSONObject().apply {
                 put("realtimeInput", JSONObject().apply {
@@ -190,7 +303,7 @@ class GeminiLiveWebSocketClient @Inject constructor() {
                     })
                 })
             }
-            
+
             webSocket?.send(msg.toString())
             Log.d(TAG, "📤 Image sent successfully via mediaChunks")
         } catch (e: Exception) {
@@ -229,7 +342,11 @@ class GeminiLiveWebSocketClient @Inject constructor() {
             if (messageData.has("inputTranscription")) {
                 val t = messageData.getJSONObject("inputTranscription")
                 val text = t.optString("text", "")
-                if (text.isNotEmpty()) onPartialTranscript?.invoke(text)
+                if (text.isNotEmpty()) {
+                    onPartialTranscript?.invoke(text)
+                    // Salva messaggio utente automaticamente
+                    saveMessageToChat(text, true)
+                }
             }
             if (messageData.has("outputTranscription")) {
                 val t = messageData.getJSONObject("outputTranscription")
@@ -267,6 +384,8 @@ class GeminiLiveWebSocketClient @Inject constructor() {
                                 val text = part.getString("text")
                                 Log.d(TAG, "📝 GEMINI: $text")
                                 onTextReceived?.invoke(text)
+                                // Salva messaggio AI automaticamente
+                                saveMessageToChat(text, false)
                             }
 
                             if (part.has("inlineData")) {
@@ -295,6 +414,7 @@ class GeminiLiveWebSocketClient @Inject constructor() {
 
             if (messageData.has("toolCall")) {
                 Log.d(TAG, "🔧 Tool call received")
+                handleToolCall(messageData.getJSONObject("toolCall"))
             }
 
             if (messageData.has("error")) {
@@ -306,6 +426,96 @@ class GeminiLiveWebSocketClient @Inject constructor() {
 
         } catch (e: Exception) {
             Log.e(TAG, "Error parsing message: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Gestisce le chiamate ai tool da parte del modello
+     */
+    private fun handleToolCall(toolCall: JSONObject) {
+        scope.launch {
+            try {
+                val functionCalls = toolCall.getJSONArray("functionCalls")
+                val responses = mutableListOf<JSONObject>()
+
+                for (i in 0 until functionCalls.length()) {
+                    val functionCall = functionCalls.getJSONObject(i)
+                    val id = functionCall.getString("id")
+                    val name = functionCall.getString("name")
+                    val args = functionCall.getJSONObject("args")
+
+                    Log.d(TAG, "🔧 Executing function: $name with args: $args")
+
+                    val result = when (name) {
+                        "get_recent_diaries" -> executeGetRecentDiaries(args)
+                        "search_diary" -> executeSearchDiary(args)
+                        else -> {
+                            Log.w(TAG, "⚠️ Unknown function: $name")
+                            JSONObject().apply {
+                                put("error", "Unknown function: $name")
+                                put("message", "Function $name is not supported")
+                            }
+                        }
+                    }
+
+                    responses.add(JSONObject().apply {
+                        put("id", id)
+                        put("name", name)
+                        put("response", JSONObject().put("result", result))
+                    })
+                }
+
+                // Invia la risposta al tool call
+                val toolResponse = JSONObject().apply {
+                    put("toolResponse", JSONObject().apply {
+                        put("functionResponses", JSONArray(responses))
+                    })
+                }
+
+                webSocket?.send(toolResponse.toString())
+                Log.d(TAG, "📤 Tool response sent")
+
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Error handling tool call", e)
+                onError?.invoke("Tool execution failed: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Esegue get_recent_diaries tramite callback
+     */
+    private suspend fun executeGetRecentDiaries(args: JSONObject): JSONObject {
+        return onExecuteFunction?.invoke("get_recent_diaries", args) ?: JSONObject().apply {
+            put("error", "No function executor available")
+            put("results", JSONArray())
+        }
+    }
+
+    /**
+     * Esegue search_diary tramite callback
+     */
+    private suspend fun executeSearchDiary(args: JSONObject): JSONObject {
+        return onExecuteFunction?.invoke("search_diary", args) ?: JSONObject().apply {
+            put("error", "No function executor available")
+            put("results", JSONArray())
+        }
+    }
+
+    /**
+     * Salva un messaggio della conversazione Live nel database Chat
+     */
+    fun saveMessageToChat(content: String, isUser: Boolean, sessionId: String? = null) {
+        scope.launch {
+            try {
+                val actualSessionId = sessionId ?: "live-${System.currentTimeMillis()}"
+                Log.d(TAG, "💬 Saving Live message to Chat DB: ${content.take(50)}...")
+
+                // Callback per notificare il salvataggio
+                onChatMessageSaved?.invoke(actualSessionId, content, isUser)
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Error saving message to chat", e)
+            }
         }
     }
 

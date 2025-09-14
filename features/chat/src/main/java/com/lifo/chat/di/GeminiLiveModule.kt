@@ -10,6 +10,7 @@ import com.lifo.chat.domain.audio.AudioQualityAnalyzer
 import com.lifo.chat.domain.audio.ConversationContextManager
 import com.lifo.chat.domain.audio.MultiDeviceAudioManager
 import com.lifo.chat.domain.audio.AdvancedDuckingEngine
+import com.google.firebase.auth.FirebaseAuth
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -29,8 +30,8 @@ object GeminiLiveModule {
      */
     @Provides
     @Singleton
-    fun provideGeminiLiveWebSocketClient(): GeminiLiveWebSocketClient {
-        return GeminiLiveWebSocketClient()
+    fun provideGeminiLiveWebSocketClient(firebaseAuth: FirebaseAuth): GeminiLiveWebSocketClient {
+        return GeminiLiveWebSocketClient(firebaseAuth)
     }
 
     /**
