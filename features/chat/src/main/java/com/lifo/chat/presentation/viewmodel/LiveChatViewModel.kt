@@ -66,6 +66,7 @@ class LiveChatViewModel @Inject constructor(
     )
     val uiState: StateFlow<LiveChatUiState> = _uiState.asStateFlow()
     private var aiSpeaking: Boolean = false
+
     // Current transcript from AI
     private val _currentTranscript = MutableStateFlow("")
     val currentTranscript: StateFlow<String> = _currentTranscript.asStateFlow()
@@ -73,13 +74,13 @@ class LiveChatViewModel @Inject constructor(
     // Advanced audio intelligence properties for liquid visualizer
     private val _userVoiceLevel = MutableStateFlow(0f)
     val userVoiceLevel: StateFlow<Float> = _userVoiceLevel.asStateFlow()
-    
+
     private val _aiVoiceLevel = MutableStateFlow(0f)
     val aiVoiceLevel: StateFlow<Float> = _aiVoiceLevel.asStateFlow()
-    
+
     private val _emotionalIntensity = MutableStateFlow(0.5f)
     val emotionalIntensity: StateFlow<Float> = _emotionalIntensity.asStateFlow()
-    
+
     private val _conversationMode = MutableStateFlow("casual")
     val conversationMode: StateFlow<String> = _conversationMode.asStateFlow()
 
@@ -97,10 +98,10 @@ class LiveChatViewModel @Inject constructor(
         setupIntelligentSystems()
         setupFunctionCalling()
     }
-    
+
     private fun setupIntelligentSystems() {
         Log.d(TAG, "🧠 Setting up intelligent audio systems...")
-        
+
         // Observe conversation context for adaptive optimization
         viewModelScope.launch {
             conversationContextManager.optimizationSettings.collectLatest { settings ->
@@ -108,18 +109,18 @@ class LiveChatViewModel @Inject constructor(
                 applyAudioOptimizationSettings(settings)
             }
         }
-        
+
         // Observe audio quality metrics for real-time optimization
         viewModelScope.launch {
             audioQualityAnalyzer.overallQuality.collectLatest { quality ->
                 Log.v(TAG, "📊 Audio quality: ${quality.grade} (${quality.totalScore})")
-                
+
                 if (quality.grade == AudioQualityAnalyzer.QualityGrade.POOR) {
                     handlePoorAudioQuality(quality)
                 }
             }
         }
-        
+
         // Start audio quality measurement when recording begins
         viewModelScope.launch {
             geminiAudioManager.recordingState.collectLatest { isRecording ->
@@ -132,25 +133,25 @@ class LiveChatViewModel @Inject constructor(
                 }
             }
         }
-        
+
         // Real-time audio level updates for liquid visualizer
         viewModelScope.launch {
             geminiAudioManager.userAudioLevel.collectLatest { userLevel ->
                 _userVoiceLevel.value = userLevel
-                
+
                 // Update emotional intensity based on conversation context
                 val intensity = conversationContextManager.getCurrentEmotionalIntensity()
                 _emotionalIntensity.value = intensity
             }
         }
-        
+
         // AI voice level from real audio playback
         viewModelScope.launch {
             geminiAudioManager.aiAudioLevel.collectLatest { aiLevel ->
                 _aiVoiceLevel.value = aiLevel
             }
         }
-        
+
         // Conversation mode updates
         viewModelScope.launch {
             conversationContextManager.currentModeString.collectLatest { mode ->
@@ -159,7 +160,7 @@ class LiveChatViewModel @Inject constructor(
             }
         }
     }
-    
+
     private fun applyAudioOptimizationSettings(settings: ConversationContextManager.AudioOptimizationSettings) {
         Log.d(TAG, "🔧 Adaptive settings applied:")
         Log.d(TAG, "   • Barge-in sensitivity: ${settings.bargeinSensitivity}")
@@ -167,15 +168,15 @@ class LiveChatViewModel @Inject constructor(
         Log.d(TAG, "   • Echo cancellation: ${settings.echoCancellationLevel}")
         Log.d(TAG, "   • Reason: ${settings.contextReason}")
     }
-    
+
     private fun handlePoorAudioQuality(quality: AudioQualityAnalyzer.OverallQualityScore) {
         Log.w(TAG, "⚠️ Poor audio quality detected: ${quality.primaryIssue}")
         quality.recommendations.forEach { recommendation ->
             Log.w(TAG, "💡 Recommendation: $recommendation")
         }
-        
-        _uiState.update { 
-            it.copy(error = "Audio quality issue: ${quality.primaryIssue}") 
+
+        _uiState.update {
+            it.copy(error = "Audio quality issue: ${quality.primaryIssue}")
         }
     }
 
@@ -222,18 +223,21 @@ class LiveChatViewModel @Inject constructor(
             }
         }
 
-        // Observe playback state (gating half-duplex + flush quando parte il TTS)
+        // UPDATED: Observe playback state with proper half-duplex gating
         viewModelScope.launch {
             var lastIsPlaying = false
             geminiAudioManager.playbackState.collectLatest { isPlaying ->
-                // Quando inizia a parlare l'AI, chiudiamo il turno utente lato server
+
+                // PATCH #2: When AI starts speaking, immediately close user's stream
                 if (isPlaying && !lastIsPlaying) {
+                    Log.d(TAG, "🔊 AI started speaking - sending EOS to flush VAD buffer")
                     geminiWebSocketClient.sendEndOfStream()
                 }
+
                 aiSpeaking = isPlaying
                 lastIsPlaying = isPlaying
-                
-                // NUOVO: Notifica al audio manager per barge-in detection
+
+                // Notify audio manager for half-duplex control
                 geminiAudioManager.setAiSpeaking(isPlaying)
 
                 _uiState.update {
@@ -250,7 +254,6 @@ class LiveChatViewModel @Inject constructor(
         }
     }
 
-
     private fun setupGeminiCallbacks() {
         // Partial transcript from user speech
         geminiWebSocketClient.onPartialTranscript = { partial ->
@@ -262,8 +265,8 @@ class LiveChatViewModel @Inject constructor(
         geminiWebSocketClient.onFinalTranscript = { final ->
             Log.d(TAG, "🎤 Final transcript: $final")
             _uiState.update { it.copy(transcript = final, partialTranscript = "") }
-            
-            // NUOVO: Add to conversation context for intelligent optimization
+
+            // Add to conversation context for intelligent optimization
             conversationContextManager.addMessage(
                 content = final,
                 isFromUser = true,
@@ -290,13 +293,38 @@ class LiveChatViewModel @Inject constructor(
             handleBargeIn()
         }
 
+        // PATCH #2: Connect TTS events to audio manager
+        // Quando parte il TTS dell'AI
+        geminiWebSocketClient.onTtsStarted = {
+            Log.d(TAG, "🔊 TTS started - blocking mic input")
+
+            // Blocca l'upload audio (PATCH #1 in AudioManager)
+            geminiAudioManager.setAiSpeaking(true)
+
+            // Opzionale: se vuoi fermare completamente la registrazione durante il TTS
+            // geminiAudioManager.stopRecording()
+        }
+
+        // Quando finisce il TTS dell'AI
+        geminiWebSocketClient.onTtsEnded = {
+            Log.d(TAG, "🔇 TTS ended - resuming mic input")
+
+            // Riabilita l'upload audio
+            geminiAudioManager.setAiSpeaking(false)
+
+            // Se avevi fermato la registrazione, riavviala
+            // if (_uiState.value.connectionStatus == ConnectionStatus.Connected) {
+            //     geminiAudioManager.startRecording()
+            // }
+        }
+
         // Text from Gemini
         geminiWebSocketClient.onTextReceived = { text ->
             Log.d(TAG, "📝 Text from Gemini: $text")
             _currentTranscript.value = text
             _uiState.update { it.copy(transcript = text) }
-            
-            // NUOVO: Add AI response to conversation context
+
+            // Add AI response to conversation context
             conversationContextManager.addMessage(
                 content = text,
                 isFromUser = false,
@@ -331,10 +359,14 @@ class LiveChatViewModel @Inject constructor(
             }
         }
 
-        // Send audio chunks to Gemini (con gating per half-duplex)
+        // PATCH #1 INTEGRATION: Send audio chunks to Gemini with half-duplex gating
         geminiAudioManager.onAudioChunkReady = { audioBase64 ->
+            // Only send audio when not muted AND AI is not speaking
             if (!_uiState.value.isMuted && !aiSpeaking) {
                 geminiWebSocketClient.sendAudioData(audioBase64)
+            } else if (aiSpeaking) {
+                // Log for debugging when audio is blocked due to AI speaking
+                Log.v(TAG, "🚫 Audio chunk blocked - AI is speaking (half-duplex)")
             }
         }
 
@@ -350,8 +382,8 @@ class LiveChatViewModel @Inject constructor(
                 }
             }
         }
-        
-        // NUOVO: Gestione barge-in smart
+
+        // Gestione barge-in smart
         geminiAudioManager.onBargeInDetected = {
             Log.d(TAG, "🗣️ Smart barge-in detected - interrupting AI")
             handleSmartBargeIn()
@@ -406,10 +438,10 @@ class LiveChatViewModel @Inject constructor(
     }
 
     fun startCameraPreview(surfaceTexture: SurfaceTexture) {
-        Log.d(TAG, "🔍 startCameraPreview() called in LiveChatViewModel")
-        Log.d(TAG, "🔍 hasCameraPermission: ${_uiState.value.hasCameraPermission}")
-        Log.d(TAG, "🔍 isCameraActive: ${_uiState.value.isCameraActive}")
-        Log.d(TAG, "🔍 surfaceTexture: $surfaceTexture")
+        Log.d(TAG, "📝 startCameraPreview() called in LiveChatViewModel")
+        Log.d(TAG, "📝 hasCameraPermission: ${_uiState.value.hasCameraPermission}")
+        Log.d(TAG, "📝 isCameraActive: ${_uiState.value.isCameraActive}")
+        Log.d(TAG, "📝 surfaceTexture: $surfaceTexture")
 
         if (!_uiState.value.hasCameraPermission) {
             Log.w(TAG, "❌ Cannot start camera without permission")
@@ -468,7 +500,7 @@ class LiveChatViewModel @Inject constructor(
 
                     startAudioChannel()
 
-                    // NUOVO: Start voice learning and context reset for new session
+                    // Start voice learning and context reset for new session
                     geminiAudioManager.startVoiceLearning()
                     conversationContextManager.resetContext()
                     Log.d(TAG, "🧠 Intelligent systems initialized for new session")
@@ -547,17 +579,17 @@ class LiveChatViewModel @Inject constructor(
             )
         }
     }
-    
-    /** NUOVO: Gestisce smart barge-in (rilevato localmente) */
+
+    /** Gestisce smart barge-in (rilevato localmente) */
     private fun handleSmartBargeIn() {
         Log.d(TAG, "🎯 Smart barge-in: immediate TTS stop, user audio resumes")
-        
+
         // ✅ Stop immediato TTS locale
         geminiAudioManager.handleInterruption()
-        
+
         // ✅ Reset stato AI speaking (permette invio audio utente)
         aiSpeaking = false
-        
+
         // ✅ UI feedback immediato
         _uiState.update {
             it.copy(
@@ -566,7 +598,6 @@ class LiveChatViewModel @Inject constructor(
             )
         }
     }
-
 
     /** Toggle mute/unmute con gestione VAD (flush su mute) */
     fun toggleMute() {
@@ -604,8 +635,8 @@ class LiveChatViewModel @Inject constructor(
         geminiWebSocketClient.onNeedUserData = {
             try {
                 val userName = firebaseAuth.currentUser?.displayName ?:
-                              firebaseAuth.currentUser?.email?.substringBefore("@") ?:
-                              "Utente"
+                firebaseAuth.currentUser?.email?.substringBefore("@") ?:
+                "Utente"
 
                 // Recupera gli ultimi 4 diari per il context
                 val diariesSummary = getDiariesSummary()
@@ -749,7 +780,7 @@ class LiveChatViewModel @Inject constructor(
                     // Ricerca semplice nei titoli e descrizioni
                     val searchResults = allDiaries.filter { diary ->
                         diary.title.contains(query, ignoreCase = true) ||
-                        diary.description.contains(query, ignoreCase = true)
+                                diary.description.contains(query, ignoreCase = true)
                     }.sortedByDescending { diary ->
                         val realmInstant = diary.date
                         java.time.Instant.ofEpochSecond(

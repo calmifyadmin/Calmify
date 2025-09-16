@@ -172,7 +172,7 @@ fun ChatScreen(
                 secondaryColor = MaterialTheme.colorScheme.tertiary,
                 backgroundColor = MaterialTheme.colorScheme.surface,
                 // NEW: Real-time audio intelligence integration
-                userVoiceLevel = if (isLiveChatMode) userVoiceLevel else 0f,
+                userVoiceLevel = if (isLiveChatMode) userVoiceLevel else if (isVoiceActive) 0.7f else 0f,
                 aiVoiceLevel = if (isLiveChatMode) aiVoiceLevel else if (voiceState.isSpeaking) 0.8f else 0f,
                 emotionalIntensity = if (isLiveChatMode) emotionalIntensity else when(voiceEmotion) {
                     com.lifo.chat.audio.GeminiNativeVoiceSystem.Emotion.HAPPY -> 0.9f
@@ -184,7 +184,8 @@ fun ChatScreen(
                     com.lifo.chat.audio.GeminiNativeVoiceSystem.Emotion.NEUTRAL -> 0.5f
                 },
                 conversationMode = if (isLiveChatMode) conversationMode else "casual",
-                isUserSpeaking = isLiveChatMode && liveChatState.turnState == TurnState.UserTurn && !liveChatState.isMuted,
+                isUserSpeaking = (isLiveChatMode && liveChatState.turnState == TurnState.UserTurn && !liveChatState.isMuted) ||
+                                 (!isLiveChatMode && isVoiceActive),
                 isAiSpeaking = (isLiveChatMode && liveChatState.aiEmotion == AIEmotion.Speaking) || voiceState.isSpeaking
             )
         } else {
