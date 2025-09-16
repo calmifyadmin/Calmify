@@ -80,21 +80,21 @@ fun ChatScreen(
     val isVoiceActive by viewModel.isVoiceActive.collectAsStateWithLifecycle()
     val voiceEmotion by viewModel.voiceEmotion.collectAsStateWithLifecycle()
     val voiceLatency by viewModel.voiceLatency.collectAsStateWithLifecycle()
-    
+
     // Live chat state
     val liveChatState by liveChatViewModel.uiState.collectAsStateWithLifecycle()
     val currentTranscript by liveChatViewModel.currentTranscript.collectAsStateWithLifecycle()
-    
+
     // Advanced audio intelligence states for liquid visualizer
     val userVoiceLevel by liveChatViewModel.userVoiceLevel.collectAsStateWithLifecycle()
     val aiVoiceLevel by liveChatViewModel.aiVoiceLevel.collectAsStateWithLifecycle()
     val emotionalIntensity by liveChatViewModel.emotionalIntensity.collectAsStateWithLifecycle()
     val conversationMode by liveChatViewModel.conversationMode.collectAsStateWithLifecycle()
-    
+
     // Track chat modes - regular voice vs live chat mode
     var isVoiceChatMode by remember { mutableStateOf(false) }
     var isLiveChatMode by remember { mutableStateOf(false) }
-    
+
     // Permission handling for voice and camera modes
     val audioPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -112,7 +112,7 @@ fun ChatScreen(
             }
         }
     }
-    
+
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -122,7 +122,7 @@ fun ChatScreen(
             liveChatViewModel.onCameraPermissionDenied()
         }
     }
-    
+
     // Load existing session if sessionId is provided
     LaunchedEffect(sessionId) {
         sessionId?.let {
@@ -162,17 +162,17 @@ fun ChatScreen(
         // Intelligent liquid wave background with real-time audio analytics
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             GeminiLiquidVisualizer(
-                isSpeaking = voiceState.isSpeaking || 
-                            isVoiceActive ||
-                            uiState.isLoading ||
-                            uiState.streamingMessage != null ||
-                            (isLiveChatMode && (liveChatState.aiEmotion == AIEmotion.Speaking || liveChatState.audioLevel > 0.1f)),
+                isSpeaking = voiceState.isSpeaking ||
+                        isVoiceActive ||
+                        uiState.isLoading ||
+                        uiState.streamingMessage != null ||
+                        (isLiveChatMode && (liveChatState.aiEmotion == AIEmotion.Speaking || liveChatState.audioLevel > 0.1f)),
                 modifier = Modifier.fillMaxSize(),
                 primaryColor = MaterialTheme.colorScheme.primary,
                 secondaryColor = MaterialTheme.colorScheme.tertiary,
                 backgroundColor = MaterialTheme.colorScheme.surface,
                 // NEW: Real-time audio intelligence integration
-                userVoiceLevel = if (isLiveChatMode) userVoiceLevel else if (isVoiceActive) 0.7f else 0f,
+                userVoiceLevel = if (isLiveChatMode) userVoiceLevel else 0f,
                 aiVoiceLevel = if (isLiveChatMode) aiVoiceLevel else if (voiceState.isSpeaking) 0.8f else 0f,
                 emotionalIntensity = if (isLiveChatMode) emotionalIntensity else when(voiceEmotion) {
                     com.lifo.chat.audio.GeminiNativeVoiceSystem.Emotion.HAPPY -> 0.9f
@@ -184,8 +184,7 @@ fun ChatScreen(
                     com.lifo.chat.audio.GeminiNativeVoiceSystem.Emotion.NEUTRAL -> 0.5f
                 },
                 conversationMode = if (isLiveChatMode) conversationMode else "casual",
-                isUserSpeaking = (isLiveChatMode && liveChatState.turnState == TurnState.UserTurn && !liveChatState.isMuted) ||
-                                 (!isLiveChatMode && isVoiceActive),
+                isUserSpeaking = isLiveChatMode && liveChatState.turnState == TurnState.UserTurn && !liveChatState.isMuted,
                 isAiSpeaking = (isLiveChatMode && liveChatState.aiEmotion == AIEmotion.Speaking) || voiceState.isSpeaking
             )
         } else {
@@ -260,201 +259,201 @@ fun ChatScreen(
                 )
             },
             containerColor = Color.Transparent,
-        bottomBar = {
-            Column {
-                // Live chat camera preview
-                AnimatedVisibility(
-                    visible = isLiveChatMode,
-                    enter = slideInVertically { it } + fadeIn(),
-                    exit = slideOutVertically { it } + fadeOut()
-                ) {
-                    LiveCameraPreview(
-                        isCameraActive = liveChatState.isCameraActive,
-                        hasCameraPermission = liveChatState.hasCameraPermission,
-                        isCameraEnabled = liveChatState.isCameraActive || liveChatState.hasCameraPermission,
-                        onToggleCamera = {
-                            if (liveChatState.hasCameraPermission) {
+            bottomBar = {
+                Column {
+                    // Live chat camera preview
+                    AnimatedVisibility(
+                        visible = isLiveChatMode,
+                        enter = slideInVertically { it } + fadeIn(),
+                        exit = slideOutVertically { it } + fadeOut()
+                    ) {
+                        LiveCameraPreview(
+                            isCameraActive = liveChatState.isCameraActive,
+                            hasCameraPermission = liveChatState.hasCameraPermission,
+                            isCameraEnabled = liveChatState.isCameraActive || liveChatState.hasCameraPermission,
+                            onToggleCamera = {
+                                if (liveChatState.hasCameraPermission) {
+                                    if (liveChatState.isCameraActive) {
+                                        liveChatViewModel.stopCameraPreview()
+                                    } else {
+                                        // Camera will start when surface is ready
+                                    }
+                                } else {
+                                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                                }
+                            },
+                            onRequestCameraPermission = {
+                                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                            },
+                            onSurfaceTextureReady = { surfaceTexture ->
+                                android.util.Log.d("ChatScreen", "📸 onSurfaceTextureReady called")
+                                android.util.Log.d("ChatScreen", "📸 hasCameraPermission: ${liveChatState.hasCameraPermission}")
+                                android.util.Log.d("ChatScreen", "📸 isCameraActive: ${liveChatState.isCameraActive}")
+                                if (liveChatState.hasCameraPermission && !liveChatState.isCameraActive) {
+                                    android.util.Log.d("ChatScreen", "📸 Calling startCameraPreview...")
+                                    liveChatViewModel.startCameraPreview(surfaceTexture)
+                                } else {
+                                    android.util.Log.w("ChatScreen", "📸 NOT starting camera: permission=${liveChatState.hasCameraPermission}, active=${liveChatState.isCameraActive}")
+                                }
+                            },
+                            onSurfaceTextureDestroyed = {
                                 if (liveChatState.isCameraActive) {
                                     liveChatViewModel.stopCameraPreview()
-                                } else {
-                                    // Camera will start when surface is ready
                                 }
-                            } else {
-                                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                             }
-                        },
-                        onRequestCameraPermission = {
-                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                        },
-                        onSurfaceTextureReady = { surfaceTexture ->
-                            android.util.Log.d("ChatScreen", "📸 onSurfaceTextureReady called")
-                            android.util.Log.d("ChatScreen", "📸 hasCameraPermission: ${liveChatState.hasCameraPermission}")
-                            android.util.Log.d("ChatScreen", "📸 isCameraActive: ${liveChatState.isCameraActive}")
-                            if (liveChatState.hasCameraPermission && !liveChatState.isCameraActive) {
-                                android.util.Log.d("ChatScreen", "📸 Calling startCameraPreview...")
-                                liveChatViewModel.startCameraPreview(surfaceTexture)
-                            } else {
-                                android.util.Log.w("ChatScreen", "📸 NOT starting camera: permission=${liveChatState.hasCameraPermission}, active=${liveChatState.isCameraActive}")
-                            }
-                        },
-                        onSurfaceTextureDestroyed = {
-                            if (liveChatState.isCameraActive) {
-                                liveChatViewModel.stopCameraPreview()
-                            }
-                        }
-                    )
-                }
+                        )
+                    }
 
-                // Live chat transcript display
-                AnimatedVisibility(
-                    visible = isLiveChatMode && currentTranscript.isNotEmpty(),
-                    enter = slideInVertically { it } + fadeIn(),
-                    exit = slideOutVertically { it } + fadeOut()
-                ) {
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f)
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    // Live chat transcript display
+                    AnimatedVisibility(
+                        visible = isLiveChatMode && currentTranscript.isNotEmpty(),
+                        enter = slideInVertically { it } + fadeIn(),
+                        exit = slideOutVertically { it } + fadeOut()
                     ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f)
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
                         ) {
-                            Text(
-                                text = "🤖 Gemini Live",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                            )
-                            Text(
-                                text = currentTranscript,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                textAlign = TextAlign.Center
-                            )
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = "🤖 Gemini Live",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                )
+                                Text(
+                                    text = currentTranscript,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
                         }
                     }
-                }
 
-                // Global voice indicator - appears above input when speaking
-                AnimatedVisibility(
-                    visible = isVoiceActive && !isLiveChatMode,
-                    enter = slideInVertically { it } + fadeIn(),
-                    exit = slideOutVertically { it } + fadeOut()
-                ) {
-                    FluidAudioIndicator(
-                        isSpeaking = isVoiceActive,
-                        emotion = voiceEmotion.name,
-                        latencyMs = voiceLatency,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        Color.Transparent,
-                                        MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+                    // Global voice indicator - appears above input when speaking
+                    AnimatedVisibility(
+                        visible = isVoiceActive && !isLiveChatMode,
+                        enter = slideInVertically { it } + fadeIn(),
+                        exit = slideOutVertically { it } + fadeOut()
+                    ) {
+                        FluidAudioIndicator(
+                            isSpeaking = isVoiceActive,
+                            emotion = voiceEmotion.name,
+                            latencyMs = voiceLatency,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color.Transparent,
+                                            MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+                                        )
                                     )
                                 )
-                            )
-                    )
-                }
+                        )
+                    }
 
-                // Conditional input: Mute/Unmute for live mode, regular input for normal mode
-                if (isLiveChatMode) {
-                    LiveChatMuteUnmuteSection(
-                        connectionStatus = liveChatState.connectionStatus,
-                        isMuted = liveChatState.isMuted,
-                        turnState = liveChatState.turnState,
-                        isChannelOpen = liveChatState.isChannelOpen,
-                        partialTranscript = liveChatState.partialTranscript,
-                        error = liveChatState.error,
-                        onToggleMute = liveChatViewModel::toggleMute,
-                        onRetryConnection = liveChatViewModel::retryConnection,
-                        onClearError = liveChatViewModel::clearError
-                    )
-                } else {
-                    // Regular chat input - visible for text and regular voice messages
-                    ChatInput(
-                        value = uiState.inputText,
-                        onValueChange = viewModel::updateInputText,
-                        onSend = {
-                            viewModel.sendMessage(uiState.inputText)
-                        },
-                        isEnabled = !uiState.isLoading && uiState.streamingMessage == null,
-                        isStreaming = uiState.streamingMessage != null,
-                        currentEmotion = voiceEmotion.name,
-                        voiceNaturalness = voiceState.naturalness,
-                        isVoiceChatMode = isVoiceChatMode,
-                        onVoiceRecord = if (isVoiceChatMode) {
-                            {
-                                // Il ChatInput gestisce già internamente la registrazione vocale
-                                // tramite il suo speechRecognizer quando si preme il pulsante mic
-                            }
-                        } else null
-                    )
+                    // Conditional input: Mute/Unmute for live mode, regular input for normal mode
+                    if (isLiveChatMode) {
+                        LiveChatMuteUnmuteSection(
+                            connectionStatus = liveChatState.connectionStatus,
+                            isMuted = liveChatState.isMuted,
+                            turnState = liveChatState.turnState,
+                            isChannelOpen = liveChatState.isChannelOpen,
+                            partialTranscript = liveChatState.partialTranscript,
+                            error = liveChatState.error,
+                            onToggleMute = liveChatViewModel::toggleMute,
+                            onRetryConnection = liveChatViewModel::retryConnection,
+                            onClearError = liveChatViewModel::clearError
+                        )
+                    } else {
+                        // Regular chat input - visible for text and regular voice messages
+                        ChatInput(
+                            value = uiState.inputText,
+                            onValueChange = viewModel::updateInputText,
+                            onSend = {
+                                viewModel.sendMessage(uiState.inputText)
+                            },
+                            isEnabled = !uiState.isLoading && uiState.streamingMessage == null,
+                            isStreaming = uiState.streamingMessage != null,
+                            currentEmotion = voiceEmotion.name,
+                            voiceNaturalness = voiceState.naturalness,
+                            isVoiceChatMode = isVoiceChatMode,
+                            onVoiceRecord = if (isVoiceChatMode) {
+                                {
+                                    // Il ChatInput gestisce già internamente la registrazione vocale
+                                    // tramite il suo speechRecognizer quando si preme il pulsante mic
+                                }
+                            } else null
+                        )
+                    }
                 }
             }
-        }
         ) { paddingValues ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-            // Messages list
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                items(
-                    items = uiState.messages,
-                    key = { it.id }
-                ) { message ->
-                    ChatBubble(
-                        message = message,
-                        isSpeaking = voiceState.isSpeaking &&
-                                voiceState.currentSpeakingMessageId == message.id,
-                        voiceEmotion = voiceEmotion.name,
-                        voiceLatency = voiceLatency,
-                        onSpeak = {
-                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            viewModel.speakMessage(message.id)
-                        },
-                        onDelete = {
-                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            viewModel.deleteMessage(message.id)
-                        },
-                        onCopy = {
-                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            copyToClipboard(context, message.content)
-                        }
-                    )
-                }
-
-                // Streaming message
-                uiState.streamingMessage?.let { streaming ->
-                    item(key = streaming.id) {
-                        StreamingMessage(
-                            content = streaming.content.toString(),
-                            isSpeaking = isVoiceActive
+                // Messages list
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    items(
+                        items = uiState.messages,
+                        key = { it.id }
+                    ) { message ->
+                        ChatBubble(
+                            message = message,
+                            isSpeaking = voiceState.isSpeaking &&
+                                    voiceState.currentSpeakingMessageId == message.id,
+                            voiceEmotion = voiceEmotion.name,
+                            voiceLatency = voiceLatency,
+                            onSpeak = {
+                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                viewModel.speakMessage(message.id)
+                            },
+                            onDelete = {
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                viewModel.deleteMessage(message.id)
+                            },
+                            onCopy = {
+                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                copyToClipboard(context, message.content)
+                            }
                         )
                     }
+
+                    // Streaming message
+                    uiState.streamingMessage?.let { streaming ->
+                        item(key = streaming.id) {
+                            StreamingMessage(
+                                content = streaming.content.toString(),
+                                isSpeaking = isVoiceActive
+                            )
+                        }
+                    }
+                }
+
+                // Empty state handling
+                if (uiState.messages.isEmpty() && uiState.streamingMessage == null && uiState.currentSession == null) {
+                    NaturalAnimatedEmptyState(
+                        userName = userDisplayName,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
                 }
             }
-
-            // Empty state handling
-            if (uiState.messages.isEmpty() && uiState.streamingMessage == null && uiState.currentSession == null) {
-                NaturalAnimatedEmptyState(
-                    userName = userDisplayName,
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            }
-        }
         } // End of Scaffold
     } // End of Box
 
@@ -522,10 +521,10 @@ private fun MinimalTopBar(
                             ) {
                                 // Animated status indicator
                                 val statusInfiniteTransition = rememberInfiniteTransition(label = "statusAnimation")
-                                val shouldAnimate = (liveChatConnectionStatus == ConnectionStatus.Connected && 
-                                                   (liveChatTurnState == TurnState.UserTurn || liveChatTurnState == TurnState.AgentTurn)) ||
-                                                   liveChatConnectionStatus == ConnectionStatus.Connecting
-                                
+                                val shouldAnimate = (liveChatConnectionStatus == ConnectionStatus.Connected &&
+                                        (liveChatTurnState == TurnState.UserTurn || liveChatTurnState == TurnState.AgentTurn)) ||
+                                        liveChatConnectionStatus == ConnectionStatus.Connecting
+
                                 val statusPulse by statusInfiniteTransition.animateFloat(
                                     initialValue = if (shouldAnimate) 0.5f else 1f,
                                     targetValue = if (shouldAnimate) 1f else 1f,
@@ -535,7 +534,7 @@ private fun MinimalTopBar(
                                     ),
                                     label = "statusPulse"
                                 )
-                                
+
                                 Box(
                                     modifier = Modifier
                                         .size(8.dp)
@@ -553,7 +552,7 @@ private fun MinimalTopBar(
                                             shape = CircleShape
                                         )
                                 )
-                                
+
                                 Text(
                                     text = when (liveChatConnectionStatus) {
                                         ConnectionStatus.Connected -> when (liveChatTurnState) {
@@ -566,8 +565,8 @@ private fun MinimalTopBar(
                                         ConnectionStatus.Disconnected -> "Offline"
                                     },
                                     style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = if (liveChatConnectionStatus == ConnectionStatus.Connected && 
-                                                   liveChatTurnState != TurnState.WaitingForUser) 
+                                    fontWeight = if (liveChatConnectionStatus == ConnectionStatus.Connected &&
+                                        liveChatTurnState != TurnState.WaitingForUser)
                                         FontWeight.Medium else FontWeight.Normal
                                 )
                             }
@@ -641,19 +640,19 @@ private fun MinimalTopBar(
             ) {
                 // Animated microphone icon based on turn state
                 val micScale by animateFloatAsState(
-                    targetValue = if (isLiveChatMode && liveChatConnectionStatus == ConnectionStatus.Connected && 
-                                    liveChatTurnState == TurnState.UserTurn && !isLiveChatMuted) 1.2f else 1f,
+                    targetValue = if (isLiveChatMode && liveChatConnectionStatus == ConnectionStatus.Connected &&
+                        liveChatTurnState == TurnState.UserTurn && !isLiveChatMuted) 1.2f else 1f,
                     animationSpec = spring(
                         dampingRatio = Spring.DampingRatioMediumBouncy,
                         stiffness = Spring.StiffnessMedium
                     ),
                     label = "micScale"
                 )
-                
+
                 Icon(
-                    imageVector = if (isLiveChatMode && isLiveChatMuted) 
-                        Icons.Outlined.VolumeOff 
-                    else 
+                    imageVector = if (isLiveChatMode && isLiveChatMuted)
+                        Icons.Outlined.VolumeOff
+                    else
                         Icons.Default.Mic,
                     contentDescription = if (isLiveChatMode) "Live Chat Attiva" else "Attiva Live Chat",
                     modifier = Modifier.graphicsLayer {
@@ -668,11 +667,11 @@ private fun MinimalTopBar(
                 IconButton(
                     onClick = onToggleVoiceChat,
                     colors = IconButtonDefaults.iconButtonColors(
-                        containerColor = if (isVoiceChatMode) 
-                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f) 
+                        containerColor = if (isVoiceChatMode)
+                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
                         else Color.Transparent,
-                        contentColor = if (isVoiceChatMode) 
-                            MaterialTheme.colorScheme.secondary 
+                        contentColor = if (isVoiceChatMode)
+                            MaterialTheme.colorScheme.secondary
                         else MaterialTheme.colorScheme.onSurface
                     )
                 ) {
@@ -682,7 +681,7 @@ private fun MinimalTopBar(
                     )
                 }
             }
-            
+
             // Stop voice button when speaking
             AnimatedVisibility(
                 visible = isVoiceSpeaking,
@@ -998,12 +997,12 @@ private fun LiveChatMuteUnmuteSection(
                         TurnState.WaitingForUser -> if (isMuted) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
                     }
                 }
-                
+
                 // Animated pulsing indicator for active states
-                val shouldPulse = (connectionStatus == ConnectionStatus.Connected && 
-                                 (turnState == TurnState.UserTurn || turnState == TurnState.AgentTurn)) ||
-                                 connectionStatus == ConnectionStatus.Connecting
-                
+                val shouldPulse = (connectionStatus == ConnectionStatus.Connected &&
+                        (turnState == TurnState.UserTurn || turnState == TurnState.AgentTurn)) ||
+                        connectionStatus == ConnectionStatus.Connecting
+
                 val infiniteTransition = rememberInfiniteTransition(label = "statusPulse")
                 val pulseAlpha by infiniteTransition.animateFloat(
                     initialValue = if (shouldPulse) 0.3f else 1f,
@@ -1014,7 +1013,7 @@ private fun LiveChatMuteUnmuteSection(
                     ),
                     label = "pulseAlpha"
                 )
-                
+
                 Box(
                     modifier = Modifier
                         .size(12.dp)
@@ -1023,7 +1022,7 @@ private fun LiveChatMuteUnmuteSection(
                             shape = CircleShape
                         )
                 )
-                
+
                 // Status text with enhanced messaging
                 Text(
                     text = when (connectionStatus) {
@@ -1033,9 +1032,9 @@ private fun LiveChatMuteUnmuteSection(
                         ConnectionStatus.Connected -> when (turnState) {
                             TurnState.UserTurn -> "🎤 È il tuo turno - Parla ora"
                             TurnState.AgentTurn -> "🤖 Gemini sta rispondendo..."
-                            TurnState.WaitingForUser -> if (isMuted) 
-                                "🔇 Microfono disattivato - Premi per attivare" 
-                            else 
+                            TurnState.WaitingForUser -> if (isMuted)
+                                "🔇 Microfono disattivato - Premi per attivare"
+                            else
                                 "🎤 In ascolto - VAD attivo"
                         }
                     },
@@ -1044,7 +1043,7 @@ private fun LiveChatMuteUnmuteSection(
                     textAlign = TextAlign.Center
                 )
             }
-            
+
             // Show partial transcript while speaking
             AnimatedVisibility(
                 visible = partialTranscript.isNotEmpty(),
@@ -1076,9 +1075,9 @@ private fun LiveChatMuteUnmuteSection(
                 .fillMaxWidth()
                 .height(64.dp),
             colors = ButtonDefaults.filledTonalButtonColors(
-                containerColor = if (isMuted) 
-                    MaterialTheme.colorScheme.errorContainer 
-                else 
+                containerColor = if (isMuted)
+                    MaterialTheme.colorScheme.errorContainer
+                else
                     MaterialTheme.colorScheme.primaryContainer
             )
         ) {
@@ -1095,26 +1094,26 @@ private fun LiveChatMuteUnmuteSection(
                     ),
                     label = "micScale"
                 )
-                
+
                 Icon(
                     imageVector = if (isMuted) Icons.Outlined.VolumeOff else Icons.Default.Mic,
                     contentDescription = if (isMuted) "Attiva microfono" else "Disattiva microfono",
-                    tint = if (isMuted) 
-                        MaterialTheme.colorScheme.onErrorContainer 
-                    else 
+                    tint = if (isMuted)
+                        MaterialTheme.colorScheme.onErrorContainer
+                    else
                         MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.graphicsLayer {
                         scaleX = micScale
                         scaleY = micScale
                     }
                 )
-                
+
                 Column {
                     Text(
                         text = if (isMuted) "Attiva Microfono" else "Disattiva Microfono",
                         style = MaterialTheme.typography.labelLarge
                     )
-                    
+
                     // Subtitle with turn-taking hint
                     Text(
                         text = when {
@@ -1129,7 +1128,7 @@ private fun LiveChatMuteUnmuteSection(
                 }
             }
         }
-        
+
         // Enhanced VAD and turn-taking indicators
         if (connectionStatus == ConnectionStatus.Connected && isChannelOpen) {
             Column(
@@ -1152,26 +1151,26 @@ private fun LiveChatMuteUnmuteSection(
                         ),
                         label = "vadPulseAlpha"
                     )
-                    
+
                     Box(
                         modifier = Modifier
                             .size(10.dp)
                             .background(
-                                color = if (!isMuted) 
+                                color = if (!isMuted)
                                     MaterialTheme.colorScheme.primary.copy(alpha = vadPulseAlpha)
-                                else 
+                                else
                                     MaterialTheme.colorScheme.outline,
                                 shape = CircleShape
                             )
                     )
-                    
+
                     Text(
                         text = "VAD: ${if (!isMuted) "Attivo" else "In pausa"}",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                
+
                 // Turn-taking guide
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -1186,9 +1185,9 @@ private fun LiveChatMuteUnmuteSection(
                             modifier = Modifier
                                 .size(6.dp)
                                 .background(
-                                    if (turnState == TurnState.UserTurn) 
-                                        MaterialTheme.colorScheme.primary 
-                                    else 
+                                    if (turnState == TurnState.UserTurn)
+                                        MaterialTheme.colorScheme.primary
+                                    else
                                         MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
                                     shape = CircleShape
                                 )
@@ -1196,13 +1195,13 @@ private fun LiveChatMuteUnmuteSection(
                         Text(
                             text = "Tu",
                             style = MaterialTheme.typography.labelSmall,
-                            color = if (turnState == TurnState.UserTurn) 
-                                MaterialTheme.colorScheme.primary 
-                            else 
+                            color = if (turnState == TurnState.UserTurn)
+                                MaterialTheme.colorScheme.primary
+                            else
                                 MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                         )
                     }
-                    
+
                     // AI turn indicator
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -1212,9 +1211,9 @@ private fun LiveChatMuteUnmuteSection(
                             modifier = Modifier
                                 .size(6.dp)
                                 .background(
-                                    if (turnState == TurnState.AgentTurn) 
-                                        MaterialTheme.colorScheme.secondary 
-                                    else 
+                                    if (turnState == TurnState.AgentTurn)
+                                        MaterialTheme.colorScheme.secondary
+                                    else
                                         MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
                                     shape = CircleShape
                                 )
@@ -1222,9 +1221,9 @@ private fun LiveChatMuteUnmuteSection(
                         Text(
                             text = "AI",
                             style = MaterialTheme.typography.labelSmall,
-                            color = if (turnState == TurnState.AgentTurn) 
-                                MaterialTheme.colorScheme.secondary 
-                            else 
+                            color = if (turnState == TurnState.AgentTurn)
+                                MaterialTheme.colorScheme.secondary
+                            else
                                 MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                         )
                     }

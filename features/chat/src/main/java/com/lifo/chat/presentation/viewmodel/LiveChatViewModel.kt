@@ -66,7 +66,6 @@ class LiveChatViewModel @Inject constructor(
     )
     val uiState: StateFlow<LiveChatUiState> = _uiState.asStateFlow()
     private var aiSpeaking: Boolean = false
-
     // Current transcript from AI
     private val _currentTranscript = MutableStateFlow("")
     val currentTranscript: StateFlow<String> = _currentTranscript.asStateFlow()
@@ -223,21 +222,18 @@ class LiveChatViewModel @Inject constructor(
             }
         }
 
-        // UPDATED: Observe playback state with proper half-duplex gating
+        // Observe playback state (gating half-duplex + flush quando parte il TTS)
         viewModelScope.launch {
             var lastIsPlaying = false
             geminiAudioManager.playbackState.collectLatest { isPlaying ->
-
-                // PATCH #2: When AI starts speaking, immediately close user's stream
+                // Quando inizia a parlare l'AI, chiudiamo il turno utente lato server
                 if (isPlaying && !lastIsPlaying) {
-                    Log.d(TAG, "🔊 AI started speaking - sending EOS to flush VAD buffer")
                     geminiWebSocketClient.sendEndOfStream()
                 }
-
                 aiSpeaking = isPlaying
                 lastIsPlaying = isPlaying
 
-                // Notify audio manager for half-duplex control
+                // NUOVO: Notifica al audio manager per barge-in detection
                 geminiAudioManager.setAiSpeaking(isPlaying)
 
                 _uiState.update {
@@ -254,6 +250,7 @@ class LiveChatViewModel @Inject constructor(
         }
     }
 
+
     private fun setupGeminiCallbacks() {
         // Partial transcript from user speech
         geminiWebSocketClient.onPartialTranscript = { partial ->
@@ -266,7 +263,7 @@ class LiveChatViewModel @Inject constructor(
             Log.d(TAG, "🎤 Final transcript: $final")
             _uiState.update { it.copy(transcript = final, partialTranscript = "") }
 
-            // Add to conversation context for intelligent optimization
+            // NUOVO: Add to conversation context for intelligent optimization
             conversationContextManager.addMessage(
                 content = final,
                 isFromUser = true,
@@ -293,38 +290,13 @@ class LiveChatViewModel @Inject constructor(
             handleBargeIn()
         }
 
-        // PATCH #2: Connect TTS events to audio manager
-        // Quando parte il TTS dell'AI
-        geminiWebSocketClient.onTtsStarted = {
-            Log.d(TAG, "🔊 TTS started - blocking mic input")
-
-            // Blocca l'upload audio (PATCH #1 in AudioManager)
-            geminiAudioManager.setAiSpeaking(true)
-
-            // Opzionale: se vuoi fermare completamente la registrazione durante il TTS
-            // geminiAudioManager.stopRecording()
-        }
-
-        // Quando finisce il TTS dell'AI
-        geminiWebSocketClient.onTtsEnded = {
-            Log.d(TAG, "🔇 TTS ended - resuming mic input")
-
-            // Riabilita l'upload audio
-            geminiAudioManager.setAiSpeaking(false)
-
-            // Se avevi fermato la registrazione, riavviala
-            // if (_uiState.value.connectionStatus == ConnectionStatus.Connected) {
-            //     geminiAudioManager.startRecording()
-            // }
-        }
-
         // Text from Gemini
         geminiWebSocketClient.onTextReceived = { text ->
             Log.d(TAG, "📝 Text from Gemini: $text")
             _currentTranscript.value = text
             _uiState.update { it.copy(transcript = text) }
 
-            // Add AI response to conversation context
+            // NUOVO: Add AI response to conversation context
             conversationContextManager.addMessage(
                 content = text,
                 isFromUser = false,
@@ -359,14 +331,10 @@ class LiveChatViewModel @Inject constructor(
             }
         }
 
-        // PATCH #1 INTEGRATION: Send audio chunks to Gemini with half-duplex gating
+        // Send audio chunks to Gemini (con gating per half-duplex)
         geminiAudioManager.onAudioChunkReady = { audioBase64 ->
-            // Only send audio when not muted AND AI is not speaking
             if (!_uiState.value.isMuted && !aiSpeaking) {
                 geminiWebSocketClient.sendAudioData(audioBase64)
-            } else if (aiSpeaking) {
-                // Log for debugging when audio is blocked due to AI speaking
-                Log.v(TAG, "🚫 Audio chunk blocked - AI is speaking (half-duplex)")
             }
         }
 
@@ -383,7 +351,7 @@ class LiveChatViewModel @Inject constructor(
             }
         }
 
-        // Gestione barge-in smart
+        // NUOVO: Gestione barge-in smart
         geminiAudioManager.onBargeInDetected = {
             Log.d(TAG, "🗣️ Smart barge-in detected - interrupting AI")
             handleSmartBargeIn()
@@ -438,10 +406,10 @@ class LiveChatViewModel @Inject constructor(
     }
 
     fun startCameraPreview(surfaceTexture: SurfaceTexture) {
-        Log.d(TAG, "📝 startCameraPreview() called in LiveChatViewModel")
-        Log.d(TAG, "📝 hasCameraPermission: ${_uiState.value.hasCameraPermission}")
-        Log.d(TAG, "📝 isCameraActive: ${_uiState.value.isCameraActive}")
-        Log.d(TAG, "📝 surfaceTexture: $surfaceTexture")
+        Log.d(TAG, "🔍 startCameraPreview() called in LiveChatViewModel")
+        Log.d(TAG, "🔍 hasCameraPermission: ${_uiState.value.hasCameraPermission}")
+        Log.d(TAG, "🔍 isCameraActive: ${_uiState.value.isCameraActive}")
+        Log.d(TAG, "🔍 surfaceTexture: $surfaceTexture")
 
         if (!_uiState.value.hasCameraPermission) {
             Log.w(TAG, "❌ Cannot start camera without permission")
@@ -500,7 +468,7 @@ class LiveChatViewModel @Inject constructor(
 
                     startAudioChannel()
 
-                    // Start voice learning and context reset for new session
+                    // NUOVO: Start voice learning and context reset for new session
                     geminiAudioManager.startVoiceLearning()
                     conversationContextManager.resetContext()
                     Log.d(TAG, "🧠 Intelligent systems initialized for new session")
@@ -580,7 +548,7 @@ class LiveChatViewModel @Inject constructor(
         }
     }
 
-    /** Gestisce smart barge-in (rilevato localmente) */
+    /** NUOVO: Gestisce smart barge-in (rilevato localmente) */
     private fun handleSmartBargeIn() {
         Log.d(TAG, "🎯 Smart barge-in: immediate TTS stop, user audio resumes")
 
@@ -598,6 +566,7 @@ class LiveChatViewModel @Inject constructor(
             )
         }
     }
+
 
     /** Toggle mute/unmute con gestione VAD (flush su mute) */
     fun toggleMute() {

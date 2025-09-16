@@ -44,10 +44,6 @@ class GeminiLiveWebSocketClient @Inject constructor(
     var onToolCallReceived: ((String) -> Unit)? = null
     var onChatMessageSaved: ((String, String, Boolean) -> Unit)? = null
 
-    // PATCH #2: Aggiungi callback per TTS events
-    var onTtsStarted: (() -> Unit)? = null
-    var onTtsEnded: (() -> Unit)? = null
-
     // Cache per i diari dell'utente (delegato al ViewModel)
     private var cachedUserName: String = ""
     private var cachedDiariesSummary: String = ""
@@ -97,7 +93,7 @@ class GeminiLiveWebSocketClient @Inject constructor(
             }
 
             override fun onMessage(message: String?) {
-                Log.d(TAG, "🔥 Message Received: ${message?.take(200)}")
+                Log.d(TAG, "📥 Message Received: ${message?.take(200)}")
                 receiveMessage(message)
             }
 
@@ -323,7 +319,7 @@ Conosci l'utente e i suoi ultimi diari.
         try {
             val msg = JSONObject().put("realtimeInput", JSONObject().put("audioStreamEnd", true))
             webSocket?.send(msg.toString())
-            Log.d(TAG, "📚 audioStreamEnd sent")
+            Log.d(TAG, "🔚 audioStreamEnd sent")
         } catch (e: Exception) {
             Log.e(TAG, "Error sending audioStreamEnd", e)
         }
@@ -366,34 +362,18 @@ Conosci l'utente e i suoi ultimi diari.
                 if (turnComplete) {
                     Log.d(TAG, "✅ Turn complete")
                     onTurnCompleted?.invoke()
-                    // PATCH #2: Notifica fine TTS
-                    onTtsEnded?.invoke()
                 }
 
                 val interrupted = serverContent.optBoolean("interrupted", false)
                 if (interrupted) {
                     Log.d(TAG, "⚠️ Response interrupted by user (barge-in detected)")
                     onInterrupted?.invoke()
-                    // PATCH #2: Notifica fine TTS per interruzione
-                    onTtsEnded?.invoke()
                 }
 
                 if (serverContent.has("modelTurn")) {
                     val modelTurn = serverContent.getJSONObject("modelTurn")
                     Log.d(TAG, "🤖 AI turn started - user should stop speaking")
                     onTurnStarted?.invoke()
-
-                    // PATCH #2: Quando parte il TTS, segnala all'app e chiudi lo stream
-                    onTtsStarted?.invoke()
-
-                    // 👉 Se stai ancora inviando input, chiudi esplicitamente lo stream corrente
-                    try {
-                        val eos = JSONObject().put("realtimeInput", JSONObject().put("audioStreamEnd", true))
-                        webSocket?.send(eos.toString())
-                        Log.d(TAG, "🔚 audioStreamEnd sent (on TTS start)")
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Could not send EOS on TTS start", e)
-                    }
 
                     if (modelTurn.has("parts")) {
                         val parts = modelTurn.getJSONArray("parts")

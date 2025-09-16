@@ -13,27 +13,27 @@ import javax.inject.Singleton
 
 /**
  * Multi-Device Audio Handoff Manager
- * 
+ *
  * Provides seamless audio device switching and routing optimization
  * for the best possible voice chat experience across different devices.
- * 
+ *
  * Features:
  * - Automatic optimal device detection
  * - Seamless handoff between audio devices
  * - Quality-based device scoring and recommendation
  * - Context-aware device selection
  * - Bluetooth SCO optimization
- * 
+ *
  * @author Jarvis AI Assistant
  */
 @Singleton
 class MultiDeviceAudioManager @Inject constructor(
     private val context: Context
 ) {
-    
+
     companion object {
         private const val TAG = "MultiDeviceAudioManager"
-        
+
         // Device priority scores (higher = better for voice chat)
         private const val WIRED_HEADSET_SCORE = 100f
         private const val USB_HEADSET_SCORE = 95f
@@ -42,16 +42,16 @@ class MultiDeviceAudioManager @Inject constructor(
         private const val EARPIECE_SCORE = 75f
         private const val SPEAKER_SCORE = 50f
         private const val DEFAULT_SCORE = 25f
-        
+
         // Quality factors
         private const val LATENCY_FACTOR = 0.3f
         private const val ECHO_REDUCTION_FACTOR = 0.3f
         private const val NOISE_ISOLATION_FACTOR = 0.2f
         private const val CONVENIENCE_FACTOR = 0.2f
     }
-    
+
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-    
+
     // Data classes for device management
     data class AudioDeviceProfile(
         val deviceInfo: AudioDeviceInfo,
@@ -65,7 +65,7 @@ class MultiDeviceAudioManager @Inject constructor(
         val echoReductionCapability: Float, // 0-1 scale
         val noiseIsolation: Float // 0-1 scale
     )
-    
+
     data class HandoffResult(
         val success: Boolean,
         val fromDevice: AudioDeviceProfile?,
@@ -73,17 +73,17 @@ class MultiDeviceAudioManager @Inject constructor(
         val reason: String,
         val optimizationApplied: List<String>
     )
-    
+
     enum class AudioDeviceType {
         WIRED_HEADSET,
-        USB_HEADSET, 
+        USB_HEADSET,
         BLUETOOTH_SCO,
         BLUETOOTH_A2DP,
         EARPIECE,
         SPEAKER,
         UNKNOWN
     }
-    
+
     enum class HandoffTrigger {
         USER_MANUAL,      // User explicitly selected device
         DEVICE_CONNECTED, // New device connected
@@ -91,20 +91,20 @@ class MultiDeviceAudioManager @Inject constructor(
         CONTEXT_CHANGE,   // Conversation context changed
         AUTOMATIC         // System-recommended optimal switch
     }
-    
+
     // State management
     private val _currentDevice = MutableStateFlow<AudioDeviceProfile?>(null)
     val currentDevice: StateFlow<AudioDeviceProfile?> = _currentDevice
-    
+
     private val _availableDevices = MutableStateFlow<List<AudioDeviceProfile>>(emptyList())
     val availableDevices: StateFlow<List<AudioDeviceProfile>> = _availableDevices
-    
+
     private val _recommendedDevice = MutableStateFlow<AudioDeviceProfile?>(null)
     val recommendedDevice: StateFlow<AudioDeviceProfile?> = _recommendedDevice
-    
+
     private var lastHandoffTime = 0L
     private val handoffHistory = mutableListOf<HandoffResult>()
-    
+
     /**
      * Initialize multi-device management
      */
@@ -113,18 +113,18 @@ class MultiDeviceAudioManager @Inject constructor(
         refreshAvailableDevices()
         detectOptimalDevice()
     }
-    
+
     /**
      * Refresh list of available audio devices
      */
     @RequiresApi(Build.VERSION_CODES.M)
     fun refreshAvailableDevices() {
         val devices = mutableListOf<AudioDeviceProfile>()
-        
+
         try {
             // Get all available audio devices
-            val audioDevices = audioManager.getDevices(AudioManager.GET_DEVICES_INPUTS or AudioManager.GET_DEVICES_OUTPUTS)
-            
+            val audioDevices = audioManager.getDevices(AudioManager.GET_DEVICES_ALL)
+
             audioDevices.forEach { deviceInfo ->
                 val profile = createDeviceProfile(deviceInfo)
                 if (profile != null) {
@@ -132,33 +132,33 @@ class MultiDeviceAudioManager @Inject constructor(
                     Log.v(TAG, "📱 Found device: ${profile.deviceType} (score: ${profile.qualityScore})")
                 }
             }
-            
+
             // Sort by quality score (best first)
             devices.sortByDescending { it.qualityScore }
-            
+
             _availableDevices.value = devices
-            
+
             Log.d(TAG, "🔍 Found ${devices.size} audio devices")
-            
+
         } catch (e: Exception) {
             Log.e(TAG, "Error refreshing devices", e)
         }
     }
-    
+
     /**
      * Create detailed device profile with quality scoring
      */
     private fun createDeviceProfile(deviceInfo: AudioDeviceInfo): AudioDeviceProfile? {
         val deviceType = classifyDeviceType(deviceInfo)
         if (deviceType == AudioDeviceType.UNKNOWN) return null
-        
+
         val baseScore = getBaseScore(deviceType)
         val qualityFactors = calculateQualityFactors(deviceType)
         val finalScore = baseScore * qualityFactors
-        
+
         val strengths = mutableListOf<String>()
         val limitations = mutableListOf<String>()
-        
+
         // Analyze device characteristics
         when (deviceType) {
             AudioDeviceType.WIRED_HEADSET -> {
@@ -187,7 +187,7 @@ class MultiDeviceAudioManager @Inject constructor(
             }
             AudioDeviceType.UNKNOWN -> return null
         }
-        
+
         return AudioDeviceProfile(
             deviceInfo = deviceInfo,
             deviceType = deviceType,
@@ -201,7 +201,7 @@ class MultiDeviceAudioManager @Inject constructor(
             noiseIsolation = estimateNoiseIsolation(deviceType)
         )
     }
-    
+
     /**
      * Classify audio device type from AudioDeviceInfo
      */
@@ -218,7 +218,7 @@ class MultiDeviceAudioManager @Inject constructor(
             else -> AudioDeviceType.UNKNOWN
         }
     }
-    
+
     /**
      * Get base quality score for device type
      */
@@ -233,13 +233,13 @@ class MultiDeviceAudioManager @Inject constructor(
             AudioDeviceType.UNKNOWN -> DEFAULT_SCORE
         }
     }
-    
+
     /**
      * Calculate quality adjustment factors
      */
     private fun calculateQualityFactors(deviceType: AudioDeviceType): Float {
         var factor = 1.0f
-        
+
         // Latency factor
         val latencyPenalty = when (deviceType) {
             AudioDeviceType.BLUETOOTH_A2DP -> 0.15f
@@ -247,7 +247,7 @@ class MultiDeviceAudioManager @Inject constructor(
             else -> 0f
         }
         factor -= latencyPenalty * LATENCY_FACTOR
-        
+
         // Echo reduction bonus
         val echoBonus = when (deviceType) {
             AudioDeviceType.WIRED_HEADSET, AudioDeviceType.USB_HEADSET -> 0.2f
@@ -256,7 +256,7 @@ class MultiDeviceAudioManager @Inject constructor(
             else -> 0f
         }
         factor += echoBonus * ECHO_REDUCTION_FACTOR
-        
+
         // Noise isolation bonus
         val noiseBonus = when (deviceType) {
             AudioDeviceType.WIRED_HEADSET, AudioDeviceType.USB_HEADSET -> 0.25f
@@ -265,28 +265,28 @@ class MultiDeviceAudioManager @Inject constructor(
             else -> 0f
         }
         factor += noiseBonus * NOISE_ISOLATION_FACTOR
-        
+
         return factor.coerceIn(0.5f, 1.5f)
     }
-    
+
     /**
      * Detect and recommend optimal device for current context
      */
     fun detectOptimalDevice(): AudioDeviceProfile? {
         val devices = _availableDevices.value
         if (devices.isEmpty()) return null
-        
+
         // Find highest scoring available device
         val optimal = devices.filter { it.isAvailable }.maxByOrNull { it.qualityScore }
-        
+
         optimal?.let {
             _recommendedDevice.value = it
             Log.d(TAG, "🎯 Optimal device: ${it.deviceType} (score: ${it.qualityScore})")
         }
-        
+
         return optimal
     }
-    
+
     /**
      * Perform seamless device handoff
      */
@@ -296,7 +296,7 @@ class MultiDeviceAudioManager @Inject constructor(
         trigger: HandoffTrigger = HandoffTrigger.AUTOMATIC
     ): HandoffResult {
         val currentTime = System.currentTimeMillis()
-        
+
         // Prevent too frequent handoffs
         if (currentTime - lastHandoffTime < 2000) {
             return HandoffResult(
@@ -307,28 +307,28 @@ class MultiDeviceAudioManager @Inject constructor(
                 optimizationApplied = emptyList()
             )
         }
-        
+
         val fromDevice = _currentDevice.value
         val optimizations = mutableListOf<String>()
-        
+
         try {
             Log.d(TAG, "🔄 Performing handoff to ${targetDevice.deviceType}")
-            
+
             // Pre-handoff optimizations
             prepareForHandoff(targetDevice, optimizations)
-            
+
             // Perform the actual device switch
             val success = switchToDevice(targetDevice)
-            
+
             if (success) {
                 // Post-handoff optimizations
                 optimizeForDevice(targetDevice, optimizations)
-                
+
                 _currentDevice.value = targetDevice
                 lastHandoffTime = currentTime
-                
+
                 Log.d(TAG, "✅ Handoff successful to ${targetDevice.deviceType}")
-                
+
                 val result = HandoffResult(
                     success = true,
                     fromDevice = fromDevice,
@@ -336,10 +336,10 @@ class MultiDeviceAudioManager @Inject constructor(
                     reason = getTriggerReason(trigger),
                     optimizationApplied = optimizations
                 )
-                
+
                 handoffHistory.add(result)
                 return result
-                
+
             } else {
                 Log.e(TAG, "❌ Handoff failed to ${targetDevice.deviceType}")
                 return HandoffResult(
@@ -350,7 +350,7 @@ class MultiDeviceAudioManager @Inject constructor(
                     optimizationApplied = optimizations
                 )
             }
-            
+
         } catch (e: Exception) {
             Log.e(TAG, "Error during handoff", e)
             return HandoffResult(
@@ -362,7 +362,7 @@ class MultiDeviceAudioManager @Inject constructor(
             )
         }
     }
-    
+
     /**
      * Prepare audio system for device handoff
      */
@@ -387,7 +387,7 @@ class MultiDeviceAudioManager @Inject constructor(
             }
         }
     }
-    
+
     /**
      * Switch to target audio device
      */
@@ -404,7 +404,7 @@ class MultiDeviceAudioManager @Inject constructor(
             false
         }
     }
-    
+
     /**
      * Apply device-specific optimizations
      */
@@ -433,7 +433,7 @@ class MultiDeviceAudioManager @Inject constructor(
             }
         }
     }
-    
+
     /**
      * Auto-handoff when better device becomes available
      */
@@ -441,19 +441,19 @@ class MultiDeviceAudioManager @Inject constructor(
         refreshAvailableDevices()
         val current = _currentDevice.value
         val optimal = detectOptimalDevice()
-        
-        if (optimal != null && current != null && 
+
+        if (optimal != null && current != null &&
             optimal.qualityScore > current.qualityScore + 10f) { // Significant improvement threshold
-            
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 val result = performHandoff(optimal, HandoffTrigger.QUALITY_OPTIMIZATION)
                 return result.success
             }
         }
-        
+
         return false
     }
-    
+
     /**
      * Recommend device for specific conversation context
      */
@@ -465,13 +465,13 @@ class MultiDeviceAudioManager @Inject constructor(
     ): AudioDeviceProfile? {
         val devices = _availableDevices.value.filter { it.isAvailable }
         if (devices.isEmpty()) return null
-        
+
         var bestDevice: AudioDeviceProfile? = null
         var bestScore = 0f
-        
+
         devices.forEach { device ->
             var contextScore = device.qualityScore
-            
+
             // Adjust score based on context
             when (device.deviceType) {
                 AudioDeviceType.WIRED_HEADSET, AudioDeviceType.USB_HEADSET -> {
@@ -496,16 +496,16 @@ class MultiDeviceAudioManager @Inject constructor(
                 }
                 else -> { /* No adjustment */ }
             }
-            
+
             if (contextScore > bestScore) {
                 bestScore = contextScore
                 bestDevice = device
             }
         }
-        
+
         return bestDevice
     }
-    
+
     // Utility methods
     private fun estimateLatency(deviceType: AudioDeviceType): Float {
         return when (deviceType) {
@@ -516,7 +516,7 @@ class MultiDeviceAudioManager @Inject constructor(
             AudioDeviceType.UNKNOWN -> 50f
         }
     }
-    
+
     private fun estimateEchoReduction(deviceType: AudioDeviceType): Float {
         return when (deviceType) {
             AudioDeviceType.WIRED_HEADSET, AudioDeviceType.USB_HEADSET -> 0.95f
@@ -527,7 +527,7 @@ class MultiDeviceAudioManager @Inject constructor(
             AudioDeviceType.UNKNOWN -> 0.5f
         }
     }
-    
+
     private fun estimateNoiseIsolation(deviceType: AudioDeviceType): Float {
         return when (deviceType) {
             AudioDeviceType.WIRED_HEADSET, AudioDeviceType.USB_HEADSET -> 0.9f
@@ -538,7 +538,7 @@ class MultiDeviceAudioManager @Inject constructor(
             AudioDeviceType.UNKNOWN -> 0.5f
         }
     }
-    
+
     private fun getTriggerReason(trigger: HandoffTrigger): String {
         return when (trigger) {
             HandoffTrigger.USER_MANUAL -> "User manually selected device"
@@ -548,7 +548,7 @@ class MultiDeviceAudioManager @Inject constructor(
             HandoffTrigger.AUTOMATIC -> "System recommended optimal device"
         }
     }
-    
+
     /**
      * Get comprehensive device management report
      */
