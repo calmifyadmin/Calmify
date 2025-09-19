@@ -226,8 +226,13 @@ class LiveChatViewModel @Inject constructor(
         viewModelScope.launch {
             var lastIsPlaying = false
             geminiAudioManager.playbackState.collectLatest { isPlaying ->
-
+                // Quando inizia a parlare l'AI, chiudiamo il turno utente lato server
+                if (isPlaying && !lastIsPlaying) {
+                    geminiWebSocketClient.sendEndOfStream()
+                }
                 aiSpeaking = isPlaying
+                lastIsPlaying = isPlaying
+
                 // NUOVO: Notifica al audio manager per barge-in detection
                 geminiAudioManager.setAiSpeaking(isPlaying)
 
@@ -247,92 +252,93 @@ class LiveChatViewModel @Inject constructor(
 
 
     private fun setupGeminiCallbacks() {
-        // Transcript parziale (UI)
+        // Partial transcript from user speech
         geminiWebSocketClient.onPartialTranscript = { partial ->
             Log.d(TAG, "🎤 Partial transcript: $partial")
             _uiState.update { it.copy(partialTranscript = partial) }
         }
 
-        // Apri/chiudi il gate PRIMA del TTS: turn start/complete
+        // Final transcript from user speech
+        geminiWebSocketClient.onFinalTranscript = { final ->
+            Log.d(TAG, "🎤 Final transcript: $final")
+            _uiState.update { it.copy(transcript = final, partialTranscript = "") }
+
+            // NUOVO: Add to conversation context for intelligent optimization
+            conversationContextManager.addMessage(
+                content = final,
+                isFromUser = true,
+                audioLevel = _uiState.value.audioLevel,
+                duration = 0L // Could be calculated from speaking event timing
+            )
+        }
+
+        // AI turn started
         geminiWebSocketClient.onTurnStarted = {
             Log.d(TAG, "🤖 AI turn started")
-            aiSpeaking = true
-            geminiAudioManager.setAiSpeaking(true)
             _uiState.update { it.copy(turnState = TurnState.AgentTurn, aiEmotion = AIEmotion.Speaking) }
         }
+
+        // Turn completed
         geminiWebSocketClient.onTurnCompleted = {
             Log.d(TAG, "✅ Turn completed")
-            aiSpeaking = false
-            geminiAudioManager.setAiSpeaking(false)
             _uiState.update { it.copy(turnState = TurnState.WaitingForUser, aiEmotion = AIEmotion.Neutral) }
         }
 
-        // Allineamento con player reale
-        geminiAudioManager.playbackState
-            .onEach { isPlaying ->
-                if (aiSpeaking != isPlaying) {
-                    aiSpeaking = isPlaying
-                    geminiAudioManager.setAiSpeaking(isPlaying)
-                }
-                Log.d(TAG, "🎛️ aiSpeaking=$aiSpeaking (playback=${if (isPlaying) "ON" else "OFF"})")
-            }
-            .launchIn(viewModelScope)
-
-        // Upload gate locale (half-duplex): MIC ON ma NON inviare durante TTS
-        geminiAudioManager.onAudioChunkReady = { audioBase64 ->
-            if (!_uiState.value.isMuted && !aiSpeaking) {
-                geminiWebSocketClient.sendAudioData(audioBase64)
-                Log.v(TAG, "📤 Uploaded (half-duplex gate open)")
-            } else {
-                Log.v(TAG, "⏸️ Upload gated (muted=${_uiState.value.isMuted}, aiSpeaking=$aiSpeaking)")
-            }
-        }
-
-        // Interruzione (barge-in)
+        // Interruption (barge-in)
         geminiWebSocketClient.onInterrupted = {
-            Log.d(TAG, "⚠️ AI interrupted by user (barge-in)")
-            aiSpeaking = false
-            geminiAudioManager.setAiSpeaking(false)
+            Log.d(TAG, "⚠️ AI interrupted by user (barge-in detected)")
             handleBargeIn()
-            // Se usi lo "smart", lascialo pure:
-            // handleSmartBargeIn()
         }
 
-        // Testo dall'AI (UI + contesto)
+        // Text from Gemini
         geminiWebSocketClient.onTextReceived = { text ->
             Log.d(TAG, "📝 Text from Gemini: $text")
             _currentTranscript.value = text
             _uiState.update { it.copy(transcript = text) }
-            conversationContextManager.addMessage(content = text, isFromUser = false, audioLevel = 0f, duration = 0L)
+
+            // NUOVO: Add AI response to conversation context
+            conversationContextManager.addMessage(
+                content = text,
+                isFromUser = false,
+                audioLevel = 0f, // AI audio level not applicable for text
+                duration = 0L
+            )
         }
 
-        // Audio dall'AI → enqueue (il gate è già gestito sopra)
+        // Audio from Gemini
         geminiWebSocketClient.onAudioReceived = { audioBase64 ->
             Log.d(TAG, "🔊 Audio from Gemini (${audioBase64.length} chars)")
             geminiAudioManager.queueAudioForPlayback(audioBase64)
+
+            // Update audio level for visualization (simulated)
             _uiState.update { it.copy(audioLevel = 0.7f) }
+
+            // Clear audio level after a delay
             viewModelScope.launch {
                 delay(2000)
                 _uiState.update { it.copy(audioLevel = 0f) }
             }
         }
 
-        // Transcript finale utente
-        geminiWebSocketClient.onFinalTranscript = { final ->
-            Log.d(TAG, "🎤 Final transcript: $final")
-            _uiState.update { it.copy(transcript = final, partialTranscript = "") }
-            conversationContextManager.addMessage(
-                content = final, isFromUser = true, audioLevel = _uiState.value.audioLevel, duration = 0L
-            )
-        }
-
-        // Errori
+        // Errors
         geminiWebSocketClient.onError = { error ->
             Log.e(TAG, "❌ Error: $error")
-            _uiState.update { it.copy(error = error, connectionStatus = ConnectionStatus.Error) }
+            _uiState.update {
+                it.copy(
+                    error = error,
+                    connectionStatus = ConnectionStatus.Error
+                )
+            }
         }
 
-        // Persistenza chat live
+        // Send audio chunks to Gemini (con gating per half-duplex)
+        geminiAudioManager.onAudioChunkReady = { audioBase64 ->
+            if (!_uiState.value.isMuted && !aiSpeaking) {
+                geminiWebSocketClient.sendAudioData(audioBase64)
+            }
+        }
+
+        // Gestione salvataggio messaggi Live in Chat DB
         geminiWebSocketClient.onChatMessageSaved = { sessionId, content, isUser ->
             currentLiveSessionId = sessionId
             viewModelScope.launch {
@@ -344,9 +350,13 @@ class LiveChatViewModel @Inject constructor(
                 }
             }
         }
+
+        // NUOVO: Gestione barge-in smart
+        geminiAudioManager.onBargeInDetected = {
+            Log.d(TAG, "🗣️ Smart barge-in detected - interrupting AI")
+            handleSmartBargeIn()
+        }
     }
-
-
 
     private fun setupCameraIntegration() {
         // Send images to Gemini
