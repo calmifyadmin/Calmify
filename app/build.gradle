@@ -3,7 +3,7 @@ plugins {
     id 'org.jetbrains.kotlin.android'
     id 'com.google.devtools.ksp'
     id 'dagger.hilt.android.plugin'
-    id 'io.realm.kotlin'
+    // id 'io.realm.kotlin'  // RIMOSSO - Migrato a Firestore
     id 'com.google.gms.google-services'
     // id 'com.google.firebase.crashlytics' // Uncomment for crash reporting
     // id 'com.google.firebase.firebase-perf' // Uncomment for performance monitoring
@@ -165,8 +165,11 @@ dependencies {
     // Splash Screen
     implementation libs.splash.api
 
-    // Realm
-    implementation libs.realm.sync
+    // Realm - RIMOSSO (Migrato a Firestore)
+    // implementation libs.realm.sync
+
+    // Firestore - NEW
+    implementation libs.firebase.firestore
 
     // Hilt
     implementation libs.hilt.android

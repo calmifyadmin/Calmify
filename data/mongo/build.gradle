@@ -2,7 +2,7 @@ plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
     id 'com.google.devtools.ksp'
-    id 'io.realm.kotlin'
+    // id 'io.realm.kotlin'  // RIMOSSO - Migrato a Firestore
     id 'dagger.hilt.android.plugin'
 }
 
@@ -43,8 +43,8 @@ dependencies {
     // Core
     implementation libs.core.ktx
 
-    // Realm - usa 'api' per esporre le dipendenze ai moduli dipendenti
-    api libs.realm.sync
+    // Realm - RIMOSSO (Migrato a Firestore)
+    // api libs.realm.sync
 
     // Room
     implementation libs.room.runtime

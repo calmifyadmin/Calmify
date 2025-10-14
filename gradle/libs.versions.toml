@@ -1,62 +1,63 @@
 [versions]
-# Core versions - LATEST
-agp = "8.2.2"
-kotlin = "1.9.22"
-ksp = "1.9.22-1.0.17"
+# Core - ULTIME STABILI OTTOBRE 2025
+agp = "8.13.0"
+kotlin = "2.2.20"
+ksp = "2.2.20-1.0.29"
+compose-compiler = "1.5.15"
 
-# Compose - LATEST STABLE
-compose-bom = "2024.02.00"
-compose-compiler = "1.5.8"
+# Compose - LATEST STABLE 2025
+compose-bom = "2025.01.00"
 
 # Converters
 gson = "2.11.0"
 
-# AndroidX - ALL LATEST
-core-ktx = "1.12.0"
-lifecycle = "2.7.0"
-activity-compose = "1.8.2"
-navigation-compose = "2.7.7"
-appcompat = "1.6.1"
+# AndroidX - ALL LATEST OCTOBER 2025
+core-ktx = "1.15.0"
+lifecycle = "2.8.7"
+activity-compose = "1.9.3"
+navigation-compose = "2.8.5"
+appcompat = "1.7.0"
 material = "1.11.0"
 splash = "1.0.1"
 
-# Firebase - LATEST (Updated for AI support)
-firebase-bom = "33.7.0"  # Updated version with Vertex AI support
-google-services = "4.4.1"
+# Firebase - LATEST 2025 (NO KTX MODULES!)
+firebase-bom = "34.4.0"
+google-services = "4.4.2"
 
-# Database - LATEST
-room = "2.6.1"
-realm = "1.13.0"
+# Database - Room 2.7 + FIRESTORE (no realm!)
+room = "2.7.2"
+# realm = "1.13.0"  # RIMOSSO - MIGRATO A FIRESTORE
 
-# Dependency Injection - LATEST
-dagger-hilt = "2.50"
-hilt-navigation-compose = "1.1.0"
+# Dependency Injection - LATEST 2025
+dagger-hilt = "2.54"
+hilt-navigation-compose = "1.2.0"
 
-# Coroutines - LATEST
-kotlin-coroutines = "1.7.3"
+# Coroutines - LATEST 2025
+kotlin-coroutines = "1.9.0"
 
-# Image Loading - LATEST
-coil = "2.5.0"
+# Image Loading - COIL 3.0 MAJOR UPDATE
+coil = "3.0.4"
 
-# Accompanist - LATEST
-accompanist = "0.32.0"
+# Accompanist - LATEST 2025
+accompanist = "0.36.0"
 
-# UI Libraries - LATEST
+# UI Libraries
 date-time-picker = "1.0.2"
 message-bar-compose = "1.0.8"
 one-tap-compose = "1.0.8"
 
-# AI/ML - LATEST
-generative-ai = "0.2.0"
+# AI/ML - LATEST 2025
+generative-ai = "0.9.0"
 
-# Markdown - LATEST
+# Markdown
 richtext = "0.20.0"
 
-# WebSocket - LATEST
+# Network - LATEST 2025
 websocket = "1.5.3"
 okhttp = "4.12.0"
+retrofit = "2.11.0"
 
-# Testing - LATEST
+# Testing - LATEST 2025
 junit = "4.13.2"
 junit-ext = "1.1.5"
 espresso = "3.5.1"
@@ -89,27 +90,29 @@ compose-foundation = { module = "androidx.compose.foundation:foundation" }
 # Navigation
 navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigation-compose" }
 
-# Firebase BOM and libraries
+# Firebase BOM and libraries (NO -ktx IN v34.0.0+!)
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }
-firebase-auth = { module = "com.google.firebase:firebase-auth-ktx" }
-firebase-storage = { module = "com.google.firebase:firebase-storage-ktx" }
-firebase-analytics = { module = "com.google.firebase:firebase-analytics-ktx" }
-firebase-functions = { module = "com.google.firebase:firebase-functions-ktx" }
-firebase-database = { module = "com.google.firebase:firebase-database-ktx" }
-firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics-ktx" }
+firebase-auth = { module = "com.google.firebase:firebase-auth" }
+firebase-firestore = { module = "com.google.firebase:firebase-firestore" }
+firebase-storage = { module = "com.google.firebase:firebase-storage" }
+firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
+firebase-functions = { module = "com.google.firebase:firebase-functions" }
+firebase-database = { module = "com.google.firebase:firebase-database" }
+firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
+firebase-performance = { module = "com.google.firebase:firebase-perf" }
 firebase-vertexai = { module = "com.google.firebase:firebase-vertexai" }
 firebase-ml-modeldownloader = { module = "com.google.firebase:firebase-ml-modeldownloader" }
 
-# Room
+# Room - 2.7.2 with KSP support
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 room-paging = { module = "androidx.room:room-paging", version.ref = "room" }
 
-# Realm
-realm-sync = { module = "io.realm.kotlin:library-sync", version.ref = "realm" }
+# Realm - RIMOSSO (Migrato a Firestore)
+# realm-sync = { module = "io.realm.kotlin:library-sync", version.ref = "realm" }
 
-# Dependency Injection
+# Dependency Injection - Hilt 2.54
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "dagger-hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "dagger-hilt" }
 hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hilt-navigation-compose" }
@@ -168,10 +171,11 @@ com-android-library = { id = "com.android.library", version.ref = "agp" }
 org-jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 com-google-devtools-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 com-google-dagger-hilt = { id = "com.google.dagger.hilt.android", version.ref = "dagger-hilt" }
-io-realm-kotlin = { id = "io.realm.kotlin", version.ref = "realm" }
+# io-realm-kotlin = { id = "io.realm.kotlin", version.ref = "realm" }  # RIMOSSO
 com-google-gms-google-services = { id = "com.google.gms.google-services", version.ref = "google-services" }
 
-# Additional useful plugins
+# Additional plugins - Firebase 2025
 org-jetbrains-kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-com-google-firebase-crashlytics = { id = "com.google.firebase.crashlytics", version = "2.9.9" }
+org-jetbrains-kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+com-google-firebase-crashlytics = { id = "com.google.firebase.crashlytics", version = "3.0.2" }
 com-google-firebase-perf = { id = "com.google.firebase.firebase-perf", version = "1.4.2" }
