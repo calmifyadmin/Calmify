@@ -58,29 +58,28 @@ generative-ai = "0.9.0"            # Da 0.2.0
 
 ## 🚀 ROADMAP OPERATIVA DETTAGLIATA
 
-### **FASE 0: PREPARAZIONE AMBIENTE**
+### **FASE 0: PREPARAZIONE AMBIENTE** ✅ COMPLETATA
 - ✅ Backup completo del progetto
-- ✅ Creare branch `migration/firebase-2025`
-- ✅ Documentare stato attuale database Realm
-- ✅ Export dati esistenti in JSON
+- ✅ Creato branch `migration/firebase-2025`
+- ✅ Documentato stato attuale database Realm
+- ✅ Export dati esistenti pianificato (FASE 12)
 
-### **FASE 1: AGGIORNAMENTO GRADLE & KOTLIN**
-- ✅ Update Gradle Wrapper a 8.11.1
-- ✅ Update AGP a 8.13.0
-- ✅ Update Kotlin a 2.2.20
-- ✅ Abilitare K2 compiler
-- ✅ Update KSP per K2 compatibility
-- ✅ Fix deprecation warnings
+### **FASE 1: AGGIORNAMENTO GRADLE & KOTLIN** ✅ COMPLETATA
+- ✅ Updated Gradle Wrapper a 8.11.1
+- ✅ Updated AGP a 8.13.0
+- ✅ Updated Kotlin a 2.2.20
+- ✅ Abilitato K2 compiler (kotlin.experimental.useK2Compiler=true)
+- ✅ Updated KSP 2.2.20-1.0.29 per K2 compatibility
+- ✅ Updated tutte le dipendenze AndroidX October 2025
 
-### **FASE 2: FIREBASE SETUP CON FIRESTORE**
-- ✅ Rimuovere `realm-sync` da dependencies
-- ✅ Aggiungere Firebase BOM 34.4.0 senza moduli KTX
-- ✅ Aggiungere `firebase-firestore` (no -ktx)
-- ✅ Aggiungere `firebase-auth` (no -ktx)
-- ✅ Setup Firebase Console project
-- ✅ Download `google-services.json`
-- ✅ Configurare Firestore rules
-- ✅ Setup offline persistence
+### **FASE 2: FIREBASE SETUP CON FIRESTORE** ✅ COMPLETATA
+- ✅ Rimosso `realm-sync` da dependencies
+- ✅ Aggiunto Firebase BOM 34.4.0 SENZA moduli -ktx
+- ✅ Aggiunto `firebase-firestore` (no -ktx)
+- ✅ Aggiunto `firebase-auth` (no -ktx)
+- ✅ google-services.json già presente
+- ✅ Creato FirestoreModule con Hilt DI
+- ✅ Configurato offline persistence (100MB cache)
 
 ### **FASE 3: MIGRAZIONE COMPOSE & MATERIAL 3**
 
@@ -105,47 +104,44 @@ generative-ai = "0.9.0"            # Da 0.2.0
 - ✅ Sealed interfaces dove appropriato
 - ✅ Trailing comma in lambda
 
-### **FASE 5: RIMOZIONE REALM/MONGODB**
+### **FASE 5: RIMOZIONE REALM/MONGODB** ✅ COMPLETATA
 
-#### Files da eliminare:
+#### Files backed up (.old):
 ```
-data/mongo/repository/MongoDB.kt
-data/mongo/repository/MongoRepository.kt
-data/mongo/di/MongoDatabaseProvider.kt
-```
-
-#### Files da trasformare:
-```
-ChatMessageEntity → ChatMessage (data class)
-ChatSessionEntity → ChatSession (data class)
-ImageToUpload → FirestoreUploadTask
-ImageToDelete → FirestoreDeleteTask
+✅ data/mongo/repository/MongoDB.kt.old
+✅ data/mongo/repository/MongoRepository.kt.old
 ```
 
-### **FASE 6: FIRESTORE REPOSITORY IMPLEMENTATION**
+#### Files trasformati:
+```
+✅ Diary: RealmObject → data class Firestore-compatible
+⏳ ChatMessageEntity → da migrare in FASE 10
+⏳ ChatSessionEntity → da migrare in FASE 10
+⏳ ImageToUpload → da migrare in FASE 10
+⏳ ImageToDelete → da migrare in FASE 10
+```
+
+### **FASE 6: FIRESTORE REPOSITORY IMPLEMENTATION** 🔄 IN CORSO
 
 #### Nuova struttura collections:
 ```
-users/
-  {userId}/
-    profile/
-    chats/
-      {chatId}/
-        metadata
-        messages/
-          {messageId}
-    uploads/
-      pending/
-      completed/
+diaries/
+  {diaryId}/
+    - ownerId, title, description, mood, images[], date
+
+chats/ (TO DO in FASE 10)
+  {chatId}/
+    messages/
+      {messageId}
 ```
 
-#### Implementare:
-- ✅ `FirestoreChatRepository`
-- ✅ `FirestoreContentRepository`
+#### Implementato:
+- ✅ `FirestoreDiaryRepository` con offline-first
 - ✅ Real-time listeners con Flow
-- ✅ Offline-first con cache
-- ✅ Batch operations
-- ✅ Transaction support
+- ✅ Firestore Timestamp utilities
+- ✅ Type-safe conversions (Date ↔ Instant ↔ Timestamp)
+- ⏳ `FirestoreChatRepository` (FASE 10)
+- ⏳ Batch operations per chat (FASE 10)
 
 ### **FASE 7: ROOM PER CACHE LOCALE**
 - ✅ Room 2.7.2 setup
