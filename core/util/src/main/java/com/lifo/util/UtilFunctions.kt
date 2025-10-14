@@ -1,19 +1,17 @@
 package com.lifo.util
 
-import  android.net.Uri
-import android.os.Build
+import android.net.Uri
 import android.util.Log
-import androidx.annotation.RequiresApi
 import androidx.core.net.toUri
+import com.google.firebase.Timestamp
 import com.google.firebase.storage.FirebaseStorage
-import com.google.firebase.storage.ktx.storageMetadata
-import io.realm.kotlin.types.RealmInstant
 import java.time.Instant
+import java.util.Date
 
 /**
  * Download images from Firebase asynchronously.
  * This function returns imageUri after each successful download.
- * */
+ */
 fun fetchImagesFromFirebase(
     remoteImagePaths: List<String>,
     onImageDownload: (Uri) -> Unit,
@@ -38,24 +36,32 @@ fun fetchImagesFromFirebase(
     }
 }
 
+// FIRESTORE UTILITIES (2025 Stack)
 
-
-fun RealmInstant.toInstant(): Instant {
-    val sec: Long = this.epochSeconds
-    val nano: Int = this.nanosecondsOfSecond
-    return if (sec >= 0) {
-        Instant.ofEpochSecond(sec, nano.toLong())
-    } else {
-        Instant.ofEpochSecond(sec - 1, 1_000_000 + nano.toLong())
-    }
+/**
+ * Converts Firestore Timestamp to Instant
+ */
+fun Timestamp.toInstant(): Instant {
+    return Instant.ofEpochSecond(this.seconds, this.nanoseconds.toLong())
 }
-@RequiresApi(Build.VERSION_CODES.O)
-fun Instant.toRealmInstant(): RealmInstant {
-    val sec: Long = this.epochSecond
-    val nano: Int = this.nano
-    return if (sec >= 0) {
-        RealmInstant.from(sec, nano)
-    } else {
-        RealmInstant.from(sec + 1, -1_000_000 + nano)
-    }
+
+/**
+ * Converts Instant to Firestore Timestamp
+ */
+fun Instant.toTimestamp(): Timestamp {
+    return Timestamp(this.epochSecond, this.nano)
+}
+
+/**
+ * Converts Date to Instant
+ */
+fun Date.toInstant(): Instant {
+    return Instant.ofEpochMilli(this.time)
+}
+
+/**
+ * Converts Instant to Date
+ */
+fun Instant.toDate(): Date {
+    return Date.from(this)
 }
