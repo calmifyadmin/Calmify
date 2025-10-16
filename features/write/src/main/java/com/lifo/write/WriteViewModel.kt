@@ -14,14 +14,12 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.FirebaseStorage
 import com.lifo.mongo.database.dao.ImageToDeleteDao
 import com.lifo.mongo.database.dao.ImageToUploadDao
 import com.lifo.mongo.database.entity.ImageToDelete
 import com.lifo.mongo.database.entity.ImageToUpload
-import com.lifo.mongo.repository.MongoDB
+import com.lifo.mongo.repository.MongoRepository
 import com.lifo.ui.GalleryImage
 import com.lifo.ui.GalleryState
 import com.lifo.util.Constants.WRITE_SCREEN_ARGUMENT_KEY
@@ -29,18 +27,16 @@ import com.lifo.util.fetchImagesFromFirebase
 import com.lifo.util.model.Diary
 import com.lifo.util.model.Mood
 import com.lifo.util.model.RequestState
-import com.lifo.util.toRealmInstant
 import dagger.hilt.android.lifecycle.HiltViewModel
-import io.realm.kotlin.types.RealmInstant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.mongodb.kbson.ObjectId
 import java.io.File
 import java.io.FileOutputStream
 import java.time.ZonedDateTime
+import java.util.Date
 import javax.inject.Inject
 
 @HiltViewModel
@@ -48,7 +44,8 @@ internal class WriteViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
     private val imageToUploadDao: ImageToUploadDao,
     private val imageToDeleteDao: ImageToDeleteDao,
-    private val context: Application // Aggiungi questo parametro
+    private val diaryRepository: MongoRepository,
+    private val context: Application
 ) : ViewModel() {
     private val _selectedGalleryImageIndex = mutableStateOf<Int?>(null)
     private val _isUploadingImages = mutableStateOf(false)
@@ -60,13 +57,24 @@ internal class WriteViewModel @Inject constructor(
 
     init {
         getDiaryIdArgument()
-        // Tenta di ripristinare lo stato se è stato salvato precedentemente
-        savedStateHandle.get<String>("saved_title")?.let {
-            uiState = uiState.copy(title = it)
+
+        // Se non c'è un diaryId, pulisci tutto lo stato salvato
+        // (nuovo diary da zero)
+        if (uiState.selectedDiaryId == null) {
+            Log.d("WriteViewModel", "No diaryId - clearing saved state for new diary")
+            savedStateHandle.remove<String>("saved_title")
+            savedStateHandle.remove<String>("saved_description")
+            savedStateHandle.remove<String>("saved_mood")
+        } else {
+            // Tenta di ripristinare lo stato se è stato salvato precedentemente
+            savedStateHandle.get<String>("saved_title")?.let {
+                uiState = uiState.copy(title = it)
+            }
+            savedStateHandle.get<String>("saved_description")?.let {
+                uiState = uiState.copy(description = it)
+            }
         }
-        savedStateHandle.get<String>("saved_description")?.let {
-            uiState = uiState.copy(description = it)
-        }
+
         // Poi procedi con il normale caricamento
         fetchSelectedDiary()
     }
@@ -94,17 +102,15 @@ internal class WriteViewModel @Inject constructor(
     }
 
     private fun getDiaryIdArgument() {
-        uiState = uiState.copy(
-            selectedDiaryId = savedStateHandle.get<String>(
-                key = WRITE_SCREEN_ARGUMENT_KEY
-            )
-        )
+        val diaryId = savedStateHandle.get<String>(key = WRITE_SCREEN_ARGUMENT_KEY)
+        Log.d("WriteViewModel", "getDiaryIdArgument: diaryId = $diaryId")
+        uiState = uiState.copy(selectedDiaryId = diaryId)
     }
 
     private fun fetchSelectedDiary() {
         if (uiState.selectedDiaryId != null) {
             viewModelScope.launch {
-                MongoDB.getSelectedDiary(diaryId = ObjectId.invoke(uiState.selectedDiaryId!!))
+                diaryRepository.getSelectedDiary(diaryId = uiState.selectedDiaryId!!)
                     .catch {
                         emit(RequestState.Error(Exception("Diary is already deleted.")))
                     }
@@ -158,7 +164,7 @@ internal class WriteViewModel @Inject constructor(
 
     @SuppressLint("NewApi")
     fun updateDateTime(zonedDateTime: ZonedDateTime) {
-        uiState = uiState.copy(updatedDateTime = zonedDateTime.toInstant().toRealmInstant())
+        uiState = uiState.copy(updatedDateTime = Date.from(zonedDateTime.toInstant()))
     }
 
     fun upsertDiary(
@@ -167,9 +173,12 @@ internal class WriteViewModel @Inject constructor(
         onError: (String) -> Unit
     ) {
         viewModelScope.launch(Dispatchers.IO) {
+            Log.d("WriteViewModel", "upsertDiary: selectedDiaryId = ${uiState.selectedDiaryId}, selectedDiary = ${uiState.selectedDiary?._id}")
             if (uiState.selectedDiaryId != null) {
+                Log.d("WriteViewModel", "Calling updateDiary")
                 updateDiary(diary = diary, onSuccess = onSuccess, onError = onError)
             } else {
+                Log.d("WriteViewModel", "Calling insertDiary")
                 insertDiary(diary = diary, onSuccess = onSuccess, onError = onError)
             }
         }
@@ -180,7 +189,7 @@ internal class WriteViewModel @Inject constructor(
         onSuccess: () -> Unit,
         onError: (String) -> Unit,
     ) {
-        val result = MongoDB.insertDiary(diary = diary.apply {
+        val result = diaryRepository.insertDiary(diary = diary.apply {
             if (uiState.updatedDateTime != null) {
                 date = uiState.updatedDateTime!!
             }
@@ -208,12 +217,14 @@ internal class WriteViewModel @Inject constructor(
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
-        val result = MongoDB.updateDiary(diary = diary.apply {
-            _id = ObjectId.invoke(uiState.selectedDiaryId!!)
-            date = if (uiState.updatedDateTime != null) {
-                uiState.updatedDateTime!!
-            } else {
-                uiState.selectedDiary!!.date
+        val result = diaryRepository.updateDiary(diary = diary.apply {
+            _id = uiState.selectedDiaryId!!
+            // IMPORTANTE: Mantieni l'ownerId del diary originale!
+            ownerId = uiState.selectedDiary?.ownerId ?: FirebaseAuth.getInstance().currentUser?.uid ?: ""
+            date = when {
+                uiState.updatedDateTime != null -> uiState.updatedDateTime!!
+                uiState.selectedDiary != null -> uiState.selectedDiary!!.date
+                else -> Date() // Fallback to current date
             }
         })
         if (result is RequestState.Success) {
@@ -240,7 +251,7 @@ internal class WriteViewModel @Inject constructor(
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             if (uiState.selectedDiaryId != null) {
-                val result = MongoDB.deleteDiary(id = ObjectId.invoke(uiState.selectedDiaryId!!))
+                val result = diaryRepository.deleteDiary(id = uiState.selectedDiaryId!!)
                 if (result is RequestState.Success) {
                     withContext(Dispatchers.Main) {
                         uiState.selectedDiary?.let {
@@ -490,7 +501,7 @@ internal class WriteViewModel @Inject constructor(
     private fun extractImagePath(fullImageUrl: String): String {
         val chunks = fullImageUrl.split("%2F")
         val imageName = chunks[2].split("?").first()
-        return "images/${Firebase.auth.currentUser?.uid}/$imageName"
+        return "images/${FirebaseAuth.getInstance().currentUser?.uid}/$imageName"
     }
 
     private fun updateImageLoadingState(galleryImage: GalleryImage, isLoading: Boolean) {
@@ -514,5 +525,5 @@ internal data class UiState(
     val title: String = "",
     val description: String = "",
     val mood: Mood = Mood.Neutral,
-    val updatedDateTime: RealmInstant? = null
+    val updatedDateTime: Date? = null
 )

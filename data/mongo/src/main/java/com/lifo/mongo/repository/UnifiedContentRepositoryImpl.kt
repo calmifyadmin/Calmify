@@ -9,25 +9,25 @@ import javax.inject.Singleton
 
 @Singleton
 class UnifiedContentRepositoryImpl @Inject constructor(
-    private val chatSessionDao: ChatSessionDao
+    private val chatSessionDao: ChatSessionDao,
+    private val diaryRepository: MongoRepository  // Inject Firestore repository
 ) : UnifiedContentRepository {
 
     override fun getUnifiedContent(ownerId: String): Flow<List<HomeContentItem>> {
         android.util.Log.d("UnifiedContent", "Loading unified content for owner: $ownerId")
-        
+
         return combine(
             // Load chat sessions (uses ownerId for Room database filtering)
             chatSessionDao.getAllSessions(ownerId),
-            // Load diaries (MongoDB uses current authenticated user, not ownerId)
-            MongoDB.getAllDiaries()
-                .onStart { 
-                    android.util.Log.d("UnifiedContent", "Starting MongoDB diary load") 
+            // Load diaries (Firestore uses current authenticated user)
+            diaryRepository.getAllDiaries()
+                .onStart {
+                    android.util.Log.d("UnifiedContent", "Starting Firestore diary load")
                 }
                 .catch { e ->
-                    android.util.Log.w("UnifiedContent", "MongoDB diary load failed: ${e.message}", e)
+                    android.util.Log.w("UnifiedContent", "Firestore diary load failed: ${e.message}", e)
                     // Emit empty success as fallback - don't block the entire feed
-                    @Suppress("UNCHECKED_CAST")
-                    emit(RequestState.Success(emptyMap<LocalDate, List<Diary>>()) as Diaries)
+                    emit(RequestState.Success(emptyMap<LocalDate, List<Diary>>()))
                 }
         ) { chatSessions, diariesResult ->
             android.util.Log.d("UnifiedContent", "Combining content: diaries=${diariesResult::class.simpleName}, chats=${chatSessions.size}")
@@ -37,30 +37,23 @@ class UnifiedContentRepositoryImpl @Inject constructor(
                 session.toHomeContentItem() 
             }
             
-            // Process diary items (from MongoDB/Realm)
-            val diaryItems: List<HomeContentItem.DiaryItem> = try {
-                // Use simple string-based check since type matching is problematic with two RequestState classes
-                val resultClassName = diariesResult::class.simpleName
-                android.util.Log.d("UnifiedContent", "Processing diaries result: $resultClassName")
-                
-                if (resultClassName == "Success") {
-                    // MongoDB returns com.lifo.util.model.RequestState.Success, not the mongo repository one
-                    val successResult = diariesResult as com.lifo.util.model.RequestState.Success<*>
-                    @Suppress("UNCHECKED_CAST")
-                    val diaryMap = successResult.data as? Map<LocalDate, List<Diary>> ?: emptyMap()
+            // Process diary items (from Firestore)
+            val diaryItems: List<HomeContentItem.DiaryItem> = when (diariesResult) {
+                is RequestState.Success -> {
+                    val diaryMap = diariesResult.data
                     android.util.Log.d("UnifiedContent", "Processing ${diaryMap.size} diary date groups")
                     val diaries = diaryMap.values.flatten()
                     android.util.Log.d("UnifiedContent", "Found ${diaries.size} total diary entries")
-                    diaries.map { diary -> 
-                        diary.toHomeContentItem() 
-                    }
-                } else {
-                    android.util.Log.d("UnifiedContent", "Diary result not success: $resultClassName")
+                    diaries.map { diary -> diary.toHomeContentItem() }
+                }
+                is RequestState.Error -> {
+                    android.util.Log.w("UnifiedContent", "Diary result error: ${diariesResult.error.message}")
                     emptyList()
                 }
-            } catch (e: Exception) {
-                android.util.Log.e("UnifiedContent", "Error processing diary data", e)
-                emptyList()
+                else -> {
+                    android.util.Log.d("UnifiedContent", "Diary result idle/loading")
+                    emptyList()
+                }
             }
             
             android.util.Log.d("UnifiedContent", "Final counts: ${diaryItems.size} diary items, ${chatItems.size} chat items")

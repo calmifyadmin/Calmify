@@ -1,7 +1,7 @@
 plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
-    id 'io.realm.kotlin'
+    id 'org.jetbrains.kotlin.plugin.compose'
     id 'com.google.devtools.ksp'
     id 'dagger.hilt.android.plugin'
 }
@@ -36,10 +36,6 @@ android {
 
     buildFeatures {
         compose true
-    }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion ProjectConfig.extensionVersion
     }
 
     packagingOptions {
@@ -79,8 +75,7 @@ dependencies {
     // Firebase (no versions with BOM)
     implementation libs.firebase.auth
 
-    // Other
-    implementation libs.realm.sync
+    // Coroutines
     implementation libs.coroutines.core
     implementation libs.coroutines.android
 

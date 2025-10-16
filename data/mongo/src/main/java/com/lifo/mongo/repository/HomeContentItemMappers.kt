@@ -11,16 +11,16 @@ import com.lifo.util.toInstant
  */
 
 /**
- * Convert Diary (Realm object) to HomeContentItem.DiaryItem
+ * Convert Diary (Firestore data class) to HomeContentItem.DiaryItem
  */
 fun Diary.toHomeContentItem(): HomeContentItem.DiaryItem {
     return HomeContentItem.DiaryItem(
-        id = _id.toHexString(),
+        id = _id,  // Already a String in Firestore
         title = title.ifBlank { "Diary Entry" },
         createdAt = date.toInstant().toEpochMilli(),
         content = description,
         mood = try { Mood.valueOf(mood) } catch (e: Exception) { Mood.Neutral },
-        images = images.toList()
+        images = images
     )
 }
 

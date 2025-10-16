@@ -17,7 +17,7 @@ import com.lifo.chat.domain.audio.AudioQualityAnalyzer
 import com.lifo.chat.domain.audio.ConversationContextManager
 import com.lifo.chat.domain.model.*
 import com.lifo.mongo.repository.ChatRepository
-import com.lifo.mongo.repository.MongoDB
+import com.lifo.mongo.repository.MongoRepository
 import kotlinx.coroutines.flow.first
 import org.json.JSONArray
 import org.json.JSONObject
@@ -38,6 +38,7 @@ class LiveChatViewModel @Inject constructor(
     private val audioQualityAnalyzer: AudioQualityAnalyzer,
     private val conversationContextManager: ConversationContextManager,
     private val chatRepository: ChatRepository,
+    private val diaryRepository: MongoRepository,
     private val firebaseAuth: FirebaseAuth,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -644,17 +645,13 @@ class LiveChatViewModel @Inject constructor(
      */
     private suspend fun getDiariesSummary(): String {
         return try {
-            val diariesResult = MongoDB.getAllDiaries().first()
+            val diariesResult = diaryRepository.getAllDiaries().first()
             when (diariesResult) {
                 is com.lifo.util.model.RequestState.Success -> {
                     val recentDiaries = diariesResult.data
                         .flatMap { it.value }
                         .sortedByDescending { diary ->
-                            val realmInstant = diary.date
-                            java.time.Instant.ofEpochSecond(
-                                realmInstant.epochSeconds,
-                                realmInstant.nanosecondsOfSecond.toLong()
-                            )
+                            diary.date.toInstant()
                         }
                         .take(4)
 
@@ -677,18 +674,14 @@ class LiveChatViewModel @Inject constructor(
         val limit = args.optInt("limit", 4).coerceAtMost(10)
 
         return try {
-            val diariesResult = MongoDB.getAllDiaries().first()
+            val diariesResult = diaryRepository.getAllDiaries().first()
 
             when (diariesResult) {
                 is com.lifo.util.model.RequestState.Success -> {
                     val recentDiaries = diariesResult.data
                         .flatMap { it.value }
                         .sortedByDescending { diary ->
-                            val realmInstant = diary.date
-                            java.time.Instant.ofEpochSecond(
-                                realmInstant.epochSeconds,
-                                realmInstant.nanosecondsOfSecond.toLong()
-                            )
+                            diary.date.toInstant()
                         }
                         .take(limit)
 
@@ -698,16 +691,8 @@ class LiveChatViewModel @Inject constructor(
                         put("results", JSONArray().apply {
                             recentDiaries.forEach { diary ->
                                 put(JSONObject().apply {
-                                    put("id", diary._id.toHexString())
-                                    put("dateISO", try {
-                                        val realmInstant = diary.date
-                                        java.time.Instant.ofEpochSecond(
-                                            realmInstant.epochSeconds,
-                                            realmInstant.nanosecondsOfSecond.toLong()
-                                        ).toString()
-                                    } catch (e: Exception) {
-                                        java.time.Instant.now().toString()
-                                    })
+                                    put("id", diary._id)
+                                    put("dateISO", diary.date.toInstant().toString())
                                     put("title", diary.title)
                                     put("mood", diary.mood)
                                     put("snippet", diary.description.take(200))
@@ -740,7 +725,7 @@ class LiveChatViewModel @Inject constructor(
         val k = args.optInt("k", 5).coerceAtMost(20)
 
         return try {
-            val diariesResult = MongoDB.getAllDiaries().first()
+            val diariesResult = diaryRepository.getAllDiaries().first()
 
             when (diariesResult) {
                 is com.lifo.util.model.RequestState.Success -> {
@@ -751,11 +736,7 @@ class LiveChatViewModel @Inject constructor(
                         diary.title.contains(query, ignoreCase = true) ||
                                 diary.description.contains(query, ignoreCase = true)
                     }.sortedByDescending { diary ->
-                        val realmInstant = diary.date
-                        java.time.Instant.ofEpochSecond(
-                            realmInstant.epochSeconds,
-                            realmInstant.nanosecondsOfSecond.toLong()
-                        )
+                        diary.date.toInstant()
                     }.take(k)
 
                     Log.d(TAG, "🔍 Search for '$query' returned ${searchResults.size} results")
@@ -764,16 +745,8 @@ class LiveChatViewModel @Inject constructor(
                         put("results", JSONArray().apply {
                             searchResults.forEach { diary ->
                                 put(JSONObject().apply {
-                                    put("id", diary._id.toHexString())
-                                    put("dateISO", try {
-                                        val realmInstant = diary.date
-                                        java.time.Instant.ofEpochSecond(
-                                            realmInstant.epochSeconds,
-                                            realmInstant.nanosecondsOfSecond.toLong()
-                                        ).toString()
-                                    } catch (e: Exception) {
-                                        java.time.Instant.now().toString()
-                                    })
+                                    put("id", diary._id)
+                                    put("dateISO", diary.date.toInstant().toString())
                                     put("title", diary.title)
                                     put("mood", diary.mood)
                                     put("snippet", diary.description.take(200))

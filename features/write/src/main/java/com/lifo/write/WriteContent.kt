@@ -24,14 +24,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 import com.lifo.ui.GalleryImage
 import com.lifo.ui.GalleryState
 import com.lifo.util.GalleryUploader
 import com.lifo.util.model.Diary
 import com.lifo.util.model.Mood
-import io.realm.kotlin.ext.toRealmList
 import kotlinx.coroutines.launch
 
 
@@ -86,7 +85,6 @@ internal fun WriteContent(
                         modifier = Modifier.size(120.dp),
                         model = ImageRequest.Builder(LocalContext.current)
                             .data(Mood.values()[page].icon)
-                            .crossfade(true)
                             .build(),
 
                         contentDescription = "Mood Image"
@@ -172,7 +170,7 @@ internal fun WriteContent(
                                 Diary().apply {
                                     this.title = uiState.title
                                     this.description = uiState.description
-                                    this.images = galleryState.images.map { it.remoteImagePath }.toRealmList()
+                                    this.images = galleryState.images.map { it.remoteImagePath }
                                 }
                             )
                         } else {

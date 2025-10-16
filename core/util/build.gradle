@@ -1,7 +1,7 @@
 plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
-    id 'io.realm.kotlin'
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 android {
@@ -36,10 +36,6 @@ android {
         compose true
     }
 
-    composeOptions {
-        kotlinCompilerExtensionVersion ProjectConfig.extensionVersion
-    }
-
     packagingOptions {
         resources.excludes.add("META-INF/*")
     }
@@ -64,12 +60,15 @@ dependencies {
 
     // Firebase (no versions with BOM)
     implementation libs.firebase.storage
+    implementation libs.firebase.firestore  // For Diary model annotations
 
-    // Other
-    implementation libs.realm.sync
+    // Coroutines
     implementation libs.coroutines.core
     implementation libs.coroutines.android
+
+    // Image Loading - Coil 3.x
     implementation libs.coil
+    implementation libs.coil.network.okhttp
 
     // Testing
     testImplementation libs.junit

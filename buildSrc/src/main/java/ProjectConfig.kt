@@ -1,8 +1,7 @@
 object ProjectConfig {
-    const val compileSdk = 34
+    const val compileSdk = 35
     const val minSdk = 26  // Minimo per evitare desugaring
-    const val targetSdk = 34
-    const val extensionVersion = "1.5.8"  // Compose compiler per Kotlin 1.9.22
+    const val targetSdk = 35
 
     // Versioni Java
     const val javaVersion = "17"

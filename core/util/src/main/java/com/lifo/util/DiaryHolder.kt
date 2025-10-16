@@ -29,7 +29,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.lifo.ui.theme.Elevation
 import com.lifo.util.model.Diary
 import com.lifo.util.model.Mood
-import io.realm.kotlin.ext.realmListOf
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -74,7 +73,7 @@ fun DiaryHolder(diary: Diary, onClick: (String) -> Unit) {
             interactionSource = remember {
                 MutableInteractionSource()
             }
-        ) { onClick(diary._id.toHexString()) }
+        ) { onClick(diary._id) }
     ) {
         Spacer(modifier = Modifier.width(14.dp))
         Surface(
@@ -188,6 +187,6 @@ fun DiaryHolderPreview() {
         description =
             "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."
         mood = Mood.Happy.name
-        images = realmListOf("", "")
+        images = listOf("", "")
     }, onClick = {})
 }

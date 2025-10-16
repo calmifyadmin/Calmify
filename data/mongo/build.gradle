@@ -51,8 +51,8 @@ dependencies {
     implementation libs.room.ktx
     ksp libs.room.compiler
 
-    // Google AI
-    implementation libs.generative.ai
+    // Firebase AI - Replaces old generativeai SDK (no Ktor needed!)
+    implementation libs.firebase.ai
 
     // Hilt
     implementation libs.hilt.android

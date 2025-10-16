@@ -17,12 +17,11 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import com.lifo.home.HomeScreen
+import com.google.firebase.auth.FirebaseAuth
 import com.lifo.home.HomeViewModel
 import com.lifo.ui.components.DisplayAlertDialog
-import com.lifo.util.Constants.APP_ID
 import com.lifo.util.Screen
 import com.lifo.util.model.RequestState
-import io.realm.kotlin.mongodb.App
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -163,10 +162,9 @@ fun NavGraphBuilder.homeRoute(
                                 ).show()
                             }
 
-                            // Sign out in IO context
+                            // Sign out from Firebase
                             withContext(Dispatchers.IO) {
-                                val user = App.create(APP_ID).currentUser
-                                user?.logOut()
+                                FirebaseAuth.getInstance().signOut()
                             }
 
                             // Navigate to auth on main thread

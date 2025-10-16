@@ -1,7 +1,7 @@
 plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
-    id 'io.realm.kotlin'
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 android {
@@ -36,10 +36,6 @@ android {
         compose true
     }
 
-    composeOptions {
-        kotlinCompilerExtensionVersion ProjectConfig.extensionVersion
-    }
-
     packagingOptions {
         resources.excludes.add("META-INF/*")
     }
@@ -61,8 +57,7 @@ dependencies {
     implementation libs.core.ktx
     implementation libs.activity.compose
 
-    // Other
-    implementation libs.realm.sync
+    // Coroutines
     implementation libs.coroutines.core
     implementation libs.coroutines.android
 

@@ -39,7 +39,7 @@ fun NavGraphBuilder.authenticationRoute(
                 viewModel.setLoading(true)
             },
             onSuccessfulFirebaseSignIn = { tokenId ->
-                viewModel.signInWithMongoAtlas(
+                viewModel.signInWithGoogle(
                     tokenId = tokenId,
                     onSuccess = {
                         messageBarState.addSuccess("Successfully Authenticated!")

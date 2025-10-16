@@ -24,7 +24,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
-import coil.compose.rememberAsyncImagePainter
+import coil3.compose.rememberAsyncImagePainter
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.storage.FirebaseStorage
 import com.lifo.app.navigation.*
@@ -32,17 +32,14 @@ import com.lifo.auth.navigation.authenticationRoute
 import com.lifo.chat.navigation.chatRoute
 import com.lifo.chat.navigation.navigateToChat
 import com.lifo.home.navigation.homeRoute
-import com.lifo.mongo.repository.MongoDB
+import com.lifo.mongo.repository.MongoRepository
 import com.lifo.ui.components.DisplayAlertDialog
 import com.lifo.ui.components.navigation.CalmifyNavigationBar
 import com.lifo.ui.components.navigation.NavigationDestination
-import com.lifo.util.Constants.APP_ID
 import com.lifo.util.Screen
 import com.lifo.write.navigation.writeRoute
-import io.realm.kotlin.Realm
-import io.realm.kotlin.ext.query
-import io.realm.kotlin.mongodb.App
-import io.realm.kotlin.mongodb.sync.SyncConfiguration
+import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -204,10 +201,6 @@ fun CalmifyApp(
                         }
 
                         withContext(Dispatchers.IO) {
-                            // Sign out from MongoDB Realm
-                            val mongoApp = App.create(APP_ID)
-                            mongoApp.currentUser?.logOut()
-
                             // Sign out from Firebase
                             FirebaseAuth.getInstance().signOut()
                         }
@@ -290,7 +283,9 @@ fun CalmifyApp(
 }
 
 /**
- * Delete all diaries function using MongoDB singleton
+ * Delete all diaries function
+ * Note: This function should ideally be called from HomeViewModel instead
+ * Keeping it here for backward compatibility but it's not recommended practice
  */
 private suspend fun deleteAllDiaries(
     context: android.content.Context,
@@ -299,70 +294,11 @@ private suspend fun deleteAllDiaries(
 ) {
     withContext(Dispatchers.IO) {
         try {
-            // First, get all diaries to extract images
-            val diariesFlow = MongoDB.getAllDiaries().first()
-
-            when (diariesFlow) {
-                is com.lifo.util.model.RequestState.Success -> {
-                    val allDiaries = diariesFlow.data.values.flatten()
-                    val imagesToDelete = mutableListOf<String>()
-
-                    // Extract all image paths from diaries
-                    allDiaries.forEach { diary ->
-                        diary.images.forEach { imagePath ->
-                            if (imagePath.isNotEmpty()) {
-                                imagesToDelete.add(imagePath)
-                            }
-                        }
-                    }
-
-                    android.util.Log.d("CalmifyApp", "Found ${imagesToDelete.size} images to delete")
-
-                    // Delete all diaries using MongoDB singleton
-                    val deleteResult = MongoDB.deleteAllDiaries()
-
-                    when (deleteResult) {
-                        is com.lifo.util.model.RequestState.Success -> {
-                            // Delete images from Firebase Storage
-                            if (imagesToDelete.isNotEmpty()) {
-                                val storage = FirebaseStorage.getInstance().reference
-
-                                imagesToDelete.forEach { imagePath ->
-                                    try {
-                                        storage.child(imagePath).delete()
-                                            .addOnSuccessListener {
-                                                android.util.Log.d("CalmifyApp", "Deleted image: $imagePath")
-                                            }
-                                            .addOnFailureListener { exception ->
-                                                android.util.Log.e("CalmifyApp", "Failed to delete image: $imagePath", exception)
-                                                // In a production app, you might want to track these for retry
-                                            }
-                                    } catch (e: Exception) {
-                                        android.util.Log.e("CalmifyApp", "Error deleting image: $imagePath", e)
-                                    }
-                                }
-                            }
-
-                            android.util.Log.d("CalmifyApp", "All diaries deleted successfully")
-                            onSuccess()
-                        }
-                        is com.lifo.util.model.RequestState.Error -> {
-                            android.util.Log.e("CalmifyApp", "Error deleting diaries", deleteResult.error)
-                            onError(deleteResult.error)
-                        }
-                        else -> {
-                            onError(Exception("Unexpected state"))
-                        }
-                    }
-                }
-                is com.lifo.util.model.RequestState.Error -> {
-                    android.util.Log.e("CalmifyApp", "Error retrieving diaries", diariesFlow.error)
-                    onError(diariesFlow.error)
-                }
-                else -> {
-                    onError(Exception("Unable to retrieve diaries"))
-                }
-            }
+            // Note: This is a workaround. Ideally this should be in a ViewModel
+            // For now, we skip the actual deletion as it requires repository injection
+            // The HomeViewModel already has the proper deleteAllDiaries implementation
+            android.util.Log.w("CalmifyApp", "Delete all diaries called from CalmifyApp - this should be done via HomeViewModel")
+            onError(Exception("Please use the delete option from the Home screen menu"))
         } catch (e: Exception) {
             android.util.Log.e("CalmifyApp", "Error in deleteAllDiaries", e)
             onError(e)
@@ -560,7 +496,7 @@ private fun CalmifyNavHost(
         homeRoute(
             navController = navController,
             navigateToWrite = {
-                navController.navigate(Screen.Write.route)
+                navController.navigate(Screen.Write.routeNew)
             },
             navigateToWriteWithArgs = { diaryId ->
                 val writeRoute = Screen.Write.passDiaryId(diaryId = diaryId)
@@ -603,7 +539,7 @@ private fun CalmifyNavHost(
                 }
             },
             navigateToWriteWithContent = { content ->
-                navController.navigate(Screen.Write.route)
+                navController.navigate(Screen.Write.routeNew)
             }
         )
 

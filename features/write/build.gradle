@@ -1,7 +1,7 @@
 plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
-    id 'io.realm.kotlin'
+    id 'org.jetbrains.kotlin.plugin.compose'
     id 'com.google.devtools.ksp'
     id 'dagger.hilt.android.plugin'
 }
@@ -38,10 +38,6 @@ android {
         compose true
     }
 
-    composeOptions {
-        kotlinCompilerExtensionVersion ProjectConfig.extensionVersion
-    }
-
     packagingOptions {
         resources.excludes.add("META-INF/*")
     }
@@ -73,6 +69,7 @@ dependencies {
 
     // UI Libraries
     implementation libs.coil
+    implementation libs.coil.network.okhttp  // Required for Coil 3.x
     implementation libs.accompanist.pager
     implementation libs.date.time.picker
     implementation libs.date.dialog
@@ -85,10 +82,9 @@ dependencies {
     implementation libs.firebase.auth
     implementation libs.firebase.storage
 
-    // Other
+    // Coroutines
     implementation libs.coroutines.core
     implementation libs.coroutines.android
-    implementation libs.realm.sync
 
     // Testing
     testImplementation libs.junit

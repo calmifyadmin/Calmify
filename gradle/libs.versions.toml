@@ -1,9 +1,8 @@
 [versions]
-# Core - ULTIME STABILI OTTOBRE 2025
+# Core - ULTIME STABILI COMPATIBILI CON HILT 2.55
 agp = "8.13.0"
-kotlin = "2.2.20"
-ksp = "2.2.20-1.0.29"
-compose-compiler = "1.5.15"
+kotlin = "2.1.0"
+ksp = "2.1.0-1.0.29"
 
 # Compose - LATEST STABLE 2025
 compose-bom = "2025.01.00"
@@ -26,17 +25,16 @@ google-services = "4.4.2"
 
 # Database - Room 2.7 + FIRESTORE (no realm!)
 room = "2.7.2"
-# realm = "1.13.0"  # RIMOSSO - MIGRATO A FIRESTORE
 
 # Dependency Injection - LATEST 2025
-dagger-hilt = "2.54"
+dagger-hilt = "2.55"
 hilt-navigation-compose = "1.2.0"
 
 # Coroutines - LATEST 2025
 kotlin-coroutines = "1.9.0"
 
-# Image Loading - COIL 3.0 MAJOR UPDATE
-coil = "3.0.4"
+# Image Loading - COIL 3.3 MAJOR UPDATE
+coil = "3.3.0"
 
 # Accompanist - LATEST 2025
 accompanist = "0.36.0"
@@ -56,6 +54,7 @@ richtext = "0.20.0"
 websocket = "1.5.3"
 okhttp = "4.12.0"
 retrofit = "2.11.0"
+ktor = "2.3.12"
 
 # Testing - LATEST 2025
 junit = "4.13.2"
@@ -100,7 +99,8 @@ firebase-functions = { module = "com.google.firebase:firebase-functions" }
 firebase-database = { module = "com.google.firebase:firebase-database" }
 firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
 firebase-performance = { module = "com.google.firebase:firebase-perf" }
-firebase-vertexai = { module = "com.google.firebase:firebase-vertexai" }
+firebase-ai = { module = "com.google.firebase:firebase-ai" }
+firebase-ai-logic = { module = "com.google.firebase:firebase-ai-logic" }
 firebase-ml-modeldownloader = { module = "com.google.firebase:firebase-ml-modeldownloader" }
 
 # Room - 2.7.2 with KSP support
@@ -109,8 +109,6 @@ room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 room-paging = { module = "androidx.room:room-paging", version.ref = "room" }
 
-# Realm - RIMOSSO (Migrato a Firestore)
-# realm-sync = { module = "io.realm.kotlin:library-sync", version.ref = "realm" }
 
 # Dependency Injection - Hilt 2.54
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "dagger-hilt" }
@@ -122,10 +120,11 @@ coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", ve
 coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlin-coroutines" }
 coroutines-play-services = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-play-services", version.ref = "kotlin-coroutines" }
 
-# Image Loading
-coil = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
-coil-svg = { module = "io.coil-kt:coil-svg", version.ref = "coil" }
-coil-gif = { module = "io.coil-kt:coil-gif", version.ref = "coil" }
+# Image Loading - Coil 3.x uses new group ID
+coil = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }
+coil-svg = { module = "io.coil-kt.coil3:coil-svg", version.ref = "coil" }
+coil-gif = { module = "io.coil-kt.coil3:coil-gif", version.ref = "coil" }
 
 # Accompanist
 accompanist-permissions = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanist" }
@@ -151,9 +150,16 @@ richtext-ui = { module = "com.halilibo.compose-richtext:richtext-ui", version.re
 richtext-ui-material3 = { module = "com.halilibo.compose-richtext:richtext-ui-material3", version.ref = "richtext" }
 richtext-commonmark = { module = "com.halilibo.compose-richtext:richtext-commonmark", version.ref = "richtext" }
 
-# WebSocket
+# WebSocket & Network
 java-websocket = { module = "org.java-websocket:Java-WebSocket", version.ref = "websocket" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+
+# Ktor - Required by Gemini AI SDK
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktor" }
+ktor-serialization-gson = { module = "io.ktor:ktor-serialization-gson", version.ref = "ktor" }
 
 # Testing
 junit = { module = "junit:junit", version.ref = "junit" }
@@ -171,7 +177,6 @@ com-android-library = { id = "com.android.library", version.ref = "agp" }
 org-jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 com-google-devtools-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 com-google-dagger-hilt = { id = "com.google.dagger.hilt.android", version.ref = "dagger-hilt" }
-# io-realm-kotlin = { id = "io.realm.kotlin", version.ref = "realm" }  # RIMOSSO
 com-google-gms-google-services = { id = "com.google.gms.google-services", version.ref = "google-services" }
 
 # Additional plugins - Firebase 2025

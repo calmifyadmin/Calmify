@@ -9,8 +9,7 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
-import com.google.firebase.database.ktx.database
-import com.google.firebase.ktx.Firebase
+import com.google.firebase.FirebaseApp
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.tasks.await
@@ -55,7 +54,7 @@ class GeminiKillerAudioSystem @Inject constructor(
     }
 
     // Firebase
-    private val database = Firebase.database(DATABASE_URL)
+    private val database = FirebaseDatabase.getInstance(DATABASE_URL)
 
     // Audio components
     private var audioTrack: AudioTrack? = null

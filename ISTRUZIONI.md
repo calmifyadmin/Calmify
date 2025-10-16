@@ -14,7 +14,7 @@ Firebase BOM v34.4.0 è la versione corrente, che ha rimosso i moduli KTX dalla 
 # Core - ULTIME STABILI OTTOBRE 2025
 agp = "8.13.0"                    # Da 8.2.2
 kotlin = "2.2.20"                  # Da 1.9.22 
-ksp = "2.2.20-1.0.29"             # Aggiornato per K2
+ksp = "2.2.20-2.0.2"             # Aggiornato per K2
 compose-bom = "2025.01.00"         # Da 2024.02.00
 compose-compiler = "1.5.15"        # Auto-gestito dal BOM
 gradle-wrapper = "8.11.1"          # Gradle stesso
@@ -216,7 +216,7 @@ chats/ (TO DO in FASE 10)
 - ✅ API documentation
 - ✅ Changelog
 
----
+---\
 
 ## ⚠️ BREAKING CHANGES CRITICI
 

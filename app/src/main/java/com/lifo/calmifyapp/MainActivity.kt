@@ -28,8 +28,9 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.google.firebase.FirebaseApp
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.storage.FirebaseStorage
-import com.google.firebase.storage.ktx.storageMetadata
+import com.google.firebase.storage.StorageMetadata
 import com.lifo.app.CalmifyApp
 import com.lifo.chat.audio.GeminiNativeVoiceSystem
 import com.lifo.chat.config.ApiConfigManager
@@ -38,10 +39,8 @@ import com.lifo.mongo.database.dao.ImageToUploadDao
 import com.lifo.mongo.database.entity.ImageToDelete
 import com.lifo.mongo.database.entity.ImageToUpload
 import com.lifo.ui.theme.CalmifyAppTheme
-import com.lifo.util.Constants.APP_ID
 import com.lifo.util.Screen
 import dagger.hilt.android.AndroidEntryPoint
-import io.realm.kotlin.mongodb.App
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import javax.inject.Inject
@@ -231,8 +230,8 @@ class MainActivity : ComponentActivity() {
 
     private fun getStartDestination(): String {
         return try {
-            val user = App.create(APP_ID).currentUser
-            if (user != null && user.loggedIn) {
+            val user = FirebaseAuth.getInstance().currentUser
+            if (user != null) {
                 Screen.Home.route
             } else {
                 Screen.Authentication.route
@@ -418,7 +417,7 @@ fun retryUploadingImageToFirebase(
         Log.d("MainActivity", "Attempting to retry upload for: ${imageToUpload.remoteImagePath}")
 
         storage.child(imageToUpload.remoteImagePath)
-            .putFile(imageUri, storageMetadata {}, sessionUri)
+            .putFile(imageUri, StorageMetadata.Builder().build(), sessionUri)
             .addOnSuccessListener {
                 Log.d("MainActivity", "Successfully uploaded: ${imageToUpload.remoteImagePath}")
                 onSuccess()

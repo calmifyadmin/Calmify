@@ -1,9 +1,9 @@
 package com.lifo.mongo.repository
 
 import android.util.Log
-import com.google.ai.client.generativeai.GenerativeModel
-import com.google.ai.client.generativeai.type.content
-import com.google.ai.client.generativeai.type.generationConfig
+import com.google.firebase.Firebase
+import com.google.firebase.ai.ai
+import com.google.firebase.ai.type.generationConfig
 import com.google.firebase.auth.FirebaseAuth
 import com.lifo.mongo.database.dao.ChatMessageDao
 import com.lifo.mongo.database.dao.ChatSessionDao
@@ -28,7 +28,8 @@ import javax.inject.Singleton
 class ChatRepositoryImpl @Inject constructor(
     private val chatSessionDao: ChatSessionDao,
     private val chatMessageDao: ChatMessageDao,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    private val diaryRepository: MongoRepository  // Inject Firestore repository
 ) : ChatRepository {
 
     companion object {
@@ -38,16 +39,21 @@ class ChatRepositoryImpl @Inject constructor(
         private const val MAX_DIARY_ENTRIES = 20
     }
 
-    private val generativeModel = GenerativeModel(
-        modelName = "gemini-2.0-flash",
-        apiKey = GEMINI_API_KEY,
-        generationConfig = generationConfig {
+    // Firebase AI - No Ktor dependencies required!
+    // API key viene presa automaticamente da google-services.json
+    private val generativeModel by lazy {
+        val config = generationConfig {
             temperature = 0.8f
             topK = 1
             topP = 0.95f
             maxOutputTokens = 4096
         }
-    )
+
+        Firebase.ai.generativeModel(
+            modelName = "gemini-2.0-flash",
+            generationConfig = config
+        )
+    }
 
     private val currentUserId: String
         get() = auth.currentUser?.uid ?: throw IllegalStateException("User not authenticated")
@@ -353,8 +359,8 @@ class ChatRepositoryImpl @Inject constructor(
     private suspend fun getDiaryContext(): List<Diary> {
         return withContext(Dispatchers.IO) {
             try {
-                // Usa MongoDB singleton per accedere ai diari
-                val diariesResult = MongoDB.getAllDiaries().first()
+                // Usa Firestore repository per accedere ai diari
+                val diariesResult = diaryRepository.getAllDiaries().first()
 
                 when (diariesResult) {
                     is RequestState.Success -> {

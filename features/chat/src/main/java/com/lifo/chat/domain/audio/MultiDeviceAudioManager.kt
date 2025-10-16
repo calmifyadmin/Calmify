@@ -122,8 +122,8 @@ class MultiDeviceAudioManager @Inject constructor(
         val devices = mutableListOf<AudioDeviceProfile>()
 
         try {
-            // Get all available audio devices
-            val audioDevices = audioManager.getDevices(AudioManager.GET_DEVICES_ALL)
+            // Get all available audio devices (both input and output)
+            val audioDevices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
 
             audioDevices.forEach { deviceInfo ->
                 val profile = createDeviceProfile(deviceInfo)

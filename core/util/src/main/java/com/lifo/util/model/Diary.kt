@@ -1,6 +1,6 @@
 package com.lifo.util.model
 
-import com.google.firebase.Timestamp
+import com.google.firebase.Timestamp as FirebaseTimestamp
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import java.time.Instant
@@ -35,7 +35,7 @@ data class Diary(
     )
 
     companion object {
-        fun fromTimestamp(timestamp: Timestamp): Instant {
+        fun fromTimestamp(timestamp: FirebaseTimestamp): Instant {
             return Instant.ofEpochSecond(timestamp.seconds, timestamp.nanoseconds.toLong())
         }
     }

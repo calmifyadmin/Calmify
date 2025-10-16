@@ -1,19 +1,23 @@
 package com.lifo.mongo.di
 
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.lifo.mongo.database.AppDatabase
 import com.lifo.mongo.database.dao.ChatMessageDao
 import com.lifo.mongo.database.dao.ChatSessionDao
-import com.lifo.mongo.repository.ChatRepository
-import com.lifo.mongo.repository.ChatRepositoryImpl
-import com.lifo.mongo.repository.UnifiedContentRepository
-import com.lifo.mongo.repository.UnifiedContentRepositoryImpl
+import com.lifo.mongo.repository.*
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
+/**
+ * MongoDataModule - Provides repository dependencies
+ *
+ * Despite the name, now provides Firestore-based repositories
+ * Name kept for backward compatibility with existing DI setup
+ */
 @Module
 @InstallIn(SingletonComponent::class)
 object MongoDataModule {
@@ -32,25 +36,30 @@ object MongoDataModule {
 
     @Provides
     @Singleton
+    fun provideMongoRepository(
+        firestore: FirebaseFirestore,
+        auth: FirebaseAuth
+    ): MongoRepository {
+        return FirestoreDiaryRepository(firestore, auth)
+    }
+
+    @Provides
+    @Singleton
     fun provideChatRepository(
         chatSessionDao: ChatSessionDao,
         chatMessageDao: ChatMessageDao,
-        auth: FirebaseAuth
+        auth: FirebaseAuth,
+        diaryRepository: MongoRepository
     ): ChatRepository {
-        return ChatRepositoryImpl(chatSessionDao, chatMessageDao, auth)
+        return ChatRepositoryImpl(chatSessionDao, chatMessageDao, auth, diaryRepository)
     }
 
     @Provides
     @Singleton
     fun provideUnifiedContentRepository(
-        chatSessionDao: ChatSessionDao
+        chatSessionDao: ChatSessionDao,
+        diaryRepository: MongoRepository
     ): UnifiedContentRepository {
-        return UnifiedContentRepositoryImpl(chatSessionDao)
-    }
-
-    @Provides
-    @Singleton
-    fun provideFirebaseAuth(): FirebaseAuth {
-        return FirebaseAuth.getInstance()
+        return UnifiedContentRepositoryImpl(chatSessionDao, diaryRepository)
     }
 }

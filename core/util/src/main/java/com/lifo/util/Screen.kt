@@ -11,6 +11,10 @@ sealed class Screen(val route: String) {
     object Profile : Screen(route = "profile_screen")   // Add this line
     object Write : Screen(route = "write_screen?$WRITE_SCREEN_ARGUMENT_KEY=" +
             "{$WRITE_SCREEN_ARGUMENT_KEY}") {
+        // Navigate to Write screen for creating a NEW diary (no ID)
+        val routeNew: String = "write_screen"
+
+        // Navigate to Write screen for EDITING an existing diary (with ID)
         fun passDiaryId(diaryId: String) =
             "write_screen?$WRITE_SCREEN_ARGUMENT_KEY=$diaryId"
     }

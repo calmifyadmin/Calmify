@@ -23,9 +23,9 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
-import coil.compose.SubcomposeAsyncImage
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.compose.SubcomposeAsyncImage
+import coil3.request.ImageRequest
 import com.lifo.ui.GalleryImage
 import com.lifo.ui.GalleryState
 import com.lifo.ui.theme.Elevation
@@ -63,7 +63,6 @@ fun Gallery(
                         .size(imageSize),
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(image)
-                        .crossfade(true)
                         .build(),
                     loading = { CircularProgressIndicator(modifier = Modifier.fillMaxSize().align(Alignment.Center).padding(8.dp)) },
                     contentScale = ContentScale.Crop,
@@ -149,7 +148,6 @@ fun GalleryUploader(
                                 .clickable { onImageClicked(galleryImage) },
                             model = ImageRequest.Builder(LocalContext.current)
                                 .data(galleryImage.image)
-                                .crossfade(true)
                                 .build(),
                             loading = { CircularProgressIndicator(modifier = Modifier.fillMaxSize().align(Alignment.Center).padding(8.dp)) },
                             contentScale = ContentScale.Crop,

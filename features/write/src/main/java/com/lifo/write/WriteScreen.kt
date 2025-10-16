@@ -28,8 +28,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.SubcomposeAsyncImage
-import coil.request.ImageRequest
+import coil3.compose.SubcomposeAsyncImage
+import coil3.request.ImageRequest
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.rememberPagerState
@@ -293,7 +293,6 @@ internal fun ZoomableImage(
             },
             model = ImageRequest.Builder(LocalContext.current)
                 .data(selectedGalleryImage.image.toString())
-                .crossfade(true)
                 .build(),
             contentScale = ContentScale.Fit,
             contentDescription = "Gallery Image"

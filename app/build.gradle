@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
     id 'com.google.devtools.ksp'
     id 'dagger.hilt.android.plugin'
     // id 'io.realm.kotlin'  // RIMOSSO - Migrato a Firestore
@@ -93,10 +94,6 @@ android {
         resValues false
     }
 
-    composeOptions {
-        kotlinCompilerExtensionVersion ProjectConfig.extensionVersion
-    }
-
     packagingOptions {
         resources {
             excludes += [
@@ -153,7 +150,7 @@ dependencies {
     implementation libs.firebase.auth
     implementation libs.firebase.storage
     implementation libs.firebase.analytics
-    implementation libs.firebase.vertexai  // Firebase AI support
+    implementation libs.firebase.ai  // Firebase AI support (formerly vertexai)
     // implementation libs.firebase.crashlytics // Uncomment if needed
 
     // Room
@@ -180,8 +177,9 @@ dependencies {
     implementation libs.coroutines.android
     implementation libs.coroutines.play.services
 
-    // Image Loading
+    // Image Loading - Coil 3.x
     implementation libs.coil
+    implementation libs.coil.network.okhttp
 
     // Internal modules
     implementation(project(":core:ui"))

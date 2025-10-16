@@ -17,19 +17,18 @@ import java.time.ZonedDateTime
 import javax.inject.Inject
 import javax.inject.Singleton
 
-typealias Diaries = RequestState<Map<LocalDate, List<Diary>>>
-
 /**
  * Firestore Diary Repository - 2025 Stack
  *
  * Sostituisce MongoDB/Realm con Firebase Firestore
  * Offline-first con cache persistente
+ * Implements MongoRepository for backward compatibility
  */
 @Singleton
 class FirestoreDiaryRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth
-) {
+) : MongoRepository {
     companion object {
         private const val TAG = "FirestoreDiaryRepo"
         private const val COLLECTION_DIARIES = "diaries"
@@ -41,7 +40,7 @@ class FirestoreDiaryRepository @Inject constructor(
     /**
      * Ottiene tutti i diary dell'utente corrente, ordinati per data
      */
-    fun getAllDiaries(): Flow<Diaries> = callbackFlow {
+    override fun getAllDiaries(): Flow<RequestState<Map<LocalDate, List<Diary>>>> = callbackFlow {
         val userId = currentUserId
         if (userId == null) {
             trySend(RequestState.Error(UserNotAuthenticatedException()))
@@ -90,7 +89,7 @@ class FirestoreDiaryRepository @Inject constructor(
     /**
      * Ottiene diary filtrati per una specifica data
      */
-    fun getFilteredDiaries(zonedDateTime: ZonedDateTime): Flow<Diaries> = callbackFlow {
+    override fun getFilteredDiaries(zonedDateTime: ZonedDateTime): Flow<RequestState<Map<LocalDate, List<Diary>>>> = callbackFlow {
         val userId = currentUserId
         if (userId == null) {
             trySend(RequestState.Error(UserNotAuthenticatedException()))
@@ -143,7 +142,7 @@ class FirestoreDiaryRepository @Inject constructor(
     /**
      * Ottiene un singolo diary per ID
      */
-    fun getSelectedDiary(diaryId: String): Flow<RequestState<Diary>> = callbackFlow {
+    override fun getSelectedDiary(diaryId: String): Flow<RequestState<Diary>> = callbackFlow {
         val userId = currentUserId
         if (userId == null) {
             trySend(RequestState.Error(UserNotAuthenticatedException()))
@@ -187,7 +186,7 @@ class FirestoreDiaryRepository @Inject constructor(
     /**
      * Inserisce un nuovo diary
      */
-    suspend fun insertDiary(diary: Diary): RequestState<Diary> {
+    override suspend fun insertDiary(diary: Diary): RequestState<Diary> {
         val userId = currentUserId
             ?: return RequestState.Error(UserNotAuthenticatedException())
 
@@ -215,7 +214,7 @@ class FirestoreDiaryRepository @Inject constructor(
     /**
      * Aggiorna un diary esistente
      */
-    suspend fun updateDiary(diary: Diary): RequestState<Diary> {
+    override suspend fun updateDiary(diary: Diary): RequestState<Diary> {
         val userId = currentUserId
             ?: return RequestState.Error(UserNotAuthenticatedException())
 
@@ -244,7 +243,7 @@ class FirestoreDiaryRepository @Inject constructor(
     /**
      * Elimina un diary
      */
-    suspend fun deleteDiary(id: String): RequestState<Boolean> {
+    override suspend fun deleteDiary(id: String): RequestState<Boolean> {
         val userId = currentUserId
             ?: return RequestState.Error(UserNotAuthenticatedException())
 
@@ -273,7 +272,7 @@ class FirestoreDiaryRepository @Inject constructor(
     /**
      * Elimina tutti i diary dell'utente
      */
-    suspend fun deleteAllDiaries(): RequestState<Boolean> {
+    override suspend fun deleteAllDiaries(): RequestState<Boolean> {
         val userId = currentUserId
             ?: return RequestState.Error(UserNotAuthenticatedException())
 

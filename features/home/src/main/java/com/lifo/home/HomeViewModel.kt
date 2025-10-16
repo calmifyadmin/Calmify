@@ -15,7 +15,7 @@ import com.google.firebase.storage.FirebaseStorage
 import com.lifo.mongo.database.dao.ImageToDeleteDao
 import com.lifo.mongo.database.entity.ImageToDelete
 import com.lifo.mongo.repository.Diaries
-import com.lifo.mongo.repository.MongoDB
+import com.lifo.mongo.repository.MongoRepository
 import com.lifo.mongo.repository.UnifiedContentRepository
 import com.lifo.util.connectivity.ConnectivityObserver
 import com.lifo.util.connectivity.NetworkConnectivityObserver
@@ -54,6 +54,7 @@ internal class HomeViewModel @Inject constructor(
     private val connectivity: NetworkConnectivityObserver,
     private val imageToDeleteDao: ImageToDeleteDao,
     private val unifiedContentRepository: UnifiedContentRepository,
+    private val diaryRepository: MongoRepository,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -199,7 +200,7 @@ internal class HomeViewModel @Inject constructor(
     }
 
     private suspend fun observeAllDiaries() {
-        MongoDB.getAllDiaries()
+        diaryRepository.getAllDiaries()
             .catch { e ->
                 Log.e(TAG, "Error observing all diaries", e)
                 handleError(e)
@@ -211,7 +212,7 @@ internal class HomeViewModel @Inject constructor(
     }
 
     private suspend fun observeFilteredDiaries(zonedDateTime: ZonedDateTime) {
-        MongoDB.getFilteredDiaries(zonedDateTime = zonedDateTime)
+        diaryRepository.getFilteredDiaries(zonedDateTime = zonedDateTime)
             .catch { e ->
                 Log.e(TAG, "Error observing filtered diaries", e)
                 handleError(e)
@@ -323,9 +324,9 @@ internal class HomeViewModel @Inject constructor(
                 }
             }
 
-            // Delete diaries from MongoDB
+            // Delete diaries from Firestore
             withContext(Dispatchers.IO) {
-                when (val result = MongoDB.deleteAllDiaries()) {
+                when (val result = diaryRepository.deleteAllDiaries()) {
                     is RequestState.Success -> {
                         withContext(Dispatchers.Main) {
                             onSuccess()
@@ -463,9 +464,6 @@ internal class HomeViewModel @Inject constructor(
         diariesJob?.cancel()
         refreshJob?.cancel()
         deleteJob?.cancel()
-
-        // Close MongoDB connection
-        MongoDB.close()
     }
 }
 

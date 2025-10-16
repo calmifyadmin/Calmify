@@ -42,7 +42,12 @@ object FirestoreModule {
     @Provides
     @Singleton
     fun provideFirestore(): FirebaseFirestore {
-        val firestore = Firebase.firestore
+        // Usa il database secondario "calmify-native" in Native Mode
+        // invece del database (default) che è in Datastore Mode
+        val firestore = FirebaseFirestore.getInstance(
+            com.google.firebase.FirebaseApp.getInstance(),
+            "calmify-native"
+        )
 
         // Configurazione ottimizzata per offline-first
         val settings = firestoreSettings {
