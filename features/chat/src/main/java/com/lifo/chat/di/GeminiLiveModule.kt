@@ -8,8 +8,6 @@ import com.lifo.chat.data.camera.GeminiLiveCameraManager
 import com.lifo.chat.domain.audio.AdaptiveBargeinDetector
 import com.lifo.chat.domain.audio.AudioQualityAnalyzer
 import com.lifo.chat.domain.audio.ConversationContextManager
-import com.lifo.chat.domain.audio.MultiDeviceAudioManager
-import com.lifo.chat.domain.audio.AdvancedDuckingEngine
 import com.google.firebase.auth.FirebaseAuth
 import dagger.Module
 import dagger.Provides
@@ -59,24 +57,6 @@ object GeminiLiveModule {
     @Singleton
     fun provideConversationContextManager(): ConversationContextManager {
         return ConversationContextManager()
-    }
-
-    /**
-     * Provides MultiDeviceAudioManager for seamless device switching
-     */
-    @Provides
-    @Singleton
-    fun provideMultiDeviceAudioManager(@ApplicationContext context: Context): MultiDeviceAudioManager {
-        return MultiDeviceAudioManager(context)
-    }
-
-    /**
-     * Provides AdvancedDuckingEngine for spatial audio and intelligent ducking
-     */
-    @Provides
-    @Singleton
-    fun provideAdvancedDuckingEngine(): AdvancedDuckingEngine {
-        return AdvancedDuckingEngine()
     }
 
     /**
