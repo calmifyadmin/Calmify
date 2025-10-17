@@ -59,8 +59,11 @@ fun CalmifyApp(
     val navigationState = rememberNavigationState()
     val shouldShowBottomBar = navigationState.shouldShowBottomBar
 
-    // Drawer state a livello globale
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    // Drawer state a livello globale - SENZA rememberSaveable per evitare state restoration problematiche
+    // Forziamo sempre Closed all'avvio/ricomposizione
+    val drawerState = rememberDrawerState(
+        initialValue = DrawerValue.Closed
+    )
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -93,27 +96,26 @@ fun CalmifyApp(
         // Abilita il gesto solo se siamo nella home
         gesturesEnabled = isHomeScreen,
         drawerContent = {
-            if (isHomeScreen) {
-                ModalDrawerSheet(
-                    modifier = Modifier.fillMaxWidth(0.85f),
-                    drawerContainerColor = MaterialTheme.colorScheme.surface
-                ) {
-                    DrawerContent(
-                        userProfileImageUrl = userProfileImageUrl,
-                        onSignOutClicked = {
-                            scope.launch {
-                                drawerState.close()
-                            }
-                            signOutDialogOpened = true
-                        },
-                        onDeleteAllClicked = {
-                            scope.launch {
-                                drawerState.close()
-                            }
-                            deleteAllDialogOpened = true
+            // Sempre mostra il drawer content, ma controlla la visibilità tramite gesturesEnabled
+            ModalDrawerSheet(
+                modifier = Modifier.fillMaxWidth(0.85f),
+                drawerContainerColor = MaterialTheme.colorScheme.surface
+            ) {
+                DrawerContent(
+                    userProfileImageUrl = userProfileImageUrl,
+                    onSignOutClicked = {
+                        scope.launch {
+                            drawerState.close()
                         }
-                    )
-                }
+                        signOutDialogOpened = true
+                    },
+                    onDeleteAllClicked = {
+                        scope.launch {
+                            drawerState.close()
+                        }
+                        deleteAllDialogOpened = true
+                    }
+                )
             }
         }
     ) {
@@ -164,8 +166,10 @@ fun CalmifyApp(
                         )
                     )
                 ) {
+                    // Usa lo stesso colore del drawer per coerenza visiva
                     Surface(
-                        color = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
+                        color = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 0.dp
                     ) {
                         CalmifyNavigationBar(
                             navController = navigationState.navController,

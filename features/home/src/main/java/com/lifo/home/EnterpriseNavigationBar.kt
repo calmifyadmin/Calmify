@@ -84,6 +84,7 @@ fun CalmifyNavigationBar(
 
     NavigationBar(
         modifier = modifier,
+        containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         tonalElevation = 0.dp
     ) {
