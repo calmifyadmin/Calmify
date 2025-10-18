@@ -67,7 +67,8 @@ fun ChatInput(
     currentEmotion: String = "NEUTRAL",
     voiceNaturalness: Float = 1.0f,
     isVoiceChatMode: Boolean = false,
-    onVoiceRecord: (() -> Unit)? = null
+    onVoiceRecord: (() -> Unit)? = null,
+    onNavigateToLiveMode: (() -> Unit)? = null
 ) {
     val haptics = LocalHapticFeedback.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -443,27 +444,8 @@ fun ChatInput(
                                                 ))
                                             }
 
-                                            if (hasRecordPermission) {
-                                                showVoiceOverlay = true
-                                                startNaturalListening(
-                                                    context = context,
-                                                    speechRecognizer = speechRecognizer,
-                                                    onStart = { isListening = true },
-                                                    onResult = { result, confidence ->
-                                                        transcribedText = result
-                                                        voiceConfidence = confidence
-                                                    },
-                                                    onEnd = {
-                                                        isListening = false
-                                                        if (transcribedText.isNotEmpty()) {
-                                                            onValueChange(value + " " + transcribedText)
-                                                            transcribedText = ""
-                                                        }
-                                                    }
-                                                )
-                                            } else {
-                                                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                                            }
+                                            // Navigate to Live Mode instead of voice recognition
+                                            onNavigateToLiveMode?.invoke()
                                         },
                                         modifier = Modifier
                                             .size(48.dp)
@@ -472,15 +454,15 @@ fun ChatInput(
                                     ) {
                                         Surface(
                                             shape = CircleShape,
-                                            color = MaterialTheme.colorScheme.surfaceVariant,
+                                            color = MaterialTheme.colorScheme.primaryContainer,
                                             modifier = Modifier.size(44.dp)
                                         ) {
                                             Box(contentAlignment = Alignment.Center) {
                                                 Icon(
-                                                    imageVector = Icons.Outlined.Mic,
-                                                    contentDescription = "Voce",
+                                                    imageVector = Icons.Default.Mic,
+                                                    contentDescription = "Live Mode",
                                                     modifier = Modifier.size(24.dp),
-                                                    tint = MaterialTheme.colorScheme.primary
+                                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
                                                 )
                                             }
                                         }

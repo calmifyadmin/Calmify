@@ -1,5 +1,7 @@
 package com.lifo.chat.navigation
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.navigation.NavController
@@ -8,11 +10,13 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.lifo.chat.presentation.screen.ChatScreen
+import com.lifo.chat.presentation.screen.LiveScreen
 import com.lifo.util.Screen
 
 fun NavGraphBuilder.chatRoute(
     navigateBack: () -> Unit,
-    navigateToWriteWithContent: (String) -> Unit
+    navigateToWriteWithContent: (String) -> Unit,
+    navigateToLiveScreen: () -> Unit
 ) {
     composable(
         route = Screen.Chat.route,
@@ -43,7 +47,8 @@ fun NavGraphBuilder.chatRoute(
     ) {
         ChatScreen(
             navigateBack = navigateBack,
-            navigateToWriteWithContent = navigateToWriteWithContent
+            navigateToWriteWithContent = navigateToWriteWithContent,
+            navigateToLiveScreen = navigateToLiveScreen
         )
     }
 
@@ -72,6 +77,7 @@ fun NavGraphBuilder.chatRoute(
         ChatScreen(
             navigateBack = navigateBack,
             navigateToWriteWithContent = navigateToWriteWithContent,
+            navigateToLiveScreen = navigateToLiveScreen,
             sessionId = sessionId
         )
     }
@@ -87,5 +93,38 @@ fun NavController.navigateToChat(sessionId: String? = null) {
     navigate(route) {
         launchSingleTop = true
         restoreState = true
+    }
+}
+
+/**
+ * Navigate to dedicated Live Chat screen
+ */
+fun NavController.navigateToLiveChat() {
+    navigate(Screen.LiveChat.route) {
+        launchSingleTop = true
+    }
+}
+
+/**
+ * Add Live Chat route to navigation graph
+ */
+@RequiresApi(Build.VERSION_CODES.O)
+fun NavGraphBuilder.liveRoute(
+    navigateBack: () -> Unit
+) {
+    composable(
+        route = Screen.LiveChat.route,
+        enterTransition = {
+            fadeIn(animationSpec = tween(500)) +
+            scaleIn(initialScale = 0.9f, animationSpec = tween(500))
+        },
+        exitTransition = {
+            fadeOut(animationSpec = tween(300)) +
+            scaleOut(targetScale = 0.9f, animationSpec = tween(300))
+        }
+    ) {
+        LiveScreen(
+            onClose = navigateBack
+        )
     }
 }

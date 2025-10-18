@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import androidx.compose.material3.BottomAppBarScrollBehavior
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -43,6 +44,7 @@ internal fun HomeScreen(
     diaries: Diaries,
     navController: NavHostController,
     drawerState: DrawerState,
+    bottomBarScrollBehavior: BottomAppBarScrollBehavior,
     onMenuClicked: () -> Unit,
     onSignOutClicked: () -> Unit,
     onDeleteAllClicked: () -> Unit,
@@ -93,6 +95,7 @@ internal fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
+                .nestedScroll(bottomBarScrollBehavior.nestedScrollConnection)
                 .background(MaterialTheme.colorScheme.background),
             containerColor = MaterialTheme.colorScheme.background,
             topBar = {
@@ -175,11 +178,20 @@ internal fun HomeScreen(
             }
         )
 
-        // Multiple FABs - Explicitly positioned at bottom right
+        // Multiple FABs - Scroll with bottom bar
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
+                .padding(
+                    start = 24.dp,
+                    top = 24.dp,
+                    end = 24.dp,
+                    bottom = 104.dp  // 24dp padding + 80dp bottom bar height
+                )
+                .graphicsLayer {
+                    // FABs scorrono insieme alla bottom bar
+                    translationY = -bottomBarScrollBehavior.state.heightOffset
+                },
             contentAlignment = Alignment.BottomEnd
         ) {
             Column(
@@ -216,46 +228,20 @@ internal fun HomeScreen(
 
 
                 // Write FAB - primo FAB (quello principale)
-                AnimatedVisibility(
-                    visible = screenState is HomeScreenState.Ready,
-                    enter = scaleIn(
-                        initialScale = 0.3f,
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessLow,
-                            visibilityThreshold = 0.1f
+                // Visible sempre, solo expand/collapse con scroll
+                ExtendedFloatingActionButton(
+                    onClick = navigateToWrite,
+                    expanded = fabExpanded && !isLoading && screenState is HomeScreenState.Ready,
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "New Diary"
                         )
-                    ) + fadeIn(),
-                    exit = scaleOut(targetScale = 0.3f) + fadeOut()
-                ) {
-                    ExtendedFloatingActionButton(
-                        onClick = navigateToWrite,
-                        expanded = fabExpanded && !isLoading,
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Default.Edit,
-                                contentDescription = "New Diary",
-                                modifier = Modifier.animateContentSize()
-                            )
-                        },
-                        text = {
-                            AnimatedVisibility(
-                                visible = fabExpanded && !isLoading,
-                                enter = fadeIn() + expandHorizontally(),
-                                exit = fadeOut() + shrinkHorizontally()
-                            ) {
-                                Text("Write")
-                            }
-                        },
-                        modifier = Modifier
-                            .animateContentSize(
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                                    stiffness = Spring.StiffnessLow
-                                )
-                            )
-                    )
-                }
+                    },
+                    text = {
+                        Text("Write")
+                    }
+                )
             }
         }
     }
@@ -441,32 +427,27 @@ private fun UnifiedContentView(
     onViewToggle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            top = paddingValues.calculateTopPadding(),
-            bottom = paddingValues.calculateBottomPadding() + 80.dp // Extra padding for FAB
-        ),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        // Search Bar
-        item("search") {
-            UnifiedSearchBar(
-                query = unifiedState.searchQuery,
-                onQueryChange = onSearchQueryChange,
-                onClearSearch = onClearSearch,
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
-        }
+    // Calculate search bar height for proper spacing
+    val searchBarHeight = 72.dp // Standard Material3 DockedSearchBar height
 
-        // Filter Chips
-        item("filters") {
-            FilterChipRow(
-                selectedFilter = unifiedState.selectedFilter,
-                onFilterSelected = onFilterChange,
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
-        }
+    Box(modifier = modifier.fillMaxSize()) {
+        // Scrollable content with top padding for search bar
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                top = paddingValues.calculateTopPadding() + searchBarHeight + 8.dp, // Space for docked search bar
+                bottom = paddingValues.calculateBottomPadding() + 80.dp // Extra padding for FAB
+            ),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Filter Chips (moved to be first scrollable item)
+            item("filters") {
+                FilterChipRow(
+                    selectedFilter = unifiedState.selectedFilter,
+                    onFilterSelected = onFilterChange,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
 
         // View Toggle Button
         item("view_toggle") {
@@ -582,17 +563,17 @@ private fun UnifiedContentView(
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onErrorContainer
                         )
-                        
+
                         Spacer(modifier = Modifier.height(8.dp))
-                        
+
                         Text(
                             text = unifiedState.error,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
-                        
+
                         Spacer(modifier = Modifier.height(8.dp))
-                        
+
                         TextButton(
                             onClick = onRefresh
                         ) {
@@ -601,6 +582,22 @@ private fun UnifiedContentView(
                     }
                 }
             }
+        }
+    }
+
+        // Docked SearchBar - Fixed overlay at top
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = paddingValues.calculateTopPadding())
+                .align(Alignment.TopCenter)
+        ) {
+            UnifiedSearchBar(
+                query = unifiedState.searchQuery,
+                onQueryChange = onSearchQueryChange,
+                onClearSearch = onClearSearch,
+                modifier = Modifier.padding(top = 8.dp)
+            )
         }
     }
 }

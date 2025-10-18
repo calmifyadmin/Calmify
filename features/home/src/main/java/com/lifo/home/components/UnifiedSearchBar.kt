@@ -1,12 +1,18 @@
 package com.lifo.home.components
 
 import androidx.compose.animation.*
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -14,10 +20,12 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 
 /**
- * Material3 SearchBar component for the unified feed
- * Provides real-time search with debouncing and proper keyboard handling
+ * Material3 DockedSearchBar component for the unified feed
+ * Provides a native Material3 search experience with expansion support
+ * Positioned to overlay content without pushing it down
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,67 +38,169 @@ fun UnifiedSearchBar(
     isActive: Boolean = false
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
-    val focusRequester = remember { FocusRequester() }
-    var textFieldValue by remember(query) { 
-        mutableStateOf(TextFieldValue(query)) 
-    }
+    var expanded by rememberSaveable { mutableStateOf(false) }
 
-    SearchBar(
-        query = textFieldValue.text,
-        onQueryChange = { newQuery ->
-            textFieldValue = textFieldValue.copy(text = newQuery)
-            onQueryChange(newQuery)
-        },
-        onSearch = { 
-            keyboardController?.hide()
-        },
-        active = isActive,
-        onActiveChange = { /* Handle active state if needed */ },
+    // Search history (can be persisted later)
+    var searchHistory by remember { mutableStateOf(listOf<String>()) }
+
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .focusRequester(focusRequester),
-        placeholder = {
-            Text(
-                text = placeholder,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        },
-        leadingIcon = {
-            Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = "Search",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        },
-        trailingIcon = {
-            AnimatedVisibility(
-                visible = query.isNotBlank(),
-                enter = fadeIn() + scaleIn(),
-                exit = fadeOut() + scaleOut()
-            ) {
-                IconButton(
-                    onClick = {
-                        textFieldValue = TextFieldValue("")
-                        onClearSearch()
+            .zIndex(1f) // Ensures search bar overlays content
+    ) {
+        DockedSearchBar(
+            inputField = {
+                SearchBarDefaults.InputField(
+                    query = query,
+                    onQueryChange = onQueryChange,
+                    onSearch = {
+                        keyboardController?.hide()
+                        if (query.isNotBlank() && !searchHistory.contains(query)) {
+                            searchHistory = (listOf(query) + searchHistory).take(5)
+                        }
+                        expanded = false
+                    },
+                    expanded = expanded,
+                    onExpandedChange = { expanded = it },
+                    placeholder = {
+                        Text(
+                            text = placeholder,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    },
+                    leadingIcon = {
+                        // Show back arrow when expanded, search icon when collapsed
+                        IconButton(
+                            onClick = {
+                                if (expanded) {
+                                    expanded = false
+                                    onClearSearch()
+                                    keyboardController?.hide()
+                                }
+                            }
+                        ) {
+                            AnimatedContent(
+                                targetState = expanded,
+                                transitionSpec = {
+                                    fadeIn() + scaleIn() togetherWith fadeOut() + scaleOut()
+                                },
+                                label = "LeadingIconAnimation"
+                            ) { isExpanded ->
+                                Icon(
+                                    imageVector = if (isExpanded) {
+                                        Icons.AutoMirrored.Filled.ArrowBack
+                                    } else {
+                                        Icons.Default.Search
+                                    },
+                                    contentDescription = if (isExpanded) "Close search" else "Search",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    },
+                    trailingIcon = {
+                        AnimatedVisibility(
+                            visible = query.isNotBlank(),
+                            enter = fadeIn() + scaleIn(),
+                            exit = fadeOut() + scaleOut()
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    onClearSearch()
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Clear,
+                                    contentDescription = "Clear search",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
+                )
+            },
+            expanded = expanded,
+            onExpandedChange = { expanded = it },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            shape = SearchBarDefaults.dockedShape,
+            colors = SearchBarDefaults.colors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                dividerColor = MaterialTheme.colorScheme.outlineVariant
+            ),
+            tonalElevation = SearchBarDefaults.TonalElevation,
+            shadowElevation = SearchBarDefaults.ShadowElevation
+        ) {
+            // Search suggestions and history
+            if (searchHistory.isNotEmpty()) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(vertical = 8.dp)
+                ) {
+                    item {
+                        Text(
+                            text = "Recent searches",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                    }
+
+                    items(searchHistory) { historyItem ->
+                        ListItem(
+                            headlineContent = { Text(historyItem) },
+                            leadingContent = {
+                                Icon(
+                                    imageVector = Icons.Default.History,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            trailingContent = {
+                                IconButton(
+                                    onClick = {
+                                        searchHistory = searchHistory.filter { it != historyItem }
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Clear,
+                                        contentDescription = "Remove from history",
+                                        modifier = Modifier.size(20.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            },
+                            modifier = Modifier.clickable {
+                                onQueryChange(historyItem)
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            } else {
+                // Empty state
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Clear,
-                        contentDescription = "Clear search",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        imageVector = Icons.Default.Search,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Start typing to search",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
-        },
-        colors = SearchBarDefaults.colors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-            dividerColor = MaterialTheme.colorScheme.outline
-        )
-    ) {
-        // Search suggestions could be added here in the future
-        // For now, we'll keep it simple
+        }
     }
 }
 

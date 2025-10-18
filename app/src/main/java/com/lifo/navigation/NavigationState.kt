@@ -48,11 +48,25 @@ class NavigationState(
      * Determina se mostrare la bottom navigation bar
      */
     val shouldShowBottomBar: Boolean
-        @Composable get() = when (currentRoute) {
-            Screen.Chat.route,
-            "${Screen.Chat.route}/{sessionId}",
-            Screen.Authentication.route -> false
-            else -> true
+        @Composable get() {
+            val route = currentRoute ?: return true
+            return when {
+                // Hide on authentication
+                route == Screen.Authentication.route -> false
+
+                // Hide on chat screens
+                route == Screen.Chat.route -> false
+                route.startsWith("${Screen.Chat.route}/") -> false
+                route == Screen.LiveChat.route -> false
+
+                // Hide on write screen (creation and editing)
+                route == Screen.Write.route -> false
+                route == Screen.Write.routeNew -> false
+                route.startsWith("${Screen.Write.route}?") -> false
+
+                // Show on all other screens (Home, Profile, etc.)
+                else -> true
+            }
         }
 
     /**

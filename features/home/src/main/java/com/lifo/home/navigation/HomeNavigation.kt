@@ -4,6 +4,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.material3.BottomAppBarScrollBehavior
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,7 +36,8 @@ fun NavGraphBuilder.homeRoute(
     navigateToChat: () -> Unit,
     navigateToExistingChat: (String) -> Unit,
     onDataLoaded: () -> Unit,
-    drawerState: DrawerState  // Riceve il drawer state globale
+    drawerState: DrawerState,  // Riceve il drawer state globale
+    bottomBarScrollBehavior: BottomAppBarScrollBehavior  // Riceve lo scroll behavior
 ) {
     composable(
         route = Screen.Home.route,
@@ -105,11 +107,12 @@ fun NavGraphBuilder.homeRoute(
             }
         }
 
-        // Home Screen with drawer state globale
+        // Home Screen with drawer state globale e scroll behavior
         HomeScreen(
             diaries = diaries,
             navController = navController,
             drawerState = drawerState,  // Usa il drawer state globale
+            bottomBarScrollBehavior = bottomBarScrollBehavior,  // Passa lo scroll behavior
             onMenuClicked = {
                 scope.launch {
                     try {

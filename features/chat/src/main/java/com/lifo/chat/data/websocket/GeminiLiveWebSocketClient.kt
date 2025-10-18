@@ -48,6 +48,9 @@ class GeminiLiveWebSocketClient @Inject constructor(
     private var cachedUserName: String = ""
     private var cachedDiariesSummary: String = ""
 
+    // Session ID persistente per la conversazione Live corrente
+    private var currentLiveSessionId: String? = null
+
     // Callbacks per delegare operazioni al ViewModel
     var onNeedUserData: (suspend () -> Pair<String, String>)? = null
     var onExecuteFunction: (suspend (String, JSONObject) -> JSONObject)? = null
@@ -80,6 +83,10 @@ class GeminiLiveWebSocketClient @Inject constructor(
                 Log.d(TAG, "✅ Connected. Server handshake: ${handshakedata?.httpStatus}")
                 _connectionState.value = ConnectionState.CONNECTED
 
+                // Crea un nuovo session ID per questa conversazione Live
+                currentLiveSessionId = "live-${System.currentTimeMillis()}"
+                Log.d(TAG, "📝 Created Live session ID: $currentLiveSessionId")
+
                 // Prefetch dati utente
                 scope.launch {
                     try {
@@ -107,6 +114,8 @@ class GeminiLiveWebSocketClient @Inject constructor(
             override fun onClose(code: Int, reason: String?, remote: Boolean) {
                 Log.d(TAG, "🔌 Connection Closed: $reason")
                 _connectionState.value = ConnectionState.DISCONNECTED
+                // Reset session ID when disconnected
+                currentLiveSessionId = null
             }
 
             override fun onError(ex: Exception?) {
@@ -508,8 +517,12 @@ Conosci l'utente e i suoi ultimi diari.
     fun saveMessageToChat(content: String, isUser: Boolean, sessionId: String? = null) {
         scope.launch {
             try {
-                val actualSessionId = sessionId ?: "live-${System.currentTimeMillis()}"
-                Log.d(TAG, "💬 Saving Live message to Chat DB: ${content.take(50)}...")
+                // Usa il session ID persistente della conversazione corrente
+                val actualSessionId = sessionId ?: currentLiveSessionId ?: run {
+                    Log.w(TAG, "⚠️ No Live session ID available, creating temporary one")
+                    "live-${System.currentTimeMillis()}"
+                }
+                Log.d(TAG, "💬 Saving Live message to Chat DB (session: $actualSessionId): ${content.take(50)}...")
 
                 // Callback per notificare il salvataggio
                 onChatMessageSaved?.invoke(actualSessionId, content, isUser)
@@ -524,6 +537,8 @@ Conosci l'utente e i suoi ultimi diari.
         webSocket?.close()
         webSocket = null
         _connectionState.value = ConnectionState.DISCONNECTED
+        // Reset session ID
+        currentLiveSessionId = null
     }
 
     fun isConnected(): Boolean = _connectionState.value == ConnectionState.CONNECTED

@@ -44,6 +44,8 @@ data class UnifiedHomeState(
     val isRefreshing: Boolean = false,
     val selectedFilter: ContentFilter = ContentFilter.ALL,
     val searchQuery: String = "",
+    val selectedDate: ZonedDateTime? = null,
+    val dateIsSelected: Boolean = false,
     val error: String? = null,
     val isEmpty: Boolean = false
 )
@@ -176,13 +178,19 @@ internal class HomeViewModel @Inject constructor(
             error = null
         )}
 
+        // Update unified state with selected date
+        _unifiedState.update { it.copy(
+            selectedDate = zonedDateTime,
+            dateIsSelected = zonedDateTime != null
+        )}
+
         // Save state
         saveState()
 
         // Update legacy state
         diaries.value = RequestState.Loading
 
-        // Cancel previous job
+        // Cancel previous job gracefully
         diariesJob?.cancel()
 
         diariesJob = viewModelScope.launch {
@@ -192,19 +200,31 @@ internal class HomeViewModel @Inject constructor(
                 } else {
                     observeAllDiaries()
                 }
+            } catch (e: CancellationException) {
+                // Expected cancellation when switching dates - don't log as error
+                Log.d(TAG, "Diaries loading cancelled (switching filters)")
+                throw e // Re-throw to properly cancel the coroutine
             } catch (e: Exception) {
                 Log.e(TAG, "Error in getDiaries", e)
                 handleError(e)
             }
         }
+
+        // Reload unified content with new date filter
+        loadUnifiedContent()
     }
 
     private suspend fun observeAllDiaries() {
         diaryRepository.getAllDiaries()
             .catch { e ->
-                Log.e(TAG, "Error observing all diaries", e)
-                handleError(e)
-                emit(RequestState.Error(e as Exception))
+                // Don't log cancellation as error - it's expected when switching filters
+                if (e !is CancellationException) {
+                    Log.e(TAG, "Error observing all diaries", e)
+                    handleError(e)
+                    emit(RequestState.Error(e as Exception))
+                } else {
+                    throw e // Re-throw cancellation to properly cancel flow
+                }
             }
             .collect { result ->
                 updateDiariesState(result)
@@ -214,9 +234,14 @@ internal class HomeViewModel @Inject constructor(
     private suspend fun observeFilteredDiaries(zonedDateTime: ZonedDateTime) {
         diaryRepository.getFilteredDiaries(zonedDateTime = zonedDateTime)
             .catch { e ->
-                Log.e(TAG, "Error observing filtered diaries", e)
-                handleError(e)
-                emit(RequestState.Error(e as Exception))
+                // Don't log cancellation as error - it's expected when switching filters
+                if (e !is CancellationException) {
+                    Log.e(TAG, "Error observing filtered diaries", e)
+                    handleError(e)
+                    emit(RequestState.Error(e as Exception))
+                } else {
+                    throw e // Re-throw cancellation to properly cancel flow
+                }
             }
             .collect { result ->
                 updateDiariesState(result)
@@ -365,14 +390,33 @@ internal class HomeViewModel @Inject constructor(
     fun loadUnifiedContent() {
         viewModelScope.launch {
             _unifiedState.update { it.copy(isLoading = true, error = null) }
-            
+
             try {
                 val userId = getCurrentUserId()
-                unifiedContentRepository.applyFilter(
-                    ownerId = userId,
-                    filter = _unifiedState.value.selectedFilter,
-                    searchQuery = _unifiedState.value.searchQuery
-                ).collect { items ->
+                val currentState = _unifiedState.value
+
+                // Choose appropriate filtering method based on whether date is selected
+                val contentFlow = if (currentState.dateIsSelected && currentState.selectedDate != null) {
+                    // Filter by date range (for the selected day)
+                    val selectedDate = currentState.selectedDate
+                    val startOfDay = selectedDate.toLocalDate().atStartOfDay(selectedDate.zone)
+                    val endOfDay = startOfDay.plusDays(1).minusNanos(1)
+
+                    unifiedContentRepository.filterByDateRange(
+                        ownerId = userId,
+                        startDate = startOfDay.toEpochSecond() * 1000, // Convert to millis
+                        endDate = endOfDay.toEpochSecond() * 1000
+                    )
+                } else {
+                    // Normal filtering (no date constraint)
+                    unifiedContentRepository.applyFilter(
+                        ownerId = userId,
+                        filter = currentState.selectedFilter,
+                        searchQuery = currentState.searchQuery
+                    )
+                }
+
+                contentFlow.collect { items ->
                     _unifiedState.update { state ->
                         state.copy(
                             items = items,
@@ -383,11 +427,11 @@ internal class HomeViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error loading unified content", e)
-                _unifiedState.update { 
+                _unifiedState.update {
                     it.copy(
-                        isLoading = false, 
+                        isLoading = false,
                         error = e.message ?: "Unknown error occurred"
-                    ) 
+                    )
                 }
             }
         }

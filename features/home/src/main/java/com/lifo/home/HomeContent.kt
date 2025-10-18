@@ -79,9 +79,12 @@ internal fun HomeContent(
                     state = listState,
                     modifier = Modifier
                         .fillMaxSize()
-                        .navigationBarsPadding()
                         .padding(top = paddingValues.calculateTopPadding()),
-                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
+                        bottom = 80.dp  // Padding per BottomAppBar + spazio extra
+                    ),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     diaryNotes?.forEach { (localDate, diaries) ->

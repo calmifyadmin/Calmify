@@ -366,3 +366,111 @@ fun Color.compositeOver(background: Color): Color {
 
     return Color(r, g, b, a)
 }
+
+/**
+ * BottomAppBar moderna con scroll behavior e navigation actions
+ * Usa exitAlwaysScrollBehavior per nascondersi durante lo scroll
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CalmifyBottomAppBar(
+    navController: NavController,
+    scrollBehavior: BottomAppBarScrollBehavior,
+    modifier: Modifier = Modifier,
+    destinations: List<NavigationDestination> = listOf(
+        NavigationDestination.Home,
+        NavigationDestination.Write,
+        NavigationDestination.Profile
+    ),
+    floatingActionButton: @Composable () -> Unit = {}
+) {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+
+    BottomAppBar(
+        modifier = modifier,
+        scrollBehavior = scrollBehavior,
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        tonalElevation = 3.dp,
+        actions = {
+            // Navigation actions invece di NavigationBarItems
+            destinations.forEach { destination ->
+                val selected = currentDestination?.hierarchy?.any { navDestination ->
+                    navDestination.route == destination.route ||
+                            navDestination.route?.startsWith(destination.route) == true
+                } == true
+
+                IconButton(
+                    onClick = {
+                        navController.navigate(destination.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    ) {
+                        BadgedBox(
+                            badge = {
+                                if (destination.badge != null) {
+                                    Badge {
+                                        Text(
+                                            text = destination.badge,
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    }
+                                } else if (destination.hasNews) {
+                                    Badge(modifier = Modifier.size(8.dp))
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = if (selected) {
+                                    destination.selectedIcon
+                                } else {
+                                    destination.unselectedIcon
+                                },
+                                contentDescription = destination.label,
+                                tint = if (selected) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .graphicsLayer {
+                                        scaleX = if (selected) 1.1f else 1f
+                                        scaleY = if (selected) 1.1f else 1f
+                                    }
+                            )
+                        }
+
+                        AnimatedVisibility(
+                            visible = selected,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
+                        ) {
+                            Text(
+                                text = destination.label,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        floatingActionButton = floatingActionButton
+    )
+}

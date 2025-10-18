@@ -63,7 +63,11 @@
       "Bash(cmd /c \"rmdir /S /Q C:\\Users\\lifoe\\AndroidStudioProjects\\CalmifyAppAndroid\\features\\chat\\src\\main\\java\\com\\lifo\\chat\\presentation\\components\\effects\")",
       "Bash(cmd /c \"gradlew.bat :features:chat:compileDebugKotlin\")",
       "Bash(cmd /c \"gradlew.bat :features:chat:build --quiet\")",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(cmd /c \"gradlew.bat :features:home:compileDebugKotlin\")",
+      "Bash(cmd /c \"gradlew.bat :app:compileDebugKotlin\")",
+      "Bash(cmd /c \"gradlew.bat clean assembleDebug --stacktrace 2>&1 | findstr /C:\"error\" /C:\"Error\" /C:\"BUILD\" /C:\"FAILED\" /C:\"SUCCESS\"\")",
+      "Bash(cmd /c \"gradlew.bat :features:home:build --quiet\")"
     ],
     "deny": [],
     "ask": []

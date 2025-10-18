@@ -30,11 +30,13 @@ import com.google.firebase.storage.FirebaseStorage
 import com.lifo.app.navigation.*
 import com.lifo.auth.navigation.authenticationRoute
 import com.lifo.chat.navigation.chatRoute
+import com.lifo.chat.navigation.liveRoute
 import com.lifo.chat.navigation.navigateToChat
 import com.lifo.home.navigation.homeRoute
 import com.lifo.mongo.repository.MongoRepository
 import com.lifo.ui.components.DisplayAlertDialog
 import com.lifo.ui.components.navigation.CalmifyNavigationBar
+import com.lifo.ui.components.navigation.CalmifyBottomAppBar
 import com.lifo.ui.components.navigation.NavigationDestination
 import com.lifo.util.Screen
 import com.lifo.write.navigation.writeRoute
@@ -80,15 +82,8 @@ fun CalmifyApp(
     var signOutDialogOpened by remember { mutableStateOf(false) }
     var deleteAllDialogOpened by remember { mutableStateOf(false) }
 
-    // Animazione per il padding del contenuto
-    val bottomPadding by animateDpAsState(
-        targetValue = if (shouldShowBottomBar) 80.dp else 0.dp,
-        animationSpec = tween(
-            durationMillis = 300,
-            easing = FastOutSlowInEasing
-        ),
-        label = "BottomPaddingAnimation"
-    )
+    // BottomAppBar scroll behavior - exitAlways nasconde la bar durante scroll
+    val bottomBarScrollBehavior = BottomAppBarDefaults.exitAlwaysScrollBehavior()
 
     // Navigation Drawer wrapper - ora avvolge tutto
     ModalNavigationDrawer(
@@ -120,67 +115,58 @@ fun CalmifyApp(
         }
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            // Main content con padding animato
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(bottom = bottomPadding)
-            ) {
-                // Navigation Host senza Scaffold
-                CalmifyNavHost(
-                    navController = navigationState.navController,
-                    startDestination = startDestination,
-                    onDataLoaded = onDataLoaded,
-                    drawerState = drawerState
-                )
-            }
+            // Main content - usa tutto lo spazio, la BottomAppBar è in overlay
+            CalmifyNavHost(
+                navController = navigationState.navController,
+                startDestination = startDestination,
+                onDataLoaded = onDataLoaded,
+                drawerState = drawerState,
+                bottomBarScrollBehavior = bottomBarScrollBehavior
+            )
 
-            // Navigation Bar posizionata in basso
-            Box(
-                modifier = Modifier.align(Alignment.BottomCenter)
-            ) {
-                AnimatedVisibility(
-                    visible = shouldShowBottomBar,
-                    enter = slideInVertically(
-                        initialOffsetY = { it },
-                        animationSpec = tween(
-                            durationMillis = 300,
-                            easing = FastOutSlowInEasing
-                        )
-                    ) + fadeIn(
-                        animationSpec = tween(
-                            durationMillis = 300,
-                            easing = FastOutSlowInEasing
-                        )
-                    ),
-                    exit = slideOutVertically(
-                        targetOffsetY = { it },
-                        animationSpec = tween(
-                            durationMillis = 300,
-                            easing = FastOutSlowInEasing
-                        )
-                    ) + fadeOut(
-                        animationSpec = tween(
-                            durationMillis = 300,
-                            easing = FastOutSlowInEasing
-                        )
+            // BottomAppBar con scroll behavior - posizionata in basso con offset
+            AnimatedVisibility(
+                visible = shouldShowBottomBar,
+                enter = slideInVertically(
+                    initialOffsetY = { it },
+                    animationSpec = tween(
+                        durationMillis = 300,
+                        easing = FastOutSlowInEasing
                     )
-                ) {
-                    // Usa lo stesso colore del drawer per coerenza visiva
-                    Surface(
-                        color = MaterialTheme.colorScheme.surface,
-                        tonalElevation = 0.dp
-                    ) {
-                        CalmifyNavigationBar(
-                            navController = navigationState.navController,
-                            destinations = listOf(
-                                NavigationDestination.Home,
-                                NavigationDestination.Write,
-                                NavigationDestination.Profile
-                            )
-                        )
+                ) + fadeIn(
+                    animationSpec = tween(
+                        durationMillis = 300,
+                        easing = FastOutSlowInEasing
+                    )
+                ),
+                exit = slideOutVertically(
+                    targetOffsetY = { it },
+                    animationSpec = tween(
+                        durationMillis = 300,
+                        easing = FastOutSlowInEasing
+                    )
+                ) + fadeOut(
+                    animationSpec = tween(
+                        durationMillis = 300,
+                        easing = FastOutSlowInEasing
+                    )
+                ),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .graphicsLayer {
+                        // Usa l'heightOffset per nascondere completamente la bar
+                        translationY = -bottomBarScrollBehavior.state.heightOffset
                     }
-                }
+            ) {
+                CalmifyBottomAppBar(
+                    navController = navigationState.navController,
+                    scrollBehavior = bottomBarScrollBehavior,
+                    destinations = listOf(
+                        NavigationDestination.Home,
+                        NavigationDestination.Write,
+                        NavigationDestination.Profile
+                    )
+                )
             }
         }
     }
@@ -477,7 +463,8 @@ private fun CalmifyNavHost(
     startDestination: String,
     modifier: Modifier = Modifier,
     onDataLoaded: () -> Unit,
-    drawerState: DrawerState
+    drawerState: DrawerState,
+    bottomBarScrollBehavior: BottomAppBarScrollBehavior
 ) {
     NavHost(
         navController = navController,
@@ -496,7 +483,7 @@ private fun CalmifyNavHost(
             onDataLoaded = onDataLoaded
         )
 
-        // Home - passa il drawerState
+        // Home - passa il drawerState e bottomBarScrollBehavior
         homeRoute(
             navController = navController,
             navigateToWrite = {
@@ -523,7 +510,8 @@ private fun CalmifyNavHost(
                 navController.navigateToChat(sessionId)
             },
             onDataLoaded = onDataLoaded,
-            drawerState = drawerState // Passa il drawer state
+            drawerState = drawerState, // Passa il drawer state
+            bottomBarScrollBehavior = bottomBarScrollBehavior // Passa lo scroll behavior
         )
 
         // Write
@@ -544,6 +532,20 @@ private fun CalmifyNavHost(
             },
             navigateToWriteWithContent = { content ->
                 navController.navigate(Screen.Write.routeNew)
+            },
+            navigateToLiveScreen = {
+                navController.navigate(Screen.LiveChat.route) {
+                    launchSingleTop = true
+                }
+            }
+        )
+
+        // Live Chat - dedicated screen
+        liveRoute(
+            navigateBack = {
+                if (navController.currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
+                    navController.popBackStack()
+                }
             }
         )
 
