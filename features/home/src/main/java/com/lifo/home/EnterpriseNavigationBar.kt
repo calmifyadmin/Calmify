@@ -51,6 +51,20 @@ open class NavigationDestination(
         unselectedIcon = Icons.Outlined.Home
     )
 
+    object History : NavigationDestination(
+        route = "history_screen",
+        label = "Activity",
+        selectedIcon = Icons.Filled.Notifications,
+        unselectedIcon = Icons.Outlined.Notifications
+    )
+
+    object Settings : NavigationDestination(
+        route = "settings_screen",
+        label = "Settings",
+        selectedIcon = Icons.Filled.Settings,
+        unselectedIcon = Icons.Outlined.Settings
+    )
+
     object Write : NavigationDestination(
         route = "write_screen",
         label = "Write",
@@ -369,7 +383,7 @@ fun Color.compositeOver(background: Color): Color {
 
 /**
  * BottomAppBar moderna con scroll behavior e navigation actions
- * Usa exitAlwaysScrollBehavior per nascondersi durante lo scroll
+ * Usa Material 3 best practices per i colori
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -390,9 +404,10 @@ fun CalmifyBottomAppBar(
     BottomAppBar(
         modifier = modifier,
         scrollBehavior = scrollBehavior,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        tonalElevation = 3.dp,
+        tonalElevation = 0.dp,
+        windowInsets = WindowInsets(0, 0, 0, 0), // Disable default insets since we're in overlay
         actions = {
             // Navigation actions invece di NavigationBarItems
             destinations.forEach { destination ->

@@ -35,6 +35,7 @@ fun NavGraphBuilder.homeRoute(
     navigateToAuth: () -> Unit,
     navigateToChat: () -> Unit,
     navigateToExistingChat: (String) -> Unit,
+    navigateToLiveScreen: () -> Unit,
     onDataLoaded: () -> Unit,
     drawerState: DrawerState,  // Riceve il drawer state globale
     bottomBarScrollBehavior: BottomAppBarScrollBehavior  // Riceve lo scroll behavior
@@ -138,7 +139,8 @@ fun NavGraphBuilder.homeRoute(
             viewModel = viewModel,
             userProfileImageUrl = viewModel.getUserPhotoUrl(),
             navigateToChat = navigateToChat,
-            navigateToExistingChat = navigateToExistingChat
+            navigateToExistingChat = navigateToExistingChat,
+            navigateToLiveScreen = navigateToLiveScreen
         )
 
         // Enhanced Sign Out Dialog

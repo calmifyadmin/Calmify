@@ -67,7 +67,13 @@
       "Bash(cmd /c \"gradlew.bat :features:home:compileDebugKotlin\")",
       "Bash(cmd /c \"gradlew.bat :app:compileDebugKotlin\")",
       "Bash(cmd /c \"gradlew.bat clean assembleDebug --stacktrace 2>&1 | findstr /C:\"error\" /C:\"Error\" /C:\"BUILD\" /C:\"FAILED\" /C:\"SUCCESS\"\")",
-      "Bash(cmd /c \"gradlew.bat :features:home:build --quiet\")"
+      "Bash(cmd /c \"gradlew.bat :features:home:build --quiet\")",
+      "Bash(cmd /c \"gradlew.bat :features:history:compileDebugKotlin\")",
+      "Bash(cmd /c \"gradlew.bat assembleDebug --quiet\")",
+      "Bash(cmd /c \"findstr /n exitAlwaysScrollBehavior C:\\Users\\lifoe\\AndroidStudioProjects\\CalmifyAppAndroid\\features\\history\\src\\main\\java\\com\\lifo\\history\\ChatHistoryFullScreen.kt\")",
+      "Bash(cmd /c \"findstr /n exitAlwaysScrollBehavior C:\\Users\\lifoe\\AndroidStudioProjects\\CalmifyAppAndroid\\features\\history\\src\\main\\java\\com\\lifo\\history\\DiaryHistoryFullScreen.kt\")",
+      "Bash(cmd /c \"git diff features/history/src/main/java/com/lifo/history/ChatHistoryFullScreen.kt\")",
+      "Bash(cmd /c \"gradlew.bat :core:ui:dependencies --configuration debugCompileClasspath 2>&1 | findstr material3\")"
     ],
     "deny": [],
     "ask": []

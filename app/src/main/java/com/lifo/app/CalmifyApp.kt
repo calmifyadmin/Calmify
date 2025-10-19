@@ -16,6 +16,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -32,7 +34,9 @@ import com.lifo.auth.navigation.authenticationRoute
 import com.lifo.chat.navigation.chatRoute
 import com.lifo.chat.navigation.liveRoute
 import com.lifo.chat.navigation.navigateToChat
+import com.lifo.history.navigation.historyRoute
 import com.lifo.home.navigation.homeRoute
+import com.lifo.home.navigation.settingsRoute
 import com.lifo.mongo.repository.MongoRepository
 import com.lifo.ui.components.DisplayAlertDialog
 import com.lifo.ui.components.navigation.CalmifyNavigationBar
@@ -46,6 +50,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.lifo.util.LocalBottomAppBarHeight
 import kotlin.math.ln
 
 /**
@@ -85,6 +90,10 @@ fun CalmifyApp(
     // BottomAppBar scroll behavior - exitAlways nasconde la bar durante scroll
     val bottomBarScrollBehavior = BottomAppBarDefaults.exitAlwaysScrollBehavior()
 
+    // Measure BottomAppBar height dynamically
+    var bottomAppBarHeight by remember { mutableStateOf(0.dp) }
+    val density = LocalDensity.current
+
     // Navigation Drawer wrapper - ora avvolge tutto
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -114,15 +123,16 @@ fun CalmifyApp(
             }
         }
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            // Main content - usa tutto lo spazio, la BottomAppBar è in overlay
-            CalmifyNavHost(
-                navController = navigationState.navController,
-                startDestination = startDestination,
-                onDataLoaded = onDataLoaded,
-                drawerState = drawerState,
-                bottomBarScrollBehavior = bottomBarScrollBehavior
-            )
+        CompositionLocalProvider(LocalBottomAppBarHeight provides bottomAppBarHeight) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                // Main content - usa tutto lo spazio, la BottomAppBar è in overlay
+                CalmifyNavHost(
+                    navController = navigationState.navController,
+                    startDestination = startDestination,
+                    onDataLoaded = onDataLoaded,
+                    drawerState = drawerState,
+                    bottomBarScrollBehavior = bottomBarScrollBehavior
+                )
 
             // BottomAppBar con scroll behavior - posizionata in basso con offset
             AnimatedVisibility(
@@ -163,10 +173,14 @@ fun CalmifyApp(
                     scrollBehavior = bottomBarScrollBehavior,
                     destinations = listOf(
                         NavigationDestination.Home,
-                        NavigationDestination.Write,
-                        NavigationDestination.Profile
-                    )
+                        NavigationDestination.History,
+                        NavigationDestination.Settings
+                    ),
+                    modifier = Modifier.onSizeChanged { size ->
+                        bottomAppBarHeight = with(density) { size.height.toDp() }
+                    }
                 )
+            }
             }
         }
     }
@@ -509,9 +523,41 @@ private fun CalmifyNavHost(
             navigateToExistingChat = { sessionId ->
                 navController.navigateToChat(sessionId)
             },
+            navigateToLiveScreen = {
+                navController.navigate(Screen.LiveChat.route) {
+                    launchSingleTop = true
+                }
+            },
             onDataLoaded = onDataLoaded,
             drawerState = drawerState, // Passa il drawer state
             bottomBarScrollBehavior = bottomBarScrollBehavior // Passa lo scroll behavior
+        )
+
+        // History - new activity/history screen
+        historyRoute(
+            navController = navController,
+            navigateToWriteWithArgs = { diaryId ->
+                val writeRoute = Screen.Write.passDiaryId(diaryId = diaryId)
+                navController.navigate(writeRoute) {
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            },
+            navigateToExistingChat = { sessionId ->
+                navController.navigateToChat(sessionId)
+            },
+            onMenuClicked = {
+                // History screen doesn't have a drawer, so we can leave this empty
+            },
+            bottomBarScrollBehavior = bottomBarScrollBehavior
+        )
+
+        // Settings
+        settingsRoute(
+            onMenuClicked = {
+                // Settings screen doesn't have a drawer
+            },
+            bottomBarScrollBehavior = bottomBarScrollBehavior
         )
 
         // Write

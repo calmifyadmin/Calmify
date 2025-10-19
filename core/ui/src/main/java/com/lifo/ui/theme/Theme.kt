@@ -15,64 +15,6 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
-import com.lifo.ui.theme.md_theme_dark_background
-import com.lifo.ui.theme.md_theme_dark_error
-import com.lifo.ui.theme.md_theme_dark_errorContainer
-import com.lifo.ui.theme.md_theme_dark_inverseOnSurface
-import com.lifo.ui.theme.md_theme_dark_inversePrimary
-import com.lifo.ui.theme.md_theme_dark_inverseSurface
-import com.lifo.ui.theme.md_theme_dark_onBackground
-import com.lifo.ui.theme.md_theme_dark_onError
-import com.lifo.ui.theme.md_theme_dark_onErrorContainer
-import com.lifo.ui.theme.md_theme_dark_onPrimary
-import com.lifo.ui.theme.md_theme_dark_onPrimaryContainer
-import com.lifo.ui.theme.md_theme_dark_onSecondary
-import com.lifo.ui.theme.md_theme_dark_onSecondaryContainer
-import com.lifo.ui.theme.md_theme_dark_onSurface
-import com.lifo.ui.theme.md_theme_dark_onSurfaceVariant
-import com.lifo.ui.theme.md_theme_dark_onTertiary
-import com.lifo.ui.theme.md_theme_dark_onTertiaryContainer
-import com.lifo.ui.theme.md_theme_dark_outline
-import com.lifo.ui.theme.md_theme_dark_outlineVariant
-import com.lifo.ui.theme.md_theme_dark_primary
-import com.lifo.ui.theme.md_theme_dark_primaryContainer
-import com.lifo.ui.theme.md_theme_dark_scrim
-import com.lifo.ui.theme.md_theme_dark_secondary
-import com.lifo.ui.theme.md_theme_dark_secondaryContainer
-import com.lifo.ui.theme.md_theme_dark_surface
-import com.lifo.ui.theme.md_theme_dark_surfaceTint
-import com.lifo.ui.theme.md_theme_dark_surfaceVariant
-import com.lifo.ui.theme.md_theme_dark_tertiary
-import com.lifo.ui.theme.md_theme_dark_tertiaryContainer
-import com.lifo.ui.theme.md_theme_light_background
-import com.lifo.ui.theme.md_theme_light_error
-import com.lifo.ui.theme.md_theme_light_errorContainer
-import com.lifo.ui.theme.md_theme_light_inverseOnSurface
-import com.lifo.ui.theme.md_theme_light_inversePrimary
-import com.lifo.ui.theme.md_theme_light_inverseSurface
-import com.lifo.ui.theme.md_theme_light_onBackground
-import com.lifo.ui.theme.md_theme_light_onError
-import com.lifo.ui.theme.md_theme_light_onErrorContainer
-import com.lifo.ui.theme.md_theme_light_onPrimary
-import com.lifo.ui.theme.md_theme_light_onPrimaryContainer
-import com.lifo.ui.theme.md_theme_light_onSecondary
-import com.lifo.ui.theme.md_theme_light_onSecondaryContainer
-import com.lifo.ui.theme.md_theme_light_onSurface
-import com.lifo.ui.theme.md_theme_light_onSurfaceVariant
-import com.lifo.ui.theme.md_theme_light_onTertiary
-import com.lifo.ui.theme.md_theme_light_onTertiaryContainer
-import com.lifo.ui.theme.md_theme_light_outline
-import com.lifo.ui.theme.md_theme_light_outlineVariant
-import com.lifo.ui.theme.md_theme_light_primary
-import com.lifo.ui.theme.md_theme_light_primaryContainer
-import com.lifo.ui.theme.md_theme_light_scrim
-import com.lifo.ui.theme.md_theme_light_secondary
-import com.lifo.ui.theme.md_theme_light_secondaryContainer
-import com.lifo.ui.theme.md_theme_light_surface
-import com.lifo.ui.theme.md_theme_light_surfaceTint
-import com.lifo.ui.theme.md_theme_light_surfaceVariant
-import com.lifo.ui.theme.md_theme_light_tertiary
-import com.lifo.ui.theme.md_theme_light_tertiaryContainer
 
 
 private val LightColors = lightColorScheme(
@@ -105,6 +47,12 @@ private val LightColors = lightColorScheme(
     surfaceTint = md_theme_light_surfaceTint,
     outlineVariant = md_theme_light_outlineVariant,
     scrim = md_theme_light_scrim,
+    // Surface container colors
+    surfaceContainerLowest = md_theme_light_surfaceContainerLowest,
+    surfaceContainerLow = md_theme_light_surfaceContainerLow,
+    surfaceContainer = md_theme_light_surfaceContainer,
+    surfaceContainerHigh = md_theme_light_surfaceContainerHigh,
+    surfaceContainerHighest = md_theme_light_surfaceContainerHighest,
 )
 
 
@@ -137,13 +85,20 @@ private val DarkColors = darkColorScheme(
     inversePrimary = md_theme_dark_inversePrimary,
     surfaceTint = md_theme_dark_surfaceTint,
     outlineVariant = md_theme_dark_outlineVariant,
-    scrim = md_theme_dark_scrim
+    scrim = md_theme_dark_scrim,
+    // Surface container colors
+    surfaceContainerLowest = md_theme_dark_surfaceContainerLowest,
+    surfaceContainerLow = md_theme_dark_surfaceContainerLow,
+    surfaceContainer = md_theme_dark_surfaceContainer,
+    surfaceContainerHigh = md_theme_dark_surfaceContainerHigh,
+    surfaceContainerHighest = md_theme_dark_surfaceContainerHighest,
 )
+
 @Composable
 fun CalmifyAppTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

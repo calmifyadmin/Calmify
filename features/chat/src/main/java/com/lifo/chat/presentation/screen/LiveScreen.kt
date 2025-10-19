@@ -1,0 +1,515 @@
+package com.lifo.chat.presentation.screen
+
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.outlined.VolumeOff
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.lifo.chat.domain.model.AIEmotion
+import com.lifo.chat.domain.model.ConnectionStatus
+import com.lifo.chat.domain.model.TurnState
+import com.lifo.chat.presentation.components.GeminiLiquidVisualizer
+import com.lifo.chat.presentation.components.SimpleLiveCameraPreview
+import com.lifo.chat.presentation.viewmodel.LiveChatViewModel
+
+/**
+ * Dedicated Live Screen with minimalist UI inspired by Gemini Live
+ *
+ * Features:
+ * - Full-screen waveform visualization
+ * - Minimal controls (Close, Mute, Status)
+ * - Real-time audio-reactive animations
+ * - Elegant gradient background
+ */
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun LiveScreen(
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: LiveChatViewModel = hiltViewModel()
+) {
+    val liveChatState by viewModel.uiState.collectAsStateWithLifecycle()
+    val currentTranscript by viewModel.currentTranscript.collectAsStateWithLifecycle()
+
+    // Audio intelligence states for waveform
+    val userVoiceLevel by viewModel.userVoiceLevel.collectAsStateWithLifecycle()
+    val aiVoiceLevel by viewModel.aiVoiceLevel.collectAsStateWithLifecycle()
+    val emotionalIntensity by viewModel.emotionalIntensity.collectAsStateWithLifecycle()
+    val conversationMode by viewModel.conversationMode.collectAsStateWithLifecycle()
+
+    val haptics = LocalHapticFeedback.current
+
+    // Local state to track if user wants camera on
+    var wantsCameraOn by remember { mutableStateOf(false) }
+
+    // Permission handling
+    val audioPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            viewModel.onAudioPermissionGranted()
+        } else {
+            viewModel.onAudioPermissionDenied()
+        }
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            viewModel.onCameraPermissionGranted()
+        } else {
+            viewModel.onCameraPermissionDenied()
+        }
+    }
+
+    // Auto-connect when screen opens
+    LaunchedEffect(Unit) {
+        if (!liveChatState.hasAudioPermission) {
+            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        } else if (liveChatState.connectionStatus == ConnectionStatus.Disconnected) {
+            viewModel.connectToRealtime()
+        }
+    }
+
+    // Disconnect when leaving
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.disconnectFromRealtime()
+        }
+    }
+
+    Box(
+        modifier = modifier.fillMaxSize()
+    ) {
+        // Waveform visualizer - full screen with same style as ChatScreen
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            GeminiLiquidVisualizer(
+                isSpeaking = liveChatState.aiEmotion == AIEmotion.Speaking ||
+                            liveChatState.turnState == TurnState.UserTurn,
+                modifier = Modifier.fillMaxSize(),
+                primaryColor = MaterialTheme.colorScheme.primary,
+                secondaryColor = MaterialTheme.colorScheme.tertiary,
+                backgroundColor = MaterialTheme.colorScheme.surface,
+                userVoiceLevel = userVoiceLevel,
+                aiVoiceLevel = aiVoiceLevel,
+                emotionalIntensity = emotionalIntensity,
+                conversationMode = conversationMode,
+                isUserSpeaking = liveChatState.turnState == TurnState.UserTurn && !liveChatState.isMuted,
+                isAiSpeaking = liveChatState.aiEmotion == AIEmotion.Speaking
+            )
+        } else {
+            // Fallback gradient background for older devices
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.surface,
+                                MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        )
+                    )
+            )
+        }
+
+        // Top bar with close button and status
+        LiveTopBar(
+            connectionStatus = liveChatState.connectionStatus,
+            turnState = liveChatState.turnState,
+            isMuted = liveChatState.isMuted,
+            onClose = {
+                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onClose()
+            },
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .statusBarsPadding()
+        )
+
+        // Simplified camera preview - shows when user wants camera on and has permission
+        AnimatedVisibility(
+            visible = wantsCameraOn && liveChatState.hasCameraPermission,
+            enter = fadeIn() + scaleIn(),
+            exit = fadeOut() + scaleOut(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(
+                    top = 96.dp,  // Space for top bar + extra margin
+                    bottom = 220.dp,  // Space for bottom controls + extra margin
+                    start = 16.dp,
+                    end = 16.dp
+                )
+        ) {
+            SimpleLiveCameraPreview(
+                isCameraActive = liveChatState.isCameraActive,
+                hasCameraPermission = liveChatState.hasCameraPermission,
+                onRequestCameraPermission = {
+                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                },
+                onSurfaceTextureReady = { surfaceTexture ->
+                    if (liveChatState.hasCameraPermission && !liveChatState.isCameraActive) {
+                        viewModel.startCameraPreview(surfaceTexture)
+                    }
+                },
+                onSurfaceTextureDestroyed = {
+                    if (liveChatState.isCameraActive) {
+                        viewModel.stopCameraPreview()
+                    }
+                }
+            )
+        }
+
+        // Bottom controls - mute button and status
+        LiveBottomControls(
+            connectionStatus = liveChatState.connectionStatus,
+            isMuted = liveChatState.isMuted,
+            turnState = liveChatState.turnState,
+            isChannelOpen = liveChatState.isChannelOpen,
+            partialTranscript = liveChatState.partialTranscript,
+            error = liveChatState.error,
+            onToggleMute = {
+                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                viewModel.toggleMute()
+            },
+            isCameraActive = liveChatState.isCameraActive,
+            hasCameraPermission = liveChatState.hasCameraPermission,
+            wantsCameraOn = wantsCameraOn,
+            onToggleCamera = {
+                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                if (!liveChatState.hasCameraPermission) {
+                    // Request permission first
+                    wantsCameraOn = true
+                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                } else {
+                    // Toggle camera on/off
+                    wantsCameraOn = !wantsCameraOn
+                    if (!wantsCameraOn && liveChatState.isCameraActive) {
+                        // Stop camera if turning off
+                        viewModel.stopCameraPreview()
+                    }
+                }
+            },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+        )
+    }
+}
+
+@Composable
+private fun LiveTopBar(
+    connectionStatus: ConnectionStatus,
+    turnState: TurnState,
+    isMuted: Boolean,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Left side - Status indicator
+        LiveStatusChip(
+            connectionStatus = connectionStatus,
+            turnState = turnState,
+            isMuted = isMuted
+        )
+
+        // Right side - Close button
+        IconButton(
+            onClick = onClose,
+            colors = IconButtonDefaults.iconButtonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                contentColor = MaterialTheme.colorScheme.onSurface
+            )
+        ) {
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = "Close Live Chat"
+            )
+        }
+    }
+}
+
+@Composable
+private fun LiveStatusChip(
+    connectionStatus: ConnectionStatus,
+    turnState: TurnState,
+    isMuted: Boolean
+) {
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        color = when (connectionStatus) {
+            ConnectionStatus.Connected -> when (turnState) {
+                TurnState.UserTurn -> MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                TurnState.AgentTurn -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
+                TurnState.WaitingForUser -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            }
+            ConnectionStatus.Connecting -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
+            ConnectionStatus.Error -> MaterialTheme.colorScheme.error.copy(alpha = 0.3f)
+            ConnectionStatus.Disconnected -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        },
+        modifier = Modifier.height(32.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Animated status indicator
+            val infiniteTransition = rememberInfiniteTransition(label = "statusPulse")
+            val shouldAnimate = (connectionStatus == ConnectionStatus.Connected &&
+                    (turnState == TurnState.UserTurn || turnState == TurnState.AgentTurn)) ||
+                    connectionStatus == ConnectionStatus.Connecting
+
+            val statusPulse by infiniteTransition.animateFloat(
+                initialValue = if (shouldAnimate) 0.5f else 1f,
+                targetValue = if (shouldAnimate) 1f else 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1200),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "statusPulse"
+            )
+
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .background(
+                        when (connectionStatus) {
+                            ConnectionStatus.Connected -> when (turnState) {
+                                TurnState.UserTurn -> MaterialTheme.colorScheme.primary.copy(alpha = statusPulse)
+                                TurnState.AgentTurn -> MaterialTheme.colorScheme.secondary.copy(alpha = statusPulse)
+                                TurnState.WaitingForUser -> MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                            ConnectionStatus.Connecting -> MaterialTheme.colorScheme.tertiary.copy(alpha = statusPulse)
+                            ConnectionStatus.Error -> MaterialTheme.colorScheme.error
+                            ConnectionStatus.Disconnected -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        },
+                        shape = CircleShape
+                    )
+            )
+
+            Text(
+                text = when (connectionStatus) {
+                    ConnectionStatus.Connected -> when (turnState) {
+                        TurnState.UserTurn -> "You"
+                        TurnState.AgentTurn -> "Gemini"
+                        TurnState.WaitingForUser -> if (isMuted) "Muted" else "Live"
+                    }
+                    ConnectionStatus.Connecting -> "Connecting"
+                    ConnectionStatus.Error -> "Error"
+                    ConnectionStatus.Disconnected -> "Offline"
+                },
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = if (connectionStatus == ConnectionStatus.Connected &&
+                    turnState != TurnState.WaitingForUser)
+                    FontWeight.Medium else FontWeight.Normal
+            )
+        }
+    }
+}
+
+
+@Composable
+private fun LiveBottomControls(
+    connectionStatus: ConnectionStatus,
+    isMuted: Boolean,
+    turnState: TurnState,
+    isChannelOpen: Boolean,
+    partialTranscript: String,
+    error: String?,
+    onToggleMute: () -> Unit,
+    isCameraActive: Boolean,
+    hasCameraPermission: Boolean,
+    wantsCameraOn: Boolean,
+    onToggleCamera: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Partial transcript display
+        AnimatedVisibility(
+            visible = partialTranscript.isNotEmpty() && connectionStatus == ConnectionStatus.Connected,
+            enter = fadeIn() + slideInVertically { it / 2 },
+            exit = fadeOut() + slideOutVertically { it / 2 }
+        ) {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) {
+                Text(
+                    text = partialTranscript,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .padding(12.dp)
+                        .fillMaxWidth()
+                )
+            }
+        }
+
+        // Error display
+        AnimatedVisibility(
+            visible = error != null,
+            enter = fadeIn() + slideInVertically { it },
+            exit = fadeOut() + slideOutVertically { it }
+        ) {
+            error?.let {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                ) {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .padding(12.dp)
+                            .fillMaxWidth()
+                    )
+                }
+            }
+        }
+
+        // Mute/Unmute and Camera buttons row
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Camera toggle button
+            val cameraScale by animateFloatAsState(
+                targetValue = if (wantsCameraOn && isCameraActive) 1.1f else 1f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMedium
+                ),
+                label = "cameraScale"
+            )
+
+            FloatingActionButton(
+                onClick = onToggleCamera,
+                modifier = Modifier
+                    .size(64.dp)
+                    .graphicsLayer {
+                        scaleX = cameraScale
+                        scaleY = cameraScale
+                    },
+                containerColor = if (wantsCameraOn && isCameraActive)
+                    MaterialTheme.colorScheme.secondaryContainer
+                else
+                    MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = if (wantsCameraOn && isCameraActive)
+                    MaterialTheme.colorScheme.onSecondaryContainer
+                else
+                    MaterialTheme.colorScheme.onSurfaceVariant
+            ) {
+                Icon(
+                    imageVector = if (wantsCameraOn && isCameraActive) Icons.Default.CameraAlt else Icons.Outlined.CameraAlt,
+                    contentDescription = if (isCameraActive) "Disable Camera" else "Enable Camera",
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+
+            // Mute/Unmute button - large, prominent
+            val micScale by animateFloatAsState(
+                targetValue = if (turnState == TurnState.UserTurn && !isMuted) 1.1f else 1f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMedium
+                ),
+                label = "micScale"
+            )
+
+            FloatingActionButton(
+                onClick = onToggleMute,
+                modifier = Modifier
+                    .size(72.dp)
+                    .graphicsLayer {
+                        scaleX = micScale
+                        scaleY = micScale
+                    },
+                containerColor = if (isMuted)
+                    MaterialTheme.colorScheme.errorContainer
+                else
+                    MaterialTheme.colorScheme.primaryContainer,
+                contentColor = if (isMuted)
+                    MaterialTheme.colorScheme.onErrorContainer
+                else
+                    MaterialTheme.colorScheme.onPrimaryContainer
+            ) {
+                Icon(
+                    imageVector = if (isMuted) Icons.Outlined.VolumeOff else Icons.Default.Mic,
+                    contentDescription = if (isMuted) "Unmute" else "Mute",
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+        }
+
+        // Subtle hint text
+        AnimatedVisibility(
+            visible = connectionStatus == ConnectionStatus.Connected,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            Text(
+                text = when (turnState) {
+                    TurnState.UserTurn -> "Speak freely"
+                    TurnState.AgentTurn -> "Gemini is responding"
+                    TurnState.WaitingForUser -> if (isMuted) "Tap to unmute" else "Listening"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}

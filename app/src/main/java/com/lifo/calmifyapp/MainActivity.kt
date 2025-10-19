@@ -98,20 +98,23 @@ class MainActivity : ComponentActivity() {
         // Configure edge-to-edge display
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
+        // Set status bar to transparent to match TopAppBar color
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+
         // Configure the API keys from BuildConfig
         // These are loaded from local.properties file and injected at build time
         try {
             // Get API keys from the chat module's BuildConfig
             val chatBuildConfig = Class.forName("com.lifo.chat.BuildConfig")
-            
+
             // Get Gemini API key
             val geminiApiKeyField = chatBuildConfig.getDeclaredField("GEMINI_API_KEY")
             val geminiApiKey = geminiApiKeyField.get(null) as String
-            
-            // Get OpenAI API key  
+
+            // Get OpenAI API key
             val openAIApiKeyField = chatBuildConfig.getDeclaredField("KEY_OPENAI_API")
             val openAIApiKey = openAIApiKeyField.get(null) as String
-            
+
             // Set the API keys if they are not empty
             if (geminiApiKey.isNotEmpty()) {
                 apiConfigManager.setGeminiApiKey(geminiApiKey)
@@ -119,7 +122,7 @@ class MainActivity : ComponentActivity() {
             } else {
                 Log.w("MainActivity", "Gemini API key is empty in BuildConfig")
             }
-            
+
             if (openAIApiKey.isNotEmpty()) {
                 apiConfigManager.setOpenAIApiKey(openAIApiKey)
                 Log.d("MainActivity", "OpenAI API key configured from BuildConfig")
