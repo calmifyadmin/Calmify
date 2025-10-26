@@ -1,22 +1,31 @@
-# Calmify - Psychological Insights Implementation Guide
+# Calmify - Psychological Insights Implementation Guide (v2.0)
 
-**Purpose**: Step-by-step guide for implementing the psychological insights feature by coordinating work between Firebase/Google Cloud Console (manual) and Claude Code (automated).
+**Purpose**: Pragmatic, step-by-step guide for implementing psychological insights by coordinating work between manual tasks (Firebase Console) and automated tasks (Claude Code).
+
+**Philosophy**: Build → Test → Optimize (not optimize → build)
 
 **For**: Project owner/developer
-**Prerequisites**: Basic understanding of Firebase, Android development, terminal usage
+**Updated**: 2025-01-19
 
 ---
 
-## 📋 Overview
+## 📋 Quick Start
 
-This guide divides the implementation into **12 phases** that alternate between:
-- 🔧 **Manual Tasks** (Firebase/Cloud Console) - Tasks you perform manually
-- 🤖 **Claude Code Tasks** (Automated) - Tasks delegated to Claude Code with simple prompts
+### What This Guide Does
 
-Each phase has:
-- Clear **STOP/START** markers
-- Specific **trigger prompts** for Claude Code
-- **Verification steps** to ensure everything works before proceeding
+This guide divides implementation into **3 main phases** over 10-12 weeks:
+
+1. **Phase 1 (Weeks 1-4)**: MVP - Get features working (NO optimization)
+2. **Phase 2 (Weeks 5-8)**: AI Integration - Add Cloud Functions + Gemini
+3. **Phase 3 (Weeks 9-12)**: Optimization - Indexes, Vector Search, Performance tuning
+
+### Key Principle
+
+**Firebase creates collections automatically** when you save the first document.
+
+**Firebase tells you when indexes are needed** via error messages with direct links.
+
+**No premature optimization** - build first, optimize later when you have real data.
 
 ---
 
@@ -24,828 +33,475 @@ Each phase has:
 
 ### Reading Instructions
 
-- **⏸️ STOP HERE**: Complete manual tasks before proceeding
-- **▶️ TRIGGER CLAUDE CODE**: Use the exact prompt provided
-- **✅ VERIFY**: Check that the work completed successfully
-- **📍 CHECKPOINT**: Ensure all steps up to this point are complete
+- **⏸️ MANUAL TASK**: You do this manually (Firebase Console or terminal)
+- **▶️ TRIGGER CLAUDE CODE**: Copy/paste the exact prompt to Claude Code
+- **✅ VERIFY**: Check that work completed successfully
+- **📍 CHECKPOINT**: Don't proceed unless ALL items are checked
 
 ### Golden Rules
 
-1. **Never skip checkpoints** - Each phase builds on the previous
-2. **Use exact trigger prompts** - Claude Code relies on these for context
+1. **Follow phases sequentially** - Don't skip ahead
+2. **Use exact trigger prompts** - Claude Code needs precise context
 3. **Verify before proceeding** - Catch issues early
 4. **Keep PSYCHOLOGICAL_INSIGHTS_PLAN.md open** - Claude Code references it constantly
-5. **Mark checkboxes** in Appendix D (Platform Setup Checklist) as you complete tasks
+5. **Don't create indexes until Phase 3** - Firebase will tell you when needed
 
 ---
 
 ## 📚 Reference Documents
 
-Claude Code will use these as "bible" references during implementation:
-
 | Document | Purpose | When Claude Code Uses It |
 |----------|---------|-------------------------|
-| `PSYCHOLOGICAL_INSIGHTS_PLAN.md` | Complete feature specification | **Every phase** - for data models, AI prompts, technical architecture |
-| `PROJECT_TECHNICAL_REPORT.md` | Current codebase state | When integrating with existing features (Chat, Write, Home) |
-| `CLAUDE.md` (aka JARVIS.md) | Project conventions & build commands | For coding style, module structure, build/deploy |
-| `IMPLEMENTATION_GUIDE.md` | This file - phase-by-phase workflow | To know current progress and next steps |
+| `PSYCHOLOGICAL_INSIGHTS_PLAN.md` | Feature specification (data models, AI prompts) | **Every task** - primary reference |
+| `PROJECT_TECHNICAL_REPORT.md` | Current codebase state | When integrating with existing features |
+| `CLAUDE.md` (JARVIS.md) | Project conventions & build commands | For coding style, module structure |
+| `IMPLEMENTATION_GUIDE.md` | This file - phase-by-phase workflow | To know current progress |
 
 ---
 
-## 🚀 Phase 0: Pre-Flight Checklist (15 minutes)
+## 🚀 PHASE 1: MVP - Working Features (Weeks 1-4)
 
-### ⏸️ STOP - Manual Tasks
+**Goal**: Get features working end-to-end with NO optimization
 
-**Location**: Your local machine + Firebase Console
+### Week 1: Enhanced Diary Input (Android)
 
-- [ ] **Install Node.js 18+** (for Firebase CLI)
-  ```bash
-  node --version  # Should show v18.x or higher
-  ```
-
-- [ ] **Install Firebase CLI**
-  ```bash
-  npm install -g firebase-tools
-  firebase --version
-  ```
-
-- [ ] **Login to Firebase**
-  ```bash
-  firebase login
-  ```
-
-- [ ] **Verify project exists**
-  - Go to [Firebase Console](https://console.firebase.google.com)
-  - Confirm `calmify` or `calmify-dev` project exists
-  - Note the **Project ID** (you'll need this later)
-
-- [ ] **Enable Blaze plan** (if not already)
-  - Firebase Console → ⚙️ Settings → Usage and Billing
-  - Upgrade to Blaze (pay-as-you-go)
-  - Set budget alert: $50/month
-
-### ✅ Verification
-
-```bash
-firebase projects:list
-# Should show your project
-```
-
-### ▶️ TRIGGER CLAUDE CODE
+#### ▶️ TRIGGER CLAUDE CODE
 
 ```
-Read PSYCHOLOGICAL_INSIGHTS_PLAN.md and PROJECT_TECHNICAL_REPORT.md to understand the current state of the project. Confirm you understand the enhancement plan and current architecture. No action needed yet, just acknowledge.
+Implement Week 1 from PSYCHOLOGICAL_INSIGHTS_PLAN.md: Enhanced Diary Input.
+
+Extend the Diary model with 6 new fields (backward compatible with defaults):
+- emotionIntensity: Int = 5
+- stressLevel: Int = 5
+- energyLevel: Int = 5
+- calmAnxietyLevel: Int = 5
+- primaryTrigger: Trigger = Trigger.NONE
+- dominantBodySensation: BodySensation = BodySensation.NONE
+
+Create enums: Trigger, BodySensation (see PSYCHOLOGICAL_INSIGHTS_PLAN.md Section 1.1)
+
+Create PsychologicalMetricsSheet composable:
+- Material3 Sliders (0-10 range) for intensity/stress/energy/calm
+- Preset buttons for Trigger enum (Work, Family, Health, etc.)
+- Preset buttons for BodySensation enum
+- Skip button (keeps defaults)
+- Target completion: <10 seconds
+
+Update WriteViewModel to handle new fields.
+Integrate into WriteScreen after mood selection.
+
+Reference existing WriteScreen patterns from PROJECT_TECHNICAL_REPORT.md.
 ```
 
-**Expected Response**: Claude Code will summarize the plan and confirm understanding of:
-- Current tech stack (Kotlin 2.1, Compose BOM 2025.01, Firebase)
-- Existing modules (app, core, data/mongo, features)
-- Firestore setup (calmify-native database)
-- Enhancement scope (psychological insights, wellbeing snapshots, AI analysis)
-
----
-
-## 🔧 Phase 1: Firebase Platform Setup (2-3 hours)
-
-### ⏸️ STOP - Manual Tasks
-
-**Reference**: `PSYCHOLOGICAL_INSIGHTS_PLAN.md` → Appendix D: Platform Setup Checklist
-
-**Tasks to Complete**:
-
-#### 1.1 Firestore Configuration (20 min)
-
-**Console**: [Firebase Console](https://console.firebase.google.com) → Your Project → Firestore
-
-- [ ] **Create 4 composite indexes**:
-
-  Navigate to: Firestore → Indexes → Composite tab → Add Index
-
-  **Index 1**: `diaries` collection
-  - Fields: `ownerId` (Ascending), `date` (Descending)
-
-  **Index 2**: `diary_insights` collection
-  - Fields: `ownerId` (Ascending), `generatedAt` (Descending)
-
-  **Index 3**: `wellbeing_snapshots` collection
-  - Fields: `ownerId` (Ascending), `timestamp` (Descending)
-
-  **Index 4**: `psychological_profiles` collection
-  - Fields: `ownerId` (Ascending), `year` (Descending), `weekNumber` (Descending)
-
-  > **Note**: Indexes will show "Building" status. This can take 5-15 minutes. Continue with other tasks while waiting.
-
-- [ ] **Enable Vector Search** (for RAG feature):
-
-  Navigate to: Firestore → Indexes → Single field tab
-
-  - Field path: `diaries.embedding`
-  - Index type: **Vector**
-  - Dimensions: **768**
-  - Distance measure: **COSINE**
-  - Click **Create**
-
-  > **Note**: Vector index can take 15-30 minutes to build.
-
-- [ ] **Update Firestore security rules**:
-
-  Copy the rules from `PSYCHOLOGICAL_INSIGHTS_PLAN.md` → Appendix D → Section 1.2
-
-  Navigate to: Firestore → Rules tab → Paste → **Publish**
-
-  Test rules using Rules Playground (same tab):
-  - Test read/write with matching/mismatched `ownerId`
-
-#### 1.2 Cloud Functions Setup (45 min)
-
-**Terminal**: Navigate to project root
-
-- [ ] **Initialize Firebase Functions**:
-
-  ```bash
-  firebase init
-
-  # Select (use Space to check, Enter to confirm):
-  # - Functions
-  # - Firestore (if not already initialized)
-
-  # Prompts:
-  # - Use existing project → Select your project
-  # - Language: TypeScript
-  # - ESLint: Yes
-  # - Install dependencies: Yes
-  ```
-
-  This creates a `functions/` directory.
-
-- [ ] **Install Genkit dependencies**:
-
-  ```bash
-  cd functions
-  npm install genkit @genkit-ai/googleai
-  npm install firebase-admin
-  npm install zod
-  npm install @google-cloud/firestore
-  cd ..
-  ```
-
-- [ ] **Configure Gemini API Key**:
-
-  1. Get API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
-  2. Set as secret:
-     ```bash
-     firebase functions:secrets:set GEMINI_API_KEY
-     # Paste your API key when prompted
-     ```
-  3. Verify:
-     ```bash
-     firebase functions:secrets:access GEMINI_API_KEY
-     # Should show redacted key
-     ```
-
-- [ ] **Create function directory structure**:
-
-  ```bash
-  mkdir -p functions/src/genkit
-  mkdir -p functions/src/scheduler
-  mkdir -p functions/src/utils
-  ```
-
-#### 1.3 Enable Google Cloud APIs (15 min)
-
-**Console**: [Google Cloud Console](https://console.cloud.google.com)
-
-- [ ] Select your Firebase project from dropdown (top left)
-- [ ] Navigate to: APIs & Services → Library
-- [ ] Search and **Enable** each of these:
-  - Cloud Functions API
-  - Cloud Scheduler API
-  - Cloud Build API
-  - Generative Language API
-  - Vertex AI API
-  - Secret Manager API
-
-  > **Tip**: Use the search box and enable them one by one. Each takes ~10 seconds.
-
-#### 1.4 Cloud Scheduler Jobs (15 min)
-
-**Console**: [Google Cloud Console](https://console.cloud.google.com) → Cloud Scheduler
-
-**Replace `[YOUR_PROJECT_ID]` with your actual Firebase project ID in URLs below**
-
-- [ ] **Job 1: compute-weekly-profiles**
-  - Name: `compute-weekly-profiles`
-  - Region: `us-central1`
-  - Frequency: `0 2 * * 0` (Sunday 2 AM)
-  - Target: HTTP
-  - URL: `https://us-central1-[YOUR_PROJECT_ID].cloudfunctions.net/computeWeeklyProfiles`
-  - HTTP method: POST
-  - Auth: OIDC token
-  - Service account: `[YOUR_PROJECT_ID]@appspot.gserviceaccount.com`
-
-- [ ] **Job 2: send-weekly-reminders**
-  - Name: `send-weekly-reminders`
-  - Frequency: `0 21 * * 0` (Sunday 9 PM)
-  - URL: `https://us-central1-[YOUR_PROJECT_ID].cloudfunctions.net/sendWeeklyReminders`
-  - (Same auth settings)
-
-- [ ] **Job 3: monthly-themes-reminder**
-  - Name: `monthly-themes-reminder`
-  - Frequency: `0 10 1 * *` (1st of month 10 AM)
-  - URL: `https://us-central1-[YOUR_PROJECT_ID].cloudfunctions.net/sendMonthlyThemesReminder`
-  - (Same auth settings)
-
-  > **Note**: These jobs will fail until Cloud Functions are deployed. This is expected.
-
-#### 1.5 Firebase Cloud Messaging (15 min)
-
-**Console**: Firebase → Cloud Messaging
-
-- [ ] **Enable FCM**:
-  - Click "Send your first message"
-  - This auto-enables the service
-
-- [ ] **Copy Server Key** (for testing):
-  - Firebase Console → ⚙️ Project Settings → Cloud Messaging
-  - Copy **Server key** (under "Cloud Messaging API - Legacy")
-  - Store in a secure note (don't commit to Git)
-
-#### 1.6 Budget & Monitoring (15 min)
-
-**Console**: [Google Cloud Console](https://console.cloud.google.com) → Billing → Budgets
-
-- [ ] **Create budget alert**:
-  - Name: `Calmify Monthly Budget`
-  - Amount: $20 (testing) or $100 (production)
-  - Alerts at: 50%, 90%, 100%
-  - Email: Your email
-
-**Console**: Cloud Console → Monitoring → Alerting
-
-- [ ] **Create error alert**:
-  - Resource: Cloud Function
-  - Metric: Execution count
-  - Filter: `status = error`
-  - Threshold: > 10 errors/hour
-  - Email: Your email
-
-### ✅ Verification Checklist
-
-Before proceeding, verify:
-
-```bash
-# 1. Firebase CLI authenticated
-firebase projects:list
-
-# 2. Functions directory created
-ls -la functions/
-
-# 3. Genkit installed
-cd functions && npm list genkit && cd ..
-
-# 4. Firestore indexes building/enabled
-# Go to Firebase Console → Firestore → Indexes
-# All 5 indexes should show "Building" or "Enabled"
-
-# 5. Cloud Scheduler jobs created
-# Go to Cloud Console → Cloud Scheduler
-# Should see 3 jobs listed
-```
-
-**Firestore Indexes Status**:
-- Go to Firebase Console → Firestore → Indexes
-- All indexes should show **"Enabled"** (wait up to 30 min if still building)
-
-### 📍 CHECKPOINT 1
-
-**Before continuing**:
-- ✅ All 5 Firestore indexes are **Enabled**
-- ✅ `functions/` directory exists with TypeScript setup
-- ✅ Genkit dependencies installed
-- ✅ `GEMINI_API_KEY` secret configured
-- ✅ 3 Cloud Scheduler jobs created
-- ✅ FCM enabled
-- ✅ Budget alert active
-
-If ANY checkbox is unchecked, go back and complete it now.
-
----
-
-## 🤖 Phase 2: Database Schema Extensions (Week 1)
-
-### ▶️ TRIGGER CLAUDE CODE
-
-```
-Start Phase 1 (Week 1) of PSYCHOLOGICAL_INSIGHTS_PLAN.md implementation roadmap. Extend the database schema with the 4 new data models:
-
-1. Enhanced Diary (add psychological metrics to existing Diary model)
-2. WellbeingSnapshot entity
-3. DiaryInsight entity
-4. PsychologicalProfile entity
-
-Also create LifeTheme entity (optional but include it).
-
-Extend the existing Firestore data models in data/mongo module. Update the Diary model with backward-compatible defaults. Create new Kotlin data classes following the existing project patterns from PROJECT_TECHNICAL_REPORT.md.
-
-No UI changes yet - just data layer.
-```
-
-**What Claude Code Will Do**:
-1. Read `data/mongo/src/main/java/com/lifo/util/model/Diary.kt`
-2. Add new fields to `Diary` data class:
-   - `emotionIntensity: Int = 5`
-   - `stressLevel: Int = 5`
-   - `energyLevel: Int = 5`
-   - `calmAnxietyLevel: Int = 5`
-   - `primaryTrigger: Trigger = Trigger.NONE`
-   - `dominantBodySensation: BodySensation = BodySensation.NONE`
-3. Create new enums: `Trigger`, `BodySensation`
-4. Create new files:
-   - `data/mongo/src/main/java/com/lifo/mongo/database/entity/WellbeingSnapshotEntity.kt`
-   - `data/mongo/src/main/java/com/lifo/mongo/database/entity/DiaryInsightEntity.kt`
-   - `data/mongo/src/main/java/com/lifo/mongo/database/entity/PsychologicalProfileEntity.kt`
-   - `data/mongo/src/main/java/com/lifo/mongo/database/entity/LifeThemeEntity.kt`
-5. Create corresponding Firestore models in `core/util/src/main/java/com/lifo/util/model/`:
-   - `WellbeingSnapshot.kt`
-   - `DiaryInsight.kt`
-   - `PsychologicalProfile.kt`
-   - `LifeTheme.kt`
-6. Update Room database version and add new DAOs if needed
-
-### ✅ Verification
+#### ✅ VERIFY
 
 **After Claude Code finishes**:
 
 ```bash
-# 1. Build the project
-cmd /c "gradlew.bat clean build"
-
-# Should compile successfully (ignore warnings)
-```
-
-**Manual Code Review**:
-- [ ] Open `core/util/src/main/java/com/lifo/util/model/Diary.kt`
-- [ ] Verify new fields added with default values
-- [ ] Check `WellbeingSnapshot.kt`, `DiaryInsight.kt`, `PsychologicalProfile.kt` exist
-- [ ] Verify data classes match specification in `PSYCHOLOGICAL_INSIGHTS_PLAN.md` Section 1
-
-**Ask Claude Code**:
-```
-Show me the changes you made to the Diary model and list all new files created.
-```
-
-### 📍 CHECKPOINT 2
-
-- ✅ Project builds successfully
-- ✅ Diary model extended with 6 new fields
-- ✅ 4 new entity classes created (Wellbeing, Insight, Profile, Theme)
-- ✅ Enums created (Trigger, BodySensation, Trend, CognitivePattern)
-- ✅ No compilation errors
-
----
-
-## 🤖 Phase 3: Enhanced Diary Input UI (Week 2)
-
-### ▶️ TRIGGER CLAUDE CODE
-
-```
-Implement Week 2 of the roadmap: Enhanced Diary Input UI.
-
-Create a new composable component called "PsychologicalMetricsSheet" that appears after mood selection in the Write screen.
-
-Requirements from PSYCHOLOGICAL_INSIGHTS_PLAN.md Section 1.1:
-- Use Material3 Sliders for intensity/stress/energy/calm metrics (0-10 range)
-- Preset buttons for Trigger enum (Work, Family, Health, etc.)
-- Preset buttons for BodySensation enum
-- Optional skip with defaults to 5/NONE
-- Target completion time: <10 seconds
-- Follow existing WriteScreen.kt patterns from PROJECT_TECHNICAL_REPORT.md
-
-Update WriteViewModel to handle the new fields.
-```
-
-**What Claude Code Will Do**:
-1. Create `features/write/src/main/java/com/lifo/write/components/PsychologicalMetricsSheet.kt`
-2. Implement Material3 Sliders with emoji anchors
-3. Add preset button rows for Trigger and BodySensation
-4. Update `WriteViewModel.kt` to include new state fields
-5. Integrate into `WriteScreen.kt` after mood selection
-6. Add skip/default logic
-
-### ✅ Verification
-
-**Build and Test**:
-
-```bash
-# 1. Build the project
+# Build project
 cmd /c "gradlew.bat :features:write:build"
 
-# 2. Install on device/emulator
+# Install on device
 cmd /c "gradlew.bat installDebug"
 ```
 
 **Manual Testing**:
-1. Open app
-2. Tap "New Diary" (FAB)
-3. Fill title and description
-4. Select a mood
-5. **New**: Should see psychological metrics sheet
-6. Move sliders, select trigger/body sensation
-7. Save diary
-8. Verify data saved correctly (check Firestore Console)
+1. Open app → Tap "New Diary"
+2. Fill title, description, select mood
+3. **NEW**: Should see psychological metrics sheet
+4. Move sliders, select trigger/sensation
+5. Tap Skip → defaults to 5/NONE
+6. Save diary
 
-**Firebase Console Check**:
-- Go to Firestore → `diaries` collection
-- Find your test diary
+**Check Firestore Console**:
+- Go to https://console.firebase.google.com → Firestore
+- Find your test diary in `diaries` collection
 - Verify new fields exist: `emotionIntensity`, `stressLevel`, etc.
+- Values should match what you selected
 
-### 📍 CHECKPOINT 3
+#### 📍 CHECKPOINT 1
 
-- ✅ Write feature builds successfully
-- ✅ PsychologicalMetricsSheet appears in UI
-- ✅ Sliders work (0-10 range)
-- ✅ Trigger/BodySensation buttons functional
-- ✅ Data saves to Firestore with new fields
-- ✅ Skip button defaults to 5/NONE
+Before proceeding to Week 2:
+- [ ] Project builds successfully (`gradlew.bat build` passes)
+- [ ] `Diary` model has 6 new fields with defaults
+- [ ] `PsychologicalMetricsSheet` appears in UI
+- [ ] Sliders work (0-10 range)
+- [ ] Trigger/BodySensation buttons functional
+- [ ] Skip button works (defaults to 5/NONE)
+- [ ] Data saves to Firestore correctly
+- [ ] Existing diaries still work (backward compatible)
 
 ---
 
-## 🤖 Phase 4: Wellbeing Snapshot UI (Week 3)
+### Week 2: Wellbeing Snapshot (Android)
 
-### ▶️ TRIGGER CLAUDE CODE
+#### ▶️ TRIGGER CLAUDE CODE
 
 ```
-Create Week 3: Wellbeing Snapshot feature.
+Implement Week 2 from PSYCHOLOGICAL_INSIGHTS_PLAN.md: Wellbeing Snapshot.
 
-Create a new feature module (or add to existing structure) for the weekly wellbeing questionnaire.
+Create WellbeingSnapshot data class as specified in Section 1.2:
+- 10 metrics (lifeSatisfaction, workSatisfaction, relationshipsQuality, mindfulness, purpose, gratitude, autonomy, competence, relatedness, loneliness)
+- All Int fields (0-10 range)
+- notes: String (optional)
+- completionTime: Long (track UX metric)
+- wasReminded: Boolean
 
-Follow specification from PSYCHOLOGICAL_INSIGHTS_PLAN.md Section 1.2:
-- 8-10 item questionnaire (SDT-based)
-- Adaptive logic: shorten to 4 items if user wrote 3+ diaries this week
-- Sliders with emoji anchors (0-10)
-- Save to Firestore wellbeing_snapshots collection
-- Track completion time (UX metric)
+Create new screen or add to existing module:
+1. SnapshotScreen.kt (8-10 item questionnaire with Material3 Sliders)
+2. SnapshotViewModel.kt (save to Firestore)
+3. WellbeingRepository.kt (Firestore operations)
 
-Create:
-1. SnapshotScreen composable
-2. SnapshotViewModel
-3. Add navigation route
-4. Integrate with home screen (button or FAB)
+Add navigation route.
+Add entry point from Home screen (FAB action or Settings button).
 
-Reference existing feature patterns from features/write and features/chat.
+Use Material3 design patterns from existing features.
 ```
 
-**What Claude Code Will Do**:
-1. Decide whether to create `features/wellbeing` module or add to existing
-2. Create `SnapshotScreen.kt` with:
-   - 8-10 slider questions
-   - Adaptive shortening logic
-   - Completion time tracking
-   - Optional notes field
-3. Create `SnapshotViewModel.kt` with:
-   - State management (StateFlow)
-   - Firestore save logic
-   - Diary count check for adaptive mode
-4. Create repository: `WellbeingRepository.kt`
-5. Update navigation in `app/navigation/NavGraph.kt`
-6. Add entry point (button in HomeScreen or FAB action)
-
-### ⏸️ STOP - Manual Task
-
-**After Claude Code finishes, you need to**:
-
-Create a **test notification** to verify FCM works before implementing automated reminders.
-
-**Terminal**:
+#### ✅ VERIFY
 
 ```bash
-# Replace with your device FCM token (get from Logcat when app starts)
-curl -X POST https://fcm.googleapis.com/fcm/send \
-  -H "Authorization: key=[YOUR_FCM_SERVER_KEY]" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "to": "[DEVICE_FCM_TOKEN]",
-    "notification": {
-      "title": "Test: Weekly Snapshot Reminder",
-      "body": "Tap to complete your 2-minute wellness check"
-    }
-  }'
-```
-
-**Verify**:
-- Notification appears on device
-- Tapping opens app (deep link will be added later)
-
-### ✅ Verification
-
-**Build and Test**:
-
-```bash
-cmd /c "gradlew.bat :features:wellbeing:build"
 cmd /c "gradlew.bat installDebug"
 ```
 
 **Manual Testing**:
-1. Open app
-2. Navigate to Wellbeing Snapshot (new button/FAB action)
-3. Complete questionnaire (slide all 8-10 items)
-4. Add optional note
-5. Submit
-6. **Check Firestore Console**:
-   - Collection: `wellbeing_snapshots`
-   - Verify document created with all fields
-   - Check `completionTime` field is populated
+1. Open app → Navigate to Wellbeing Snapshot (new button)
+2. Complete questionnaire (slide all 8-10 items)
+3. Add optional note
+4. Submit
 
-**Test Adaptive Mode**:
-1. Create 3+ diary entries this week
-2. Open Wellbeing Snapshot again
-3. Should show **4 items** instead of 10 (shortened mode)
+**Check Firestore Console**:
+- Collection: `wellbeing_snapshots` (should auto-create on first save)
+- Verify document exists with all fields
+- Check `completionTime` is populated (milliseconds)
 
-### 📍 CHECKPOINT 4
+#### 📍 CHECKPOINT 2
 
-- ✅ Wellbeing feature builds successfully
-- ✅ Snapshot screen accessible from home
-- ✅ All 8-10 questions display correctly
-- ✅ Adaptive shortening works (3+ diaries → 4 questions)
-- ✅ Data saves to Firestore `wellbeing_snapshots`
-- ✅ `completionTime` tracked correctly
-- ✅ FCM test notification received
+- [ ] `WellbeingSnapshot` data class created
+- [ ] Snapshot screen accessible from Home
+- [ ] All 10 questions display with sliders
+- [ ] Optional notes field works
+- [ ] Data saves to Firestore
+- [ ] Collection `wellbeing_snapshots` auto-created
+- [ ] No Firestore index errors (data set still small)
 
 ---
 
-## 🤖 Phase 5: Cloud Functions - Insight Generation (Week 4-5)
+### Week 3: Firebase Setup - Cloud Functions
 
-### ⏸️ STOP - Manual Preparation
+#### ⏸️ MANUAL TASKS
 
-Before triggering Claude Code, ensure:
-- [ ] `functions/` directory initialized (done in Phase 1)
-- [ ] Genkit installed (done in Phase 1)
-- [ ] `GEMINI_API_KEY` secret configured (done in Phase 1)
+**Prerequisites**:
+- Node.js 18+ installed: `node --version`
+- Firebase CLI installed: `npm install -g firebase-tools`
 
-### ▶️ TRIGGER CLAUDE CODE
+**Terminal** (in project root):
 
-```
-Implement Weeks 4-5: Cloud Functions for AI Insight Generation.
+```bash
+# 1. Login to Firebase
+firebase login
 
-Create the following Cloud Functions using Genkit as specified in PSYCHOLOGICAL_INSIGHTS_PLAN.md Section 5:
+# 2. Initialize Firebase Functions
+firebase init
 
-1. Firestore onCreate trigger for diaries collection → Generate DiaryInsight
-2. Genkit flow for insight generation (sentiment, topics, cognitive patterns)
-3. Structured output parsing (Zod schema)
-4. Save insight to diary_insights collection
-5. Send FCM notification when insight ready
+# Select (Space to check, Enter to confirm):
+# - Functions
+# - Firestore (if not already initialized)
 
-Use the exact prompt template from PSYCHOLOGICAL_INSIGHTS_PLAN.md Appendix C.
-
-Create files in functions/src/:
-- genkit/insights.ts (Genkit flow)
-- index.ts (Cloud Function triggers)
-- utils/schemas.ts (Zod schemas)
-
-Test locally with Firebase Emulator before deploying.
+# Prompts:
+# - Use existing project → Select your Calmify project
+# - Language: TypeScript
+# - ESLint: Yes
+# - Install dependencies: Yes
 ```
 
-**What Claude Code Will Do**:
-1. Create `functions/src/genkit/insights.ts`:
-   - Import Genkit and Gemini plugin
-   - Define `InsightSchema` (Zod)
-   - Implement `generateDiaryInsight` flow
-   - Use ethical system prompt from plan
-2. Create `functions/src/index.ts`:
-   - Import Firebase Functions v2
-   - Create `onDiaryCreated` trigger
-   - Call Genkit flow
-   - Save result to `diary_insights`
-   - Send FCM notification
-3. Create `functions/src/utils/schemas.ts`:
-   - Zod schemas for all models
-4. Update `functions/package.json` with dependencies
-5. Provide deployment commands
+This creates a `functions/` directory.
 
-### ⏸️ STOP - Manual Deployment
+```bash
+# 3. Install Genkit dependencies
+cd functions
+npm install genkit @genkit-ai/googleai
+npm install firebase-admin zod @google-cloud/firestore
+cd ..
+```
+
+```bash
+# 4. Set Gemini API Key as secret
+firebase functions:secrets:set GEMINI_API_KEY
+# Paste your API key from https://aistudio.google.com/app/apikey
+```
+
+```bash
+# 5. Verify secret
+firebase functions:secrets:access GEMINI_API_KEY
+# Should show redacted key
+```
+
+**Enable Google Cloud APIs**:
+
+Go to https://console.cloud.google.com → Select your project
+
+Navigate to: APIs & Services → Library
+
+Search and **Enable** each:
+- Cloud Functions API
+- Cloud Scheduler API
+- Cloud Build API
+- Generative Language API
+- Secret Manager API
+
+#### ✅ VERIFY
+
+```bash
+# Verify Firebase CLI
+firebase projects:list
+# Should show your project
+
+# Verify functions directory
+ls -la functions/
+
+# Verify Genkit installed
+cd functions && npm list genkit && cd ..
+```
+
+#### 📍 CHECKPOINT 3
+
+- [ ] Firebase CLI authenticated
+- [ ] `functions/` directory created with TypeScript setup
+- [ ] Genkit dependencies installed (`npm list genkit` shows version)
+- [ ] `GEMINI_API_KEY` secret configured
+- [ ] 5 Google Cloud APIs enabled
+
+---
+
+### Week 4: Cloud Functions - Insight Generation (MVP)
+
+#### ▶️ TRIGGER CLAUDE CODE
+
+```
+Implement Week 4 from PSYCHOLOGICAL_INSIGHTS_PLAN.md: Cloud Functions for AI Insight Generation.
+
+Create Cloud Functions with Genkit as specified in Section 4:
+
+1. Create functions/src/genkit/insights.ts:
+   - Genkit flow: generateDiaryInsight
+   - Use Gemini 2.0 Flash
+   - Input schema: diaryText, mood, stressLevel
+   - Output schema (Zod): InsightSchema with fields from Section 1.3
+   - Use the exact AI prompt from Section 4.1 (compassionate, CBT-informed)
+
+2. Create functions/src/index.ts:
+   - onDocumentCreated trigger for 'diaries/{diaryId}'
+   - Call generateInsight Genkit flow
+   - Save result to 'diary_insights' collection
+   - Include error handling
+
+3. Create functions/src/utils/schemas.ts:
+   - Zod schemas for all data models
+
+Follow TypeScript patterns from existing Cloud Functions projects.
+Test locally before deploying (I'll deploy manually).
+```
+
+#### ⏸️ MANUAL TASKS
 
 **After Claude Code creates the functions**:
 
-#### Test with Emulator (Recommended)
+**Test with Firebase Emulator (Recommended)**:
 
 ```bash
-# 1. Start Firebase Emulators
+# Start emulators
 firebase emulators:start
 
 # Open Emulator UI: http://localhost:4000
 ```
 
-**In Emulator UI**:
+In Emulator UI:
 1. Go to Firestore tab
-2. Manually add a test diary document
-3. Watch Functions tab - should see `onDiaryCreated` execute
+2. Create test diary document manually
+3. Watch Functions tab → `onDiaryCreated` should execute
 4. Check `diary_insights` collection for new document
 
-#### Deploy to Firebase
+**Deploy to Firebase**:
 
 ```bash
-# 1. Build TypeScript
+# Build TypeScript
 cd functions
 npm run build
-
-# 2. Deploy functions
 cd ..
+
+# Deploy
 firebase deploy --only functions
 
-# Wait for deployment (2-5 minutes)
+# Wait 2-5 minutes for deployment
 ```
 
-**Verify Deployment**:
+**Verify deployment**:
 
 ```bash
 firebase functions:log
-# Should show function deployed successfully
+# Should show "Function deployed successfully"
 ```
 
-### ✅ Verification
+#### ✅ VERIFY
 
 **End-to-End Test**:
 
-1. **Open Android app**
-2. **Create a new diary** with meaningful content:
+1. Open Android app
+2. Create diary with meaningful content:
    - Title: "Stressful day at work"
-   - Description: "My boss criticized my project in front of everyone. I feel like a failure and think I'm going to get fired. This always happens to me."
+   - Description: "My boss criticized my project in front of everyone. I feel like a failure. I always mess things up."
    - Mood: Sad
    - Stress: 8/10
-3. **Save diary**
+3. Save diary
 4. **Wait 5-10 seconds**
-5. **Check notification**:
-   - Should receive FCM notification: "New insight ready!"
-6. **Check Firestore Console**:
-   - Go to `diary_insights` collection
-   - Find insight for your diary (check `diaryId` matches)
-   - Verify fields:
-     - `sentimentPolarity` (should be negative, e.g., -0.7)
-     - `topics` (e.g., ["work", "criticism"])
-     - `cognitivePatterns` (should include "LABELING", "FORTUNE_TELLING", "OVERGENERALIZATION")
-     - `summary` (compassionate 1-2 sentence summary)
-     - `suggestedPrompts` (2-3 reflective questions)
 
-**Check Cloud Function Logs**:
+**Check Firestore Console**:
+- Collection: `diary_insights` (auto-created by Cloud Function)
+- Find insight for your diary (match `diaryId`)
+- Verify fields:
+  - `sentimentPolarity` (should be negative, e.g., -0.7)
+  - `topics` (e.g., ["work", "criticism", "self-worth"])
+  - `cognitivePatterns` (should include "LABELING", "OVERGENERALIZATION")
+  - `summary` (1-2 sentence compassionate summary)
+  - `suggestedPrompts` (2-3 reflective questions)
+
+**Check Logs**:
 
 ```bash
 firebase functions:log --only onDiaryCreated
 # Should show successful execution, no errors
 ```
 
-### 📍 CHECKPOINT 5
+#### 📍 CHECKPOINT 4 (END OF PHASE 1 MVP)
 
-- ✅ Cloud Functions deployed successfully
-- ✅ `onDiaryCreated` trigger fires when diary saved
-- ✅ DiaryInsight generated within 5 seconds
-- ✅ Sentiment analysis accurate
-- ✅ Cognitive patterns detected correctly
-- ✅ FCM notification sent and received
-- ✅ No errors in function logs
+- [ ] Cloud Functions deployed successfully
+- [ ] `onDiaryCreated` trigger fires when diary saved
+- [ ] DiaryInsight generated within 10 seconds
+- [ ] Sentiment analysis accurate (polarity matches diary tone)
+- [ ] Topics detected correctly
+- [ ] Cognitive patterns detected (CBT framework)
+- [ ] Summary is compassionate and non-judgmental
+- [ ] Collection `diary_insights` auto-created
+- [ ] **NO Firestore index errors yet** (data set still small)
+- [ ] No errors in `firebase functions:log`
+
+**🎉 PHASE 1 COMPLETE**: You have a working MVP! Users can:
+- Add psychological metrics to diaries
+- Complete weekly wellbeing snapshots
+- Get AI-generated insights automatically
 
 ---
 
-## 🤖 Phase 6: Insights Display UI (Week 6)
+## 🚀 PHASE 2: AI Integration & Polish (Weeks 5-8)
 
-### ▶️ TRIGGER CLAUDE CODE
+**Goal**: Polish UI, add profile computation, implement notifications
+
+### Week 5: Insights Display UI (Android)
+
+#### ▶️ TRIGGER CLAUDE CODE
 
 ```
-Create Week 6: Insights Display UI.
+Implement Week 5 from PSYCHOLOGICAL_INSIGHTS_PLAN.md: Insights Display UI.
 
-Implement a new screen to display AI-generated diary insights to the user.
+Create a screen to display AI-generated insights to users:
 
-Requirements from PSYCHOLOGICAL_INSIGHTS_PLAN.md Section 1.3:
-- Create InsightScreen composable (card-based UI)
-- Show sentiment visualization (positive/negative indicator)
-- Display topics, key phrases, cognitive patterns
-- Show AI summary and suggested prompts
-- Add "This insight is incorrect" button (user override)
-- Explainability: show text snippets that led to pattern detection
-- Add opt-out setting in Settings screen
-- Confidence score visualization
+1. Create InsightScreen.kt (card-based Material3 UI):
+   - Sentiment indicator (color-coded: green=positive, red=negative, gray=neutral)
+   - Topics as Material3 chips
+   - Cognitive patterns with info icons (explainability)
+   - AI summary in expandable card
+   - Suggested prompts as clickable cards
+   - "This insight is incorrect" feedback button
 
-Create:
-1. features/insights module (or add to existing structure)
-2. InsightScreen.kt
-3. InsightViewModel.kt
-4. InsightRepository.kt
-5. Navigation integration (deep link from FCM notification)
+2. Create InsightViewModel.kt:
+   - Fetch insights from Firestore for a diary
+   - Handle user corrections (save to Firestore)
+   - State management with StateFlow
 
-Follow Material3 design patterns from existing features.
+3. Create InsightRepository.kt:
+   - Firestore query: get insights by diaryId
+   - Save user correction
+
+4. Add navigation route and deep linking (for FCM notifications later)
+
+5. Add entry point (button on diary detail screen or home feed)
+
+Follow existing screen patterns from features/chat and features/write.
 ```
 
-**What Claude Code Will Do**:
-1. Create insight display module/package
-2. Create `InsightScreen.kt`:
-   - Material3 Cards for each insight section
-   - Sentiment indicator (color-coded)
-   - Topics chips
-   - Cognitive patterns with explainability tooltips
-   - Suggested prompts as expandable cards
-3. Create `InsightViewModel.kt`:
-   - Fetch insights from Firestore
-   - Handle user corrections
-   - Manage opt-out preference
-4. Create `InsightRepository.kt`:
-   - Firestore queries for insights
-   - Save user corrections
-5. Update navigation for deep links
-6. Add opt-out toggle in Settings screen
-
-### ✅ Verification
-
-**Build and Test**:
+#### ✅ VERIFY
 
 ```bash
-cmd /c "gradlew.bat :features:insights:build"
 cmd /c "gradlew.bat installDebug"
 ```
 
 **Manual Testing**:
-
-1. **Open app**
-2. **Create a diary** (to generate insight)
-3. **Wait for notification** ("New insight ready!")
-4. **Tap notification**
-   - Should deep link to InsightScreen
-   - Should show the insight for that diary
-5. **Verify UI elements**:
+1. Open app
+2. View a diary that has an insight (created in Week 4 test)
+3. Tap "View Insight" button
+4. **Verify UI elements**:
    - [ ] Sentiment indicator visible (color matches polarity)
    - [ ] Topics displayed as chips
    - [ ] Cognitive patterns listed with info icons
+   - [ ] Tap info icon → shows explainability tooltip
    - [ ] AI summary displayed
-   - [ ] Suggested prompts shown (expandable)
+   - [ ] Suggested prompts shown (2-3 questions)
    - [ ] "This insight is incorrect" button visible
-6. **Test correction**:
-   - Tap "This insight is incorrect"
-   - Enter correction text
-   - Submit
+5. **Test correction**:
+   - Tap "Incorrect" → Enter feedback → Submit
    - Check Firestore: insight document should have `userCorrection` field
-7. **Test opt-out**:
-   - Go to Settings
-   - Toggle "Enable AI Insights" OFF
-   - Create new diary
-   - Verify NO insight notification received
 
-### 📍 CHECKPOINT 6
+#### 📍 CHECKPOINT 5
 
-- ✅ Insights screen accessible from notification
-- ✅ All UI elements render correctly
-- ✅ Sentiment/topics/patterns display accurately
-- ✅ User correction feature works
-- ✅ Opt-out setting functional
-- ✅ Deep linking from FCM works
+- [ ] Insights screen accessible from diary view
+- [ ] All UI elements render correctly
+- [ ] Sentiment indicator color matches data
+- [ ] Topics and patterns display accurately
+- [ ] User correction feature works
+- [ ] Data updates in Firestore after correction
 
 ---
 
-## 🤖 Phase 7: Psychological Profile Computation (Week 7-8)
+### Week 6: Weekly Profile Computation (Cloud Functions)
 
-### ▶️ TRIGGER CLAUDE CODE
+#### ▶️ TRIGGER CLAUDE CODE
 
 ```
-Implement Weeks 7-8: Psychological Profile Computation.
+Implement Week 6 from PSYCHOLOGICAL_INSIGHTS_PLAN.md: Weekly Profile Computation.
 
-Create a Cloud Function that runs weekly to compute the PsychologicalProfile as specified in PSYCHOLOGICAL_INSIGHTS_PLAN.md Section 1.4 and 5.3.
+Create Cloud Function to compute psychological profiles:
 
-Requirements:
-1. Cloud Scheduler triggered function (HTTP)
-2. Compute profile metrics:
-   - Stress baseline (weighted average)
-   - Stress volatility (standard deviation)
-   - Stress peaks detection
-   - Mood trends (improving/stable/declining)
-   - Resilience index (recovery time)
-   - Language clarity (via Gemini)
-3. Save to psychological_profiles collection
-4. Process all active users
-
-Create:
-- functions/src/scheduler/compute-profiles.ts
-- functions/src/utils/profile-calculator.ts (algorithms)
-- Update functions/src/index.ts with HTTP trigger
-
-Use the computation algorithms from PSYCHOLOGICAL_INSIGHTS_PLAN.md Section 5.3.
-```
-
-**What Claude Code Will Do**:
-1. Create `functions/src/scheduler/compute-profiles.ts`:
+1. Create functions/src/scheduler/compute-profiles.ts:
    - HTTP Cloud Function (triggered by Cloud Scheduler)
-   - Fetch all active users
+   - Fetch all active users from Firestore
    - For each user:
-     - Get diaries from past 7-14 days
-     - Get wellbeing snapshots
-     - Calculate metrics
-     - Save profile
-2. Create `functions/src/utils/profile-calculator.ts`:
-   - `calculateWeightedAverage()` (exponential decay)
-   - `calculateStdDev()`
-   - `detectPeaks()` (threshold-based)
-   - `calculateResilience()` (area under curve)
-   - `detectTrend()` (linear regression)
-3. Create Genkit flow for language clarity analysis
-4. Update `functions/src/index.ts` with `computeWeeklyProfiles` export
+     * Get diaries from past 7-14 days
+     * Get wellbeing snapshots from past week
+     * Calculate metrics (see Section 1.4):
+       - stressBaseline (weighted average)
+       - stressVolatility (standard deviation)
+       - stressPeaks (detect peaks above threshold 7)
+       - moodBaseline, moodVolatility, moodTrend
+       - resilienceIndex (recovery time after peaks)
+     * Save to 'psychological_profiles' collection
 
-### ⏸️ STOP - Manual Deployment
+2. Create functions/src/utils/profile-calculator.ts:
+   - calculateWeightedAverage(values) - exponential decay
+   - calculateStdDev(values)
+   - detectPeaks(values, threshold)
+   - calculateResilience(values, peaks)
+   - detectTrend(values) - returns IMPROVING/STABLE/DECLINING
+
+3. Update functions/src/index.ts:
+   - Export HTTP function: computeWeeklyProfiles
+
+Include error handling, logging, and batch processing (max 60s per user).
+```
+
+#### ⏸️ MANUAL TASKS
+
+**After Claude Code creates functions**:
 
 ```bash
 # Deploy updated functions
@@ -855,338 +511,193 @@ cd ..
 firebase deploy --only functions
 ```
 
-**Verify Cloud Scheduler Connection**:
+**Create Cloud Scheduler Job**:
 
-1. Go to [Cloud Console](https://console.cloud.google.com) → Cloud Scheduler
-2. Find `compute-weekly-profiles` job
-3. Click **"Run Now"** (manual trigger)
-4. Wait 1-2 minutes
-5. Check function logs:
-   ```bash
-   firebase functions:log --only computeWeeklyProfiles
-   ```
-6. Check Firestore:
-   - Collection: `psychological_profiles`
-   - Should have documents for all active users
+Go to https://console.cloud.google.com → Cloud Scheduler
 
-### ✅ Verification
+Click **Create Job**:
+- Name: `compute-weekly-profiles`
+- Region: `us-central1` (match Functions region)
+- Frequency: `0 2 * * 0` (Sunday 2 AM)
+- Timezone: Your timezone
+- Target: **HTTP**
+- URL: `https://us-central1-[YOUR_PROJECT_ID].cloudfunctions.net/computeWeeklyProfiles`
+  - Replace `[YOUR_PROJECT_ID]` with your actual Firebase project ID
+- HTTP method: **POST**
+- Auth header: **Add OIDC token**
+  - Service account: `[YOUR_PROJECT_ID]@appspot.gserviceaccount.com`
+- Click **Create**
 
-**Check Profile Data**:
+#### ✅ VERIFY
 
-1. **Firestore Console** → `psychological_profiles`
-2. Open your user's profile document
-3. Verify fields:
-   - [ ] `stressBaseline` (float 0-10)
-   - [ ] `stressVolatility` (float >= 0)
-   - [ ] `stressPeaks` (array of peak objects)
-   - [ ] `moodBaseline` (float 0-10)
-   - [ ] `moodTrend` (enum: IMPROVING/STABLE/DECLINING)
-   - [ ] `resilienceIndex` (float 0-1)
-   - [ ] `clarityTrend` (enum)
-   - [ ] `diaryCount` (integer)
-   - [ ] `snapshotCount` (integer)
-   - [ ] `confidence` (float 0-1)
-
-**Test Manual Trigger**:
+**Manual Trigger** (don't wait for Sunday):
 
 ```bash
-# Manually trigger computation (don't wait for Sunday 2 AM)
+# Manually trigger the job
 curl -X POST https://us-central1-[YOUR_PROJECT_ID].cloudfunctions.net/computeWeeklyProfiles \
   -H "Authorization: Bearer $(gcloud auth print-identity-token)"
 ```
 
-### 📍 CHECKPOINT 7
+Or click **"Run Now"** in Cloud Scheduler console.
 
-- ✅ `computeWeeklyProfiles` function deployed
-- ✅ Cloud Scheduler job runs successfully
-- ✅ Profiles computed for all users
-- ✅ All metrics calculated correctly
-- ✅ Data saved to Firestore
-- ✅ No errors in function logs
+**Check Firestore Console**:
+- Collection: `psychological_profiles` (auto-created)
+- Should have documents for all users with diaries
+- Verify fields:
+  - [ ] `stressBaseline` (float 0-10)
+  - [ ] `stressVolatility` (float >= 0)
+  - [ ] `stressPeaks` (array of peak objects)
+  - [ ] `moodBaseline`, `moodTrend`
+  - [ ] `resilienceIndex` (0-1)
+  - [ ] `diaryCount`, `snapshotCount`
+  - [ ] `confidence` (0-1)
+
+**Check Logs**:
+
+```bash
+firebase functions:log --only computeWeeklyProfiles
+# Should show successful execution for each user
+```
+
+#### 📍 CHECKPOINT 6
+
+- [ ] `computeWeeklyProfiles` function deployed
+- [ ] Cloud Scheduler job created
+- [ ] Manual trigger works
+- [ ] Profiles computed for all users
+- [ ] All metrics calculated correctly
+- [ ] Collection `psychological_profiles` auto-created
+- [ ] **Still NO Firestore index errors** (queries are simple)
 
 ---
 
-## 🤖 Phase 8: Profile Dashboard UI (Week 8)
+### Week 7: Profile Dashboard UI (Android)
 
-### ▶️ TRIGGER CLAUDE CODE
+#### ▶️ TRIGGER CLAUDE CODE
 
 ```
-Create Week 8: Profile Dashboard UI.
+Implement Week 7: Profile Dashboard UI.
 
-Build a ProfileDashboard screen to visualize the user's psychological profile trends.
+Create a screen to visualize psychological profile trends:
 
-Requirements from PSYCHOLOGICAL_INSIGHTS_PLAN.md:
-- 4-week rolling view
-- Trend charts (stress, mood, energy over time)
-- Stress peaks timeline
-- Resilience score visualization
-- Clarity and social/purpose trends
-- Export profile as PDF (optional)
+1. Evaluate charting library options for Jetpack Compose:
+   - Option A: Vico (recommended for Compose)
+   - Option B: Compose Canvas (custom charts)
+   - Choose the best option and explain why
 
-Use Compose Canvas or integrate a charting library (suggest best option for Compose).
+2. Create ProfileDashboard.kt:
+   - 4-week rolling line chart (X: weeks, Y: 0-10)
+   - Three lines: stress baseline, mood baseline, energy (if available)
+   - Stress peaks timeline (vertical markers on chart)
+   - Resilience score (progress bar or gauge)
+   - Trend indicators (↑ IMPROVING, → STABLE, ↓ DECLINING)
+   - Handle empty state ("Not enough data yet")
 
-Create:
-1. ProfileDashboard.kt (screen)
-2. ProfileViewModel.kt
-3. ProfileRepository.kt
-4. Chart components (line charts, bar charts)
-5. Add navigation entry point
-
-Reference Material3 theming for chart colors.
-```
-
-**What Claude Code Will Do**:
-1. Evaluate charting options:
-   - Compose Canvas (custom charts)
-   - Or suggest a library like `Vico` or `MPAndroidChart`
-2. Create `ProfileDashboard.kt`:
-   - 4-week rolling line chart (stress/mood/energy)
-   - Stress peaks timeline (vertical markers)
-   - Resilience score gauge/progress bar
-   - Trend indicators (arrows up/down/stable)
-3. Create `ProfileViewModel.kt`:
+3. Create ProfileViewModel.kt:
    - Fetch last 4 weeks of profiles
    - Transform data for chart display
-   - Handle loading/error states
-4. Create `ProfileRepository.kt`:
-   - Firestore query: `psychological_profiles` collection
-   - Filter by `ownerId` and last 4 weeks
-   - Sort by `weekNumber` descending
+   - State management (StateFlow)
+
+4. Create ProfileRepository.kt:
+   - Firestore query: get profiles for user (last 4 weeks)
+
 5. Add navigation route
-6. Add entry point (Settings screen or Home screen button)
+6. Add entry point (Settings screen or Home dashboard)
 
-### ✅ Verification
+Use Material3 theming for chart colors.
+```
 
-**Build and Test**:
+#### ✅ VERIFY
 
 ```bash
 cmd /c "gradlew.bat installDebug"
 ```
 
 **Manual Testing**:
-
-1. **Open app**
-2. **Navigate to Profile Dashboard** (new menu item)
-3. **Verify charts display**:
-   - [ ] 4-week line chart (X-axis: weeks, Y-axis: 0-10)
-   - [ ] Stress/mood/energy lines visible (different colors)
+1. Open app → Navigate to Profile Dashboard
+2. **Verify charts**:
+   - [ ] 4-week line chart displays
+   - [ ] X-axis shows week numbers
+   - [ ] Y-axis shows 0-10 scale
+   - [ ] Lines visible for stress/mood (different colors)
    - [ ] Stress peaks marked on timeline
-   - [ ] Resilience score displayed (0-1 or 0-100%)
-   - [ ] Trend arrows (↑ improving, → stable, ↓ declining)
-4. **Test empty state**:
-   - Create a new test account with no data
+3. **Test empty state**:
+   - Create new test account with no data
    - Should show "Not enough data" message
-5. **Test data accuracy**:
+4. **Test data accuracy**:
    - Compare chart values to Firestore data
-   - Verify trends match calculated values
+   - Values should match `stressBaseline`, `moodBaseline` from profiles
 
-### 📍 CHECKPOINT 8
+#### 📍 CHECKPOINT 7
 
-- ✅ Profile dashboard accessible
-- ✅ Charts render correctly
-- ✅ 4-week rolling window works
-- ✅ Trends calculated accurately
-- ✅ Empty state handled gracefully
-- ✅ UI follows Material3 design
+- [ ] Profile dashboard accessible
+- [ ] Charting library integrated
+- [ ] 4-week rolling chart renders correctly
+- [ ] Trends match Firestore data
+- [ ] Empty state handled gracefully
+- [ ] UI follows Material3 design
 
 ---
 
-## 🤖 Phase 9: FCM Notification System (Week 9)
+### Week 8: FCM Notifications & Reminders
 
-### ▶️ TRIGGER CLAUDE CODE
+#### ▶️ TRIGGER CLAUDE CODE (Android)
 
 ```
-Implement Week 9: FCM Notification System.
+Implement Week 8 (Android side): FCM Notification System.
 
-Create Android notification handling and Cloud Functions to send scheduled reminders.
-
-Requirements from PSYCHOLOGICAL_INSIGHTS_PLAN.md Section 6.2:
-1. Android side:
-   - Create notification channels (Insights, Reminders, Wellness, Achievements)
-   - Handle deep linking from notifications
-   - CalmifyFirebaseMessagingService
-
-2. Cloud Functions side:
-   - sendWeeklyReminders (Cloud Scheduler triggered)
-   - sendMonthlyThemesReminder
-   - Adaptive notification logic (check stress peaks, skip if high stress)
-
-Update MainActivity.kt to create notification channels.
-Create FirebaseMessagingService to handle incoming FCM messages.
-Create Cloud Functions to send notifications via FCM.
-```
-
-**What Claude Code Will Do**:
-
-**Android Side**:
-1. Update `MainActivity.kt`:
-   - Create notification channels (4 channels)
+1. Update MainActivity.kt:
+   - Create notification channels (4 channels):
+     * Insights: NotificationManager.IMPORTANCE_DEFAULT
+     * Reminders: NotificationManager.IMPORTANCE_HIGH
+     * Wellness: NotificationManager.IMPORTANCE_LOW
+     * Crisis: NotificationManager.IMPORTANCE_HIGH
    - Request notification permission (Android 13+)
-2. Create `CalmifyFirebaseMessagingService.kt`:
-   - Handle `onMessageReceived()`
-   - Parse notification types (INSIGHT_READY, WEEKLY_SNAPSHOT, etc.)
+
+2. Create CalmifyFirebaseMessagingService.kt:
+   - Extend FirebaseMessagingService
+   - Override onMessageReceived()
+   - Parse notification types (INSIGHT_READY, WEEKLY_SNAPSHOT, CRISIS)
    - Show notifications with correct channel
-   - Handle deep linking (PendingIntent)
-3. Update `AndroidManifest.xml`:
+   - Handle deep linking (PendingIntent to screens)
+   - Save FCM token to Firestore on token refresh
+
+3. Update AndroidManifest.xml:
    - Register FirebaseMessagingService
 
-**Cloud Functions Side**:
-1. Create `functions/src/scheduler/send-reminders.ts`:
-   - `sendWeeklyReminders()`:
-     - Query users who haven't completed snapshot this week
-     - Check recent profiles (adaptive logic)
-     - Send FCM notification
-   - `sendMonthlyThemesReminder()`:
-     - Remind users to review life themes
-2. Create `functions/src/utils/fcm-helper.ts`:
-   - Helper functions to send FCM messages
-   - Get user FCM tokens from Firestore
-3. Update `functions/src/index.ts`:
-   - Export HTTP triggers for Cloud Scheduler
+4. Create repository function to save FCM token:
+   - Save to Firestore: users/{userId}/fcmToken
 
-### ⏸️ STOP - Manual Tasks
-
-#### Update Firestore to Store FCM Tokens
-
-**Add a `users` collection** (if not exists):
-
-1. **Firestore Console** → Create collection: `users`
-2. Structure:
-   ```
-   users/{userId}
-   - fcmToken: string
-   - lastSnapshotAt: timestamp
-   - notificationsEnabled: boolean
-   ```
-
-#### Update Android to Save FCM Token
-
-**Ask Claude Code**:
-```
-Update MainActivity or create a repository function to save the FCM token to Firestore when the app starts. Store it in users/{userId}/fcmToken.
+Reference notification patterns from existing Android projects.
 ```
 
-#### Deploy Cloud Functions
-
-```bash
-cd functions
-npm run build
-cd ..
-firebase deploy --only functions
-```
-
-#### Test Cloud Scheduler Jobs
-
-```bash
-# Manually trigger weekly reminder
-curl -X POST https://us-central1-[YOUR_PROJECT_ID].cloudfunctions.net/sendWeeklyReminders \
-  -H "Authorization: Bearer $(gcloud auth print-identity-token)"
-```
-
-**Verify**:
-- Check device for notification
-- Check function logs for any errors
-
-### ✅ Verification
-
-**End-to-End Notification Test**:
-
-1. **Create a diary** → Should receive "New insight ready!" notification
-2. **Tap notification** → Should deep link to InsightScreen
-3. **Manually trigger weekly reminder**:
-   ```bash
-   # From terminal
-   curl -X POST https://us-central1-[YOUR_PROJECT_ID].cloudfunctions.net/sendWeeklyReminders \
-     -H "Authorization: Bearer $(gcloud auth print-identity-token)"
-   ```
-4. **Check device** → Should receive "Weekly Check-In" notification
-5. **Tap notification** → Should open Wellbeing Snapshot screen
-
-**Verify Notification Channels**:
-1. **Android Settings** → Apps → Calmify → Notifications
-2. Should see 4 channels:
-   - Insights
-   - Reminders
-   - Wellness Checks
-   - Achievements
-3. Test toggling each channel on/off
-
-### 📍 CHECKPOINT 9
-
-- ✅ 4 notification channels created
-- ✅ FCM tokens saved to Firestore
-- ✅ Deep linking works for all notification types
-- ✅ Weekly reminder function works
-- ✅ Monthly reminder function works
-- ✅ Adaptive logic (stress-aware) implemented
-- ✅ All notifications received on device
-
----
-
-## 🤖 Phase 10: Vector Search & RAG (Week 10)
-
-### ⏸️ STOP - Manual Task
-
-**Before triggering Claude Code**, verify Vector Search is enabled:
-
-1. **Firestore Console** → Indexes → Single field tab
-2. Find `diaries.embedding` vector index
-3. Status should be **"Enabled"** (if "Building", wait until enabled)
-
-### ▶️ TRIGGER CLAUDE CODE
+#### ▶️ TRIGGER CLAUDE CODE (Cloud Functions)
 
 ```
-Implement Week 10: Vector Search for RAG (Retrieval-Augmented Generation).
+Implement Week 8 (Cloud Functions side): FCM Reminders.
 
-Add embedding generation and vector search to enhance chat context with similar past diaries.
+1. Create functions/src/scheduler/send-reminders.ts:
+   - Function: sendWeeklyReminders (HTTP, Cloud Scheduler triggered)
+   - Query users who haven't completed snapshot this week
+   - Check recent profiles for adaptive logic:
+     * If stressBaseline > 7 → skip notification (give them a break)
+     * If snapshotCount = 0 → send reminder
+   - Send FCM notification via Firebase Admin SDK
 
-Requirements from PSYCHOLOGICAL_INSIGHTS_PLAN.md Section 5.2:
-1. Cloud Function: Generate embeddings when diary is created
-   - Use Gemini text-embedding-004
-   - Store vector in Firestore (diaries.embedding field)
+2. Create functions/src/utils/fcm-helper.ts:
+   - Helper: sendFCM(userId, notification)
+   - Get user FCM token from Firestore
+   - Send message via admin.messaging().send()
 
-2. Cloud Function: Callable function getSimilarDiaries
-   - Input: user message, userId, limit
-   - Generate query embedding
-   - Perform vector search (COSINE distance)
-   - Return top N similar diaries
+3. Update functions/src/index.ts:
+   - Export HTTP function: sendWeeklyReminders
 
-3. Android: Update ChatRepositoryImpl
-   - Call getSimilarDiaries before AI response
-   - Build personalized prompt with RAG context
-   - Enhanced prompt: "Based on your past journal entries about [topic]..."
-
-Create:
-- functions/src/genkit/embeddings.ts
-- functions/src/callable/get-similar-diaries.ts
-- Update ChatRepositoryImpl.kt with RAG integration
+Include error handling for missing FCM tokens.
 ```
 
-**What Claude Code Will Do**:
+#### ⏸️ MANUAL TASKS
 
-**Cloud Functions Side**:
-1. Create `functions/src/genkit/embeddings.ts`:
-   - Genkit flow: `generateEmbedding`
-   - Use `text-embedding-004` model
-2. Update `functions/src/index.ts`:
-   - Add `onDiaryCreated` hook to generate embedding
-   - Update Firestore document with embedding vector
-3. Create `functions/src/callable/get-similar-diaries.ts`:
-   - HTTPS callable function
-   - Generate query embedding
-   - Firestore vector search query
-   - Return similar diaries (limit 5)
-
-**Android Side**:
-1. Update `ChatRepositoryImpl.kt`:
-   - Add `getDiaryContext()` function
-   - Call Cloud Function via HTTP
-   - Parse response (list of similar diaries)
-2. Update `buildPersonalizedPrompt()`:
-   - Include RAG context in AI prompt
-   - Format: "Recent similar journal entries: ..."
-
-### ⏸️ STOP - Manual Deployment
+**After Claude Code finishes**:
 
 ```bash
 # Deploy functions
@@ -1196,286 +707,485 @@ cd ..
 firebase deploy --only functions
 ```
 
-### ✅ Verification
+**Create Cloud Scheduler Job** (Weekly Reminder):
+
+Cloud Console → Cloud Scheduler → Create Job:
+- Name: `send-weekly-reminders`
+- Frequency: `0 21 * * 0` (Sunday 9 PM)
+- Target: HTTP
+- URL: `https://us-central1-[YOUR_PROJECT_ID].cloudfunctions.net/sendWeeklyReminders`
+- Method: POST
+- Auth: OIDC token (same service account)
+
+**Test FCM**:
+
+```bash
+# Manually trigger reminder
+curl -X POST https://us-central1-[YOUR_PROJECT_ID].cloudfunctions.net/sendWeeklyReminders \
+  -H "Authorization: Bearer $(gcloud auth print-identity-token)"
+```
+
+#### ✅ VERIFY
+
+**Test Notification Channels** (Android Settings):
+1. Android Settings → Apps → Calmify → Notifications
+2. Should see 4 channels:
+   - Insights
+   - Reminders
+   - Wellness Checks
+   - Crisis
+3. Test toggling each on/off
+
+**Test Notification Delivery**:
+1. Trigger weekly reminder (curl command above)
+2. Check device → Should receive notification
+3. Tap notification → Should open Wellbeing Snapshot screen (deep link)
+
+**Test Insight Notification**:
+1. Create a new diary
+2. Wait 5-10 seconds
+3. Should receive "New Insight Available" notification
+4. Tap → Should open InsightScreen
+
+#### 📍 CHECKPOINT 8 (END OF PHASE 2)
+
+- [ ] 4 notification channels created
+- [ ] FCM tokens saved to Firestore (`users/{userId}/fcmToken`)
+- [ ] Deep linking works for all notification types
+- [ ] Weekly reminder function works
+- [ ] Adaptive logic implemented (skip if high stress)
+- [ ] Notifications received on device
+- [ ] Tapping notifications opens correct screens
+
+**🎉 PHASE 2 COMPLETE**: Full AI integration working!
+- Users get insights automatically
+- Weekly profiles computed
+- Notifications for reminders
+- Complete UX for viewing insights and trends
+
+---
+
+## ⚡ PHASE 3: Optimization & Scale (Weeks 9-12)
+
+**Goal**: Optimize performance, add advanced features, prepare for production
+
+### Week 9: Firestore Indexing (Finally!)
+
+#### Why NOW and not earlier?
+
+**You now have**:
+- Real users (or extensive testing data)
+- Real query patterns
+- Firebase has shown you which queries are slow
+
+**Firebase will tell you** which indexes to create via error messages like:
+```
+FAILED_PRECONDITION: The query requires an index.
+Create it here: https://console.firebase.google.com/project/.../indexes?create_composite=...
+```
+
+#### ⏸️ MANUAL TASKS
+
+**Approach 1: Click Firebase Error Links** (Recommended)
+
+When you see a Firestore query error in logs or UI:
+1. Firebase provides a direct link to create the index
+2. Click the link
+3. Firebase auto-fills the index configuration
+4. Click "Create"
+5. Wait 5-15 minutes for index to build
+
+**Approach 2: Manually Create Indexes** (If no errors yet)
+
+Go to https://console.firebase.google.com → Firestore → Indexes
+
+**Create these composite indexes**:
+
+**Index 1**: `diary_insights` collection
+- Collection ID: `diary_insights`
+- Fields:
+  - `ownerId` (Ascending)
+  - `generatedAt` (Descending)
+- Query scope: Collection
+
+**Index 2**: `wellbeing_snapshots` collection
+- Collection ID: `wellbeing_snapshots`
+- Fields:
+  - `ownerId` (Ascending)
+  - `timestamp` (Descending)
+
+**Index 3**: `psychological_profiles` collection
+- Collection ID: `psychological_profiles`
+- Fields:
+  - `ownerId` (Ascending)
+  - `year` (Descending)
+  - `weekNumber` (Descending)
+
+**Note**: Indexes will show "Building" status. This takes 5-30 minutes.
+
+#### ✅ VERIFY
+
+**Check Index Status**:
+- Firestore Console → Indexes
+- All 3 indexes should show **"Enabled"**
+
+**Test Query Performance**:
+1. Open app → Load Profile Dashboard (queries profiles)
+2. Load Insights screen (queries insights)
+3. All queries should complete in <500ms (check with Logcat or Chrome DevTools)
+
+#### 📍 CHECKPOINT 9
+
+- [ ] All 3 composite indexes created
+- [ ] All indexes show "Enabled" status
+- [ ] Queries complete in <500ms
+- [ ] No FAILED_PRECONDITION errors in logs
+
+---
+
+### Week 10: Vector Search & RAG (Advanced)
+
+#### Prerequisites Check
+
+**BEFORE proceeding, verify**:
+- [ ] At least 50-100 diaries in database
+- [ ] At least 5 different users (for diverse data)
+
+**If you don't have enough data**: Skip this week, come back later when database grows.
+
+#### ⏸️ MANUAL TASK (Firebase Console)
+
+**Create Vector Index**:
+
+Go to Firestore Console → Indexes → Single field tab
+
+Click **Create Index**:
+- Collection: `diaries`
+- Field path: `embedding`
+- Index type: **Vector**
+- Dimensions: **768** (Gemini text-embedding-004)
+- Distance measure: **COSINE**
+- Click **Create**
+
+**IMPORTANT**: Vector index takes 15-30 minutes to build (possibly longer if you have many diaries).
+
+#### ▶️ TRIGGER CLAUDE CODE (Cloud Functions)
+
+```
+Implement Week 10: Vector Search & RAG.
+
+1. Create functions/src/genkit/embeddings.ts:
+   - Genkit flow: generateEmbedding
+   - Use 'text-embedding-004' model
+   - Input: text string
+   - Output: vector (768 dimensions)
+
+2. Update functions/src/index.ts:
+   - Add to onDiaryCreated trigger:
+     * Generate embedding for diary.description
+     * Update Firestore document with embedding field
+     * Store as FieldValue.vector(embedding)
+
+3. Create functions/src/callable/get-similar-diaries.ts:
+   - HTTPS callable function
+   - Input: userMessage, userId, limit (default 5)
+   - Generate query embedding
+   - Perform Firestore vector search (COSINE distance)
+   - Return top N similar diaries
+
+Use Firestore vector search API (not external vector DB).
+```
+
+#### ▶️ TRIGGER CLAUDE CODE (Android)
+
+```
+Integrate RAG into Chat feature:
+
+Update ChatRepositoryImpl.kt:
+1. Add function getDiaryContext(userMessage: String):
+   - Call Cloud Function getSimilarDiaries via HTTP
+   - Parse response (list of similar diaries)
+
+2. Update buildPersonalizedPrompt():
+   - Include RAG context in AI prompt
+   - Format: "Based on your past journal entries: [diary1 summary], [diary2 summary]..."
+   - Add similar diaries BEFORE user message
+
+Reference existing ChatRepositoryImpl patterns from PROJECT_TECHNICAL_REPORT.md.
+```
+
+#### ⏸️ MANUAL TASKS
+
+```bash
+# Deploy updated functions
+cd functions
+npm run build
+cd ..
+firebase deploy --only functions
+```
+
+#### ✅ VERIFY
 
 **Test Embedding Generation**:
-
-1. **Create a new diary** with unique content:
-   - Title: "Feeling anxious about presentation"
-   - Description: "I have a big presentation tomorrow and I'm worried about public speaking."
-2. **Wait 5-10 seconds**
+1. Create new diary with unique content
+2. Wait 5-10 seconds
 3. **Firestore Console** → `diaries` → Find your diary
-4. **Check for `embedding` field**:
-   - Should be a `FieldValue.vector()` with 768 dimensions
-   - Will appear as a long array of floats
+4. Should have `embedding` field (array of 768 floats)
 
 **Test Vector Search**:
-
-1. **Create 3-4 more diaries** with varied topics:
-   - Diary 2: "Great workout today, feeling energized"
-   - Diary 3: "Nervous about job interview"
+1. Create 3-4 diaries with different topics:
+   - Diary 1: "Anxious about public speaking presentation"
+   - Diary 2: "Great workout, feeling energized"
+   - Diary 3: "Worried about job interview tomorrow"
    - Diary 4: "Relaxing weekend with family"
 2. **Open Chat**
-3. **Send message**: "I'm feeling anxious about public speaking"
-4. **Expected**:
-   - AI should reference your "presentation anxiety" diary
-   - Response should include context like: "I see you've written before about presentation anxiety..."
+3. Send message: "I'm nervous about giving a presentation"
+4. **Expected**: AI should reference Diary 1 (similar topic)
+5. AI response should mention "I see you've written before about presentation anxiety..."
 
-**Verify RAG in Logs**:
+**Check Logs**:
 
 ```bash
 firebase functions:log --only getSimilarDiaries
-# Should show vector search query executed
+# Should show vector search queries executed
 ```
 
-### 📍 CHECKPOINT 10
+#### 📍 CHECKPOINT 10
 
-- ✅ Embeddings generated for all diaries
-- ✅ `embedding` field exists in Firestore
-- ✅ `getSimilarDiaries` callable function works
-- ✅ Vector search returns relevant diaries
-- ✅ Chat uses RAG context in responses
-- ✅ AI references past diary entries accurately
+- [ ] Vector index created and **Enabled**
+- [ ] Embeddings generated for all diaries
+- [ ] `embedding` field exists in Firestore (768-dim vector)
+- [ ] `getSimilarDiaries` callable function works
+- [ ] Vector search returns relevant diaries
+- [ ] Chat uses RAG context in responses
+- [ ] AI mentions relevant past diary entries
 
 ---
 
-## 🤖 Phase 11: Ethical Safeguards & Polish (Week 11)
+### Week 11: Ethical Safeguards & Privacy
 
-### ▶️ TRIGGER CLAUDE CODE
+#### ▶️ TRIGGER CLAUDE CODE
 
 ```
-Implement Week 11: Ethical Safeguards and Polish.
+Implement Week 11: Ethical Safeguards & Privacy.
 
-Add ethical AI features from PSYCHOLOGICAL_INSIGHTS_PLAN.md Section 8:
-1. Consent screen (first-time AI features)
-2. "Disable insights" setting
-3. Data export (GDPR Article 20)
-4. Privacy policy update screen
-5. Explainability tooltips for all AI features
-6. Insight correction feedback loop
-7. Crisis detection and response protocol
-
-Update Settings screen with privacy controls.
-Create consent flow for new users.
-Implement data export functionality.
-Add crisis detection to insight generation.
-```
-
-**What Claude Code Will Do**:
-
-**Android Side**:
-1. Create `ConsentScreen.kt`:
+Android side:
+1. Create ConsentScreen.kt:
    - First-time modal explaining AI features
    - Clear privacy information
-   - "Agree" / "Decline" buttons
+   - "I understand" / "Disable AI features" buttons
    - Store consent in SharedPreferences
-2. Update `SettingsScreen.kt`:
-   - Add "Privacy & AI" section
-   - Toggle: "Enable AI Insights"
-   - Toggle: "Enable Profile Computation"
-   - Toggle: "Share Anonymized Data for Research"
-   - Button: "Export My Data"
-   - Button: "Delete All Data"
-3. Create `DataExportViewModel.kt`:
+
+2. Update SettingsScreen.kt:
+   - Add "Privacy & AI" section:
+     * Toggle: "Enable AI Insights"
+     * Toggle: "Enable Profile Computation"
+     * Toggle: "Share Anonymized Data" (default OFF)
+     * Button: "Export My Data" (GDPR compliance)
+     * Button: "Delete All Data"
+
+3. Create DataExportViewModel.kt:
    - Query all user data (diaries, insights, snapshots, profiles)
    - Export as JSON
-   - Save to Downloads folder
-4. Add explainability tooltips:
-   - Info icons next to cognitive patterns
-   - Tap to show: "This pattern was detected based on phrases like: '...'"
+   - Save to Downloads folder or share intent
 
-**Cloud Functions Side**:
-1. Update `functions/src/genkit/insights.ts`:
-   - Add crisis detection logic
-   - Check for suicidal keywords
-   - Check for sustained high stress (7+ consecutive days)
-2. Create `functions/src/crisis/detect-crisis.ts`:
-   - Crisis levels: HIGH, MEDIUM, NONE
-   - Send emergency resources notification if HIGH
-3. Update FCM notification templates:
-   - Crisis resources (988 Suicide Lifeline, etc.)
+4. Add explainability:
+   - Info icons next to cognitive patterns in InsightScreen
+   - Tap icon → show tooltip: "Detected based on phrases: '...'"
 
-### ✅ Verification
+Cloud Functions side:
+1. Update functions/src/genkit/insights.ts:
+   - Add crisis detection logic:
+     * Check for keywords: "suicide", "harm myself", "end it all"
+     * Check for sustained high stress (stressLevel >= 9 for 7+ days)
+   - Return crisisLevel: HIGH, MEDIUM, NONE
+
+2. Update functions/src/index.ts (onDiaryCreated):
+   - If crisisLevel === HIGH:
+     * Send emergency notification with crisis resources
+     * Log to 'crisis_logs' collection (for follow-up)
+
+3. Create crisis notification template:
+   - Title: "We're here for you"
+   - Body: Crisis resources (988 Suicide Lifeline, Crisis Text Line)
+   - Priority: HIGH
+   - Channel: crisis
+
+Follow PSYCHOLOGICAL_INSIGHTS_PLAN.md Section 7 for ethical guidelines.
+```
+
+#### ✅ VERIFY
 
 **Test Consent Flow**:
-1. Uninstall and reinstall app (or clear app data)
-2. On first launch, should see consent screen
-3. Decline → AI features disabled
-4. Accept → AI features enabled
+1. Uninstall app and reinstall (or clear app data)
+2. On first launch → Should see consent screen
+3. Tap "Disable AI" → AI features should be OFF
+4. Reinstall again → Tap "I understand" → AI features enabled
 
 **Test Privacy Settings**:
-1. **Settings** → Privacy & AI
+1. Settings → Privacy & AI
 2. Toggle "Enable AI Insights" OFF
-3. Create diary → No insight notification
-4. Toggle ON → Create diary → Insight notification
+3. Create diary → NO insight notification
+4. Toggle ON → Create diary → Insight notification received
 
 **Test Data Export**:
-1. **Settings** → "Export My Data"
+1. Settings → "Export My Data"
 2. Wait for export (5-10 seconds)
-3. Check Downloads folder
-4. Open JSON file
-5. Verify contains all data:
-   - Diaries
-   - Insights
-   - Wellbeing snapshots
-   - Psychological profiles
+3. Check Downloads folder or share dialog
+4. Open JSON file → Should contain:
+   - `diaries`: array of all diaries
+   - `insights`: array of all insights
+   - `snapshots`: array of all snapshots
+   - `profiles`: array of all profiles
 
 **Test Crisis Detection**:
 1. Create diary with crisis keywords:
-   - "I want to end it all. No point in living anymore."
-2. Wait for function to process
-3. Should receive **high-priority notification** with crisis resources:
-   - 988 Suicide & Crisis Lifeline
-   - Text HELLO to 741741
-4. Check Firestore:
-   - Collection: `crisis_logs` (if implemented)
-   - Should have log entry
+   - "I want to end it all. There's no point in living."
+2. Wait 5-10 seconds
+3. **Should receive HIGH-priority notification**:
+   - Title: "We're here for you"
+   - Body: Crisis resources (988, Crisis Text Line)
+   - Notification channel: Crisis
+4. **Check Firestore**:
+   - Collection: `crisis_logs`
+   - Should have log entry with userId, diaryId, timestamp
 
-### 📍 CHECKPOINT 11
+#### 📍 CHECKPOINT 11
 
-- ✅ Consent screen shows on first launch
-- ✅ Privacy settings functional
-- ✅ Data export works (valid JSON)
-- ✅ Data deletion works
-- ✅ Crisis detection active
-- ✅ Crisis notifications sent
-- ✅ Explainability tooltips added
+- [ ] Consent screen shows on first launch
+- [ ] Privacy settings functional
+- [ ] "Enable AI Insights" toggle works
+- [ ] Data export works (valid JSON with all data)
+- [ ] Crisis detection active
+- [ ] Crisis notifications sent for HIGH level
+- [ ] Explainability tooltips added to InsightScreen
+- [ ] GDPR compliance features implemented
 
 ---
 
-## 🧪 Phase 12: Testing & Launch Prep (Week 12)
+### Week 12: Testing & Beta Launch
 
-### ▶️ TRIGGER CLAUDE CODE
+#### ▶️ TRIGGER CLAUDE CODE
 
 ```
-Prepare for Week 12: Final testing and launch preparation.
+Create integration tests for critical flows:
 
-Tasks:
-1. Write integration tests for critical flows:
-   - Diary save → Insight generation → Notification
-   - Weekly snapshot completion → Profile computation
-   - Chat with RAG context
-   - Crisis detection
+1. Create test file: ChatInsightIntegrationTest.kt
+   - Test: Create diary → Wait → Verify insight created
+   - Test: Insight has correct sentimentPolarity
+   - Test: Cognitive patterns detected
 
-2. Performance testing:
-   - Profile large data sets (100+ diaries)
-   - Check Firestore query performance
-   - Optimize if needed
+2. Create test file: ProfileComputationTest.kt (if possible to test Cloud Functions)
+   - Test: Profile metrics calculated correctly
+   - Test: Stress peaks detected
 
-3. Create a testing checklist document
+3. Create test file: CrisisDetectionTest.kt
+   - Test: Crisis keywords trigger HIGH level
+   - Test: Sustained stress triggers MEDIUM level
 
-4. Fix any critical bugs found during testing
+4. Create TESTING_CHECKLIST.md:
+   - Pre-launch verification steps
+   - Performance benchmarks
+   - Edge cases to test
 
 Reference PROJECT_TECHNICAL_REPORT.md Section 6 for testing patterns.
 ```
 
-**What Claude Code Will Do**:
-1. Create integration tests:
-   - `DiaryInsightIntegrationTest.kt`
-   - `ProfileComputationTest.kt`
-   - `RAGChatTest.kt`
-   - `CrisisDetectionTest.kt`
-2. Create `TESTING_CHECKLIST.md`:
-   - Pre-launch verification steps
-   - Performance benchmarks
-   - Edge cases to test
-3. Run local tests and report results
-4. Suggest optimizations based on findings
+#### ⏸️ MANUAL TASKS
 
-### ⏸️ STOP - Manual Tasks
+**Beta Testing Setup**:
 
-#### Beta Testing
+1. **Recruit 5-10 beta testers** (friends, colleagues, Reddit community)
 
-1. **Recruit 5-10 beta testers**
 2. **Deploy to Firebase App Distribution**:
-   ```bash
-   # Build release APK
-   cmd /c "gradlew.bat assembleRelease"
 
-   # Upload to App Distribution
-   firebase appdistribution:distribute app/build/outputs/apk/release/app-release.apk \
-     --app [YOUR_APP_ID] \
-     --groups "beta-testers" \
-     --release-notes "Beta v1.0 - Psychological Insights Feature"
-   ```
-3. **Collect feedback** (2 weeks)
-4. **Fix critical issues**
+```bash
+# Build release APK
+cmd /c "gradlew.bat assembleRelease"
 
-#### Performance Testing
-
-**Load test Cloud Functions**:
-
-Use Artillery.io or similar:
-
-```yaml
-# load-test.yml (see PSYCHOLOGICAL_INSIGHTS_PLAN.md Section 9.3)
-config:
-  target: 'https://us-central1-[YOUR_PROJECT_ID].cloudfunctions.net'
-  phases:
-    - duration: 60
-      arrivalRate: 10
+# Upload to App Distribution
+firebase appdistribution:distribute app/build/outputs/apk/release/app-release.apk \
+  --app [YOUR_FIREBASE_APP_ID] \
+  --groups "beta-testers" \
+  --release-notes "Beta v1.0 - Psychological Insights Feature Testing"
 ```
 
-Run:
+3. **Collect feedback** (2 weeks)
+   - Use Google Forms or Typeform
+   - Questions:
+     * How helpful are AI insights? (1-5)
+     * Were any insights inaccurate?
+     * Is the wellbeing snapshot easy to complete?
+     * Any bugs or crashes?
+     * Feature requests?
+
+4. **Fix critical bugs** based on feedback
+
+**Performance Testing**:
+
+Run load test on Cloud Functions:
+
 ```bash
+# Install Artillery (if not installed)
+npm install -g artillery
+
+# Create load test config (artillery will be provided by Claude Code)
 artillery run load-test.yml
 ```
 
 **Acceptance Criteria**:
 - P95 latency < 5s for insight generation
 - Error rate < 1%
-- No cold start issues under sustained load
+- No cold starts under sustained load (>10 req/sec)
 
-#### Cost Monitoring
+**Cost Monitoring**:
 
-1. **Firebase Console** → Usage and Billing
+1. Firebase Console → Usage and Billing
 2. Monitor for 1 week
-3. Verify costs within budget ($20-100/month)
-4. Check:
-   - Firestore reads/writes
-   - Cloud Functions invocations
-   - Gemini API calls
+3. Verify costs within budget:
+   - Target: <$30/month for 100 users
+   - Check: Firestore reads/writes, Cloud Functions invocations, Gemini API calls
 
-### ✅ Verification
+#### ✅ VERIFY
 
 **Pre-Launch Checklist**:
 
-- [ ] All unit tests passing
-- [ ] All integration tests passing
+- [ ] All unit tests passing (`gradlew.bat test`)
+- [ ] Integration tests passing
 - [ ] Beta testing complete (5-10 users, 2 weeks)
-- [ ] Critical bugs fixed
+- [ ] Critical bugs fixed (no P0 or P1 bugs remaining)
 - [ ] Performance benchmarks met (P95 < 5s)
-- [ ] Cost within budget
-- [ ] Privacy policy updated
+- [ ] Cost within budget (<$30/month per 100 users)
+- [ ] Privacy policy updated (mentions AI features)
 - [ ] Google Play Store listing ready
 - [ ] Screenshots & promotional materials prepared
 - [ ] Rollout plan defined (10% → 50% → 100%)
 
-### 📍 CHECKPOINT 12 - LAUNCH READY
+#### 📍 CHECKPOINT 12 (LAUNCH READY)
 
-- ✅ All tests passing
-- ✅ Beta feedback addressed
-- ✅ Performance optimized
-- ✅ Cost under control
-- ✅ Privacy/legal compliance verified
-- ✅ App Store submission ready
+- [ ] All tests passing
+- [ ] Beta feedback addressed
+- [ ] Performance optimized
+- [ ] Cost under control
+- [ ] Privacy/legal compliance verified
+- [ ] App Store submission materials ready
+
+**🎉 PHASE 3 COMPLETE**: Ready for production launch!
 
 ---
 
-## 🎉 Phase 13: Staged Rollout & Monitoring
+## 🚀 Production Launch (Week 13+)
 
-### ⏸️ STOP - Manual Tasks Only
+### Staged Rollout (Manual - Google Play Console)
 
-**This phase is entirely manual** - Claude Code cannot access Google Play Console.
-
-#### Week 1: Internal Testing (10% rollout)
+**Week 13: Internal Testing (10% rollout)**
 
 1. **Google Play Console** → Release → Production
 2. Create new release
 3. Upload AAB:
    ```bash
    cmd /c "gradlew.bat bundleRelease"
-   # AAB location: app/build/outputs/bundle/release/app-release.aab
+   # AAB: app/build/outputs/bundle/release/app-release.aab
    ```
 4. **Staged rollout**: 10%
 5. Monitor for 7 days:
@@ -1484,125 +1194,140 @@ artillery run load-test.yml
    - Function logs: Check for errors
    - User reviews: Check for complaints
 
-#### Week 2: Expand to 50%
+**Week 14: Expand to 50%**
 
 If no critical issues:
-- **Play Console** → Release → Update rollout → 50%
+- Play Console → Release → Update rollout → 50%
 - Monitor for 7 more days
 
-#### Week 3: Full Release (100%)
+**Week 15: Full Release (100%)**
 
 If still stable:
-- **Play Console** → Release → Update rollout → 100%
+- Play Console → Release → Update rollout → 100%
 
-### ✅ Post-Launch Monitoring
+---
 
-**Daily (First Week)**:
-- Check Crashlytics
-- Review function logs
-- Monitor costs
+## 📊 Post-Launch Monitoring
 
-**Weekly**:
+### Daily (First Week)
+
+```bash
+# Check Crashlytics
+# Firebase Console → Crashlytics → Dashboard
+
+# Check function logs
+firebase functions:log --limit 50
+
+# Check costs
+# Firebase Console → Usage and Billing → Dashboard
+```
+
+### Weekly
+
 - Analyze usage metrics (Firebase Analytics)
-- Review user feedback
-- Check insight accuracy (sample reviews)
+- Review user feedback (Play Store reviews)
+- Check insight accuracy (sample user corrections)
 - Monitor costs vs. budget
 
-**Monthly**:
+### Monthly
+
 - Review psychological profile trends (anonymized aggregate)
 - Bias testing (ensure no demographic disparities)
-- Cost optimization
+- Cost optimization (identify expensive queries)
 - Feature requests from users
 
 ---
 
-## 📊 Success Metrics
-
-**After 1 Month**:
+## 🎯 Success Metrics (After 1 Month)
 
 | Metric | Target | How to Measure |
 |--------|--------|----------------|
-| Weekly Active Users completing Wellbeing Snapshot | 70% | Firebase Analytics event: `wellbeing_snapshot_completed` |
-| Insight Satisfaction (User Corrections <20%) | >80% | Firestore: count insights with `userCorrection` field / total insights |
-| Crisis Detection Response Time | <5 min | Function logs: time from diary save to crisis notification |
-| AI Response Latency | <2s | Firebase Performance Monitoring: custom trace |
-| Cost per 1K users | <$30/month | Firebase Console → Usage and Billing |
-| App Crash Rate | <0.1% | Crashlytics → Dashboard |
+| **Weekly Active Users completing Snapshot** | 70% | Firebase Analytics event: `wellbeing_snapshot_completed` |
+| **Insight Satisfaction** | >80% | Firestore: user corrections <20% of total insights |
+| **Crisis Response Time** | <5 min | Function logs: time from diary save to notification |
+| **AI Response Latency** | <2s | Firebase Performance: custom trace |
+| **Cost per 1K Users** | <$30/month | Firebase Console → Usage and Billing |
+| **App Crash Rate** | <0.1% | Crashlytics → Dashboard |
 
 ---
 
 ## 🆘 Troubleshooting Guide
 
-### Common Issues & Solutions
-
-#### Issue: Firestore indexes stuck in "Building"
+### Issue: "FAILED_PRECONDITION: The query requires an index"
 
 **Solution**:
-1. Wait 30 minutes
-2. If still building, delete and recreate index
-3. Check Firestore quota limits (Firebase Console → Quotas)
+1. Click the link in the error message
+2. Firebase auto-creates the index
+3. Wait 5-15 minutes
+4. Retry query
 
-#### Issue: Cloud Function deployment fails
+### Issue: Cloud Function deployment fails
 
 **Solution**:
 ```bash
 # Re-authenticate
 firebase login --reauth
 
-# Check service account permissions
+# Check permissions
 gcloud projects get-iam-policy [YOUR_PROJECT_ID]
 
 # Redeploy with verbose logging
 firebase deploy --only functions --debug
 ```
 
-#### Issue: FCM notifications not received
+### Issue: FCM notifications not received
 
 **Solution**:
 1. Verify `google-services.json` in `app/` directory
-2. Check FCM token saved to Firestore (users collection)
+2. Check FCM token saved to Firestore (`users/{userId}/fcmToken`)
 3. Test with Firebase Console → Cloud Messaging → Send test message
-4. Check notification channels enabled on device
+4. Check notification channels enabled on device (Android Settings → Apps → Calmify → Notifications)
 
-#### Issue: Vector search returns no results
+### Issue: Vector search returns no results
 
 **Solution**:
 1. Verify embeddings stored as `FieldValue.vector()` (not plain array)
 2. Check vector index status (Firestore Console → Indexes)
 3. Ensure query embedding dimensions match (768)
-4. Check COSINE distance threshold
+4. Wait for index to fully build (can take 30 min+)
 
-#### Issue: AI insights inaccurate
+### Issue: AI insights inaccurate
 
 **Solution**:
 1. Review prompt in `functions/src/genkit/insights.ts`
-2. Adjust temperature (lower = more deterministic)
+2. Adjust temperature (lower = more deterministic):
+   ```typescript
+   temperature: 0.7  // Try 0.6 or 0.5
+   ```
 3. Add more examples to system prompt
-4. Collect user corrections and retrain prompt
+4. Collect user corrections and analyze patterns
 
-#### Issue: Costs higher than expected
+### Issue: Costs higher than expected
 
 **Solution**:
-1. Firebase Console → Usage and Billing → View detailed usage
+1. Firebase Console → Usage and Billing → Detailed usage
 2. Common culprits:
-   - Too many Firestore reads (optimize queries)
-   - Gemini API overuse (add caching)
-   - Function cold starts (increase min instances to 0)
+   - Too many Firestore reads (optimize queries, use limits)
+   - Gemini API overuse (add caching for similar queries)
+   - Function cold starts (increase min instances to 1)
 3. Implement caching:
-   - Cache insights for 24 hours
-   - Cache profiles for 7 days
+   ```typescript
+   // Cache insights for 24 hours (reduce duplicate analysis)
+   const cachedInsight = await cache.get(diaryId);
+   if (cachedInsight) return cachedInsight;
+   ```
 
 ---
 
-## 🎓 Learning Resources
+## 📚 Learning Resources
 
-**If you get stuck**, consult these resources:
+**Stuck? Check these**:
 
-- **Firebase Docs**: [firebase.google.com/docs](https://firebase.google.com/docs)
-- **Genkit Docs**: [firebase.google.com/docs/genkit](https://firebase.google.com/docs/genkit)
-- **Gemini API Docs**: [ai.google.dev/gemini-api/docs](https://ai.google.dev/gemini-api/docs)
-- **Compose Docs**: [developer.android.com/jetpack/compose](https://developer.android.com/jetpack/compose)
-- **Firestore Vector Search**: [firebase.google.com/docs/firestore/vector-search](https://firebase.google.com/docs/firestore/vector-search)
+- **Firebase Docs**: https://firebase.google.com/docs
+- **Genkit Docs**: https://firebase.google.com/docs/genkit
+- **Gemini API**: https://ai.google.dev/gemini-api/docs
+- **Jetpack Compose**: https://developer.android.com/jetpack/compose
+- **Firestore Vector Search**: https://firebase.google.com/docs/firestore/vector-search
 
 **Stack Overflow Tags**:
 - `[firebase]` + `[cloud-functions]`
@@ -1612,71 +1337,21 @@ firebase deploy --only functions --debug
 
 ---
 
-## 🔄 Iteration & Improvement
+## ✅ Final Checklist Before You Start
 
-After launch, use this workflow for future enhancements:
+**Before Week 1**:
+- [ ] Read entire IMPLEMENTATION_GUIDE.md (this file)
+- [ ] Read PSYCHOLOGICAL_INSIGHTS_PLAN.md (data models, AI specs)
+- [ ] Firebase project exists and Blaze plan enabled
+- [ ] Android Studio project builds successfully
+- [ ] `google-services.json` in `app/` directory
+- [ ] Firebase CLI installed and authenticated
+- [ ] Node.js 18+ installed (for Cloud Functions)
 
-### Weekly Iteration Cycle
-
-1. **Monday**: Review metrics from past week
-2. **Tuesday**: Prioritize bugs/features
-3. **Wednesday-Thursday**:
-   - **Trigger Claude Code** with new tasks
-   - Follow same phase pattern (manual → automated → verify)
-4. **Friday**: Deploy to beta testers
-5. **Weekend**: Monitor
-
-### Prompt Template for Iterations
-
-```
-Based on user feedback and metrics from FIREBASE_CONFIG.md, implement [FEATURE_NAME].
-
-Current state:
-- [Describe current implementation]
-- [Issue or metric that triggered this]
-
-Requirements:
-- [Specific change requested]
-- [Acceptance criteria]
-
-Reference PSYCHOLOGICAL_INSIGHTS_PLAN.md Section [X] for context.
-```
+**Ready to begin? Start with Week 1!**
 
 ---
 
-## 📝 Final Notes
-
-### Key Takeaways
-
-1. **Always verify before proceeding** - Each checkpoint catches issues early
-2. **Use exact trigger prompts** - Claude Code relies on context from PSYCHOLOGICAL_INSIGHTS_PLAN.md
-3. **Monitor costs daily** - Set budget alerts to avoid surprises
-4. **Test crisis detection thoroughly** - This is a safety-critical feature
-5. **Collect user feedback early** - Beta test with diverse users
-
-### When to Ask Claude Code for Help
-
-- ❌ **Don't ask**: "What should I do next?" (This guide tells you)
-- ✅ **Do ask**: "The Diary model changes broke the build. Fix compilation errors."
-- ✅ **Do ask**: "Optimize the profile computation function - it's taking >60s."
-- ✅ **Do ask**: "Write a migration script to backfill embeddings for existing diaries."
-
-### When to Do Manual Work
-
-- Firebase/Cloud Console configuration (Claude Code has no access)
-- Testing on physical devices
-- Google Play Store submission
-- Cost monitoring and optimization
-- User feedback collection
-
----
-
-**Good luck with your implementation, Sir!** 🚀
-
-Follow this guide phase by phase, and you'll have the psychological insights feature live within 12 weeks.
-
----
-
-*Generated by Jarvis AI - 2025-01-19*
-*For: Calmify Psychological Insights Implementation*
-*Companion to: PSYCHOLOGICAL_INSIGHTS_PLAN.md*
+*Updated by Jarvis AI - 2025-01-19*
+*Philosophy: Build → Test → Optimize (No Premature Optimization)*
+*Version 2.0 - Pragmatic Approach*
