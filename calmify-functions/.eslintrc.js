@@ -29,5 +29,7 @@ module.exports = {
     "quotes": ["error", "double"],
     "import/no-unresolved": 0,
     "indent": ["error", 2],
+    "valid-jsdoc": "off", // Disable JSDoc validation
+    "max-len": ["error", {"code": 100}], // Increase line length to 100
   },
 };

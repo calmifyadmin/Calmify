@@ -215,7 +215,7 @@ firebase init
 # - Install dependencies: Yes
 ```
 
-This creates a `functions/` directory.
+This creates a `calmify-functions/` directory.
 
 ```bash
 # 3. Install Genkit dependencies
@@ -258,7 +258,7 @@ firebase projects:list
 # Should show your project
 
 # Verify functions directory
-ls -la functions/
+ls -la calmify-functions/
 
 # Verify Genkit installed
 cd functions && npm list genkit && cd ..
@@ -267,7 +267,7 @@ cd functions && npm list genkit && cd ..
 #### 📍 CHECKPOINT 3
 
 - [ ] Firebase CLI authenticated
-- [ ] `functions/` directory created with TypeScript setup
+- [ ] `calmify-functions/` directory created with TypeScript setup
 - [ ] Genkit dependencies installed (`npm list genkit` shows version)
 - [ ] `GEMINI_API_KEY` secret configured
 - [ ] 5 Google Cloud APIs enabled
@@ -283,20 +283,20 @@ Implement Week 4 from PSYCHOLOGICAL_INSIGHTS_PLAN.md: Cloud Functions for AI Ins
 
 Create Cloud Functions with Genkit as specified in Section 4:
 
-1. Create functions/src/genkit/insights.ts:
+1. Create calmify-functions/src/genkit/insights.ts:
    - Genkit flow: generateDiaryInsight
    - Use Gemini 2.0 Flash
    - Input schema: diaryText, mood, stressLevel
    - Output schema (Zod): InsightSchema with fields from Section 1.3
    - Use the exact AI prompt from Section 4.1 (compassionate, CBT-informed)
 
-2. Create functions/src/index.ts:
+2. Create calmify-functions/src/index.ts:
    - onDocumentCreated trigger for 'diaries/{diaryId}'
    - Call generateInsight Genkit flow
    - Save result to 'diary_insights' collection
    - Include error handling
 
-3. Create functions/src/utils/schemas.ts:
+3. Create calmify-functions/src/utils/schemas.ts:
    - Zod schemas for all data models
 
 Follow TypeScript patterns from existing Cloud Functions projects.
@@ -472,7 +472,7 @@ Implement Week 6 from PSYCHOLOGICAL_INSIGHTS_PLAN.md: Weekly Profile Computation
 
 Create Cloud Function to compute psychological profiles:
 
-1. Create functions/src/scheduler/compute-profiles.ts:
+1. Create calmify-functions/src/scheduler/compute-profiles.ts:
    - HTTP Cloud Function (triggered by Cloud Scheduler)
    - Fetch all active users from Firestore
    - For each user:
@@ -486,14 +486,14 @@ Create Cloud Function to compute psychological profiles:
        - resilienceIndex (recovery time after peaks)
      * Save to 'psychological_profiles' collection
 
-2. Create functions/src/utils/profile-calculator.ts:
+2. Create calmify-functions/src/utils/profile-calculator.ts:
    - calculateWeightedAverage(values) - exponential decay
    - calculateStdDev(values)
    - detectPeaks(values, threshold)
    - calculateResilience(values, peaks)
    - detectTrend(values) - returns IMPROVING/STABLE/DECLINING
 
-3. Update functions/src/index.ts:
+3. Update calmify-functions/src/index.ts:
    - Export HTTP function: computeWeeklyProfiles
 
 Include error handling, logging, and batch processing (max 60s per user).
@@ -676,7 +676,7 @@ Reference notification patterns from existing Android projects.
 ```
 Implement Week 8 (Cloud Functions side): FCM Reminders.
 
-1. Create functions/src/scheduler/send-reminders.ts:
+1. Create calmify-functions/src/scheduler/send-reminders.ts:
    - Function: sendWeeklyReminders (HTTP, Cloud Scheduler triggered)
    - Query users who haven't completed snapshot this week
    - Check recent profiles for adaptive logic:
@@ -684,12 +684,12 @@ Implement Week 8 (Cloud Functions side): FCM Reminders.
      * If snapshotCount = 0 → send reminder
    - Send FCM notification via Firebase Admin SDK
 
-2. Create functions/src/utils/fcm-helper.ts:
+2. Create calmify-functions/src/utils/fcm-helper.ts:
    - Helper: sendFCM(userId, notification)
    - Get user FCM token from Firestore
    - Send message via admin.messaging().send()
 
-3. Update functions/src/index.ts:
+3. Update calmify-functions/src/index.ts:
    - Export HTTP function: sendWeeklyReminders
 
 Include error handling for missing FCM tokens.
@@ -874,19 +874,19 @@ Click **Create Index**:
 ```
 Implement Week 10: Vector Search & RAG.
 
-1. Create functions/src/genkit/embeddings.ts:
+1. Create calmify-functions/src/genkit/embeddings.ts:
    - Genkit flow: generateEmbedding
    - Use 'text-embedding-004' model
    - Input: text string
    - Output: vector (768 dimensions)
 
-2. Update functions/src/index.ts:
+2. Update calmify-functions/src/index.ts:
    - Add to onDiaryCreated trigger:
      * Generate embedding for diary.description
      * Update Firestore document with embedding field
      * Store as FieldValue.vector(embedding)
 
-3. Create functions/src/callable/get-similar-diaries.ts:
+3. Create calmify-functions/src/callable/get-similar-diaries.ts:
    - HTTPS callable function
    - Input: userMessage, userId, limit (default 5)
    - Generate query embedding
@@ -994,13 +994,13 @@ Android side:
    - Tap icon → show tooltip: "Detected based on phrases: '...'"
 
 Cloud Functions side:
-1. Update functions/src/genkit/insights.ts:
+1. Update calmify-functions/src/genkit/insights.ts:
    - Add crisis detection logic:
      * Check for keywords: "suicide", "harm myself", "end it all"
      * Check for sustained high stress (stressLevel >= 9 for 7+ days)
    - Return crisisLevel: HIGH, MEDIUM, NONE
 
-2. Update functions/src/index.ts (onDiaryCreated):
+2. Update calmify-functions/src/index.ts (onDiaryCreated):
    - If crisisLevel === HIGH:
      * Send emergency notification with crisis resources
      * Log to 'crisis_logs' collection (for follow-up)
@@ -1294,7 +1294,7 @@ firebase deploy --only functions --debug
 ### Issue: AI insights inaccurate
 
 **Solution**:
-1. Review prompt in `functions/src/genkit/insights.ts`
+1. Review prompt in `calmify-functions/src/genkit/insights.ts`
 2. Adjust temperature (lower = more deterministic):
    ```typescript
    temperature: 0.7  // Try 0.6 or 0.5

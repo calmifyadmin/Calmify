@@ -85,7 +85,9 @@
       "Bash(firebase deploy:*)",
       "Bash(npm run lint:*)",
       "Bash(cmd /c \"gradlew.bat :app:compileDebugKotlin --quiet\")",
-      "Bash(cmd /c \"gradlew.bat :features:insight:compileDebugKotlin\")"
+      "Bash(cmd /c \"gradlew.bat :features:insight:compileDebugKotlin\")",
+      "Bash(curl:*)",
+      "Bash(cmd /c \"gradlew.bat :features:insight:build --quiet\")"
     ],
     "deny": [],
     "ask": []

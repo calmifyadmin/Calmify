@@ -389,3 +389,8 @@ export const onDiaryCreated = onDocumentCreated(
     }
   }
 );
+
+/**
+ * Export Weekly Profile Computation (HTTP Function)
+ */
+export {computeWeeklyProfiles} from "./scheduler/compute-profiles";

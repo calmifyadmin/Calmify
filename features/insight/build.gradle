@@ -73,6 +73,10 @@ dependencies {
     implementation libs.coroutines.core
     implementation libs.coroutines.android
 
+    // Vico charting library
+    implementation "com.patrykandpatrick.vico:compose:1.13.1"
+    implementation "com.patrykandpatrick.vico:compose-m3:1.13.1"
+
     // Testing
     testImplementation libs.junit
     androidTestImplementation libs.junit.ext

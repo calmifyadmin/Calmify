@@ -74,9 +74,9 @@ open class NavigationDestination(
 
     object Profile : NavigationDestination(
         route = "profile_screen",
-        label = "Profile",
-        selectedIcon = Icons.Filled.Person,
-        unselectedIcon = Icons.Outlined.Person
+        label = "Profilo",
+        selectedIcon = Icons.Filled.Analytics,
+        unselectedIcon = Icons.Outlined.Analytics
     )
 }
 
