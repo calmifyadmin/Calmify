@@ -1,0 +1,59 @@
+rules_version = '2';
+  service cloud.firestore {
+    match /databases/{database}/documents {
+      // Diaries collection
+      match /diaries/{diaryId} {
+        // Lettura: solo se autenticato e sei il proprietario
+        allow read: if request.auth != null &&
+                       resource.data.ownerId == request.auth.uid;
+
+        // Creazione: solo se autenticato e imposti te stesso come proprietario
+        allow create: if request.auth != null &&
+                         request.resource.data.ownerId == request.auth.uid;
+
+        // Aggiornamento: solo se autenticato e sei il proprietario
+        allow update: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid &&
+                         request.resource.data.ownerId == request.auth.uid;
+
+        // Eliminazione: solo se autenticato e sei il proprietario
+        allow delete: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+      }
+
+      // Query sulla collection (per getAllDiaries)
+      match /diaries {
+        allow list: if request.auth != null;
+      }
+
+      // Wellbeing Snapshots collection
+      match /wellbeing_snapshots/{snapshotId} {
+        // Lettura: solo se autenticato e sei il proprietario
+        allow read: if request.auth != null &&
+                       resource.data.ownerId == request.auth.uid;
+
+        // Creazione: solo se autenticato e imposti te stesso come proprietario
+        allow create: if request.auth != null &&
+                         request.resource.data.ownerId == request.auth.uid;
+
+        // Aggiornamento: solo se autenticato e sei il proprietario
+        allow update: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid &&
+                         request.resource.data.ownerId == request.auth.uid;
+
+        // Eliminazione: solo se autenticato e sei il proprietario
+        allow delete: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+      }
+
+      // Query sulla collection wellbeing_snapshots
+      match /wellbeing_snapshots {
+        allow list: if request.auth != null;
+      }
+
+      // Nega tutto il resto per sicurezza (DEVE ESSERE L'ULTIMA REGOLA)
+      match /{document=**} {
+        allow read, write: if false;
+      }
+    }
+  }

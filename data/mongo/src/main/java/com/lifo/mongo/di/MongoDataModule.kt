@@ -62,4 +62,22 @@ object MongoDataModule {
     ): UnifiedContentRepository {
         return UnifiedContentRepositoryImpl(chatSessionDao, diaryRepository)
     }
+
+    @Provides
+    @Singleton
+    fun provideWellbeingRepository(
+        firestore: FirebaseFirestore,
+        auth: FirebaseAuth
+    ): WellbeingRepository {
+        return FirestoreWellbeingRepository(firestore, auth)
+    }
+
+    @Provides
+    @Singleton
+    fun provideInsightRepository(
+        firestore: FirebaseFirestore,
+        auth: FirebaseAuth
+    ): InsightRepository {
+        return FirestoreInsightRepository(firestore, auth)
+    }
 }

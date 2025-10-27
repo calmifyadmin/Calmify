@@ -36,3 +36,4 @@ include ':features:chat'
 enableFeaturePreview("STABLE_CONFIGURATION_CACHE")
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 include ':features:history'
+include ':features:insight'

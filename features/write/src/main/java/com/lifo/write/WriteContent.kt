@@ -92,6 +92,25 @@ internal fun WriteContent(
                 }
             }
             Spacer(modifier = Modifier.height(30.dp))
+
+            // Psychological Metrics Sheet
+            PsychologicalMetricsSheet(
+                emotionIntensity = uiState.emotionIntensity,
+                stressLevel = uiState.stressLevel,
+                energyLevel = uiState.energyLevel,
+                calmAnxietyLevel = uiState.calmAnxietyLevel,
+                primaryTrigger = uiState.primaryTrigger,
+                dominantBodySensation = uiState.dominantBodySensation,
+                onEmotionIntensityChanged = { viewModel.setEmotionIntensity(it) },
+                onStressLevelChanged = { viewModel.setStressLevel(it) },
+                onEnergyLevelChanged = { viewModel.setEnergyLevel(it) },
+                onCalmAnxietyLevelChanged = { viewModel.setCalmAnxietyLevel(it) },
+                onPrimaryTriggerChanged = { viewModel.setPrimaryTrigger(it) },
+                onDominantBodySensationChanged = { viewModel.setDominantBodySensation(it) },
+                initiallyExpanded = false
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
             TextField(
                 modifier = Modifier.fillMaxWidth(),
                 value = title,
@@ -171,6 +190,13 @@ internal fun WriteContent(
                                     this.title = uiState.title
                                     this.description = uiState.description
                                     this.images = galleryState.images.map { it.remoteImagePath }
+                                    // Include psychological metrics
+                                    this.emotionIntensity = uiState.emotionIntensity
+                                    this.stressLevel = uiState.stressLevel
+                                    this.energyLevel = uiState.energyLevel
+                                    this.calmAnxietyLevel = uiState.calmAnxietyLevel
+                                    this.primaryTrigger = uiState.primaryTrigger.name
+                                    this.dominantBodySensation = uiState.dominantBodySensation.name
                                 }
                             )
                         } else {

@@ -425,7 +425,7 @@ Create a screen to display AI-generated insights to users:
 
 4. Add navigation route and deep linking (for FCM notifications later)
 
-5. Add entry point (button on diary detail screen or home feed)
+5. Add entry point (button on home feed)
 
 Follow existing screen patterns from features/chat and features/write.
 ```

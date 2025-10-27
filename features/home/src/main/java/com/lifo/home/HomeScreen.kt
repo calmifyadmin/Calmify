@@ -60,6 +60,7 @@ internal fun HomeScreen(
     navigateToChat: () -> Unit,
     navigateToExistingChat: (String) -> Unit,
     navigateToLiveScreen: () -> Unit,
+    navigateToWellbeingSnapshot: () -> Unit,
     // New unified content navigation parameters
     onDiaryClicked: (HomeContentItem.DiaryItem) -> Unit = { navigateToWriteWithArgs(it.id) },
     onChatClicked: (HomeContentItem.ChatItem) -> Unit = { navigateToExistingChat(it.id) }
@@ -84,13 +85,27 @@ internal fun HomeScreen(
             )
         },
         floatingActionButton = {
-            // Dual FAB layout - with padding equal to overlay BottomAppBar height only
+            // Triple FAB layout - with padding equal to overlay BottomAppBar height only
             Column(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.padding(bottom = bottomAppBarHeight)
             ) {
-                // Chat FAB (smaller, above)
+                // Wellbeing Snapshot FAB (smallest, top)
+                FloatingActionButton(
+                    onClick = navigateToWellbeingSnapshot,
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Favorite,
+                        contentDescription = "Wellbeing Snapshot",
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                // Chat FAB (smaller, middle)
                 FloatingActionButton(
                     onClick = navigateToChat,
                     containerColor = MaterialTheme.colorScheme.secondary,
@@ -104,7 +119,7 @@ internal fun HomeScreen(
                     )
                 }
 
-                // New Diary Extended FAB (primary action)
+                // New Diary Extended FAB (primary action, bottom)
                 ExtendedFloatingActionButton(
                     onClick = navigateToWrite,
                     text = {

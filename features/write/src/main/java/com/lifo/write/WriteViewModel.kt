@@ -121,6 +121,16 @@ internal class WriteViewModel @Inject constructor(
                             setTitle(title = diary.data.title)
                             setDescription(description = diary.data.description)
 
+                            // Load psychological metrics
+                            setPsychologicalMetrics(
+                                emotionIntensity = diary.data.emotionIntensity,
+                                stressLevel = diary.data.stressLevel,
+                                energyLevel = diary.data.energyLevel,
+                                calmAnxietyLevel = diary.data.calmAnxietyLevel,
+                                primaryTrigger = com.lifo.util.model.Trigger.valueOf(diary.data.primaryTrigger),
+                                dominantBodySensation = com.lifo.util.model.BodySensation.valueOf(diary.data.dominantBodySensation)
+                            )
+
                             fetchImagesFromFirebase(
                                 remoteImagePaths = diary.data.images,
                                 onImageDownload = { downloadedImage ->
@@ -158,8 +168,49 @@ internal class WriteViewModel @Inject constructor(
 
     private fun setMood(mood: Mood) {
         uiState = uiState.copy(mood = mood)
-
         savedStateHandle["saved_mood"] = mood
+    }
+
+    fun setEmotionIntensity(intensity: Int) {
+        uiState = uiState.copy(emotionIntensity = intensity)
+    }
+
+    fun setStressLevel(level: Int) {
+        uiState = uiState.copy(stressLevel = level)
+    }
+
+    fun setEnergyLevel(level: Int) {
+        uiState = uiState.copy(energyLevel = level)
+    }
+
+    fun setCalmAnxietyLevel(level: Int) {
+        uiState = uiState.copy(calmAnxietyLevel = level)
+    }
+
+    fun setPrimaryTrigger(trigger: com.lifo.util.model.Trigger) {
+        uiState = uiState.copy(primaryTrigger = trigger)
+    }
+
+    fun setDominantBodySensation(sensation: com.lifo.util.model.BodySensation) {
+        uiState = uiState.copy(dominantBodySensation = sensation)
+    }
+
+    private fun setPsychologicalMetrics(
+        emotionIntensity: Int,
+        stressLevel: Int,
+        energyLevel: Int,
+        calmAnxietyLevel: Int,
+        primaryTrigger: com.lifo.util.model.Trigger,
+        dominantBodySensation: com.lifo.util.model.BodySensation
+    ) {
+        uiState = uiState.copy(
+            emotionIntensity = emotionIntensity,
+            stressLevel = stressLevel,
+            energyLevel = energyLevel,
+            calmAnxietyLevel = calmAnxietyLevel,
+            primaryTrigger = primaryTrigger,
+            dominantBodySensation = dominantBodySensation
+        )
     }
 
     @SuppressLint("NewApi")
@@ -525,5 +576,12 @@ internal data class UiState(
     val title: String = "",
     val description: String = "",
     val mood: Mood = Mood.Neutral,
-    val updatedDateTime: Date? = null
+    val updatedDateTime: Date? = null,
+    // Psychological metrics
+    val emotionIntensity: Int = 5,
+    val stressLevel: Int = 5,
+    val energyLevel: Int = 5,
+    val calmAnxietyLevel: Int = 5,
+    val primaryTrigger: com.lifo.util.model.Trigger = com.lifo.util.model.Trigger.NONE,
+    val dominantBodySensation: com.lifo.util.model.BodySensation = com.lifo.util.model.BodySensation.NONE
 )

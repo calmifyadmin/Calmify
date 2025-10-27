@@ -13,6 +13,10 @@ sealed class Screen(val route: String) {
     object LiveChat : Screen(route = "live_chat_screen")
     object GeminiLiveChat : Screen(route = "gemini_live_chat_screen")
     object Profile : Screen(route = "profile_screen")
+    object WellbeingSnapshot : Screen(route = "wellbeing_snapshot_screen")
+    object Insight : Screen(route = "insight_screen?diaryId={diaryId}") {
+        fun passDiaryId(diaryId: String) = "insight_screen?diaryId=$diaryId"
+    }
     object Write : Screen(route = "write_screen?$WRITE_SCREEN_ARGUMENT_KEY=" +
             "{$WRITE_SCREEN_ARGUMENT_KEY}") {
         // Navigate to Write screen for creating a NEW diary (no ID)

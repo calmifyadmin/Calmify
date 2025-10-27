@@ -35,6 +35,7 @@ import java.time.format.FormatStyle
 internal fun DiaryHistoryFullScreen(
     onBackClick: () -> Unit,
     onDiaryClick: (HomeContentItem.DiaryItem) -> Unit,
+    onInsightClick: (String) -> Unit = {},
     viewModel: HistoryViewModel = hiltViewModel()
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -103,7 +104,8 @@ internal fun DiaryHistoryFullScreen(
                         ) { diary ->
                             DiaryHistoryFullItem(
                                 diary = diary,
-                                onClick = { onDiaryClick(diary) }
+                                onClick = { onDiaryClick(diary) },
+                                onInsightClick = { onInsightClick(diary.id) }
                             )
                         }
                     }
@@ -136,6 +138,7 @@ internal fun DiaryHistoryFullScreen(
 private fun DiaryHistoryFullItem(
     diary: HomeContentItem.DiaryItem,
     onClick: () -> Unit,
+    onInsightClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -191,10 +194,23 @@ private fun DiaryHistoryFullItem(
                 )
             }
 
+            // Insight button
+            IconButton(
+                onClick = onInsightClick,
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Lightbulb,
+                    contentDescription = "View Insights",
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.tertiary
+                )
+            }
+
             // More options icon
             IconButton(
                 onClick = { /* TODO: Show options menu */ },
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(40.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.MoreVert,

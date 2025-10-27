@@ -37,6 +37,7 @@ import com.lifo.chat.navigation.navigateToChat
 import com.lifo.history.navigation.historyRoute
 import com.lifo.home.navigation.homeRoute
 import com.lifo.home.navigation.settingsRoute
+import com.lifo.insight.InsightScreen
 import com.lifo.mongo.repository.MongoRepository
 import com.lifo.ui.components.DisplayAlertDialog
 import com.lifo.ui.components.navigation.CalmifyNavigationBar
@@ -528,6 +529,11 @@ private fun CalmifyNavHost(
                     launchSingleTop = true
                 }
             },
+            navigateToWellbeingSnapshot = {
+                navController.navigate(Screen.WellbeingSnapshot.route) {
+                    launchSingleTop = true
+                }
+            },
             onDataLoaded = onDataLoaded,
             drawerState = drawerState, // Passa il drawer state
             bottomBarScrollBehavior = bottomBarScrollBehavior // Passa lo scroll behavior
@@ -546,6 +552,12 @@ private fun CalmifyNavHost(
             navigateToExistingChat = { sessionId ->
                 navController.navigateToChat(sessionId)
             },
+            navigateToInsight = { diaryId ->
+                val insightRoute = Screen.Insight.passDiaryId(diaryId)
+                navController.navigate(insightRoute) {
+                    launchSingleTop = true
+                }
+            },
             onMenuClicked = {
                 // History screen doesn't have a drawer, so we can leave this empty
             },
@@ -559,6 +571,47 @@ private fun CalmifyNavHost(
             },
             bottomBarScrollBehavior = bottomBarScrollBehavior
         )
+
+        // Wellbeing Snapshot
+        composable(route = Screen.WellbeingSnapshot.route) {
+            com.lifo.home.SnapshotScreen(
+                onBackPressed = {
+                    if (navController.currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
+                        navController.popBackStack()
+                    }
+                },
+                onSnapshotComplete = {
+                    if (navController.currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
+                        navController.popBackStack()
+                    }
+                }
+            )
+        }
+
+        // Insight Screen
+        composable(
+            route = Screen.Insight.route,
+            arguments = listOf(
+                androidx.navigation.navArgument("diaryId") {
+                    type = androidx.navigation.NavType.StringType
+                    nullable = false
+                }
+            )
+        ) { backStackEntry ->
+            val diaryId = backStackEntry.arguments?.getString("diaryId") ?: ""
+            com.lifo.insight.InsightScreen(
+                diaryId = diaryId,
+                onBackPressed = {
+                    if (navController.currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
+                        navController.popBackStack()
+                    }
+                },
+                onPromptClicked = { prompt ->
+                    // Navigate to chat with pre-filled prompt
+                    navController.navigate(Screen.Chat.route)
+                }
+            )
+        }
 
         // Write
         writeRoute(

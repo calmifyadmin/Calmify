@@ -26,6 +26,7 @@ fun NavGraphBuilder.historyRoute(
     navController: NavHostController,
     navigateToWriteWithArgs: (String) -> Unit,
     navigateToExistingChat: (String) -> Unit,
+    navigateToInsight: (String) -> Unit,
     onMenuClicked: () -> Unit,
     bottomBarScrollBehavior: BottomAppBarScrollBehavior
 ) {
@@ -159,6 +160,9 @@ fun NavGraphBuilder.historyRoute(
             },
             onDiaryClick = { diary ->
                 navigateToWriteWithArgs(diary.id)
+            },
+            onInsightClick = { diaryId ->
+                navigateToInsight(diaryId)
             },
             viewModel = viewModel
         )
