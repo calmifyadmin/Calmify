@@ -191,6 +191,7 @@ dependencies {
     implementation(project(":features:write"))
     implementation(project(":features:chat"))
     implementation(project(":features:insight"))
+    implementation(project(":features:profile"))
 
     // Testing
     testImplementation libs.junit

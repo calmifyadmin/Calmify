@@ -84,8 +84,10 @@ object MongoDataModule {
     @Provides
     @Singleton
     fun provideProfileRepository(
-        firestore: FirebaseFirestore
+        firestore: FirebaseFirestore,
+        auth: FirebaseAuth
     ): ProfileRepository {
-        return FirestoreProfileRepository(firestore)
+        return FirestoreProfileRepository(firestore, auth)
     }
+
 }

@@ -34,6 +34,7 @@
             <option value="$PROJECT_DIR$/features/history" />
             <option value="$PROJECT_DIR$/features/home" />
             <option value="$PROJECT_DIR$/features/insight" />
+            <option value="$PROJECT_DIR$/features/profile" />
             <option value="$PROJECT_DIR$/features/write" />
           </set>
         </option>

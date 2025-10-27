@@ -39,6 +39,7 @@ import com.lifo.home.navigation.homeRoute
 import com.lifo.home.navigation.settingsRoute
 import com.lifo.insight.InsightScreen
 import com.lifo.mongo.repository.MongoRepository
+import com.lifo.profile.ProfileDashboard
 import com.lifo.ui.components.DisplayAlertDialog
 import com.lifo.ui.components.navigation.CalmifyNavigationBar
 import com.lifo.ui.components.navigation.CalmifyBottomAppBar
@@ -175,7 +176,7 @@ fun CalmifyApp(
                     destinations = listOf(
                         NavigationDestination.Home,
                         NavigationDestination.History,
-                        NavigationDestination.Settings
+                        NavigationDestination.Profile
                     ),
                     modifier = Modifier.onSizeChanged { size ->
                         bottomAppBarHeight = with(density) { size.height.toDp() }
@@ -648,11 +649,9 @@ private fun CalmifyNavHost(
             }
         )
 
-        // Profile
-        composable(route = "profile_screen") {
-            ProfileScreen(
-                navController = navController
-            )
+        // Profile - Week 7 Implementation
+        composable(route = Screen.Profile.route) {
+            ProfileDashboard()
         }
     }
 }
