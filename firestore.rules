@@ -51,7 +51,67 @@ rules_version = '2';
         allow list: if request.auth != null;
       }
 
-      // Nega tutto il resto per sicurezza (DEVE ESSERE L'ULTIMA REGOLA)
+      // Users collection (Week 8: FCM Token Storage)
+      match /users/{userId} {
+        // Lettura: solo se autenticato e sei tu stesso
+        allow read: if request.auth != null &&
+                       request.auth.uid == userId;
+
+        // Creazione/Aggiornamento: solo se autenticato e sei tu stesso
+        // Permette di salvare il proprio fcmToken
+        allow create, update: if request.auth != null &&
+                                 request.auth.uid == userId;
+
+        // Eliminazione: solo se autenticato e sei tu stesso
+        allow delete: if request.auth != null &&
+                         request.auth.uid == userId;
+      }
+
+      // Diary Insights collection (Week 5 - AI-generated insights)
+      match /diary_insights/{insightId} {
+        // Lettura: solo se autenticato e sei il proprietario
+        allow read: if request.auth != null &&
+                       resource.data.ownerId == request.auth.uid;
+
+        // Creazione: solo se autenticato e imposti te stesso come proprietario
+        // (tipicamente chiamato da Cloud Function, ma supporta anche client-side)
+        allow create: if request.auth != null &&
+                         request.resource.data.ownerId == request.auth.uid;
+
+        // Aggiornamento: solo se autenticato e sei il proprietario
+        // (permette di aggiungere feedback: userRating, userCorrection)
+        allow update: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid &&
+                         request.resource.data.ownerId == request.auth.uid;
+
+        // Eliminazione: solo se autenticato e sei il proprietario
+        allow delete: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+      }
+
+      // Query sulla collection diary_insights
+      match /diary_insights {
+        allow list: if request.auth != null;
+      }
+
+      // Psychological Profiles collection (Week 7 - AI-computed profiles)
+      match /psychological_profiles/{profileId} {
+        // Lettura: solo se autenticato e sei il proprietario
+        allow read: if request.auth != null &&
+                       resource.data.ownerId == request.auth.uid;
+
+        // Creazione: SOLO Cloud Function (Admin SDK bypassa queste regole)
+        allow create: if false;
+
+        // Aggiornamento: VIETATO (profili read-only)
+        allow update: if false;
+
+        // Eliminazione: solo se autenticato e sei il proprietario
+        allow delete: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+      }
+
+      // NEGA TUTTO IL RESTO (DEVE ESSERE L'ULTIMA REGOLA)
       match /{document=**} {
         allow read, write: if false;
       }

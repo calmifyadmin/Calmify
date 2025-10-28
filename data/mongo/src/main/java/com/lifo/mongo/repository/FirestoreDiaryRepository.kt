@@ -301,6 +301,33 @@ class FirestoreDiaryRepository @Inject constructor(
             RequestState.Error(e)
         }
     }
+
+    /**
+     * Salva FCM token in Firestore (Week 8)
+     */
+    override suspend fun saveFCMToken(token: String): RequestState<Boolean> {
+        return try {
+            val userId = currentUserId
+            if (userId == null) {
+                Log.w(TAG, "Cannot save FCM token: user not authenticated")
+                return RequestState.Error(UserNotAuthenticatedException())
+            }
+
+            Log.d(TAG, "Saving FCM token for user: $userId")
+
+            // Salva in Firestore users collection
+            firestore.collection("users")
+                .document(userId)
+                .set(mapOf("fcmToken" to token), com.google.firebase.firestore.SetOptions.merge())
+                .await()
+
+            Log.d(TAG, "FCM token saved successfully")
+            RequestState.Success(true)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving FCM token", e)
+            RequestState.Error(e)
+        }
+    }
 }
 
 class UserNotAuthenticatedException : Exception("User is not logged in")

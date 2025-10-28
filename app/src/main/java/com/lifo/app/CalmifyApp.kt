@@ -62,11 +62,28 @@ import kotlin.math.ln
 @Composable
 fun CalmifyApp(
     startDestination: String,
+    deepLinkRoute: String? = null,
+    onDeepLinkHandled: () -> Unit = {},
     onDataLoaded: () -> Unit = {}
 ) {
 
     val navigationState = rememberNavigationState()
     val shouldShowBottomBar = navigationState.shouldShowBottomBar
+
+    // Handle deep linking from FCM notifications
+    LaunchedEffect(deepLinkRoute) {
+        deepLinkRoute?.let { route ->
+            android.util.Log.d("CalmifyApp", "Navigating to deep link: $route")
+            navigationState.navController.navigate(route) {
+                // Pop up to home to avoid building a large back stack
+                popUpTo(Screen.Home.route) {
+                    inclusive = false
+                }
+                launchSingleTop = true
+            }
+            onDeepLinkHandled()
+        }
+    }
 
     // Drawer state a livello globale - SENZA rememberSaveable per evitare state restoration problematiche
     // Forziamo sempre Closed all'avvio/ricomposizione

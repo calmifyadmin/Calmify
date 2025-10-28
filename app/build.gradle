@@ -150,6 +150,7 @@ dependencies {
     implementation libs.firebase.auth
     implementation libs.firebase.storage
     implementation libs.firebase.analytics
+    implementation libs.firebase.messaging  // Week 8: FCM Push Notifications
     implementation libs.firebase.ai  // Firebase AI support (formerly vertexai)
     // implementation libs.firebase.crashlytics // Uncomment if needed
 

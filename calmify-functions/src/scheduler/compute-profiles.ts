@@ -239,7 +239,6 @@ export const computeWeeklyProfiles = onRequest(
 
     try {
       const db = admin.firestore();
-      db.settings({databaseId: "calmify-native"});
 
       // Get all users who have created a diary in the past 14 days
       const fourteenDaysAgo = new Date();

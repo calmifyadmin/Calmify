@@ -99,6 +99,7 @@ firebase-functions = { module = "com.google.firebase:firebase-functions" }
 firebase-database = { module = "com.google.firebase:firebase-database" }
 firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
 firebase-performance = { module = "com.google.firebase:firebase-perf" }
+firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
 firebase-ai = { module = "com.google.firebase:firebase-ai" }
 firebase-ai-logic = { module = "com.google.firebase:firebase-ai-logic" }
 firebase-ml-modeldownloader = { module = "com.google.firebase:firebase-ml-modeldownloader" }

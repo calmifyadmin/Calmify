@@ -14,9 +14,13 @@ import {genkit} from "genkit";
 import {googleAI, gemini20FlashExp} from "@genkit-ai/googleai";
 import {defineSecret} from "firebase-functions/params";
 import {z} from "zod";
+import {sendFCM} from "./utils/fcm-helper";
 
 // Initialize Firebase Admin
 admin.initializeApp();
+
+// Configure Firestore to use calmify-native database (MUST BE CALLED ONCE)
+admin.firestore().settings({databaseId: "calmify-native"});
 
 // Secret for Gemini API Key
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
@@ -320,7 +324,6 @@ export const onDiaryCreated = onDocumentCreated(
 
       // Save insight to Firestore (calmify-native database)
       const db = admin.firestore();
-      db.settings({databaseId: "calmify-native"});
       const insightRef = db
         .collection("diary_insights")
         .doc(); // Auto-generate ID
@@ -364,7 +367,7 @@ export const onDiaryCreated = onDocumentCreated(
         patternsCount: insight.cognitivePatterns.length,
       });
 
-      // 🚨 CRISIS DETECTION: Check for negative sentiment + low confidence
+      // 🚨 CRISIS DETECTION: Check for negative sentiment + high magnitude
       if (insight.sentimentPolarity < -0.7 && insight.sentimentMagnitude > 7) {
         logger.warn("HIGHLY NEGATIVE SENTIMENT DETECTED", {
           diaryId,
@@ -373,8 +376,54 @@ export const onDiaryCreated = onDocumentCreated(
           sentimentMagnitude: insight.sentimentMagnitude,
         });
 
-        // TODO Week 8: Send support notification via FCM
-        // await sendSupportNotification(diary.ownerId, insightRef.id);
+        // Send CRISIS notification via FCM
+        await sendFCM(diary.ownerId, {
+          title: "💙 Siamo qui per te",
+          body: "Abbiamo notato che stai attraversando un momento " +
+            "difficile. Considera di parlare con un professionista " +
+            "della salute mentale.",
+          data: {
+            type: "CRISIS",
+            action: "OPEN_HOME_SCREEN",
+            insightId: insightRef.id,
+            diaryId: diaryId,
+          },
+        });
+
+        logger.info("CRISIS notification sent", {
+          diaryId,
+          ownerId: diary.ownerId,
+        });
+      } else {
+        // Send regular INSIGHT_READY notification
+        // Only if confidence is high enough
+        if (insight.confidence > 0.5) {
+          const summaryPreview = insight.summary.length > 100 ?
+            insight.summary.substring(0, 97) + "..." :
+            insight.summary;
+
+          await sendFCM(diary.ownerId, {
+            title: "✨ Nuovi insight sul tuo diario",
+            body: summaryPreview,
+            data: {
+              type: "INSIGHT_READY",
+              action: "OPEN_INSIGHTS_SCREEN",
+              insightId: insightRef.id,
+              diaryId: diaryId,
+            },
+          });
+
+          logger.info("INSIGHT_READY notification sent", {
+            diaryId,
+            insightId: insightRef.id,
+            confidence: insight.confidence,
+          });
+        } else {
+          logger.info("Skipping notification - low confidence", {
+            diaryId,
+            confidence: insight.confidence,
+          });
+        }
       }
 
       return {success: true, insightId: insightRef.id};
@@ -394,3 +443,8 @@ export const onDiaryCreated = onDocumentCreated(
  * Export Weekly Profile Computation (HTTP Function)
  */
 export {computeWeeklyProfiles} from "./scheduler/compute-profiles";
+
+/**
+ * Export Weekly Reminders (HTTP Function - Cloud Scheduler triggered)
+ */
+export {sendWeeklyReminders} from "./scheduler/send-reminders";

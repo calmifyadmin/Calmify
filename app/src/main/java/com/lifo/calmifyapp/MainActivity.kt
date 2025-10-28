@@ -1,13 +1,21 @@
 package com.lifo.calmifyapp
 
+import android.Manifest
 import android.app.Activity
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -29,6 +37,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageMetadata
 import com.lifo.app.CalmifyApp
@@ -75,6 +84,10 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var geminiNativeVoiceSystem: GeminiNativeVoiceSystem // Assuming you inject this too
+
+    @Inject
+    lateinit var mongoRepository: com.lifo.mongo.repository.MongoRepository // For FCM token
+
     // App state management
     private val _appState = MutableStateFlow<AppState>(AppState.Initializing)
     private val appState: StateFlow<AppState> = _appState.asStateFlow()
@@ -84,6 +97,21 @@ class MainActivity : ComponentActivity() {
 
     // Keep splash screen visible until app is ready
     private var keepSplashScreen = true
+
+    // Deep link navigation target (from FCM notification)
+    private val _deepLinkTarget = MutableStateFlow<String?>(null)
+    private val deepLinkTarget: StateFlow<String?> = _deepLinkTarget.asStateFlow()
+
+    // Notification permission launcher (Android 13+)
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            Log.d("MainActivity", "Notification permission granted")
+        } else {
+            Log.w("MainActivity", "Notification permission denied")
+        }
+    }
 
     @OptIn(ExperimentalAnimationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -100,6 +128,12 @@ class MainActivity : ComponentActivity() {
 
         // Set status bar to transparent to match TopAppBar color
         window.statusBarColor = android.graphics.Color.TRANSPARENT
+
+        // Create notification channels (Week 8: FCM)
+        createNotificationChannels()
+
+        // Request notification permission (Android 13+)
+        requestNotificationPermission()
 
         // Configure the API keys from BuildConfig
         // These are loaded from local.properties file and injected at build time
@@ -136,6 +170,9 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             geminiNativeVoiceSystem.initialize()
         }
+        // Check for deep link from notification
+        handleDeepLink(intent)
+
         // Initialize in background
         lifecycleScope.launch {
             initializeApp()
@@ -143,6 +180,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val currentAppState by appState.collectAsStateWithLifecycle()
+            val deepLinkRoute by deepLinkTarget.collectAsStateWithLifecycle()
 
             CalmifyAppTheme(dynamicColor = false) {
                 // Always provide a background to prevent white screens
@@ -168,6 +206,11 @@ class MainActivity : ComponentActivity() {
                                 // Use the new CalmifyApp with global navigation bar
                                 CalmifyApp(
                                     startDestination = getStartDestination(),
+                                    deepLinkRoute = deepLinkRoute,
+                                    onDeepLinkHandled = {
+                                        // Clear deep link after navigation
+                                        _deepLinkTarget.value = null
+                                    },
                                     onDataLoaded = {
                                         // Data loaded callback - can be used for analytics
                                         Log.d("MainActivity", "Navigation data loaded")
@@ -216,6 +259,9 @@ class MainActivity : ComponentActivity() {
                 imageToDeleteDao = imageToDeleteDao
             )
 
+            // Register FCM token (Week 8)
+            registerFCMToken()
+
         } catch (e: Exception) {
             Log.e("MainActivity", "Error initializing app", e)
             _appState.value = AppState.Error(
@@ -245,15 +291,162 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Create notification channels for FCM notifications (Week 8)
+     */
+    private fun createNotificationChannels() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+            // 1. Insights Channel (Normal priority)
+            val insightsChannel = NotificationChannel(
+                CHANNEL_INSIGHTS,
+                "Insights psicologici",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "Notifiche quando sono pronti nuovi insight sul tuo diario"
+                enableLights(true)
+                enableVibration(true)
+            }
+
+            // 2. Reminders Channel (High priority)
+            val remindersChannel = NotificationChannel(
+                CHANNEL_REMINDERS,
+                "Promemoria",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Promemoria per il check-in settimanale e attività di benessere"
+                enableLights(true)
+                enableVibration(true)
+            }
+
+            // 3. Wellness Channel (Low priority)
+            val wellnessChannel = NotificationChannel(
+                CHANNEL_WELLNESS,
+                "Suggerimenti benessere",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Suggerimenti e consigli per il benessere mentale"
+                enableLights(false)
+                enableVibration(false)
+            }
+
+            // 4. Crisis Channel (High priority with special sound)
+            val crisisChannel = NotificationChannel(
+                CHANNEL_CRISIS,
+                "Supporto urgente",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Notifiche di supporto urgente e risorse di crisi"
+                enableLights(true)
+                enableVibration(true)
+                setShowBadge(true)
+            }
+
+            // Register all channels
+            notificationManager.createNotificationChannels(
+                listOf(insightsChannel, remindersChannel, wellnessChannel, crisisChannel)
+            )
+
+            Log.d("MainActivity", "Notification channels created successfully")
+        }
+    }
+
+    /**
+     * Request notification permission for Android 13+ (Week 8)
+     */
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            when {
+                ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED -> {
+                    Log.d("MainActivity", "Notification permission already granted")
+                }
+                else -> {
+                    // Request permission
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
+        }
+    }
+
+    /**
+     * Register FCM token with Firestore (Week 8)
+     */
+    private fun registerFCMToken() {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid
+        if (userId == null) {
+            Log.d("MainActivity", "User not authenticated, skipping FCM token registration")
+            return
+        }
+
+        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (!task.isSuccessful) {
+                Log.w("MainActivity", "Fetching FCM token failed", task.exception)
+                return@addOnCompleteListener
+            }
+
+            val token = task.result
+            Log.d("MainActivity", "FCM token obtained: ${token.take(20)}...")
+
+            // Save to Firestore using repository
+            lifecycleScope.launch {
+                try {
+                    val result = mongoRepository.saveFCMToken(token)
+                    when (result) {
+                        is com.lifo.util.model.RequestState.Success -> {
+                            Log.d("MainActivity", "FCM token saved to Firestore")
+                        }
+                        is com.lifo.util.model.RequestState.Error -> {
+                            Log.e("MainActivity", "Failed to save FCM token", result.error)
+                        }
+                        else -> {
+                            Log.w("MainActivity", "FCM token save in unexpected state")
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("MainActivity", "Error saving FCM token", e)
+                }
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // Handle deep link when app is already running
+        handleDeepLink(intent)
+    }
+
+    /**
+     * Handle deep linking from FCM notifications
+     */
+    private fun handleDeepLink(intent: Intent?) {
+        intent?.getStringExtra("navigate_to")?.let { route ->
+            Log.d("MainActivity", "Deep link navigation to: $route")
+            _deepLinkTarget.value = route
+        }
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putBoolean("recreated", true)
     }
+
     override fun onDestroy() {
         super.onDestroy()
         lifecycleScope.launch { // Ensure cleanup is called on a coroutine scope
             geminiNativeVoiceSystem.cleanup()
         }
+    }
+
+    companion object {
+        // Notification channel IDs (Week 8: FCM)
+        const val CHANNEL_INSIGHTS = "calmify_insights"
+        const val CHANNEL_REMINDERS = "calmify_reminders"
+        const val CHANNEL_WELLNESS = "calmify_wellness"
+        const val CHANNEL_CRISIS = "calmify_crisis"
     }
 }
 
