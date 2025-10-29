@@ -8,7 +8,9 @@
       "Bash(firebase functions:log:*)",
       "Bash(adb logcat:*)",
       "Bash(curl:*)",
-      "Bash(./gradlew installDebug:*)"
+      "Bash(./gradlew installDebug:*)",
+      "Bash(./gradlew :features:profile:compileDebugKotlin:*)",
+      "Bash(powershell -Command:*)"
     ],
     "deny": [],
     "ask": []

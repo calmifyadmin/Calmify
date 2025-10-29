@@ -50,6 +50,15 @@ data class UnifiedHomeState(
     val isEmpty: Boolean = false
 )
 
+// Daily insight data for chart visualization (last 7 days)
+data class DailyInsightData(
+    val date: ZonedDateTime,
+    val dayLabel: String,                // "M", "T", "W", etc.
+    val sentimentMagnitude: Float,       // Average sentiment magnitude for the day
+    val dominantEmotion: SentimentLabel, // Dominant sentiment for color
+    val diaryCount: Int                  // Number of diaries for that day
+)
+
 @RequiresApi(Build.VERSION_CODES.N)
 @HiltViewModel
 internal class HomeViewModel @Inject constructor(
@@ -57,6 +66,7 @@ internal class HomeViewModel @Inject constructor(
     private val imageToDeleteDao: ImageToDeleteDao,
     private val unifiedContentRepository: UnifiedContentRepository,
     private val diaryRepository: MongoRepository,
+    private val insightRepository: com.lifo.mongo.repository.InsightRepository,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -84,6 +94,14 @@ internal class HomeViewModel @Inject constructor(
     // Unified content state
     private val _unifiedState = MutableStateFlow(UnifiedHomeState())
     val unifiedState: StateFlow<UnifiedHomeState> = _unifiedState.asStateFlow()
+
+    // Daily insights state (current week M-S)
+    private val _dailyInsights = MutableStateFlow<List<DailyInsightData>>(emptyList())
+    val dailyInsights: StateFlow<List<DailyInsightData>> = _dailyInsights.asStateFlow()
+
+    // Week navigation state
+    private val _currentWeekOffset = MutableStateFlow(0) // 0 = current week, -1 = last week, etc.
+    val currentWeekOffset: StateFlow<Int> = _currentWeekOffset.asStateFlow()
 
     // Legacy state holders for backward compatibility
     var diaries: MutableState<Diaries> = mutableStateOf(RequestState.Loading)
@@ -119,9 +137,12 @@ internal class HomeViewModel @Inject constructor(
 
         // Initial load
         loadDiaries()
-        
+
         // Load unified content
         loadUnifiedContent()
+
+        // Load daily insights for chart
+        loadDailyInsights()
     }
 
     private fun restoreState() {
@@ -500,6 +521,127 @@ internal class HomeViewModel @Inject constructor(
     fun onChatItemClicked(chatItem: HomeContentItem.ChatItem) {
         // Will be handled by navigation in the UI layer
         Log.d(TAG, "Chat item clicked: ${chatItem.title}")
+    }
+
+    /**
+     * Navigate to previous week
+     */
+    fun navigateToPreviousWeek() {
+        _currentWeekOffset.value -= 1
+        loadDailyInsights()
+    }
+
+    /**
+     * Navigate to next week
+     */
+    fun navigateToNextWeek() {
+        _currentWeekOffset.value += 1
+        loadDailyInsights()
+    }
+
+    /**
+     * Reset to current week
+     */
+    fun resetToCurrentWeek() {
+        _currentWeekOffset.value = 0
+        loadDailyInsights()
+    }
+
+    /**
+     * Load daily insights for the current week (M-S) for chart visualization
+     * Week starts on Monday and ends on Sunday
+     */
+    fun loadDailyInsights() {
+        viewModelScope.launch {
+            try {
+                Log.d(TAG, "Loading daily insights for week offset: ${_currentWeekOffset.value}...")
+                insightRepository.getAllInsights().collect { result ->
+                    when (result) {
+                        is RequestState.Success -> {
+                            val insights = result.data
+                            Log.d(TAG, "Loaded ${insights.size} insights from repository")
+                            val now = ZonedDateTime.now()
+
+                            // Calculate Monday of the target week
+                            val currentDayOfWeek = now.dayOfWeek.value // 1 = Monday, 7 = Sunday
+                            val daysFromMonday = currentDayOfWeek - 1 // Days since last Monday
+                            val currentWeekMonday = now.minusDays(daysFromMonday.toLong())
+
+                            // Apply week offset
+                            val targetWeekMonday = currentWeekMonday.plusWeeks(_currentWeekOffset.value.toLong())
+
+                            // Group insights by day (Monday to Sunday)
+                            val dailyData = (0 until 7).map { dayIndex ->
+                                val targetDate = targetWeekMonday.plusDays(dayIndex.toLong())
+                                val startOfDay = targetDate.toLocalDate().atStartOfDay(targetDate.zone)
+                                val endOfDay = startOfDay.plusDays(1).minusNanos(1)
+
+                                // Filter insights for this day
+                                val dayInsights = insights.filter { insight ->
+                                    val insightDate = ZonedDateTime.ofInstant(
+                                        insight.generatedAt.toInstant(),
+                                        targetDate.zone
+                                    )
+                                    insightDate.isAfter(startOfDay) && insightDate.isBefore(endOfDay)
+                                }
+
+                                // Calculate average sentiment magnitude
+                                val avgMagnitude = if (dayInsights.isNotEmpty()) {
+                                    dayInsights.map { it.sentimentMagnitude }.average().toFloat()
+                                } else {
+                                    0f
+                                }
+
+                                // Find dominant emotion (most common sentiment label)
+                                val dominantEmotion = if (dayInsights.isNotEmpty()) {
+                                    dayInsights
+                                        .groupBy { it.getSentimentLabel() }
+                                        .maxByOrNull { it.value.size }
+                                        ?.key ?: SentimentLabel.NEUTRAL
+                                } else {
+                                    SentimentLabel.NEUTRAL
+                                }
+
+                                // Get day label (M, T, W, T, F, S, S)
+                                val dayLabel = when (targetDate.dayOfWeek.value) {
+                                    1 -> "M" // Monday
+                                    2 -> "T" // Tuesday
+                                    3 -> "W" // Wednesday
+                                    4 -> "T" // Thursday
+                                    5 -> "F" // Friday
+                                    6 -> "S" // Saturday
+                                    7 -> "S" // Sunday
+                                    else -> "?"
+                                }
+
+                                DailyInsightData(
+                                    date = targetDate,
+                                    dayLabel = dayLabel,
+                                    sentimentMagnitude = avgMagnitude,
+                                    dominantEmotion = dominantEmotion,
+                                    diaryCount = dayInsights.size
+                                )
+                            }
+
+                            _dailyInsights.value = dailyData
+                            Log.d(TAG, "Daily insights processed: ${dailyData.size} days (M-S)")
+                            dailyData.forEachIndexed { index, data ->
+                                Log.d(TAG, "Day $index: ${data.dayLabel}, magnitude: ${data.sentimentMagnitude}, emotion: ${data.dominantEmotion}, diaries: ${data.diaryCount}")
+                            }
+                        }
+                        is RequestState.Error -> {
+                            Log.e(TAG, "Error loading daily insights", result.error)
+                        }
+                        else -> {
+                            // Loading state
+                            Log.d(TAG, "Loading daily insights...")
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in loadDailyInsights", e)
+            }
+        }
     }
 
     override fun onCleared() {

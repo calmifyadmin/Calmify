@@ -5,7 +5,7 @@ kotlin = "2.1.0"
 ksp = "2.1.0-1.0.29"
 
 # Compose - LATEST STABLE 2025
-compose-bom = "2025.01.00"
+compose-bom = "2025.10.01"
 
 # Converters
 gson = "2.11.0"
@@ -16,7 +16,7 @@ lifecycle = "2.8.7"
 activity-compose = "1.9.3"
 navigation-compose = "2.8.5"
 appcompat = "1.7.0"
-material = "1.11.0"
+material = "1.5.0-alpha07"
 splash = "1.0.1"
 
 # Firebase - LATEST 2025 (NO KTX MODULES!)
@@ -63,6 +63,7 @@ espresso = "3.5.1"
 mockk = "1.13.9"
 turbine = "1.0.0"
 junit4 = "1.4.1"
+material3 = "1.4.0"
 
 [libraries]
 # Core Android
@@ -171,6 +172,7 @@ turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 compose-ui-test = { module = "androidx.compose.ui:ui-test-junit4", version.ref = "junit4" }
 
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
 
 [plugins]
 com-android-application = { id = "com.android.application", version.ref = "agp" }

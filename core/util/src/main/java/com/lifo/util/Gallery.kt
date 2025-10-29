@@ -7,9 +7,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CornerBasedShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -17,8 +14,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -177,18 +176,18 @@ fun AddImageButton(
     onClick: () -> Unit
 ) {
     Surface(
-        modifier = Modifier
-            .size(imageSize)
-            .clip(shape = imageShape),
-        onClick = onClick,
-        tonalElevation = Elevation.Level1
+            modifier = Modifier
+                .size(imageSize)
+                .clip(shape = imageShape),
+    onClick = onClick,
+    tonalElevation = Elevation.Level1
     ) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.Add,
+                imageVector = ImageVector.vectorResource(id = R.drawable.add_24px),
                 contentDescription = "Add Icon",
             )
         }

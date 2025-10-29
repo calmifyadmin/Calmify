@@ -56,7 +56,7 @@ class FirestoreInsightRepository @Inject constructor(
 
         val listenerRegistration = collection
             .whereEqualTo("ownerId", currentUserId)
-            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .orderBy("generatedAt", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     trySend(RequestState.Error(error))

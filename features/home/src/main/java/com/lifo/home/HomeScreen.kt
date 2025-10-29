@@ -85,27 +85,13 @@ internal fun HomeScreen(
             )
         },
         floatingActionButton = {
-            // Triple FAB layout - with padding equal to overlay BottomAppBar height only
+            // Dual FAB layout - with padding equal to overlay BottomAppBar height only
             Column(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.padding(bottom = bottomAppBarHeight)
             ) {
-                // Wellbeing Snapshot FAB (smallest, top)
-                FloatingActionButton(
-                    onClick = navigateToWellbeingSnapshot,
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Favorite,
-                        contentDescription = "Wellbeing Snapshot",
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                // Chat FAB (smaller, middle)
+                // Chat FAB (smaller, top)
                 FloatingActionButton(
                     onClick = navigateToChat,
                     containerColor = MaterialTheme.colorScheme.secondary,
@@ -141,58 +127,71 @@ internal fun HomeScreen(
         },
         floatingActionButtonPosition = FabPosition.End,
         content = { paddingValues ->
-            // Minimal home content - placeholder for future feed
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .background(MaterialTheme.colorScheme.background),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.padding(32.dp)
-                ) {
-                    // Icon illustration
-                    Icon(
-                        imageVector = Icons.Default.Dashboard,
-                        contentDescription = null,
-                        modifier = Modifier.size(80.dp),
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+            // Observe state and show appropriate content
+            val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+
+            when (diaries) {
+                is RequestState.Success -> {
+                    HomeContent(
+                        paddingValues = paddingValues,
+                        diaryNotes = diaries.data,
+                        onClick = navigateToWriteWithArgs,
+                        isLoading = isLoading,
+                        viewModel = viewModel,
+                        navigateToWellbeingSnapshot = navigateToWellbeingSnapshot
                     )
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    Text(
-                        text = "Welcome Home",
-                        style = MaterialTheme.typography.displaySmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Text(
-                        text = "Your personal space for thoughts and conversations",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 32.dp)
-                    )
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    // Coming soon badge
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceContainer,
-                        shape = MaterialTheme.shapes.small
+                }
+                is RequestState.Error -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "Smart feed coming soon",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ErrorOutline,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "Error loading diaries",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = diaries.error.message ?: "Unknown error",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                is RequestState.Loading -> {
+                    GoogleStyleLoadingIndicator(
+                        loadingState = LoadingState.Loading("Loading your memories..."),
+                        style = LoadingStyle.Skeleton,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues)
+                    )
+                }
+                else -> {
+                    // Idle state - show placeholder
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues)
+                            .background(MaterialTheme.colorScheme.background),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
                     }
                 }
             }
