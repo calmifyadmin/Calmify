@@ -10,7 +10,16 @@
       "Bash(curl:*)",
       "Bash(./gradlew installDebug:*)",
       "Bash(./gradlew :features:profile:compileDebugKotlin:*)",
-      "Bash(powershell -Command:*)"
+      "Bash(powershell -Command:*)",
+      "Bash(../gradlew :app:compileDebugKotlin:*)",
+      "Bash(.gradlew.bat:*)",
+      "Bash(Select-String \"error:\")",
+      "Bash(Select-Object -First 30)",
+      "Bash(Select-Object -First 15)",
+      "Bash(Select-Object -First 5)",
+      "Bash(Select-Object -First 10)",
+      "Bash(Select-Object -First 3)",
+      "Bash(./gradlew:*)"
     ],
     "deny": [],
     "ask": []

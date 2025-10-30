@@ -67,11 +67,13 @@ class FirestoreDiaryRepository @Inject constructor(
                             }
                         }
 
-                        val grouped = diaries.groupBy {
-                            it.date.toInstant()
-                                .atZone(ZoneId.systemDefault())
-                                .toLocalDate()
-                        }
+                        // Group by dayKey (timezone-safe) and convert to LocalDate for Map key
+                        val grouped = diaries
+                            .filter { it.dayKey.isNotBlank() } // Skip diaries without dayKey (old data)
+                            .groupBy {
+                                // Convert dayKey "YYYY-MM-DD" to LocalDate
+                                LocalDate.parse(it.dayKey)
+                            }
 
                         trySend(RequestState.Success(grouped))
                     } catch (e: Exception) {
@@ -88,6 +90,7 @@ class FirestoreDiaryRepository @Inject constructor(
 
     /**
      * Ottiene diary filtrati per una specifica data
+     * Usa dayKey per filtraggio timezone-safe
      */
     override fun getFilteredDiaries(zonedDateTime: ZonedDateTime): Flow<RequestState<Map<LocalDate, List<Diary>>>> = callbackFlow {
         val userId = currentUserId
@@ -97,14 +100,13 @@ class FirestoreDiaryRepository @Inject constructor(
             return@callbackFlow
         }
 
-        val startOfDay = zonedDateTime.toLocalDate().atStartOfDay(zonedDateTime.zone)
-        val endOfDay = startOfDay.plusDays(1)
+        // Convert ZonedDateTime to dayKey (business date)
+        val targetDayKey = zonedDateTime.toLocalDate().toString() // "YYYY-MM-DD"
 
         val listenerRegistration = firestore
             .collection(COLLECTION_DIARIES)
             .whereEqualTo("ownerId", userId)
-            .whereGreaterThanOrEqualTo("date", startOfDay.toInstant().toEpochMilli())
-            .whereLessThan("date", endOfDay.toInstant().toEpochMilli())
+            .whereEqualTo("dayKey", targetDayKey) // Use dayKey for filtering (timezone-safe)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     Log.e(TAG, "Error getting filtered diaries", error)
@@ -120,11 +122,13 @@ class FirestoreDiaryRepository @Inject constructor(
                             }
                         }
 
-                        val grouped = diaries.groupBy {
-                            it.date.toInstant()
-                                .atZone(ZoneId.systemDefault())
-                                .toLocalDate()
-                        }
+                        // Group by dayKey (timezone-safe) and convert to LocalDate for Map key
+                        val grouped = diaries
+                            .filter { it.dayKey.isNotBlank() } // Skip diaries without dayKey (old data)
+                            .groupBy {
+                                // Convert dayKey "YYYY-MM-DD" to LocalDate
+                                LocalDate.parse(it.dayKey)
+                            }
 
                         trySend(RequestState.Success(grouped))
                     } catch (e: Exception) {
@@ -298,6 +302,60 @@ class FirestoreDiaryRepository @Inject constructor(
             RequestState.Success(true)
         } catch (e: Exception) {
             Log.e(TAG, "Error deleting all diaries", e)
+            RequestState.Error(e)
+        }
+    }
+
+    /**
+     * Delete ALL user data from Firestore
+     * Collections: diaries, diary_insights, psychological_profiles, wellbeing_snapshots, chat_sessions
+     */
+    override suspend fun deleteAllUserData(): RequestState<Boolean> {
+        val userId = currentUserId
+            ?: return RequestState.Error(UserNotAuthenticatedException())
+
+        return try {
+            Log.d(TAG, "Deleting ALL data for user: $userId")
+
+            // Collections to delete
+            val collections = listOf(
+                "diaries",
+                "diary_insights",
+                "psychological_profiles",
+                "wellbeing_snapshots",
+                "chat_sessions",
+                "chat_messages"
+            )
+
+            var totalDeleted = 0
+
+            collections.forEach { collectionName ->
+                try {
+                    val snapshot = firestore.collection(collectionName)
+                        .whereEqualTo("ownerId", userId)
+                        .get()
+                        .await()
+
+                    Log.d(TAG, "Found ${snapshot.size()} documents in $collectionName")
+
+                    if (snapshot.size() > 0) {
+                        val batch = firestore.batch()
+                        snapshot.documents.forEach { doc ->
+                            batch.delete(doc.reference)
+                        }
+                        batch.commit().await()
+                        totalDeleted += snapshot.size()
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error deleting from $collectionName: ${e.message}")
+                    // Continue with other collections even if one fails
+                }
+            }
+
+            Log.d(TAG, "All user data deleted successfully. Total: $totalDeleted documents")
+            RequestState.Success(true)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error deleting all user data", e)
             RequestState.Error(e)
         }
     }

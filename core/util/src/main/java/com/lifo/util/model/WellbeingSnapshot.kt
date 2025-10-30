@@ -21,6 +21,8 @@ data class WellbeingSnapshot(
     var ownerId: String = "",
     @ServerTimestamp
     var timestamp: Date = Date.from(Instant.now()),
+    var dayKey: String = "",                    // Business date (YYYY-MM-DD) for grouping
+    var timezone: String = "",                  // User's timezone when snapshot was created
 
     // Core SDT (Self-Determination Theory) Dimensions
     var lifeSatisfaction: Int = 5,          // 0-10 (overall life satisfaction)
@@ -52,6 +54,8 @@ data class WellbeingSnapshot(
         id = UUID.randomUUID().toString(),
         ownerId = "",
         timestamp = Date.from(Instant.now()),
+        dayKey = "",
+        timezone = "",
         lifeSatisfaction = 5,
         workSatisfaction = 5,
         relationshipsQuality = 5,
@@ -129,8 +133,19 @@ data class WellbeingMetrics(
         completionTime: Long,
         wasReminded: Boolean
     ): WellbeingSnapshot {
+        // Calculate dayKey and timezone from current device context
+        val now = Date()
+        val zoneId = java.time.ZoneId.systemDefault()
+        val dayKey = now.toInstant()
+            .atZone(zoneId)
+            .toLocalDate()
+            .toString() // "YYYY-MM-DD"
+        val timezone = zoneId.id // e.g., "Europe/Rome"
+
         return WellbeingSnapshot(
             ownerId = ownerId,
+            dayKey = dayKey,
+            timezone = timezone,
             lifeSatisfaction = lifeSatisfaction,
             workSatisfaction = workSatisfaction,
             relationshipsQuality = relationshipsQuality,

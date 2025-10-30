@@ -159,6 +159,10 @@ async function computeUserProfile(
     // Create profile ID
     const profileId = `${userId}_week_${weekNumber}_${year}`;
 
+    // Create weekKey (ISO week format: YYYY-Www)
+    const weekKey = `${year}-W${weekNumber.toString().padStart(2, "0")}`;
+    const sourceTimezone = "Europe/Rome"; // Server timezone (europe-west1 region)
+
     // Save profile to Firestore
     const profileRef = db.collection("psychological_profiles").doc(profileId);
 
@@ -167,6 +171,8 @@ async function computeUserProfile(
       ownerId: userId,
       weekNumber,
       year,
+      weekKey, // Business week key for grouping (YYYY-Www)
+      sourceTimezone, // Server timezone reference
       computedAt: admin.firestore.FieldValue.serverTimestamp(),
 
       // Stress Dynamics

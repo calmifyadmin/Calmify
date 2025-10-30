@@ -88,6 +88,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var mongoRepository: com.lifo.mongo.repository.MongoRepository // For FCM token
 
+    @Inject
+    lateinit var profileSettingsRepository: com.lifo.mongo.repository.ProfileSettingsRepository // For onboarding check
+
     // App state management
     private val _appState = MutableStateFlow<AppState>(AppState.Initializing)
     private val appState: StateFlow<AppState> = _appState.asStateFlow()
@@ -101,6 +104,10 @@ class MainActivity : ComponentActivity() {
     // Deep link navigation target (from FCM notification)
     private val _deepLinkTarget = MutableStateFlow<String?>(null)
     private val deepLinkTarget: StateFlow<String?> = _deepLinkTarget.asStateFlow()
+
+    // Onboarding completion state
+    private val _hasCompletedOnboarding = MutableStateFlow<Boolean?>(null)
+    private val hasCompletedOnboarding: StateFlow<Boolean?> = _hasCompletedOnboarding.asStateFlow()
 
     // Notification permission launcher (Android 13+)
     private val notificationPermissionLauncher = registerForActivityResult(
@@ -206,6 +213,7 @@ class MainActivity : ComponentActivity() {
                                 // Use the new CalmifyApp with global navigation bar
                                 CalmifyApp(
                                     startDestination = getStartDestination(),
+                                    repository = mongoRepository,
                                     deepLinkRoute = deepLinkRoute,
                                     onDeepLinkHandled = {
                                         // Clear deep link after navigation
@@ -238,6 +246,21 @@ class MainActivity : ComponentActivity() {
             // Initialize Firebase
             withContext(Dispatchers.IO) {
                 FirebaseApp.initializeApp(this@MainActivity)
+            }
+
+            // Check onboarding completion status
+            val user = FirebaseAuth.getInstance().currentUser
+            if (user != null) {
+                withContext(Dispatchers.IO) {
+                    val result = profileSettingsRepository.hasCompletedOnboarding()
+                    _hasCompletedOnboarding.value = if (result is com.lifo.util.model.RequestState.Success) {
+                        result.data
+                    } else {
+                        false // Default to false if check fails, user will go through onboarding
+                    }
+                }
+            } else {
+                _hasCompletedOnboarding.value = null // Not logged in, will go to auth
             }
 
             // Ensure minimum loading time of 1 second
@@ -281,7 +304,13 @@ class MainActivity : ComponentActivity() {
         return try {
             val user = FirebaseAuth.getInstance().currentUser
             if (user != null) {
-                Screen.Home.route
+                // User is authenticated, check onboarding status
+                val onboardingComplete = _hasCompletedOnboarding.value ?: false
+                if (onboardingComplete) {
+                    Screen.Home.route
+                } else {
+                    Screen.Onboarding.route
+                }
             } else {
                 Screen.Authentication.route
             }

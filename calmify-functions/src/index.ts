@@ -47,6 +47,8 @@ interface DiaryDocument {
   description: string;
   images: string[];
   date: admin.firestore.Timestamp;
+  dayKey?: string; // Business date YYYY-MM-DD (set by client)
+  timezone?: string; // User's timezone when diary was created (e.g., "Europe/Rome")
   // Psychological metrics (Week 1)
   emotionIntensity: number;
   stressLevel: number;
@@ -328,10 +330,28 @@ export const onDiaryCreated = onDocumentCreated(
         .collection("diary_insights")
         .doc(); // Auto-generate ID
 
+      // Use dayKey from diary (business date for grouping in charts)
+      // generatedAt tracks when the insight was actually created
+      // dayKey ensures insight appears on the correct day in charts
+      const dayKey = diary.dayKey ||
+        diary.date.toDate().toISOString().split("T")[0]; // Fallback
+      const sourceTimezone = diary.timezone ||
+        "Europe/Rome"; // Fallback for old diaries
+
+      logger.info("Insight metadata", {
+        diaryId,
+        dayKey,
+        sourceTimezone,
+        diaryTimestamp: diary.date.toDate().toISOString(),
+      });
+
       await insightRef.set({
         diaryId: diaryId,
         ownerId: diary.ownerId,
+        // When insight was generated (technical)
         generatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        dayKey: dayKey, // Business date from diary (for charts)
+        sourceTimezone: sourceTimezone, // Timezone reference
 
         // Sentiment Analysis
         sentimentPolarity: insight.sentimentPolarity,

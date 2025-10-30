@@ -187,6 +187,7 @@ dependencies {
     implementation(project(":core:util"))
     implementation(project(":data:mongo"))
     implementation(project(":features:auth"))
+    implementation(project(":features:onboarding"))
     implementation(project(":features:home"))
     implementation(project(":features:history"))
     implementation(project(":features:write"))

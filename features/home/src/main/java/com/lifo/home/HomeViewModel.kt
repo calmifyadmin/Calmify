@@ -573,17 +573,14 @@ internal class HomeViewModel @Inject constructor(
                             // Group insights by day (Monday to Sunday)
                             val dailyData = (0 until 7).map { dayIndex ->
                                 val targetDate = targetWeekMonday.plusDays(dayIndex.toLong())
-                                val startOfDay = targetDate.toLocalDate().atStartOfDay(targetDate.zone)
-                                val endOfDay = startOfDay.plusDays(1).minusNanos(1)
+                                val targetDayKey = targetDate.toLocalDate().toString() // "YYYY-MM-DD"
 
-                                // Filter insights for this day
+                                // Filter insights for this day using dayKey - NO timezone conversion needed!
                                 val dayInsights = insights.filter { insight ->
-                                    val insightDate = ZonedDateTime.ofInstant(
-                                        insight.generatedAt.toInstant(),
-                                        targetDate.zone
-                                    )
-                                    insightDate.isAfter(startOfDay) && insightDate.isBefore(endOfDay)
+                                    insight.dayKey == targetDayKey
                                 }
+
+                                Log.d(TAG, "Day $dayIndex ($targetDayKey): ${dayInsights.size} insights")
 
                                 // Calculate average sentiment magnitude
                                 val avgMagnitude = if (dayInsights.isNotEmpty()) {

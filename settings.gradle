@@ -38,3 +38,4 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 include ':features:history'
 include ':features:insight'
 include ':features:profile'
+include ':features:onboarding'

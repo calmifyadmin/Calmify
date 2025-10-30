@@ -36,11 +36,13 @@ import kotlinx.coroutines.launch
 fun SetupNavGraph(
     startDestination: String,
     navController: NavHostController,
+    repository: com.lifo.mongo.repository.MongoRepository,
     onDataLoaded: () -> Unit
 ) {
     // Delega tutto a CalmifyApp
     CalmifyApp(
         startDestination = startDestination,
+        repository = repository,
         onDataLoaded = onDataLoaded
     )
 }

@@ -20,7 +20,9 @@ data class DiaryInsight(
     var diaryId: String = "",                  // Reference to diary entry
     var ownerId: String = "",                   // User ID
     @ServerTimestamp
-    var generatedAt: Date = Date.from(Instant.now()),
+    var generatedAt: Date = Date.from(Instant.now()), // When insight was generated (technical timestamp)
+    var dayKey: String = "",                    // Business date YYYY-MM-DD from diary (for chart grouping)
+    var sourceTimezone: String = "",            // User's timezone when diary was created (for debugging/migrations)
 
     // Sentiment Analysis
     var sentimentPolarity: Float = 0f,          // -1.0 (negative) to +1.0 (positive)
@@ -52,6 +54,8 @@ data class DiaryInsight(
         diaryId = "",
         ownerId = "",
         generatedAt = Date.from(Instant.now()),
+        dayKey = "",
+        sourceTimezone = "",
         sentimentPolarity = 0f,
         sentimentMagnitude = 0f,
         topics = emptyList(),

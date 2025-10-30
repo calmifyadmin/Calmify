@@ -21,7 +21,9 @@ data class Diary(
     var description: String = "",
     var images: List<String> = emptyList(),
     @ServerTimestamp
-    var date: Date = Date.from(Instant.now()),
+    var date: Date = Date.from(Instant.now()), // Technical timestamp (for ordering/audit)
+    var dayKey: String = "", // Business date YYYY-MM-DD (for grouping by day)
+    var timezone: String = "", // User's timezone when diary was created (e.g., "Europe/Rome")
 
     // ✨ NEW: Psychological Metrics (10-second input)
     // Backward compatible with defaults for existing entries
@@ -41,6 +43,8 @@ data class Diary(
         description = "",
         images = emptyList(),
         date = Date.from(Instant.now()),
+        dayKey = "",
+        timezone = "",
         emotionIntensity = 5,
         stressLevel = 5,
         energyLevel = 5,

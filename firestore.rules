@@ -111,6 +111,28 @@ rules_version = '2';
                          resource.data.ownerId == request.auth.uid;
       }
 
+      // Profile Settings collection (Onboarding data - SENSITIVE)
+      match /profile_settings/{userId} {
+        // Lettura: solo se autenticato e sei tu stesso
+        allow read: if request.auth != null &&
+                       request.auth.uid == userId;
+
+        // Creazione: solo se autenticato, sei tu stesso, e imposti il corretto ownerId
+        allow create: if request.auth != null &&
+                         request.auth.uid == userId &&
+                         request.resource.data.ownerId == request.auth.uid;
+
+        // Aggiornamento: solo se autenticato, sei tu stesso, e non modifichi ownerId
+        allow update: if request.auth != null &&
+                         request.auth.uid == userId &&
+                         resource.data.ownerId == request.auth.uid &&
+                         request.resource.data.ownerId == request.auth.uid;
+
+        // Eliminazione: solo se autenticato e sei tu stesso
+        allow delete: if request.auth != null &&
+                         request.auth.uid == userId;
+      }
+
       // NEGA TUTTO IL RESTO (DEVE ESSERE L'ULTIMA REGOLA)
       match /{document=**} {
         allow read, write: if false;

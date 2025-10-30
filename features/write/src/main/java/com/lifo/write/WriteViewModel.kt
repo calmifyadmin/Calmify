@@ -244,6 +244,13 @@ internal class WriteViewModel @Inject constructor(
             if (uiState.updatedDateTime != null) {
                 date = uiState.updatedDateTime!!
             }
+            // Set dayKey and timezone from current device context
+            val zoneId = java.time.ZoneId.systemDefault()
+            dayKey = date.toInstant()
+                .atZone(zoneId)
+                .toLocalDate()
+                .toString() // "YYYY-MM-DD"
+            timezone = zoneId.id // e.g., "Europe/Rome"
         })
         if (result is RequestState.Success) {
             uploadImageToFirebase()
@@ -277,6 +284,13 @@ internal class WriteViewModel @Inject constructor(
                 uiState.selectedDiary != null -> uiState.selectedDiary!!.date
                 else -> Date() // Fallback to current date
             }
+            // Set dayKey and timezone from current device context
+            val zoneId = java.time.ZoneId.systemDefault()
+            dayKey = date.toInstant()
+                .atZone(zoneId)
+                .toLocalDate()
+                .toString() // "YYYY-MM-DD"
+            timezone = zoneId.id // e.g., "Europe/Rome"
         })
         if (result is RequestState.Success) {
             // Upload and delete images

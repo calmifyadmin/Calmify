@@ -23,6 +23,8 @@ data class PsychologicalProfile(
     var ownerId: String = "",                       // User ID
     var weekNumber: Int = 0,                        // ISO week number (1-53)
     var year: Int = 2025,
+    var weekKey: String = "",                       // Business week key (YYYY-Www) for grouping
+    var sourceTimezone: String = "Europe/Rome",     // Server timezone reference
     @ServerTimestamp
     var computedAt: Date = Date.from(Instant.now()),
 
@@ -51,6 +53,8 @@ data class PsychologicalProfile(
         ownerId = "",
         weekNumber = 0,
         year = 2025,
+        weekKey = "",
+        sourceTimezone = "Europe/Rome",
         computedAt = Date.from(Instant.now()),
         stressBaseline = 5f,
         stressVolatility = 0f,

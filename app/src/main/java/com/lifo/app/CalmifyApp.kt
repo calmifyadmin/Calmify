@@ -39,6 +39,7 @@ import com.lifo.home.navigation.homeRoute
 import com.lifo.home.navigation.settingsRoute
 import com.lifo.insight.InsightScreen
 import com.lifo.mongo.repository.MongoRepository
+import com.lifo.onboarding.navigation.onboardingRoute
 import com.lifo.profile.ProfileDashboard
 import com.lifo.ui.components.DisplayAlertDialog
 import com.lifo.ui.components.navigation.CalmifyNavigationBar
@@ -53,6 +54,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.lifo.util.LocalBottomAppBarHeight
+import com.lifo.util.model.RequestState
 import kotlin.math.ln
 
 /**
@@ -62,6 +64,7 @@ import kotlin.math.ln
 @Composable
 fun CalmifyApp(
     startDestination: String,
+    repository: MongoRepository,
     deepLinkRoute: String? = null,
     onDeepLinkHandled: () -> Unit = {},
     onDataLoaded: () -> Unit = {}
@@ -249,15 +252,15 @@ fun CalmifyApp(
         )
     }
 
-    // Delete All Dialog
+    // Delete All User Data Dialog
     AnimatedVisibility(
         visible = deleteAllDialogOpened,
         enter = fadeIn() + scaleIn(),
         exit = fadeOut() + scaleOut()
     ) {
         DisplayAlertDialog(
-            title = "Delete All Diaries",
-            message = "This action cannot be undone. All your diaries and associated images will be permanently deleted.",
+            title = "Delete All My Data",
+            message = "⚠️ THIS ACTION CANNOT BE UNDONE!\n\nThis will permanently delete:\n• All diaries\n• All AI insights\n• All wellbeing snapshots\n• All psychological profiles\n• All chat sessions\n\nYour account will remain active, but all data will be lost forever.",
             dialogOpened = deleteAllDialogOpened,
             onDialogClosed = { deleteAllDialogOpened = false },
             onYesClicked = {
@@ -265,31 +268,33 @@ fun CalmifyApp(
                 scope.launch {
                     try {
                         withContext(Dispatchers.Main) {
-                            Toast.makeText(context, "Deleting all diaries...", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Deleting all your data...", Toast.LENGTH_SHORT).show()
                         }
 
-                        // Delete all diaries
-                        deleteAllDiaries(
-                            context = context,
-                            onSuccess = {
-                                scope.launch(Dispatchers.Main) {
-                                    Toast.makeText(
-                                        context,
-                                        "All diaries deleted successfully",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
+                        // Delete ALL user data
+                        withContext(Dispatchers.IO) {
+                            when (val result = repository.deleteAllUserData()) {
+                                is RequestState.Success -> {
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(
+                                            context,
+                                            "All data deleted successfully",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
                                 }
-                            },
-                            onError = { error ->
-                                scope.launch(Dispatchers.Main) {
-                                    Toast.makeText(
-                                        context,
-                                        error.message ?: "Failed to delete diaries",
-                                        Toast.LENGTH_LONG
-                                    ).show()
+                                is RequestState.Error -> {
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(
+                                            context,
+                                            result.error.message ?: "Failed to delete data",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
                                 }
+                                else -> {}
                             }
-                        )
+                        }
                     } catch (e: Exception) {
                         withContext(Dispatchers.Main) {
                             Toast.makeText(
@@ -305,29 +310,6 @@ fun CalmifyApp(
     }
 }
 
-/**
- * Delete all diaries function
- * Note: This function should ideally be called from HomeViewModel instead
- * Keeping it here for backward compatibility but it's not recommended practice
- */
-private suspend fun deleteAllDiaries(
-    context: android.content.Context,
-    onSuccess: () -> Unit,
-    onError: (Throwable) -> Unit
-) {
-    withContext(Dispatchers.IO) {
-        try {
-            // Note: This is a workaround. Ideally this should be in a ViewModel
-            // For now, we skip the actual deletion as it requires repository injection
-            // The HomeViewModel already has the proper deleteAllDiaries implementation
-            android.util.Log.w("CalmifyApp", "Delete all diaries called from CalmifyApp - this should be done via HomeViewModel")
-            onError(Exception("Please use the delete option from the Home screen menu"))
-        } catch (e: Exception) {
-            android.util.Log.e("CalmifyApp", "Error in deleteAllDiaries", e)
-            onError(e)
-        }
-    }
-}
 
 /**
  * Drawer Content Component
@@ -439,7 +421,7 @@ private fun DrawerContent(
                     contentDescription = null
                 )
             },
-            label = { Text("Delete All Diaries") },
+            label = { Text("Delete All My Data") },
             selected = false,
             onClick = onDeleteAllClicked,
             modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -514,6 +496,17 @@ private fun CalmifyNavHost(
                 }
             },
             onDataLoaded = onDataLoaded
+        )
+
+        // Onboarding
+        onboardingRoute(
+            onComplete = {
+                navController.navigate(Screen.Home.route) {
+                    popUpTo(Screen.Onboarding.route) {
+                        inclusive = true
+                    }
+                }
+            }
         )
 
         // Home - passa il drawerState e bottomBarScrollBehavior
