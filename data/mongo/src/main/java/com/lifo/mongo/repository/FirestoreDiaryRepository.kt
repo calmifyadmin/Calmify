@@ -308,7 +308,8 @@ class FirestoreDiaryRepository @Inject constructor(
 
     /**
      * Delete ALL user data from Firestore
-     * Collections: diaries, diary_insights, psychological_profiles, wellbeing_snapshots, chat_sessions
+     * Collections: diaries, diary_insights, psychological_profiles, wellbeing_snapshots,
+     *              chat_sessions, chat_messages, profile_settings
      */
     override suspend fun deleteAllUserData(): RequestState<Boolean> {
         val userId = currentUserId
@@ -317,7 +318,7 @@ class FirestoreDiaryRepository @Inject constructor(
         return try {
             Log.d(TAG, "Deleting ALL data for user: $userId")
 
-            // Collections to delete
+            // Collections to delete (with ownerId field)
             val collections = listOf(
                 "diaries",
                 "diary_insights",
@@ -329,6 +330,7 @@ class FirestoreDiaryRepository @Inject constructor(
 
             var totalDeleted = 0
 
+            // Delete collections that use ownerId field
             collections.forEach { collectionName ->
                 try {
                     val snapshot = firestore.collection(collectionName)
@@ -350,6 +352,40 @@ class FirestoreDiaryRepository @Inject constructor(
                     Log.w(TAG, "Error deleting from $collectionName: ${e.message}")
                     // Continue with other collections even if one fails
                 }
+            }
+
+            // Delete profile_settings (uses document ID = userId, not ownerId field)
+            try {
+                val profileSettingsDoc = firestore.collection("profile_settings")
+                    .document(userId)
+                    .get()
+                    .await()
+
+                if (profileSettingsDoc.exists()) {
+                    profileSettingsDoc.reference.delete().await()
+                    totalDeleted++
+                    Log.d(TAG, "Deleted profile_settings document")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Error deleting profile_settings: ${e.message}")
+                // Continue even if this fails
+            }
+
+            // Delete users document (FCM token storage - uses document ID = userId)
+            try {
+                val usersDoc = firestore.collection("users")
+                    .document(userId)
+                    .get()
+                    .await()
+
+                if (usersDoc.exists()) {
+                    usersDoc.reference.delete().await()
+                    totalDeleted++
+                    Log.d(TAG, "Deleted users document (FCM token)")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Error deleting users document: ${e.message}")
+                // Continue even if this fails
             }
 
             Log.d(TAG, "All user data deleted successfully. Total: $totalDeleted documents")

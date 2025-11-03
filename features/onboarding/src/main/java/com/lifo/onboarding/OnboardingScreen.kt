@@ -205,19 +205,21 @@ private fun OnboardingBottomBar(
         ) {
             // Back Button (left side) - visible only when not on first step
             if (currentStep > 0) {
-                IconButton(
+                TextButton(
                     onClick = onBack,
                     enabled = !isSaving,
-                    modifier = Modifier.size(56.dp)
+                    modifier = Modifier.height(56.dp)
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back to previous step"
+                        contentDescription = null
                     )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Back")
                 }
             } else {
                 // Spacer to maintain layout balance when back button is hidden
-                Spacer(modifier = Modifier.size(56.dp))
+                Spacer(modifier = Modifier.width(100.dp))
             }
 
             // Next/Complete Button (right side)

@@ -117,16 +117,10 @@ rules_version = '2';
         allow read: if request.auth != null &&
                        request.auth.uid == userId;
 
-        // Creazione: solo se autenticato, sei tu stesso, e imposti il corretto ownerId
-        allow create: if request.auth != null &&
-                         request.auth.uid == userId &&
-                         request.resource.data.ownerId == request.auth.uid;
-
-        // Aggiornamento: solo se autenticato, sei tu stesso, e non modifichi ownerId
-        allow update: if request.auth != null &&
-                         request.auth.uid == userId &&
-                         resource.data.ownerId == request.auth.uid &&
-                         request.resource.data.ownerId == request.auth.uid;
+        // Creazione/Aggiornamento: solo se autenticato e sei tu stesso
+        // Il document ID corrisponde all'user ID, quindi è intrinsecamente sicuro
+        allow create, update: if request.auth != null &&
+                                 request.auth.uid == userId;
 
         // Eliminazione: solo se autenticato e sei tu stesso
         allow delete: if request.auth != null &&

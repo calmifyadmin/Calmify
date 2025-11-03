@@ -370,9 +370,9 @@ internal class HomeViewModel @Inject constructor(
                 }
             }
 
-            // Delete diaries from Firestore
+            // Delete ALL user data from Firestore (diaries, insights, profiles, chat, profile_settings, etc.)
             withContext(Dispatchers.IO) {
-                when (val result = diaryRepository.deleteAllDiaries()) {
+                when (val result = diaryRepository.deleteAllUserData()) {
                     is RequestState.Success -> {
                         withContext(Dispatchers.Main) {
                             onSuccess()
@@ -386,7 +386,7 @@ internal class HomeViewModel @Inject constructor(
                         }
                     }
                     else -> {
-                        Log.w(TAG, "Unexpected state during deleteAllDiaries")
+                        Log.w(TAG, "Unexpected state during deleteAllUserData")
                     }
                 }
             }
