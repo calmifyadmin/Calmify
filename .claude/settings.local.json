@@ -19,7 +19,12 @@
       "Bash(Select-Object -First 5)",
       "Bash(Select-Object -First 10)",
       "Bash(Select-Object -First 3)",
-      "Bash(./gradlew:*)"
+      "Bash(./gradlew:*)",
+      "Bash(findstr:*)",
+      "Bash(Select-String -Pattern \"error:\" -Context 2,2)",
+      "Bash(Select-String -Pattern \"BUILD|error:\" -Context 1,2)",
+      "Bash(Select-Object -First 20)",
+      "Bash(Select-Object -Last 15)"
     ],
     "deny": [],
     "ask": []

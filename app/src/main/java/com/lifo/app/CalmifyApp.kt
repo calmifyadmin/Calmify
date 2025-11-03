@@ -4,6 +4,7 @@ import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -13,16 +14,24 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavHostController
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -36,14 +45,14 @@ import com.lifo.chat.navigation.liveRoute
 import com.lifo.chat.navigation.navigateToChat
 import com.lifo.history.navigation.historyRoute
 import com.lifo.home.navigation.homeRoute
-import com.lifo.home.navigation.settingsRoute
+import com.lifo.settings.navigation.settingsRoute
 import com.lifo.insight.InsightScreen
 import com.lifo.mongo.repository.MongoRepository
 import com.lifo.onboarding.navigation.onboardingRoute
 import com.lifo.profile.ProfileDashboard
 import com.lifo.ui.components.DisplayAlertDialog
-import com.lifo.ui.components.navigation.CalmifyNavigationBar
 import com.lifo.ui.components.navigation.CalmifyBottomAppBar
+import com.lifo.ui.components.navigation.CalmifyNavigationBar
 import com.lifo.ui.components.navigation.NavigationDestination
 import com.lifo.util.Screen
 import com.lifo.write.navigation.writeRoute
@@ -58,7 +67,41 @@ import com.lifo.util.model.RequestState
 import kotlin.math.ln
 
 /**
- * Composable principale dell'app con Navigation Bar Material 3 e Drawer globale
+ * Composable principale dell'app con NavigationBar Material 3 e Drawer globale
+ *
+ * # Architettura UI con Scroll Behavior (come Gmail):
+ *
+ * ## NavigationBar con Scroll Behavior Custom
+ * - Componente standard Material 3 per navigazione principale
+ * - **Scroll behavior**: Si nasconde durante scroll down, riappare durante scroll up
+ * - Implementato via `NestedScrollConnection` + `graphicsLayer.translationY`
+ * - Smooth animations senza hardcoded values
+ * - 3-5 destinazioni principali con icone + label
+ *
+ * ## Perché Custom Scroll Behavior?
+ * NavigationBar di Material 3 non ha scroll behavior built-in (solo BottomAppBar ce l'ha).
+ * Questo è il pattern usato dalle app Google (Gmail, Photos) per massimizzare lo spazio
+ * del contenuto mantenendo la navigazione facilmente accessibile.
+ *
+ * ## Layout Hierarchy:
+ * 1. ModalNavigationDrawer (livello più esterno)
+ * 2. Box con NestedScrollConnection
+ *    ├─ NavHost (main content con bottom padding)
+ *    └─ NavigationBar (overlay in bottom con graphicsLayer translation)
+ *
+ * ## Scroll Behavior Implementation:
+ * - `NestedScrollConnection.onPreScroll`: Intercetta scroll events
+ * - `mutableFloatStateOf`: Traccia l'offset corrente (-height a 0)
+ * - `graphicsLayer.translationY`: Anima la posizione senza recomposition
+ * - `coerceIn(-height, 0f)`: Limita l'offset ai bounds corretti
+ *
+ * ## FAB Positioning:
+ * - FAB posizionati nelle schermate con bottom padding
+ * - Non più nascosti dalla NavigationBar perché si ritira durante lo scroll
+ *
+ * @see androidx.compose.material3.NavigationBar
+ * @see androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+ * @see androidx.compose.ui.graphics.graphicsLayer
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
@@ -115,7 +158,6 @@ fun CalmifyApp(
     // Measure BottomAppBar height dynamically
     var bottomAppBarHeight by remember { mutableStateOf(0.dp) }
     val density = LocalDensity.current
-
     // Navigation Drawer wrapper - ora avvolge tutto
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -129,6 +171,12 @@ fun CalmifyApp(
             ) {
                 DrawerContent(
                     userProfileImageUrl = userProfileImageUrl,
+                    onHeaderClicked = {
+                        scope.launch {
+                            drawerState.close()
+                        }
+                        navigationState.navController.navigate(Screen.Settings.route)
+                    },
                     onSignOutClicked = {
                         scope.launch {
                             drawerState.close()
@@ -156,53 +204,53 @@ fun CalmifyApp(
                     bottomBarScrollBehavior = bottomBarScrollBehavior
                 )
 
-            // BottomAppBar con scroll behavior - posizionata in basso con offset
-            AnimatedVisibility(
-                visible = shouldShowBottomBar,
-                enter = slideInVertically(
-                    initialOffsetY = { it },
-                    animationSpec = tween(
-                        durationMillis = 300,
-                        easing = FastOutSlowInEasing
-                    )
-                ) + fadeIn(
-                    animationSpec = tween(
-                        durationMillis = 300,
-                        easing = FastOutSlowInEasing
-                    )
-                ),
-                exit = slideOutVertically(
-                    targetOffsetY = { it },
-                    animationSpec = tween(
-                        durationMillis = 300,
-                        easing = FastOutSlowInEasing
-                    )
-                ) + fadeOut(
-                    animationSpec = tween(
-                        durationMillis = 300,
-                        easing = FastOutSlowInEasing
-                    )
-                ),
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .graphicsLayer {
-                        // Usa l'heightOffset per nascondere completamente la bar
-                        translationY = -bottomBarScrollBehavior.state.heightOffset
-                    }
-            ) {
-                CalmifyBottomAppBar(
-                    navController = navigationState.navController,
-                    scrollBehavior = bottomBarScrollBehavior,
-                    destinations = listOf(
-                        NavigationDestination.Home,
-                        NavigationDestination.History,
-                        NavigationDestination.Profile
+                // BottomAppBar con scroll behavior - posizionata in basso con offset
+                AnimatedVisibility(
+                    visible = shouldShowBottomBar,
+                    enter = slideInVertically(
+                        initialOffsetY = { it },
+                        animationSpec = tween(
+                            durationMillis = 300,
+                            easing = FastOutSlowInEasing
+                        )
+                    ) + fadeIn(
+                        animationSpec = tween(
+                            durationMillis = 300,
+                            easing = FastOutSlowInEasing
+                        )
                     ),
-                    modifier = Modifier.onSizeChanged { size ->
-                        bottomAppBarHeight = with(density) { size.height.toDp() }
-                    }
-                )
-            }
+                    exit = slideOutVertically(
+                        targetOffsetY = { it },
+                        animationSpec = tween(
+                            durationMillis = 300,
+                            easing = FastOutSlowInEasing
+                        )
+                    ) + fadeOut(
+                        animationSpec = tween(
+                            durationMillis = 300,
+                            easing = FastOutSlowInEasing
+                        )
+                    ),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .graphicsLayer {
+                            // Usa l'heightOffset per nascondere completamente la bar
+                            translationY = -bottomBarScrollBehavior.state.heightOffset
+                        }
+                ) {
+                    CalmifyBottomAppBar(
+                        navController = navigationState.navController,
+                        scrollBehavior = bottomBarScrollBehavior,
+                        destinations = listOf(
+                            NavigationDestination.Home,
+                            NavigationDestination.History,
+                            NavigationDestination.Profile
+                        ),
+                        modifier = Modifier.onSizeChanged { size ->
+                            bottomAppBarHeight = with(density) { size.height.toDp() }
+                        }
+                    )
+                }
             }
         }
     }
@@ -318,6 +366,7 @@ fun CalmifyApp(
 @Composable
 private fun DrawerContent(
     userProfileImageUrl: String?,
+    onHeaderClicked: () -> Unit,
     onSignOutClicked: () -> Unit,
     onDeleteAllClicked: () -> Unit
 ) {
@@ -332,9 +381,11 @@ private fun DrawerContent(
             .fillMaxSize()
             .graphicsLayer { alpha = drawerContentAlpha }
     ) {
-        // Header with user info
+        // Header with user info - CLICKABLE
         Surface(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onHeaderClicked),
             color = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
         ) {
             Column(
@@ -509,7 +560,7 @@ private fun CalmifyNavHost(
             }
         )
 
-        // Home - passa il drawerState e bottomBarScrollBehavior
+        // Home - passa il drawerState e contentPadding per layout corretto
         homeRoute(
             navController = navController,
             navigateToWrite = {
@@ -547,7 +598,7 @@ private fun CalmifyNavHost(
             },
             onDataLoaded = onDataLoaded,
             drawerState = drawerState, // Passa il drawer state
-            bottomBarScrollBehavior = bottomBarScrollBehavior // Passa lo scroll behavior
+            bottomBarScrollBehavior = bottomBarScrollBehavior // Passa il padding da Scaffold per layout corretto
         )
 
         // History - new activity/history screen
@@ -575,12 +626,21 @@ private fun CalmifyNavHost(
             bottomBarScrollBehavior = bottomBarScrollBehavior
         )
 
-        // Settings
+        // Settings - new module with subscreens
         settingsRoute(
-            onMenuClicked = {
-                // Settings screen doesn't have a drawer
+            navController = navController,
+            onNavigateBack = {
+                if (navController.currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
+                    navController.popBackStack()
+                }
             },
-            bottomBarScrollBehavior = bottomBarScrollBehavior
+            onLogout = {
+                navController.navigate(Screen.Authentication.route) {
+                    popUpTo(Screen.Home.route) {
+                        inclusive = true
+                    }
+                }
+            }
         )
 
         // Wellbeing Snapshot

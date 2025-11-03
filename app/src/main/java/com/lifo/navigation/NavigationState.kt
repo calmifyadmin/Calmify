@@ -64,6 +64,15 @@ class NavigationState(
                 route == Screen.Write.routeNew -> false
                 route.startsWith("${Screen.Write.route}?") -> false
 
+                // Hide on onboarding screens
+                route == Screen.Onboarding.route -> false
+                route.startsWith("${Screen.Onboarding.route}/") -> false
+
+                // Hide on settings screens (main + all subscreens)
+                route == Screen.Settings.route -> false
+                route.startsWith("${Screen.Settings.route}/") -> false
+                route.startsWith("settings_") -> false // Catches settings_main, settings_personal_info, etc.
+
                 // Show on all other screens (Home, Profile, etc.)
                 else -> true
             }

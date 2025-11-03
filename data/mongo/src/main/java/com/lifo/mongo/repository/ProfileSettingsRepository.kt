@@ -16,9 +16,19 @@ interface ProfileSettingsRepository {
     fun getProfileSettings(): Flow<RequestState<ProfileSettings?>>
 
     /**
+     * Get specific user's profile settings (one-time)
+     */
+    suspend fun getProfileSettings(userId: String): RequestState<ProfileSettings?>
+
+    /**
      * Save or update profile settings
      */
     suspend fun saveProfileSettings(settings: ProfileSettings): RequestState<Boolean>
+
+    /**
+     * Delete user's profile settings
+     */
+    suspend fun deleteProfileSettings(userId: String): RequestState<Boolean>
 
     /**
      * Check if user has completed onboarding

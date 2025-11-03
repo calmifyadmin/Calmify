@@ -1,16 +1,18 @@
 plugins {
-    alias(libs.plugins.com.android.library)
-    alias(libs.plugins.org.jetbrains.kotlin.android)
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
+    id 'com.google.devtools.ksp'
+    id 'dagger.hilt.android.plugin'
 }
 
 android {
     namespace 'com.lifo.settings'
-    compileSdk {
-        version = release(35)
-    }
+    compileSdk ProjectConfig.compileSdk
 
     defaultConfig {
-        minSdk 24
+        minSdk ProjectConfig.minSdk
+        targetSdk ProjectConfig.targetSdk
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -22,19 +24,57 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
+
     kotlinOptions {
-        jvmTarget = '11'
+        jvmTarget = '17'
+    }
+
+    buildFeatures {
+        compose true
     }
 }
 
 dependencies {
+    // Modules
+    implementation project(':core:ui')
+    implementation project(':core:util')
+    implementation project(':data:mongo')
+
+    // Compose BOM
+    implementation platform(libs.compose.bom)
+    implementation libs.compose.ui
+    implementation libs.compose.ui.graphics
+    implementation libs.compose.ui.tooling.preview
+    implementation libs.compose.material3
+    implementation libs.compose.material.icons.extended
+    debugImplementation libs.compose.ui.tooling
+
+    // Core
     implementation libs.core.ktx
-    implementation libs.appcompat
-    implementation libs.material
+    implementation libs.activity.compose
+    implementation libs.navigation.compose
+    implementation libs.lifecycle.runtime.compose
+    implementation libs.lifecycle.viewmodel.compose
+
+    // Hilt
+    implementation libs.hilt.android
+    ksp libs.hilt.compiler
+    implementation libs.hilt.navigation.compose
+
+    // Date Picker
+    implementation libs.date.dialog
+
+    // Firebase BOM
+    implementation platform(libs.firebase.bom)
+    implementation libs.firebase.auth
+    implementation libs.firebase.firestore
+
+    // Testing
     testImplementation libs.junit
     androidTestImplementation libs.junit.ext
     androidTestImplementation libs.espresso.core

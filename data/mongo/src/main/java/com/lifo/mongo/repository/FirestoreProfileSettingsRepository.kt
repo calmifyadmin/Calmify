@@ -120,6 +120,46 @@ class FirestoreProfileSettingsRepository @Inject constructor(
         }
     }
 
+    override suspend fun getProfileSettings(userId: String): RequestState<ProfileSettings?> {
+        return try {
+            Log.d(TAG, "Getting profile settings for user: $userId")
+
+            val doc = firestore.collection(COLLECTION_PROFILE_SETTINGS)
+                .document(userId)
+                .get()
+                .await()
+
+            if (doc.exists()) {
+                val settings = doc.toObject(ProfileSettings::class.java)
+                Log.d(TAG, "Profile settings retrieved successfully")
+                RequestState.Success(settings)
+            } else {
+                Log.d(TAG, "No profile settings found for user")
+                RequestState.Success(null)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting profile settings", e)
+            RequestState.Error(e)
+        }
+    }
+
+    override suspend fun deleteProfileSettings(userId: String): RequestState<Boolean> {
+        return try {
+            Log.d(TAG, "Deleting profile settings for user: $userId")
+
+            firestore.collection(COLLECTION_PROFILE_SETTINGS)
+                .document(userId)
+                .delete()
+                .await()
+
+            Log.d(TAG, "Profile settings deleted successfully")
+            RequestState.Success(true)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error deleting profile settings", e)
+            RequestState.Error(e)
+        }
+    }
+
     override suspend fun completeOnboarding(): RequestState<Boolean> {
         return try {
             val userId = currentUserId
