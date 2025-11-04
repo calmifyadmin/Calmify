@@ -382,110 +382,100 @@ fun Color.compositeOver(background: Color): Color {
 }
 
 /**
- * BottomAppBar moderna con scroll behavior e navigation actions
- * Usa Material 3 best practices per i colori
+ * NavigationBar Material 3 conforme alle specifiche ufficiali Android
+ *
+ * Implementazione standard seguendo:
+ * - Material Design 3 Navigation Bar specifications
+ * - Android Developer official guidelines
+ * - NavigationBar è PERSISTENTE (no scroll behavior per spec M3)
+ * - WindowInsets handling con NavigationBarDefaults
+ * - Per 3-5 destinazioni principali (spec M3)
+ *
+ * Riferimenti ufficiali:
+ * - https://developer.android.com/develop/ui/compose/components/navigation-bar
+ * - https://m3.material.io/components/navigation-bar
+ *
+ * @param navController Controller per la navigazione
+ * @param modifier Modificatore esterno
+ * @param destinations Lista di destinazioni (max 5 per spec M3)
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalmifyBottomAppBar(
     navController: NavController,
-    scrollBehavior: BottomAppBarScrollBehavior,
     modifier: Modifier = Modifier,
     destinations: List<NavigationDestination> = listOf(
         NavigationDestination.Home,
-        NavigationDestination.Write,
+        NavigationDestination.History,
         NavigationDestination.Profile
-    ),
-    floatingActionButton: @Composable () -> Unit = {}
+    )
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    BottomAppBar(
+    // NavigationBar standard M3 - persistente e integrata nel Scaffold
+    ShortNavigationBar(
         modifier = modifier,
-        scrollBehavior = scrollBehavior,
-        containerColor = MaterialTheme.colorScheme.surface,
+        windowInsets = NavigationBarDefaults.windowInsets, // WindowInsets ufficiali M3
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        tonalElevation = 0.dp,
-        windowInsets = WindowInsets(0, 0, 0, 0), // Disable default insets since we're in overlay
-        actions = {
-            // Navigation actions invece di NavigationBarItems
-            destinations.forEach { destination ->
-                val selected = currentDestination?.hierarchy?.any { navDestination ->
-                    navDestination.route == destination.route ||
-                            navDestination.route?.startsWith(destination.route) == true
-                } == true
+    ) {
+        destinations.forEach { destination ->
+            // Determina se la destinazione è selezionata
+            val selected = currentDestination?.hierarchy?.any { navDestination ->
+                navDestination.route == destination.route ||
+                        navDestination.route?.startsWith(destination.route) == true
+            } == true
 
-                IconButton(
-                    onClick = {
-                        navController.navigate(destination.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
+            // NavigationBarItem standard M3 - garantisce accessibilità e layout corretto
+            ShortNavigationBarItem(
+                selected = selected,
+                onClick = {
+                    navController.navigate(destination.route) {
+                        // Pop fino alla start destination per back stack pulito
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
                         }
-                    },
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    ) {
-                        BadgedBox(
-                            badge = {
-                                if (destination.badge != null) {
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                icon = {
+                    // Badge per notifiche/contatori
+                    BadgedBox(
+                        badge = {
+                            when {
+                                destination.badge != null -> {
                                     Badge {
                                         Text(
                                             text = destination.badge,
                                             style = MaterialTheme.typography.labelSmall
                                         )
                                     }
-                                } else if (destination.hasNews) {
-                                    Badge(modifier = Modifier.size(8.dp))
+                                }
+                                destination.hasNews -> {
+                                    Badge(modifier = Modifier.size(6.dp))
                                 }
                             }
-                        ) {
-                            Icon(
-                                imageVector = if (selected) {
-                                    destination.selectedIcon
-                                } else {
-                                    destination.unselectedIcon
-                                },
-                                contentDescription = destination.label,
-                                tint = if (selected) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .graphicsLayer {
-                                        scaleX = if (selected) 1.1f else 1f
-                                        scaleY = if (selected) 1.1f else 1f
-                                    }
-                            )
                         }
-
-                        AnimatedVisibility(
-                            visible = selected,
-                            enter = fadeIn() + expandVertically(),
-                            exit = fadeOut() + shrinkVertically()
-                        ) {
-                            Text(
-                                text = destination.label,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(top = 4.dp)
-                            )
-                        }
+                    ) {
+                        Icon(
+                            imageVector = if (selected) {
+                                destination.selectedIcon
+                            } else {
+                                destination.unselectedIcon
+                            },
+                            contentDescription = destination.label
+                        )
                     }
+                },
+                label = {
+                    Text(
+                        text = destination.label,
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1
+                    )
                 }
-            }
-        },
-        floatingActionButton = floatingActionButton
-    )
+            )
+        }
+    }
 }

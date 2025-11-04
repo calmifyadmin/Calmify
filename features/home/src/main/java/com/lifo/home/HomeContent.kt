@@ -49,7 +49,11 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+@OptIn(
+    ExperimentalFoundationApi::class,
+    ExperimentalMaterial3Api::class,
+    ExperimentalMaterial3ExpressiveApi::class  // Required for LoadingIndicator
+)
 @Composable
 internal fun HomeContent(
     paddingValues: PaddingValues,
@@ -98,19 +102,17 @@ internal fun HomeContent(
             onRefresh = onRefresh,
             modifier = Modifier.fillMaxSize(),
             indicator = {
-                PullToRefreshDefaults.Indicator(
+                // Material 3 Expressive LoadingIndicator
+                // Provides expressive animated pull-to-refresh experience
+                PullToRefreshDefaults.LoadingIndicator(
                     state = pullToRefreshState,
                     isRefreshing = isRefreshing,
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 12.dp),
-                    // Material 3 Expressive tokens
-                    color = MaterialTheme.colorScheme.primary,
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                    modifier = Modifier.align(Alignment.TopCenter),
+                    // Material 3 Expressive color tokens
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
-
-
         ) {
             when {
                 isLoading && dailyInsights.isEmpty() -> {

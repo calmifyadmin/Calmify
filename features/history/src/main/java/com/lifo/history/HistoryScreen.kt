@@ -22,7 +22,6 @@ internal fun HistoryScreen(
     onDiaryClick: (HomeContentItem.DiaryItem) -> Unit,
     onChatHistoryHeaderClick: () -> Unit,
     onDiaryHistoryHeaderClick: () -> Unit,
-    bottomBarScrollBehavior: BottomAppBarScrollBehavior,
     viewModel: HistoryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -31,8 +30,7 @@ internal fun HistoryScreen(
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
-            .nestedScroll(scrollBehavior.nestedScrollConnection)
-            .nestedScroll(bottomBarScrollBehavior.nestedScrollConnection),
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             HistoryTopBar(
                 scrollBehavior = scrollBehavior,

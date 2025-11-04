@@ -8,6 +8,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -62,7 +65,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.lifo.util.LocalBottomAppBarHeight
 import com.lifo.util.model.RequestState
 import kotlin.math.ln
 
@@ -152,12 +154,6 @@ fun CalmifyApp(
     var signOutDialogOpened by remember { mutableStateOf(false) }
     var deleteAllDialogOpened by remember { mutableStateOf(false) }
 
-    // BottomAppBar scroll behavior - exitAlways nasconde la bar durante scroll
-    val bottomBarScrollBehavior = BottomAppBarDefaults.exitAlwaysScrollBehavior()
-
-    // Measure BottomAppBar height dynamically
-    var bottomAppBarHeight by remember { mutableStateOf(0.dp) }
-    val density = LocalDensity.current
     // Navigation Drawer wrapper - ora avvolge tutto
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -193,65 +189,91 @@ fun CalmifyApp(
             }
         }
     ) {
-        CompositionLocalProvider(LocalBottomAppBarHeight provides bottomAppBarHeight) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                // Main content - usa tutto lo spazio, la BottomAppBar è in overlay
-                CalmifyNavHost(
-                    navController = navigationState.navController,
-                    startDestination = startDestination,
-                    onDataLoaded = onDataLoaded,
-                    drawerState = drawerState,
-                    bottomBarScrollBehavior = bottomBarScrollBehavior
-                )
-
-                // BottomAppBar con scroll behavior - posizionata in basso con offset
+        // Scaffold con NavigationBar e FAB - pattern ufficiale M3
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = MaterialTheme.colorScheme.background,
+            bottomBar = {
+                // NavigationBar persistente - spec M3 ufficiale
                 AnimatedVisibility(
                     visible = shouldShowBottomBar,
                     enter = slideInVertically(
                         initialOffsetY = { it },
-                        animationSpec = tween(
-                            durationMillis = 300,
-                            easing = FastOutSlowInEasing
-                        )
-                    ) + fadeIn(
-                        animationSpec = tween(
-                            durationMillis = 300,
-                            easing = FastOutSlowInEasing
-                        )
-                    ),
+                        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                    ) + fadeIn(animationSpec = tween(300)),
                     exit = slideOutVertically(
                         targetOffsetY = { it },
-                        animationSpec = tween(
-                            durationMillis = 300,
-                            easing = FastOutSlowInEasing
-                        )
-                    ) + fadeOut(
-                        animationSpec = tween(
-                            durationMillis = 300,
-                            easing = FastOutSlowInEasing
-                        )
-                    ),
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .graphicsLayer {
-                            // Usa l'heightOffset per nascondere completamente la bar
-                            translationY = -bottomBarScrollBehavior.state.heightOffset
-                        }
+                        animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing)
+                    ) + fadeOut(animationSpec = tween(250))
                 ) {
                     CalmifyBottomAppBar(
                         navController = navigationState.navController,
-                        scrollBehavior = bottomBarScrollBehavior,
                         destinations = listOf(
                             NavigationDestination.Home,
                             NavigationDestination.History,
                             NavigationDestination.Profile
-                        ),
-                        modifier = Modifier.onSizeChanged { size ->
-                            bottomAppBarHeight = with(density) { size.height.toDp() }
-                        }
+                        )
                     )
                 }
-            }
+            },
+            // FAB gestito a livello Scaffold - Scaffold posiziona automaticamente sopra NavigationBar
+            floatingActionButton = {
+                // Mostra FAB solo nella Home
+                if (isHomeScreen && shouldShowBottomBar) {
+                    // Dual FAB layout - Chat + Write
+                    Column(
+                        horizontalAlignment = Alignment.End,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // Chat FAB (smaller, top)
+                        FloatingActionButton(
+                            onClick = {
+                                navigationState.navController.navigate(Screen.Chat.route)
+                            },
+                            containerColor = MaterialTheme.colorScheme.secondary,
+                            contentColor = MaterialTheme.colorScheme.onSecondary,
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Chat,
+                                contentDescription = "Start Chat",
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+
+                        // New Diary Extended FAB (primary action, bottom)
+                        ExtendedFloatingActionButton(
+                            onClick = {
+                                navigationState.navController.navigate(Screen.Write.routeNew)
+                            },
+                            text = {
+                                Text(
+                                    text = "New Diary",
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            },
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = null
+                                )
+                            },
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+            },
+            floatingActionButtonPosition = FabPosition.End // Posizionamento standard M3
+        ) { paddingValues ->
+            // Main content con padding automatico dallo Scaffold
+            CalmifyNavHost(
+                navController = navigationState.navController,
+                startDestination = startDestination,
+                onDataLoaded = onDataLoaded,
+                drawerState = drawerState,
+                contentPadding = paddingValues // Scaffold fornisce padding per NavigationBar
+            )
         }
     }
 
@@ -530,7 +552,7 @@ private fun CalmifyNavHost(
     modifier: Modifier = Modifier,
     onDataLoaded: () -> Unit,
     drawerState: DrawerState,
-    bottomBarScrollBehavior: BottomAppBarScrollBehavior
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     NavHost(
         navController = navController,
@@ -597,8 +619,7 @@ private fun CalmifyNavHost(
                 }
             },
             onDataLoaded = onDataLoaded,
-            drawerState = drawerState, // Passa il drawer state
-            bottomBarScrollBehavior = bottomBarScrollBehavior // Passa il padding da Scaffold per layout corretto
+            drawerState = drawerState // Passa il drawer state
         )
 
         // History - new activity/history screen
@@ -622,8 +643,7 @@ private fun CalmifyNavHost(
             },
             onMenuClicked = {
                 // History screen doesn't have a drawer, so we can leave this empty
-            },
-            bottomBarScrollBehavior = bottomBarScrollBehavior
+            }
         )
 
         // Settings - new module with subscreens

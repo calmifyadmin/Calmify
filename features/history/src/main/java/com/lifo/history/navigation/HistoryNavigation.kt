@@ -2,7 +2,6 @@ package com.lifo.history.navigation
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
-import androidx.compose.material3.BottomAppBarScrollBehavior
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
@@ -27,8 +26,7 @@ fun NavGraphBuilder.historyRoute(
     navigateToWriteWithArgs: (String) -> Unit,
     navigateToExistingChat: (String) -> Unit,
     navigateToInsight: (String) -> Unit,
-    onMenuClicked: () -> Unit,
-    bottomBarScrollBehavior: BottomAppBarScrollBehavior
+    onMenuClicked: () -> Unit
 ) {
     // Main History screen
     composable(
@@ -78,7 +76,6 @@ fun NavGraphBuilder.historyRoute(
             onDiaryHistoryHeaderClick = {
                 navController.navigate(Screen.DiaryHistoryFull.route)
             },
-            bottomBarScrollBehavior = bottomBarScrollBehavior,
             viewModel = viewModel
         )
     }

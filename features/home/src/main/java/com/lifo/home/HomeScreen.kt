@@ -11,7 +11,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.material3.BottomAppBarScrollBehavior
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -26,7 +25,6 @@ import androidx.navigation.NavHostController
 import com.lifo.home.components.*
 import com.lifo.mongo.repository.Diaries
 import com.lifo.ui.components.loading.*
-import com.lifo.util.LocalBottomAppBarHeight
 import com.lifo.util.model.RequestState
 import com.lifo.util.model.HomeContentItem
 import com.lifo.util.model.ContentFilter
@@ -46,7 +44,6 @@ internal fun HomeScreen(
     diaries: Diaries,
     navController: NavHostController,
     drawerState: DrawerState,
-    bottomBarScrollBehavior: BottomAppBarScrollBehavior,
     onMenuClicked: () -> Unit,
     onSignOutClicked: () -> Unit,
     onDeleteAllClicked: () -> Unit,
@@ -67,13 +64,11 @@ internal fun HomeScreen(
 ) {
     // Use enterAlwaysScrollBehavior for consistent appearance
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
-    val bottomAppBarHeight = LocalBottomAppBarHeight.current
 
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
             .nestedScroll(scrollBehavior.nestedScrollConnection)
-            .nestedScroll(bottomBarScrollBehavior.nestedScrollConnection)
             .background(MaterialTheme.colorScheme.background),
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
@@ -84,48 +79,7 @@ internal fun HomeScreen(
                 userProfileImageUrl = userProfileImageUrl
             )
         },
-        floatingActionButton = {
-            // Dual FAB layout - with padding equal to overlay BottomAppBar height only
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.padding(bottom = bottomAppBarHeight)
-            ) {
-                // Chat FAB (smaller, top)
-                FloatingActionButton(
-                    onClick = navigateToChat,
-                    containerColor = MaterialTheme.colorScheme.secondary,
-                    contentColor = MaterialTheme.colorScheme.onSecondary,
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Chat,
-                        contentDescription = "Start Chat",
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                // New Diary Extended FAB (primary action, bottom)
-                ExtendedFloatingActionButton(
-                    onClick = navigateToWrite,
-                    text = {
-                        Text(
-                            text = "New Diary",
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                    },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = null
-                        )
-                    },
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
-        },
-        floatingActionButtonPosition = FabPosition.End,
+        // FAB rimosso - gestito a livello Scaffold principale in CalmifyApp
         content = { paddingValues ->
             // Observe state and show appropriate content
             val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()

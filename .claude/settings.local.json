@@ -24,7 +24,10 @@
       "Bash(Select-String -Pattern \"error:\" -Context 2,2)",
       "Bash(Select-String -Pattern \"BUILD|error:\" -Context 1,2)",
       "Bash(Select-Object -First 20)",
-      "Bash(Select-Object -Last 15)"
+      "Bash(Select-Object -Last 15)",
+      "Bash(dir /s /b \"c:\\Users\\lifoe\\AndroidStudioProjects\\CalmifyAppAndroid\\core\\ui\")",
+      "Bash(.gradlew :app:compileDebugKotlin:*)",
+      "Bash(Select-Object -First 50)"
     ],
     "deny": [],
     "ask": []
