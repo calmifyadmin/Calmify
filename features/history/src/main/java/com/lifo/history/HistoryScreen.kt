@@ -31,13 +31,13 @@ internal fun HistoryScreen(
         modifier = Modifier
             .fillMaxSize()
             .nestedScroll(scrollBehavior.nestedScrollConnection),
+        containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             HistoryTopBar(
                 scrollBehavior = scrollBehavior,
                 onMenuClicked = onMenuClicked
             )
-        },
-        containerColor = MaterialTheme.colorScheme.background
+        }
     ) { paddingValues ->
         HistoryContent(
             uiState = uiState,

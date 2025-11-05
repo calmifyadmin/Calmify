@@ -406,9 +406,8 @@ private fun DrawerContent(
         // Header with user info - CLICKABLE
         Surface(
             modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onHeaderClicked),
-            color = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
+                .fillMaxWidth(),
+            color = MaterialTheme.colorScheme.surface
         ) {
             Column(
                 modifier = Modifier
@@ -434,6 +433,9 @@ private fun DrawerContent(
 
                 // User Profile with animation
                 Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onHeaderClicked),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Surface(

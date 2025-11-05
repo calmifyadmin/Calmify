@@ -46,6 +46,7 @@ fun LifestyleSettingsScreen(
     val isValid = editedOccupation.isNotBlank() && editedSleepHours > 0
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
                 title = { Text("Lifestyle Information") },
@@ -56,10 +57,7 @@ fun LifestyleSettingsScreen(
                             contentDescription = "Back"
                         )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+                }
             )
         },
         bottomBar = {

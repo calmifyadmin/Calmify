@@ -43,13 +43,6 @@ fun HomeTopBar(
     val dateDialog = rememberSheetState()
 
     TopAppBar(
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.background,
-            scrolledContainerColor = MaterialTheme.colorScheme.surface,
-            navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
-            titleContentColor = MaterialTheme.colorScheme.onBackground,
-            actionIconContentColor = MaterialTheme.colorScheme.onBackground
-        ),
         scrollBehavior = scrollBehavior,
         navigationIcon = {
             IconButton(onClick = {

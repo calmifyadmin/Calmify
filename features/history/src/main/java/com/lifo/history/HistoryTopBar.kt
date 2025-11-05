@@ -28,10 +28,6 @@ fun HistoryTopBar(
                 )
             }
         },
-        scrollBehavior = scrollBehavior,
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer
-        )
+        scrollBehavior = scrollBehavior
     )
 }

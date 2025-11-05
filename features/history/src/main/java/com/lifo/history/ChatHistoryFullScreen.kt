@@ -45,6 +45,7 @@ internal fun ChatHistoryFullScreen(
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
                 title = {
@@ -62,14 +63,9 @@ internal fun ChatHistoryFullScreen(
                         )
                     }
                 },
-                scrollBehavior = scrollBehavior,
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surface
-                )
+                scrollBehavior = scrollBehavior
             )
-        },
-        containerColor = MaterialTheme.colorScheme.background
+        }
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize()) {
             if (chatHistory.isEmpty() && searchQuery.isBlank()) {

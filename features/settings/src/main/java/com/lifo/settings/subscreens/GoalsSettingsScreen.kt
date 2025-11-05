@@ -42,6 +42,7 @@ fun GoalsSettingsScreen(
     val isValid = selectedGoals.isNotEmpty()
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
                 title = { Text("Wellness Goals") },
@@ -52,10 +53,7 @@ fun GoalsSettingsScreen(
                             contentDescription = "Back"
                         )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+                }
             )
         },
         bottomBar = {

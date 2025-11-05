@@ -69,8 +69,8 @@ internal fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .nestedScroll(scrollBehavior.nestedScrollConnection)
-            .background(MaterialTheme.colorScheme.background),
-        containerColor = MaterialTheme.colorScheme.background,
+            .background(MaterialTheme.colorScheme.surface),
+        containerColor = MaterialTheme.colorScheme.surface,
         contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
         topBar = {
             MinimalHomeTopBar(

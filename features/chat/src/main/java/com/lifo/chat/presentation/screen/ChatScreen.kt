@@ -177,6 +177,7 @@ fun ChatScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
                 .navigationBarsPadding(),
+            containerColor = Color.Transparent,
             topBar = {
                 MinimalTopBar(
                     onNavigateBack = {
@@ -193,7 +194,6 @@ fun ChatScreen(
                     }
                 )
             },
-            containerColor = Color.Transparent,
             bottomBar = {
                 Column {
                     // Live chat camera preview
@@ -426,10 +426,7 @@ private fun MinimalTopBar(
         },
         actions = {
             // No actions - all voice functionality moved to Live Chat screen
-        },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Color.Transparent
-        )
+        }
     )
 }
 

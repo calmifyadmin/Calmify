@@ -27,7 +27,8 @@
       "Bash(Select-Object -Last 15)",
       "Bash(dir /s /b \"c:\\Users\\lifoe\\AndroidStudioProjects\\CalmifyAppAndroid\\core\\ui\")",
       "Bash(.gradlew :app:compileDebugKotlin:*)",
-      "Bash(Select-Object -First 50)"
+      "Bash(Select-Object -First 50)",
+      "Bash(Select-Object -Last 50)"
     ],
     "deny": [],
     "ask": []

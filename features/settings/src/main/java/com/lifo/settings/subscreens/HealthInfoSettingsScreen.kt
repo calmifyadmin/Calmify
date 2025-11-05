@@ -48,6 +48,7 @@ fun HealthInfoSettingsScreen(
     val isValid = selectedConcerns.isNotEmpty()
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
                 title = { Text("Mental Health Information") },
@@ -58,10 +59,7 @@ fun HealthInfoSettingsScreen(
                             contentDescription = "Back"
                         )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+                }
             )
         },
         bottomBar = {

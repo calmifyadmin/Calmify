@@ -58,12 +58,10 @@ fun ProfileDashboard(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
-                title = { Text("Il Tuo Profilo Psicologico") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+                title = { Text("Il Tuo Profilo Psicologico") }
             )
         }
     ) { paddingValues ->

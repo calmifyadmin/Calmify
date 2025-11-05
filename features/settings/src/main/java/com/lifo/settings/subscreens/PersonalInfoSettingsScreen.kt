@@ -56,6 +56,7 @@ fun PersonalInfoSettingsScreen(
                   editedWeight > 0
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
                 title = { Text("Personal Information") },
@@ -66,10 +67,7 @@ fun PersonalInfoSettingsScreen(
                             contentDescription = "Back"
                         )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+                }
             )
         },
         bottomBar = {

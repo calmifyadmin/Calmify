@@ -69,6 +69,10 @@ dependencies {
     // Date Picker
     implementation libs.date.dialog
 
+    // Image Loading - Coil for profile images
+    implementation libs.coil
+    implementation libs.coil.network.okhttp
+
     // Firebase BOM
     implementation platform(libs.firebase.bom)
     implementation libs.firebase.auth

@@ -1,6 +1,7 @@
 package com.lifo.settings
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -15,9 +16,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil3.compose.rememberAsyncImagePainter
+import com.google.firebase.auth.FirebaseAuth
 import com.lifo.settings.components.SettingsNavigationItem
 import com.lifo.settings.components.SettingsSectionHeader
 import com.lifo.settings.components.SettingsActionButton
@@ -73,6 +77,7 @@ fun SettingsScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             SettingsTopBar(
                 onNavigateBack = onNavigateBack,
@@ -175,10 +180,6 @@ private fun SettingsTopBar(
                 )
             }
         },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            titleContentColor = MaterialTheme.colorScheme.onSurface
-        ),
         modifier = modifier
     )
 }
@@ -202,6 +203,10 @@ private fun ProfileOverviewCard(
         label = "scale"
     )
 
+    // Get user profile image from Firebase Auth
+    val user = FirebaseAuth.getInstance().currentUser
+    val userProfileImageUrl = user?.photoUrl?.toString()
+
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -216,7 +221,7 @@ private fun ProfileOverviewCard(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Avatar with animated scale
+            // Avatar with animated scale and user profile image
             Surface(
                 modifier = Modifier
                     .size(64.dp)
@@ -224,14 +229,15 @@ private fun ProfileOverviewCard(
                     .clip(CircleShape),
                 color = MaterialTheme.colorScheme.primary
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(36.dp)
-                    )
-                }
+                Image(
+                    painter = rememberAsyncImagePainter(
+                        model = userProfileImageUrl,
+                        error = painterResource(id = com.lifo.ui.R.drawable.google_logo_ic),
+                        placeholder = painterResource(id = com.lifo.ui.R.drawable.google_logo_ic)
+                    ),
+                    contentDescription = "Profile Picture",
+                    modifier = Modifier.fillMaxSize()
+                )
             }
 
             // User info
