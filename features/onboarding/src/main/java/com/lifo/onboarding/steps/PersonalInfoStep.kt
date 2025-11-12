@@ -15,6 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.Alignment
+import com.airbnb.lottie.LottieComposition
+import com.airbnb.lottie.compose.*
 import com.lifo.onboarding.OnboardingViewModel
 import com.lifo.util.model.Gender
 import com.maxkeppeker.sheets.core.models.base.rememberSheetState
@@ -34,6 +37,7 @@ fun PersonalInfoStep(
     viewModel: OnboardingViewModel,
     modifier: Modifier = Modifier
 ) {
+    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(com.lifo.ui.R.raw.robot))
     val scrollState = rememberScrollState()
     val uiState by viewModel.uiState.collectAsState()
     val settings = uiState.profileSettings
@@ -48,8 +52,8 @@ fun PersonalInfoStep(
         // Header
         ExpressiveStepHeader(
             title = "Let's get to know you",
-            subtitle = "Help us personalize your mental wellness journey",
-            icon = Icons.Outlined.Person
+            subtitle = "Personalize your mental wellness journey",
+            lottieComposition = composition
         )
 
         // Full Name
@@ -57,7 +61,6 @@ fun PersonalInfoStep(
             value = settings.fullName,
             onValueChange = { viewModel.updatePersonalInfo(fullName = it) },
             label = "Full Name",
-            leadingIcon = Icons.Outlined.Person,
             placeholder = "Enter your full name"
         )
 
@@ -80,51 +83,6 @@ fun PersonalInfoStep(
             leadingIcon = Icons.Outlined.Wc
         )
 
-        // Height & Weight Row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Height
-            ExpressiveTextField(
-                value = if (settings.height > 0) settings.height.toString() else "",
-                onValueChange = {
-                    it.toIntOrNull()?.let { height ->
-                        viewModel.updatePersonalInfo(height = height)
-                    }
-                },
-                label = "Height (cm)",
-                leadingIcon = Icons.Outlined.Height,
-                placeholder = "170",
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.weight(1f)
-            )
-
-            // Weight
-            ExpressiveTextField(
-                value = if (settings.weight > 0) settings.weight.toString() else "",
-                onValueChange = {
-                    it.toFloatOrNull()?.let { weight ->
-                        viewModel.updatePersonalInfo(weight = weight)
-                    }
-                },
-                label = "Weight (kg)",
-                leadingIcon = Icons.Outlined.MonitorWeight,
-                placeholder = "70",
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        // Location (Optional)
-        ExpressiveTextField(
-            value = settings.location,
-            onValueChange = { viewModel.updatePersonalInfo(location = it) },
-            label = "Location (Optional)",
-            leadingIcon = Icons.Outlined.LocationOn,
-            placeholder = "City, Country"
-        )
-
         // Info card
         ExpressiveInfoCard(
             message = "Your personal information helps us provide tailored insights and recommendations for your mental wellness journey."
@@ -135,14 +93,15 @@ fun PersonalInfoStep(
 }
 
 /**
- * Expressive Step Header with animated icon
+ * Expressive Step Header with animated icon or Lottie animation
  */
 @Composable
 private fun ExpressiveStepHeader(
     title: String,
     subtitle: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    lottieComposition: LottieComposition? = null
 ) {
     val scale by rememberInfiniteTransition(label = "icon_scale").animateFloat(
         initialValue = 1f,
@@ -154,21 +113,36 @@ private fun ExpressiveStepHeader(
         label = "scale"
     )
 
+    val lottieProgress by animateLottieCompositionAsState(
+        composition = lottieComposition,
+        iterations = LottieConstants.IterateForever
+    )
+
     Column(
         modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier
-                .size(48.dp)
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                },
-            tint = MaterialTheme.colorScheme.primary
-        )
+        // Lottie animation or Icon
+        if (lottieComposition != null) {
+            LottieAnimation(
+                composition = lottieComposition,
+                progress = { lottieProgress },
+                modifier = Modifier.size(240.dp)
+            )
+        } else if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(48.dp)
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                    },
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
 
         Text(
             text = title,
@@ -179,7 +153,7 @@ private fun ExpressiveStepHeader(
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -219,12 +193,6 @@ private fun DateOfBirthPicker(
         readOnly = true,
         label = { Text("Date of Birth") },
         placeholder = { Text("Select your birth date") },
-        leadingIcon = {
-            Icon(
-                imageVector = Icons.Outlined.CalendarToday,
-                contentDescription = null
-            )
-        },
         trailingIcon = {
             IconButton(onClick = { dateDialog.show() }) {
                 Icon(
@@ -240,7 +208,6 @@ private fun DateOfBirthPicker(
         colors = OutlinedTextFieldDefaults.colors(
             disabledTextColor = MaterialTheme.colorScheme.onSurface,
             disabledBorderColor = MaterialTheme.colorScheme.outline,
-            disabledLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
             disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
             disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
             disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -270,8 +237,8 @@ private fun ExpressiveTextField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
-    leadingIcon: androidx.compose.ui.graphics.vector.ImageVector,
     modifier: Modifier = Modifier,
+    leadingIcon: androidx.compose.ui.graphics.vector.ImageVector? = null,
     placeholder: String = "",
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default
 ) {
@@ -280,12 +247,14 @@ private fun ExpressiveTextField(
         onValueChange = onValueChange,
         label = { Text(label) },
         placeholder = { Text(placeholder) },
-        leadingIcon = {
-            Icon(
-                imageVector = leadingIcon,
-                contentDescription = null
-            )
-        },
+        leadingIcon = if (leadingIcon != null) {
+            {
+                Icon(
+                    imageVector = leadingIcon,
+                    contentDescription = null
+                )
+            }
+        } else null,
         modifier = modifier.fillMaxWidth(),
         singleLine = true,
         keyboardOptions = keyboardOptions,

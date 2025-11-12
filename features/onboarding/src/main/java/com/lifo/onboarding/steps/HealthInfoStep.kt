@@ -135,7 +135,7 @@ fun HealthInfoStep(
         ExpressiveDropdown(
             value = selectedHistory,
             onValueChange = { selectedHistory = it },
-            options = MentalHealthHistory.entries.map { it.displayName },
+            options = MentalHealthHistory.entries.map { it.name to it.displayName },
             label = "Mental Health History",
             leadingIcon = Icons.Default.History
         )
@@ -370,18 +370,20 @@ private fun ExpressiveSwitch(
 
 /**
  * Reusable expressive dropdown from Step 1
+ * Uses Pair<String, String> for value to displayName mapping
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ExpressiveDropdown(
     value: String,
     onValueChange: (String) -> Unit,
-    options: List<String>,
+    options: List<Pair<String, String>>, // value to displayName
     label: String,
     leadingIcon: ImageVector,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val selectedDisplayName = options.find { it.first == value }?.second ?: ""
 
     ExposedDropdownMenuBox(
         expanded = expanded,
@@ -389,7 +391,7 @@ private fun ExpressiveDropdown(
         modifier = modifier.fillMaxWidth()
     ) {
         OutlinedTextField(
-            value = value,
+            value = selectedDisplayName,
             onValueChange = {},
             readOnly = true,
             label = { Text(label) },
@@ -413,11 +415,11 @@ private fun ExpressiveDropdown(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            options.forEach { option ->
+            options.forEach { (optionValue, displayName) ->
                 DropdownMenuItem(
-                    text = { Text(option) },
+                    text = { Text(displayName) },
                     onClick = {
-                        onValueChange(option)
+                        onValueChange(optionValue)
                         expanded = false
                     }
                 )

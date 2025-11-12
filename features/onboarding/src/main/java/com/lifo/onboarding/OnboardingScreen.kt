@@ -33,6 +33,7 @@ import com.lifo.ui.components.stepper.ExpressiveStepper
 fun OnboardingScreen(
     onComplete: () -> Unit,
     modifier: Modifier = Modifier,
+    showStepper: Boolean = false,
     viewModel: OnboardingViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -95,21 +96,23 @@ fun OnboardingScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Stepper
-            ExpressiveStepper(
-                currentStep = uiState.currentStep,
-                totalSteps = uiState.totalSteps,
-                stepLabels = listOf(
-                    "Personal",
-                    "Health",
-                    "Lifestyle",
-                    "Goals",
-                    "Review"
-                ),
-                modifier = Modifier.padding(vertical = 16.dp)
-            )
+            // Stepper (conditionally visible)
+            if (showStepper) {
+                ExpressiveStepper(
+                    currentStep = uiState.currentStep,
+                    totalSteps = uiState.totalSteps,
+                    stepLabels = listOf(
+                        "Personal",
+                        "Health",
+                        "Lifestyle",
+                        "Goals",
+                        "Review"
+                    ),
+                    modifier = Modifier.padding(vertical = 16.dp)
+                )
 
-            Divider()
+                Divider()
+            }
 
             // Error message
             if (uiState.error != null) {

@@ -98,15 +98,15 @@ fun LifestyleStep(
             value = occupation,
             onValueChange = { occupation = it },
             options = listOf(
-                "Student",
-                "Employed Full-Time",
-                "Employed Part-Time",
-                "Self-Employed",
-                "Freelancer",
-                "Unemployed",
-                "Retired",
-                "Homemaker",
-                "Other"
+                "Student" to "Student",
+                "Employed Full-Time" to "Employed Full-Time",
+                "Employed Part-Time" to "Employed Part-Time",
+                "Self-Employed" to "Self-Employed",
+                "Freelancer" to "Freelancer",
+                "Unemployed" to "Unemployed",
+                "Retired" to "Retired",
+                "Homemaker" to "Homemaker",
+                "Other" to "Other"
             ),
             label = "Current Occupation",
             leadingIcon = Icons.Default.Work
@@ -168,7 +168,7 @@ fun LifestyleStep(
         ExpressiveDropdown(
             value = exerciseFrequency,
             onValueChange = { exerciseFrequency = it },
-            options = ExerciseFrequency.entries.map { it.displayName },
+            options = ExerciseFrequency.entries.map { it.name to it.displayName },
             label = "Exercise Frequency",
             leadingIcon = Icons.Default.FitnessCenter
         )
@@ -197,7 +197,7 @@ fun LifestyleStep(
         ExpressiveDropdown(
             value = socialSupport,
             onValueChange = { socialSupport = it },
-            options = SocialSupport.entries.map { it.displayName },
+            options = SocialSupport.entries.map { it.name to it.displayName },
             label = "Social Support Level",
             leadingIcon = Icons.Default.Groups
         )
@@ -352,18 +352,20 @@ private fun SleepQualityIndicator(
 
 /**
  * Reusable expressive dropdown
+ * Uses Pair<String, String> for value to displayName mapping
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ExpressiveDropdown(
     value: String,
     onValueChange: (String) -> Unit,
-    options: List<String>,
+    options: List<Pair<String, String>>, // value to displayName
     label: String,
     leadingIcon: ImageVector,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val selectedDisplayName = options.find { it.first == value }?.second ?: ""
 
     ExposedDropdownMenuBox(
         expanded = expanded,
@@ -371,7 +373,7 @@ private fun ExpressiveDropdown(
         modifier = modifier.fillMaxWidth()
     ) {
         OutlinedTextField(
-            value = value,
+            value = selectedDisplayName,
             onValueChange = {},
             readOnly = true,
             label = { Text(label) },
@@ -395,11 +397,11 @@ private fun ExpressiveDropdown(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            options.forEach { option ->
+            options.forEach { (optionValue, displayName) ->
                 DropdownMenuItem(
-                    text = { Text(option) },
+                    text = { Text(displayName) },
                     onClick = {
-                        onValueChange(option)
+                        onValueChange(optionValue)
                         expanded = false
                     }
                 )

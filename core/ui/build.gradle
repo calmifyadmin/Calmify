@@ -61,7 +61,7 @@ dependencies {
     // Coroutines
     implementation libs.coroutines.core
     implementation libs.coroutines.android
-
+    implementation libs.lottie.compose
     // Testing
     testImplementation libs.junit
     androidTestImplementation libs.junit.ext

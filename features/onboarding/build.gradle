@@ -61,6 +61,7 @@ dependencies {
     implementation libs.lifecycle.runtime.compose
     implementation libs.lifecycle.viewmodel.compose
 
+    implementation libs.lottie.compose
     // Hilt
     implementation libs.hilt.android
     ksp libs.hilt.compiler

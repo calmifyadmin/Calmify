@@ -188,9 +188,8 @@ class OnboardingViewModel @Inject constructor(
         return when (state.currentStep) {
             0 -> { // Personal Info
                 state.profileSettings.fullName.isNotBlank() &&
-                state.profileSettings.dateOfBirth.isNotBlank() &&
-                state.profileSettings.height > 0 &&
-                state.profileSettings.weight > 0
+                state.profileSettings.dateOfBirth.isNotBlank()
+                // Removed: height, weight, location are now optional
             }
             1 -> { // Health
                 state.profileSettings.primaryConcerns.isNotEmpty()
