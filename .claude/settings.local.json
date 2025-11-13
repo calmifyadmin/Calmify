@@ -28,7 +28,10 @@
       "Bash(dir /s /b \"c:\\Users\\lifoe\\AndroidStudioProjects\\CalmifyAppAndroid\\core\\ui\")",
       "Bash(.gradlew :app:compileDebugKotlin:*)",
       "Bash(Select-Object -First 50)",
-      "Bash(Select-Object -Last 50)"
+      "Bash(Select-Object -Last 50)",
+      "Bash(dir /s /b \"c:\\Users\\lifoe\\AndroidStudioProjects\\CalmifyAppAndroid\\features\\humanoid\\src\")",
+      "Bash(Select-String \"error:\" -Context 2,2)",
+      "Bash(Select-Object -Last 5)"
     ],
     "deny": [],
     "ask": []

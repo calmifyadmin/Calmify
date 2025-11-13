@@ -1,0 +1,262 @@
+package com.lifo.humanoid.data.vrm
+
+import android.content.Context
+import android.util.Log
+import com.google.android.filament.gltfio.FilamentAsset
+import com.google.gson.Gson
+import com.google.gson.JsonObject
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+
+/**
+ * Loads VRM models and parses VRM-specific extensions.
+ *
+ * VRM files are glTF 2.0 files with additional "VRM" extension data.
+ * This loader:
+ * 1. Extracts the base glTF structure (handled by Filament's gltfio)
+ * 2. Parses VRM extensions from JSON
+ * 3. Extracts blend shapes, spring bones, and metadata
+ *
+ * Specification: https://github.com/vrm-c/vrm-specification
+ */
+class VrmLoader(private val context: Context) {
+
+    private val gson = Gson()
+    private val tag = "VrmLoader"
+
+    /**
+     * Load a VRM file from app assets and create a VrmModel.
+     * The FilamentAsset loading is handled by FilamentRenderer.
+     *
+     * @param assetPath Path to VRM file in assets (e.g., "models/avatar.vrm")
+     * @return Pair of ByteBuffer (for Filament) and VRM extensions data
+     */
+    suspend fun loadVrmFromAssets(assetPath: String): Pair<ByteBuffer, VrmExtensions>? {
+        return try {
+            Log.d(tag, "Attempting to load VRM from assets: $assetPath")
+
+            // Read VRM file from assets
+            val buffer = context.assets.open(assetPath).use { inputStream ->
+                val bytes = inputStream.readBytes()
+                Log.d(tag, "Successfully read ${bytes.size} bytes from $assetPath")
+
+                ByteBuffer.allocateDirect(bytes.size).apply {
+                    order(ByteOrder.LITTLE_ENDIAN)
+                    put(bytes)
+                    rewind()
+                }
+            }
+
+            Log.d(tag, "Created ByteBuffer with ${buffer.capacity()} bytes, position=${buffer.position()}, limit=${buffer.limit()}")
+
+            // Parse VRM extensions
+            Log.d(tag, "Parsing VRM extensions...")
+            val vrmExtensions = parseVrmExtensions(buffer)
+            Log.d(tag, "VRM extensions parsed successfully: ${vrmExtensions.blendShapes.size} blend shapes, ${vrmExtensions.springBones.size} spring bones")
+
+            Pair(buffer, vrmExtensions)
+        } catch (e: Exception) {
+            Log.e(tag, "Failed to load VRM from assets: $assetPath", e)
+            null
+        }
+    }
+
+    /**
+     * Parse VRM extension data from glTF JSON.
+     *
+     * VRM extensions are stored in the glTF JSON under "extensions.VRM"
+     */
+    private fun parseVrmExtensions(buffer: ByteBuffer): VrmExtensions {
+        return try {
+            // glTF binary structure:
+            // - 12 bytes header (magic, version, length)
+            // - JSON chunk
+            // - Binary buffer chunk
+
+            buffer.position(0)
+
+            // Read header
+            val magic = buffer.int
+            Log.d(tag, "glTF magic: 0x${magic.toString(16)} (expected 0x46546c67)")
+            if (magic != 0x46546C67) { // "glTF" in ASCII
+                throw IllegalArgumentException("Not a valid glTF file - magic is 0x${magic.toString(16)}")
+            }
+
+            val version = buffer.int
+            val length = buffer.int
+            Log.d(tag, "glTF version: $version, length: $length")
+
+            // Read JSON chunk header
+            val jsonLength = buffer.int
+            val jsonType = buffer.int
+            Log.d(tag, "JSON chunk: length=$jsonLength, type=0x${jsonType.toString(16)} (expected 0x4e4f534a)")
+
+            if (jsonType != 0x4E4F534A) { // "JSON" in ASCII
+                throw IllegalArgumentException("Expected JSON chunk, got 0x${jsonType.toString(16)}")
+            }
+
+            // Read JSON data
+            val jsonBytes = ByteArray(jsonLength)
+            buffer.get(jsonBytes)
+            val jsonString = String(jsonBytes, Charsets.UTF_8)
+            Log.d(tag, "JSON string length: ${jsonString.length}, first 100 chars: ${jsonString.take(100)}")
+
+            // Parse JSON
+            val rootObject = gson.fromJson(jsonString, JsonObject::class.java)
+
+            // Extract VRM extension
+            val extensionsObject = rootObject.getAsJsonObject("extensions")
+            val vrmObject = extensionsObject?.getAsJsonObject("VRM")
+
+            if (vrmObject != null) {
+                Log.d(tag, "Found VRM extension in glTF file")
+                parseVrmObject(vrmObject)
+            } else {
+                Log.w(tag, "No VRM extension found - this is a standard glTF file")
+                // Not a VRM file, return empty extensions
+                VrmExtensions()
+            }
+
+        } catch (e: Exception) {
+            Log.e(tag, "Failed to parse VRM extensions", e)
+            VrmExtensions() // Return empty extensions on error
+        }
+    }
+
+    /**
+     * Parse VRM extension object into structured data
+     */
+    private fun parseVrmObject(vrmObject: JsonObject): VrmExtensions {
+        // Parse metadata
+        val metadata = vrmObject.getAsJsonObject("meta")?.let { parseMetadata(it) }
+            ?: VrmMetadata()
+
+        // Parse blend shape master
+        val blendShapes = vrmObject.getAsJsonObject("blendShapeMaster")
+            ?.getAsJsonArray("blendShapeGroups")
+            ?.map { parseBlendShape(it.asJsonObject) }
+            ?: emptyList()
+
+        // Parse spring bones
+        val springBones = vrmObject.getAsJsonObject("secondaryAnimation")
+            ?.getAsJsonArray("boneGroups")
+            ?.map { parseSpringBone(it.asJsonObject) }
+            ?.flatten()
+            ?: emptyList()
+
+        return VrmExtensions(
+            metadata = metadata,
+            blendShapes = blendShapes,
+            springBones = springBones
+        )
+    }
+
+    /**
+     * Parse VRM metadata
+     */
+    private fun parseMetadata(metaObject: JsonObject): VrmMetadata {
+        return VrmMetadata(
+            version = metaObject.get("version")?.asString ?: "0.0",
+            title = metaObject.get("title")?.asString ?: "Unknown Avatar",
+            author = metaObject.get("author")?.asString ?: "Unknown",
+            contactInformation = metaObject.get("contactInformation")?.asString ?: "",
+            reference = metaObject.get("reference")?.asString ?: "",
+            allowedUserName = metaObject.get("allowedUserName")?.asString ?: "OnlyAuthor",
+            violentUsage = metaObject.get("violentUssageName")?.asString ?: "Disallow",
+            sexualUsage = metaObject.get("sexualUssageName")?.asString ?: "Disallow",
+            commercialUsage = metaObject.get("commercialUssageName")?.asString ?: "Disallow",
+            licenseType = metaObject.get("licenseName")?.asString ?: "Redistribution_Prohibited"
+        )
+    }
+
+    /**
+     * Parse blend shape definition
+     */
+    private fun parseBlendShape(blendShapeObject: JsonObject): VrmBlendShape {
+        val name = blendShapeObject.get("name")?.asString ?: "Unknown"
+        val presetName = blendShapeObject.get("presetName")?.asString ?: "unknown"
+
+        val preset = try {
+            VrmBlendShape.BlendShapePreset.valueOf(presetName.uppercase())
+        } catch (e: Exception) {
+            VrmBlendShape.BlendShapePreset.UNKNOWN
+        }
+
+        val bindings = blendShapeObject.getAsJsonArray("binds")
+            ?.map { bindObject ->
+                val obj = bindObject.asJsonObject
+                BlendShapeBinding(
+                    meshIndex = obj.get("mesh")?.asInt ?: 0,
+                    morphTargetIndex = obj.get("index")?.asInt ?: 0,
+                    weight = obj.get("weight")?.asFloat ?: 1.0f
+                )
+            }
+            ?: emptyList()
+
+        return VrmBlendShape(name, preset, bindings)
+    }
+
+    /**
+     * Parse spring bone group
+     */
+    private fun parseSpringBone(boneGroupObject: JsonObject): List<SpringBoneData> {
+        val stiffness = boneGroupObject.get("stiffiness")?.asFloat ?: 0.5f // Note: typo in VRM spec
+        val gravityPower = boneGroupObject.get("gravityPower")?.asFloat ?: 0.1f
+        val dragForce = boneGroupObject.get("dragForce")?.asFloat ?: 0.4f
+        val hitRadius = boneGroupObject.get("hitRadius")?.asFloat ?: 0.02f
+
+        val gravityDir = boneGroupObject.getAsJsonObject("gravityDir")?.let {
+            Triple(
+                it.get("x")?.asFloat ?: 0f,
+                it.get("y")?.asFloat ?: -1f,
+                it.get("z")?.asFloat ?: 0f
+            )
+        } ?: Triple(0f, -1f, 0f)
+
+        val colliderGroups = boneGroupObject.getAsJsonArray("colliderGroups")
+            ?.map { it.asInt.toString() }
+            ?: emptyList()
+
+        // Get bones in this group
+        val bones = boneGroupObject.getAsJsonArray("bones")
+            ?.map { it.asInt }
+            ?: emptyList()
+
+        // Create spring bone data for each bone
+        return bones.map { boneIndex ->
+            SpringBoneData(
+                boneName = "bone_$boneIndex", // TODO: Resolve actual bone name from node index
+                stiffness = stiffness,
+                gravityPower = gravityPower,
+                gravityDir = gravityDir,
+                dragForce = dragForce,
+                hitRadius = hitRadius,
+                colliderGroups = colliderGroups
+            )
+        }
+    }
+
+    /**
+     * Build complete VrmModel from FilamentAsset and VRM extensions
+     */
+    fun buildVrmModel(
+        filamentAsset: FilamentAsset,
+        vrmExtensions: VrmExtensions
+    ): VrmModel {
+        return VrmModel(
+            filamentAsset = filamentAsset,
+            blendShapes = vrmExtensions.blendShapes,
+            springBones = vrmExtensions.springBones,
+            metadata = vrmExtensions.metadata
+        )
+    }
+}
+
+/**
+ * Container for parsed VRM extension data
+ */
+data class VrmExtensions(
+    val metadata: VrmMetadata = VrmMetadata(),
+    val blendShapes: List<VrmBlendShape> = emptyList(),
+    val springBones: List<SpringBoneData> = emptyList()
+)

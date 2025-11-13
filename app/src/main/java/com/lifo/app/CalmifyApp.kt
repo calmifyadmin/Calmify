@@ -48,6 +48,7 @@ import com.lifo.chat.navigation.liveRoute
 import com.lifo.chat.navigation.navigateToChat
 import com.lifo.history.navigation.historyRoute
 import com.lifo.home.navigation.homeRoute
+import com.lifo.humanoid.presentation.navigation.humanoidRoute
 import com.lifo.settings.navigation.settingsRoute
 import com.lifo.insight.InsightScreen
 import com.lifo.mongo.repository.MongoRepository
@@ -210,6 +211,7 @@ fun CalmifyApp(
                         navController = navigationState.navController,
                         destinations = listOf(
                             NavigationDestination.Home,
+                            NavigationDestination.Humanoid,
                             NavigationDestination.History,
                             NavigationDestination.Profile
                         )
@@ -745,5 +747,14 @@ private fun CalmifyNavHost(
         composable(route = Screen.Profile.route) {
             ProfileDashboard()
         }
+
+        // Humanoid Avatar - 3D Avatar with Filament
+        humanoidRoute(
+            navigateBack = {
+                if (navController.currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
+                    navController.popBackStack()
+                }
+            }
+        )
     }
 }

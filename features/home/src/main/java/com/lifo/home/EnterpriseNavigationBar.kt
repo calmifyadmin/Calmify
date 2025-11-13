@@ -78,6 +78,13 @@ open class NavigationDestination(
         selectedIcon = Icons.Filled.Analytics,
         unselectedIcon = Icons.Outlined.Analytics
     )
+
+    object Humanoid : NavigationDestination(
+        route = "humanoid_screen",
+        label = "Avatar",
+        selectedIcon = Icons.Filled.Face,
+        unselectedIcon = Icons.Outlined.Face
+    )
 }
 
 /**

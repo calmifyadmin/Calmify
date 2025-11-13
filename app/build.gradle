@@ -192,6 +192,7 @@ dependencies {
     implementation(project(":features:history"))
     implementation(project(":features:write"))
     implementation(project(":features:chat"))
+    implementation(project(":features:humanoid"))
     implementation(project(":features:insight"))
     implementation(project(":features:profile"))
     implementation(project(":features:settings"))
