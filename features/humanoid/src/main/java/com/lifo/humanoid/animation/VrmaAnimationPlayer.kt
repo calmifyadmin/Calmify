@@ -132,6 +132,19 @@ class VrmaAnimationPlayer(
     private var currentTimeSeconds: Float = 0f
     private var playbackSpeed: Float = 1.0f
 
+    // ==================== Idle Animation System (following Amica pattern) ====================
+
+    // The idle animation that plays in loop as default
+    private var idleAnimation: VrmaAnimation? = null
+    private var idleAnimationScope: CoroutineScope? = null
+
+    // Flag to track if we're playing a one-shot animation
+    private var isPlayingOneShot = false
+
+    // Fade duration for transitions (following Amica)
+    private var fadeInDuration: Float = 0.5f
+    private var fadeOutDuration: Float = 1.0f
+
     // Node name to entity mapping for the current model
     private val nodeEntityMap = mutableMapOf<String, Int>()
     private val humanoidNodeMap = mutableMapOf<HumanoidBone, String>()
@@ -480,6 +493,146 @@ class VrmaAnimationPlayer(
         currentTimeSeconds = timeSeconds.coerceIn(0f, animation.durationSeconds)
         _playbackProgress.value = currentTimeSeconds / animation.durationSeconds
     }
+
+    // ==================== Idle Animation System (following Amica model.ts pattern) ====================
+
+    /**
+     * Set and start the idle animation.
+     * This animation will play in a continuous loop as the default state.
+     * Following Amica's loadAnimation() pattern.
+     *
+     * @param animation The idle animation (typically idle_loop.vrma)
+     * @param scope CoroutineScope for playback
+     */
+    fun setIdleAnimation(animation: VrmaAnimation, scope: CoroutineScope) {
+        Log.d(TAG, "Setting idle animation: ${animation.name}")
+
+        idleAnimation = animation
+        idleAnimationScope = scope
+
+        // Start playing idle immediately if not playing a one-shot
+        if (!isPlayingOneShot) {
+            startIdleLoop()
+        }
+    }
+
+    /**
+     * Start or restart the idle animation loop.
+     * Internal method used after one-shot animations complete.
+     */
+    private fun startIdleLoop() {
+        val idle = idleAnimation ?: return
+        val scope = idleAnimationScope ?: return
+
+        Log.d(TAG, "Starting idle loop: ${idle.name}")
+
+        // Set animation rest pose data
+        setAnimationRestPoseData(idle)
+
+        // Play in loop
+        play(
+            animation = idle,
+            scope = scope,
+            loop = true,
+            speed = 1.0f
+        )
+    }
+
+    /**
+     * Play a one-shot animation, then automatically return to idle.
+     * Following Amica's playAnimation() pattern.
+     *
+     * @param animation The animation to play once
+     * @param scope CoroutineScope for playback
+     * @param fadeDuration Duration of crossfade transitions in seconds
+     * @return The total duration of the animation including fade times
+     */
+    fun playOneShot(
+        animation: VrmaAnimation,
+        scope: CoroutineScope,
+        fadeDuration: Float = 0.5f
+    ): Float {
+        if (idleAnimation == null) {
+            Log.w(TAG, "No idle animation set, playing as regular animation")
+            play(animation, scope, loop = false)
+            return animation.durationSeconds
+        }
+
+        Log.d(TAG, "Playing one-shot animation: ${animation.name}, duration: ${animation.durationSeconds}s")
+
+        isPlayingOneShot = true
+        fadeOutDuration = fadeDuration
+        fadeInDuration = fadeDuration
+
+        // Set animation rest pose data for proper retargeting
+        setAnimationRestPoseData(animation)
+
+        // Stop current playback
+        playbackJob?.cancel()
+
+        _currentAnimation.value = animation
+        _isPlaying.value = true
+        currentTimeSeconds = 0f
+        blendWeight = 0f // Start with blend weight 0 for fade-in
+
+        playbackJob = scope.launch {
+            var lastFrameTime = System.nanoTime()
+
+            // Phase 1: Fade in
+            while (isActive && blendWeight < 1f) {
+                val currentTime = System.nanoTime()
+                val deltaTime = (currentTime - lastFrameTime) / 1_000_000_000f
+                lastFrameTime = currentTime
+
+                blendWeight = (blendWeight + deltaTime / fadeInDuration).coerceAtMost(1f)
+                currentTimeSeconds += deltaTime * playbackSpeed
+
+                _playbackProgress.value = currentTimeSeconds / animation.durationSeconds
+
+                withContext(Dispatchers.Main) {
+                    applyAnimation(animation, currentTimeSeconds)
+                }
+
+                delay(16)
+            }
+
+            // Phase 2: Main playback
+            while (isActive && currentTimeSeconds < animation.durationSeconds) {
+                val currentTime = System.nanoTime()
+                val deltaTime = (currentTime - lastFrameTime) / 1_000_000_000f
+                lastFrameTime = currentTime
+
+                currentTimeSeconds += deltaTime * playbackSpeed
+                _playbackProgress.value = (currentTimeSeconds / animation.durationSeconds).coerceAtMost(1f)
+
+                withContext(Dispatchers.Main) {
+                    applyAnimation(animation, currentTimeSeconds.coerceAtMost(animation.durationSeconds))
+                }
+
+                delay(16)
+            }
+
+            // Phase 3: Return to idle with fade
+            Log.d(TAG, "One-shot animation complete, returning to idle")
+            isPlayingOneShot = false
+
+            // Restart idle animation
+            startIdleLoop()
+        }
+
+        // Return total duration (animation + fade in + fade out)
+        return animation.durationSeconds + fadeInDuration + fadeOutDuration
+    }
+
+    /**
+     * Check if idle animation is set and ready.
+     */
+    fun hasIdleAnimation(): Boolean = idleAnimation != null
+
+    /**
+     * Get the current idle animation (if set).
+     */
+    fun getIdleAnimation(): VrmaAnimation? = idleAnimation
 
     /**
      * Apply animation at a specific time.

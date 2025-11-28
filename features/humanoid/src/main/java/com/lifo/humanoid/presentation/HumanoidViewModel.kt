@@ -244,7 +244,8 @@ class HumanoidViewModel @Inject constructor(
     }
 
     /**
-     * Pre-load commonly used animations
+     * Pre-load commonly used animations and set up idle animation.
+     * Following Amica pattern: idle_loop is the default animation that always plays.
      */
     private suspend fun preloadCommonAnimations() {
         val animationsToPreload = listOf(
@@ -260,12 +261,28 @@ class HumanoidViewModel @Inject constructor(
                 }
             }
         }
+
+        // Set idle_loop as the default animation (following Amica pattern)
+        loadedAnimations[VrmaAnimationLoader.AnimationAsset.IDLE_LOOP]?.let { idleAnimation ->
+            vrmaAnimationPlayer?.setIdleAnimation(idleAnimation, viewModelScope)
+            Log.d(TAG, "Set idle animation: ${idleAnimation.name}")
+
+            // Update UI state
+            _currentAnimation.value = idleAnimation
+            _uiState.value = _uiState.value.copy(
+                isPlayingAnimation = true,
+                currentAnimationName = idleAnimation.name
+            )
+        }
     }
 
     // ==================== Animation Methods ====================
 
     /**
-     * Play a VRMA animation by asset type
+     * Play a VRMA animation by asset type.
+     * Following Amica pattern:
+     * - If it's the idle animation, set it as the new idle
+     * - Otherwise, play as one-shot and return to idle when done
      */
     fun playAnimation(animationAsset: VrmaAnimationLoader.AnimationAsset) {
         viewModelScope.launch {
@@ -298,26 +315,49 @@ class HumanoidViewModel @Inject constructor(
 
             Log.d(TAG, "Playing animation: ${animation.name}, duration: ${animation.durationSeconds}s, looping: ${animation.isLooping}")
 
-            // Play the animation on the player
-            player.play(
-                animation = animation,
-                scope = viewModelScope,
-                loop = animation.isLooping
-            )
+            // Following Amica pattern:
+            // - idle_loop plays in loop as the default state
+            // - Other animations play once then return to idle
+            if (animationAsset == VrmaAnimationLoader.AnimationAsset.IDLE_LOOP) {
+                // Set as the new idle animation
+                player.setIdleAnimation(animation, viewModelScope)
+            } else {
+                // Play as one-shot, will automatically return to idle
+                player.playOneShot(
+                    animation = animation,
+                    scope = viewModelScope,
+                    fadeDuration = 0.5f
+                )
+            }
         }
     }
 
     /**
-     * Stop current animation
+     * Stop current one-shot animation and return to idle.
+     * Following Amica pattern: idle always plays, so "stop" means return to idle.
      */
     fun stopAnimation() {
-        vrmaAnimationPlayer?.stop()
-        _currentAnimation.value = null
-        _uiState.value = _uiState.value.copy(
-            isPlayingAnimation = false,
-            currentAnimationName = null
-        )
-        Log.d(TAG, "Animation stopped")
+        val player = vrmaAnimationPlayer
+        if (player != null && player.hasIdleAnimation()) {
+            // Return to idle animation
+            player.getIdleAnimation()?.let { idleAnim ->
+                player.setIdleAnimation(idleAnim, viewModelScope)
+                _currentAnimation.value = idleAnim
+                _uiState.value = _uiState.value.copy(
+                    isPlayingAnimation = true,
+                    currentAnimationName = idleAnim.name
+                )
+                Log.d(TAG, "Returned to idle animation")
+            }
+        } else {
+            player?.stop()
+            _currentAnimation.value = null
+            _uiState.value = _uiState.value.copy(
+                isPlayingAnimation = false,
+                currentAnimationName = null
+            )
+            Log.d(TAG, "Animation stopped (no idle available)")
+        }
     }
 
     // ==================== Lip-Sync Methods ====================
