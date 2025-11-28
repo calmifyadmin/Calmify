@@ -118,6 +118,59 @@ class VrmHumanoidBoneMapper {
     private var engine: Engine? = null
 
     /**
+     * Common VRM model bone name patterns.
+     * Maps common naming conventions to VRM humanoid bone names.
+     */
+    private val boneNamePatterns = mapOf(
+        // J_Bip style (common in VRoid models)
+        "J_Bip_C_Hips" to "hips",
+        "J_Bip_C_Spine" to "spine",
+        "J_Bip_C_Chest" to "chest",
+        "J_Bip_C_UpperChest" to "upperChest",
+        "J_Bip_C_Neck" to "neck",
+        "J_Bip_C_Head" to "head",
+        "J_Bip_L_Shoulder" to "leftShoulder",
+        "J_Bip_L_UpperArm" to "leftUpperArm",
+        "J_Bip_L_LowerArm" to "leftLowerArm",
+        "J_Bip_L_Hand" to "leftHand",
+        "J_Bip_R_Shoulder" to "rightShoulder",
+        "J_Bip_R_UpperArm" to "rightUpperArm",
+        "J_Bip_R_LowerArm" to "rightLowerArm",
+        "J_Bip_R_Hand" to "rightHand",
+        "J_Bip_L_UpperLeg" to "leftUpperLeg",
+        "J_Bip_L_LowerLeg" to "leftLowerLeg",
+        "J_Bip_L_Foot" to "leftFoot",
+        "J_Bip_L_ToeBase" to "leftToes",
+        "J_Bip_R_UpperLeg" to "rightUpperLeg",
+        "J_Bip_R_LowerLeg" to "rightLowerLeg",
+        "J_Bip_R_Foot" to "rightFoot",
+        "J_Bip_R_ToeBase" to "rightToes",
+        // Alternative naming conventions
+        "Hips" to "hips",
+        "Spine" to "spine",
+        "Spine1" to "chest",
+        "Spine2" to "upperChest",
+        "Neck" to "neck",
+        "Head" to "head",
+        "LeftShoulder" to "leftShoulder",
+        "LeftArm" to "leftUpperArm",
+        "LeftForeArm" to "leftLowerArm",
+        "LeftHand" to "leftHand",
+        "RightShoulder" to "rightShoulder",
+        "RightArm" to "rightUpperArm",
+        "RightForeArm" to "rightLowerArm",
+        "RightHand" to "rightHand",
+        "LeftUpLeg" to "leftUpperLeg",
+        "LeftLeg" to "leftLowerLeg",
+        "LeftFoot" to "leftFoot",
+        "LeftToeBase" to "leftToes",
+        "RightUpLeg" to "rightUpperLeg",
+        "RightLeg" to "rightLowerLeg",
+        "RightFoot" to "rightFoot",
+        "RightToeBase" to "rightToes"
+    )
+
+    /**
      * Initialize the bone mapper with Engine, asset, and node names.
      * This builds a mapping from node names to entities and attempts to
      * match VRM humanoid bone names automatically.
@@ -129,6 +182,7 @@ class VrmHumanoidBoneMapper {
     fun initialize(engine: Engine, asset: FilamentAsset, nodeNames: List<String>) {
         this.engine = engine
         nodeNameToEntityMap.clear()
+        boneEntityMap.clear()
 
         // Build node name to entity mapping
         nodeNames.forEachIndexed { index, name ->
@@ -137,9 +191,25 @@ class VrmHumanoidBoneMapper {
                 nodeNameToEntityMap[name] = entity
                 nodeToEntityMap[index] = entity
 
-                // Try to match to humanoid bone by name
-                val humanoidBone = HumanoidBone.fromVrmName(name)
-                if (humanoidBone != null) {
+                // Try multiple strategies to match to humanoid bone
+
+                // Strategy 1: Direct VRM name match
+                var humanoidBone = HumanoidBone.fromVrmName(name)
+
+                // Strategy 2: Pattern-based matching (e.g., J_Bip_C_Hips -> hips)
+                if (humanoidBone == null) {
+                    val mappedVrmName = boneNamePatterns[name]
+                    if (mappedVrmName != null) {
+                        humanoidBone = HumanoidBone.fromVrmName(mappedVrmName)
+                    }
+                }
+
+                // Strategy 3: Contains-based matching (e.g., "J_Bip_C_Hips" contains "Hips")
+                if (humanoidBone == null) {
+                    humanoidBone = findBoneByContains(name)
+                }
+
+                if (humanoidBone != null && !boneEntityMap.containsKey(humanoidBone)) {
                     boneEntityMap[humanoidBone] = entity
                     Log.d(TAG, "Auto-mapped bone ${humanoidBone.name} from node name '$name' -> entity $entity")
                 }
@@ -157,7 +227,63 @@ class VrmHumanoidBoneMapper {
             }
         }
 
-        Log.d(TAG, "Initialized with ${nodeNameToEntityMap.size} nodes, ${boneEntityMap.size} auto-mapped bones")
+        Log.d(TAG, "=== VrmHumanoidBoneMapper Initialization ===")
+        Log.d(TAG, "Total nodes: ${nodeNameToEntityMap.size}")
+        Log.d(TAG, "Auto-mapped humanoid bones: ${boneEntityMap.size}")
+        Log.d(TAG, "Mapped bones:")
+        boneEntityMap.forEach { (bone, entity) ->
+            Log.d(TAG, "  ${bone.vrmName} -> entity $entity")
+        }
+        Log.d(TAG, "Node names sample (first 10):")
+        nodeNameToEntityMap.keys.take(10).forEach { name ->
+            Log.d(TAG, "  '$name' -> entity ${nodeNameToEntityMap[name]}")
+        }
+        Log.d(TAG, "=== End Initialization ===")
+    }
+
+    /**
+     * Find humanoid bone by checking if node name contains bone-specific keywords.
+     * Prioritizes more specific matches (e.g., "UpperLeg" before "Leg").
+     */
+    private fun findBoneByContains(nodeName: String): HumanoidBone? {
+        val lowerName = nodeName.lowercase()
+
+        // Order matters - check more specific patterns first
+        return when {
+            // Upper body
+            lowerName.contains("upperchest") -> HumanoidBone.UPPER_CHEST
+            lowerName.contains("chest") -> HumanoidBone.CHEST
+            lowerName.contains("hips") || lowerName.contains("hip") -> HumanoidBone.HIPS
+            lowerName.contains("spine") -> HumanoidBone.SPINE
+            lowerName.contains("neck") -> HumanoidBone.NECK
+            lowerName.contains("head") && !lowerName.contains("eye") -> HumanoidBone.HEAD
+
+            // Left arm
+            (lowerName.contains("left") || lowerName.contains("_l_")) && lowerName.contains("shoulder") -> HumanoidBone.LEFT_SHOULDER
+            (lowerName.contains("left") || lowerName.contains("_l_")) && lowerName.contains("upperarm") -> HumanoidBone.LEFT_UPPER_ARM
+            (lowerName.contains("left") || lowerName.contains("_l_")) && (lowerName.contains("lowerarm") || lowerName.contains("forearm")) -> HumanoidBone.LEFT_LOWER_ARM
+            (lowerName.contains("left") || lowerName.contains("_l_")) && lowerName.contains("hand") && !lowerName.contains("thumb") && !lowerName.contains("index") && !lowerName.contains("middle") && !lowerName.contains("ring") && !lowerName.contains("pinky") && !lowerName.contains("little") -> HumanoidBone.LEFT_HAND
+
+            // Right arm
+            (lowerName.contains("right") || lowerName.contains("_r_")) && lowerName.contains("shoulder") -> HumanoidBone.RIGHT_SHOULDER
+            (lowerName.contains("right") || lowerName.contains("_r_")) && lowerName.contains("upperarm") -> HumanoidBone.RIGHT_UPPER_ARM
+            (lowerName.contains("right") || lowerName.contains("_r_")) && (lowerName.contains("lowerarm") || lowerName.contains("forearm")) -> HumanoidBone.RIGHT_LOWER_ARM
+            (lowerName.contains("right") || lowerName.contains("_r_")) && lowerName.contains("hand") && !lowerName.contains("thumb") && !lowerName.contains("index") && !lowerName.contains("middle") && !lowerName.contains("ring") && !lowerName.contains("pinky") && !lowerName.contains("little") -> HumanoidBone.RIGHT_HAND
+
+            // Left leg
+            (lowerName.contains("left") || lowerName.contains("_l_")) && (lowerName.contains("upperleg") || lowerName.contains("upleg") || lowerName.contains("thigh")) -> HumanoidBone.LEFT_UPPER_LEG
+            (lowerName.contains("left") || lowerName.contains("_l_")) && (lowerName.contains("lowerleg") || lowerName.contains("calf") || lowerName.contains("shin")) -> HumanoidBone.LEFT_LOWER_LEG
+            (lowerName.contains("left") || lowerName.contains("_l_")) && lowerName.contains("foot") && !lowerName.contains("toe") -> HumanoidBone.LEFT_FOOT
+            (lowerName.contains("left") || lowerName.contains("_l_")) && (lowerName.contains("toe") || lowerName.contains("toes")) -> HumanoidBone.LEFT_TOES
+
+            // Right leg
+            (lowerName.contains("right") || lowerName.contains("_r_")) && (lowerName.contains("upperleg") || lowerName.contains("upleg") || lowerName.contains("thigh")) -> HumanoidBone.RIGHT_UPPER_LEG
+            (lowerName.contains("right") || lowerName.contains("_r_")) && (lowerName.contains("lowerleg") || lowerName.contains("calf") || lowerName.contains("shin")) -> HumanoidBone.RIGHT_LOWER_LEG
+            (lowerName.contains("right") || lowerName.contains("_r_")) && lowerName.contains("foot") && !lowerName.contains("toe") -> HumanoidBone.RIGHT_FOOT
+            (lowerName.contains("right") || lowerName.contains("_r_")) && (lowerName.contains("toe") || lowerName.contains("toes")) -> HumanoidBone.RIGHT_TOES
+
+            else -> null
+        }
     }
 
     /**

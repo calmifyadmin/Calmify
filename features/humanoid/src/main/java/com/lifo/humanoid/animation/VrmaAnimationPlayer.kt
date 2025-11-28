@@ -3,6 +3,7 @@ package com.lifo.humanoid.animation
 import android.util.Log
 import com.google.android.filament.Engine
 import com.google.android.filament.TransformManager
+import com.google.android.filament.gltfio.Animator
 import com.google.android.filament.gltfio.FilamentAsset
 import com.lifo.humanoid.data.vrm.VrmHumanoidBoneMapper
 import com.lifo.humanoid.data.vrm.VrmHumanoidBoneMapper.HumanoidBone
@@ -14,6 +15,17 @@ import kotlin.math.floor
 /**
  * Player for VRMA animations.
  * Handles playback, blending, and application of animation data to VRM models.
+ *
+ * Implements proper animation retargeting following Amica/three-vrm approach:
+ * - VRMA animations contain rotations in the animation's rest pose space
+ * - To apply to a different model, we need to transform: finalRot = parentWorldQuat * animQuat * boneWorldQuat^-1
+ * - This converts from animation space to the target model's local bone space
+ *
+ * CRITICAL: After applying transforms, updateBoneMatrices() must be called on the
+ * Animator to update the skinning matrices. Without this, transforms won't affect
+ * the visible mesh!
+ *
+ * Reference: amica-master VRMAnimationLoaderPlugin.ts
  */
 class VrmaAnimationPlayer(
     private val engine: Engine,
@@ -22,6 +34,89 @@ class VrmaAnimationPlayer(
 
     companion object {
         private const val TAG = "VrmaAnimationPlayer"
+
+        /**
+         * Mapping from common VRMA animation bone names to VRM humanoid bone names.
+         * Different animation sources use different naming conventions.
+         */
+        private val ANIMATION_TO_VRM_BONE_MAP = mapOf(
+            // Root
+            "root" to "hips",
+
+            // Torso/Spine (many animations use torso_1, torso_2, etc.)
+            "torso_1" to "spine",
+            "torso_2" to "chest",
+            "torso_3" to "upperChest",
+            "torso_4" to "upperChest",
+            "torso_5" to "upperChest",
+            "torso_6" to "upperChest",
+            "torso_7" to "upperChest",
+
+            // Neck
+            "neck_1" to "neck",
+            "neck_2" to "neck",
+
+            // Head
+            "head" to "head",
+
+            // Left Arm
+            "l_shoulder" to "leftShoulder",
+            "l_up_arm" to "leftUpperArm",
+            "l_low_arm" to "leftLowerArm",
+            "l_hand" to "leftHand",
+
+            // Right Arm
+            "r_shoulder" to "rightShoulder",
+            "r_up_arm" to "rightUpperArm",
+            "r_low_arm" to "rightLowerArm",
+            "r_hand" to "rightHand",
+
+            // Left Leg
+            "l_up_leg" to "leftUpperLeg",
+            "l_low_leg" to "leftLowerLeg",
+            "l_foot" to "leftFoot",
+            "l_toes" to "leftToes",
+
+            // Right Leg
+            "r_up_leg" to "rightUpperLeg",
+            "r_low_leg" to "rightLowerLeg",
+            "r_foot" to "rightFoot",
+            "r_toes" to "rightToes",
+
+            // Standard VRM names (pass-through)
+            "hips" to "hips",
+            "spine" to "spine",
+            "spine1" to "spine",
+            "spine2" to "chest",
+            "spine3" to "upperChest",
+            "chest" to "chest",
+            "upperchest" to "upperChest",
+            "neck" to "neck",
+
+            // Mixamo-style names
+            "mixamorigHips" to "hips",
+            "mixamorigSpine" to "spine",
+            "mixamorigSpine1" to "chest",
+            "mixamorigSpine2" to "upperChest",
+            "mixamorigNeck" to "neck",
+            "mixamorigHead" to "head",
+            "mixamorigLeftShoulder" to "leftShoulder",
+            "mixamorigLeftArm" to "leftUpperArm",
+            "mixamorigLeftForeArm" to "leftLowerArm",
+            "mixamorigLeftHand" to "leftHand",
+            "mixamorigRightShoulder" to "rightShoulder",
+            "mixamorigRightArm" to "rightUpperArm",
+            "mixamorigRightForeArm" to "rightLowerArm",
+            "mixamorigRightHand" to "rightHand",
+            "mixamorigLeftUpLeg" to "leftUpperLeg",
+            "mixamorigLeftLeg" to "leftLowerLeg",
+            "mixamorigLeftFoot" to "leftFoot",
+            "mixamorigLeftToeBase" to "leftToes",
+            "mixamorigRightUpLeg" to "rightUpperLeg",
+            "mixamorigRightLeg" to "rightLowerLeg",
+            "mixamorigRightFoot" to "rightFoot",
+            "mixamorigRightToeBase" to "rightToes"
+        )
     }
 
     private val _currentAnimation = MutableStateFlow<VrmaAnimation?>(null)
@@ -41,18 +136,74 @@ class VrmaAnimationPlayer(
     private val nodeEntityMap = mutableMapOf<String, Int>()
     private val humanoidNodeMap = mutableMapOf<HumanoidBone, String>()
 
+    // VRM humanoid bone name (from animation) to HumanoidBone enum mapping
+    private val vrmBoneNameToEnum = mutableMapOf<String, HumanoidBone>()
+
     // Original transforms for blending/reset
     private val originalTransforms = mutableMapOf<Int, FloatArray>()
+
+    // World matrices for proper transform application (following amica pattern)
+    private val boneWorldMatrices = mutableMapOf<HumanoidBone, FloatArray>()
+    private var hipsParentWorldMatrix: FloatArray = FloatArray(16) { if (it % 5 == 0) 1f else 0f }
+
+    // Parent bone mapping for proper transform chain (following amica VRMHumanBoneParentMap)
+    private val humanoidBoneParentMap = mapOf(
+        HumanoidBone.HIPS to null,
+        HumanoidBone.SPINE to HumanoidBone.HIPS,
+        HumanoidBone.CHEST to HumanoidBone.SPINE,
+        HumanoidBone.UPPER_CHEST to HumanoidBone.CHEST,
+        HumanoidBone.NECK to HumanoidBone.UPPER_CHEST,
+        HumanoidBone.HEAD to HumanoidBone.NECK,
+        HumanoidBone.LEFT_SHOULDER to HumanoidBone.UPPER_CHEST,
+        HumanoidBone.LEFT_UPPER_ARM to HumanoidBone.LEFT_SHOULDER,
+        HumanoidBone.LEFT_LOWER_ARM to HumanoidBone.LEFT_UPPER_ARM,
+        HumanoidBone.LEFT_HAND to HumanoidBone.LEFT_LOWER_ARM,
+        HumanoidBone.RIGHT_SHOULDER to HumanoidBone.UPPER_CHEST,
+        HumanoidBone.RIGHT_UPPER_ARM to HumanoidBone.RIGHT_SHOULDER,
+        HumanoidBone.RIGHT_LOWER_ARM to HumanoidBone.RIGHT_UPPER_ARM,
+        HumanoidBone.RIGHT_HAND to HumanoidBone.RIGHT_LOWER_ARM,
+        HumanoidBone.LEFT_UPPER_LEG to HumanoidBone.HIPS,
+        HumanoidBone.LEFT_LOWER_LEG to HumanoidBone.LEFT_UPPER_LEG,
+        HumanoidBone.LEFT_FOOT to HumanoidBone.LEFT_LOWER_LEG,
+        HumanoidBone.LEFT_TOES to HumanoidBone.LEFT_FOOT,
+        HumanoidBone.RIGHT_UPPER_LEG to HumanoidBone.HIPS,
+        HumanoidBone.RIGHT_LOWER_LEG to HumanoidBone.RIGHT_UPPER_LEG,
+        HumanoidBone.RIGHT_FOOT to HumanoidBone.RIGHT_LOWER_LEG,
+        HumanoidBone.RIGHT_TOES to HumanoidBone.RIGHT_FOOT
+    )
+
+    // Rest pose quaternions for proper rotation transformation (computed from world matrices)
+    private val boneWorldQuaternions = mutableMapOf<HumanoidBone, FloatArray>()
+    private val boneWorldQuaternionInverses = mutableMapOf<HumanoidBone, FloatArray>()
+    private var hipsParentWorldQuaternion: FloatArray = floatArrayOf(0f, 0f, 0f, 1f) // Identity
 
     // Blend weight for smooth transitions
     private var blendWeight: Float = 1f
     private var blendDuration: Float = 0.3f // seconds
+
+    // Track if properly initialized
+    private var isInitialized = false
+
+    // Reference to Animator for updateBoneMatrices() - CRITICAL for skinning
+    private var animator: Animator? = null
 
     /**
      * Initialize with a FilamentAsset to build node mapping
      */
     fun initialize(asset: FilamentAsset, nodeNames: List<String>) {
         nodeEntityMap.clear()
+        vrmBoneNameToEnum.clear()
+        boneWorldMatrices.clear()
+        boneWorldQuaternions.clear()
+        boneWorldQuaternionInverses.clear()
+        animNodeToHumanoidBone.clear()
+        humanoidNodeMap.clear()
+
+        // Store reference to Animator for bone matrix updates
+        // This is CRITICAL - without updateBoneMatrices(), transforms don't affect skinned mesh!
+        // Note: Animator is obtained from FilamentInstance (asset.getInstance()), not directly from FilamentAsset
+        animator = asset.getInstance()?.animator
+        Log.d(TAG, "Animator obtained from asset instance: ${animator != null}")
 
         // Build node name to entity mapping
         nodeNames.forEachIndexed { index, name ->
@@ -62,28 +213,111 @@ class VrmaAnimationPlayer(
             }
         }
 
+        // Build VRM bone name to enum mapping for fast lookups
+        HumanoidBone.entries.forEach { bone ->
+            vrmBoneNameToEnum[bone.vrmName.lowercase()] = bone
+            // Also add camelCase variant
+            vrmBoneNameToEnum[bone.vrmName] = bone
+        }
+
+        // Calculate and store world matrices for all mapped bones
+        calculateBoneWorldMatrices()
+
         // Store original transforms
         storeOriginalTransforms()
 
-        Log.d(TAG, "Initialized with ${nodeEntityMap.size} node mappings")
+        isInitialized = true
+        Log.d(TAG, "Initialized with ${nodeEntityMap.size} node mappings, ${boneMapper.getMappedBones().size} humanoid bones")
     }
 
     /**
-     * Build humanoid bone to node name mapping from animation
+     * Calculate world matrices and quaternions for all humanoid bones.
+     * This is essential for correct VRMA animation application (following amica pattern).
+     *
+     * Following amica VRMAnimationLoaderPlugin.ts:
+     * - Store world matrix for each bone
+     * - Extract world quaternion for rotation transformation
+     * - Compute inverse quaternions for the animation retargeting formula
      */
-    fun buildHumanoidMapping(animation: VrmaAnimation) {
-        humanoidNodeMap.clear()
+    private fun calculateBoneWorldMatrices() {
+        val tm = engine.transformManager
 
-        animation.humanoidBoneMapping.forEach { (boneName, nodeName) ->
-            val humanoidBone = HumanoidBone.entries.firstOrNull {
-                it.vrmName.equals(boneName, ignoreCase = true)
-            }
-            if (humanoidBone != null) {
-                humanoidNodeMap[humanoidBone] = nodeName
+        boneMapper.getBoneEntityMap().forEach { (bone, entity) ->
+            val instance = tm.getInstance(entity)
+            if (instance != 0) {
+                val worldMatrix = FloatArray(16)
+                tm.getWorldTransform(instance, worldMatrix)
+                boneWorldMatrices[bone] = worldMatrix
+
+                // Extract world quaternion from world matrix
+                val sx = kotlin.math.sqrt(worldMatrix[0] * worldMatrix[0] + worldMatrix[1] * worldMatrix[1] + worldMatrix[2] * worldMatrix[2])
+                val sy = kotlin.math.sqrt(worldMatrix[4] * worldMatrix[4] + worldMatrix[5] * worldMatrix[5] + worldMatrix[6] * worldMatrix[6])
+                val sz = kotlin.math.sqrt(worldMatrix[8] * worldMatrix[8] + worldMatrix[9] * worldMatrix[9] + worldMatrix[10] * worldMatrix[10])
+
+                val worldQuat = matrixToQuaternion(worldMatrix, sx, sy, sz)
+                boneWorldQuaternions[bone] = worldQuat
+                boneWorldQuaternionInverses[bone] = invertQuaternion(worldQuat)
+
+                // Store hips parent world matrix and quaternion
+                if (bone == HumanoidBone.HIPS) {
+                    // For now, use identity as parent (root level)
+                    hipsParentWorldMatrix = FloatArray(16) { if (it % 5 == 0) 1f else 0f }
+                    hipsParentWorldQuaternion = floatArrayOf(0f, 0f, 0f, 1f) // Identity
+                }
             }
         }
 
-        Log.d(TAG, "Built humanoid mapping: ${humanoidNodeMap.size} bones")
+        Log.d(TAG, "Calculated world matrices and quaternions for ${boneWorldMatrices.size} bones")
+    }
+
+    /**
+     * Invert a quaternion.
+     * For a unit quaternion, the inverse is the conjugate: [-x, -y, -z, w]
+     */
+    private fun invertQuaternion(q: FloatArray): FloatArray {
+        return floatArrayOf(-q[0], -q[1], -q[2], q[3])
+    }
+
+    // Animation node name -> HumanoidBone mapping (inverse of humanoidNodeMap for fast lookup)
+    private val animNodeToHumanoidBone = mutableMapOf<String, HumanoidBone>()
+
+    /**
+     * Build humanoid bone to node name mapping from animation.
+     * Maps animation node names to VRM humanoid bones.
+     *
+     * The VRMC_vrm_animation extension provides:
+     * humanBones: { "hips": { node: 0 }, "spine": { node: 1 }, ... }
+     *
+     * After parsing in VrmaAnimationLoader, we get:
+     * humanoidBoneMapping: { "hips": "root", "spine": "torso_1", ... }
+     * where "root", "torso_1" are the animation's internal node names
+     *
+     * We build TWO mappings:
+     * 1. humanoidNodeMap: HumanoidBone -> animation node name (for looking up what node name an animation uses for a bone)
+     * 2. animNodeToHumanoidBone: animation node name -> HumanoidBone (for resolving track.nodeName to bone)
+     */
+    fun buildHumanoidMapping(animation: VrmaAnimation) {
+        humanoidNodeMap.clear()
+        animNodeToHumanoidBone.clear()
+
+        // The animation.humanoidBoneMapping maps VRM bone name (e.g., "hips") -> animation node name
+        animation.humanoidBoneMapping.forEach { (vrmBoneName, animationNodeName) ->
+            val humanoidBone = vrmBoneNameToEnum[vrmBoneName.lowercase()]
+                ?: vrmBoneNameToEnum[vrmBoneName]
+                ?: HumanoidBone.entries.firstOrNull {
+                    it.vrmName.equals(vrmBoneName, ignoreCase = true)
+                }
+
+            if (humanoidBone != null) {
+                humanoidNodeMap[humanoidBone] = animationNodeName
+                animNodeToHumanoidBone[animationNodeName] = humanoidBone
+                Log.d(TAG, "Humanoid mapping: $vrmBoneName -> $humanoidBone (animation node: $animationNodeName)")
+            } else {
+                Log.w(TAG, "Unknown VRM bone name in animation: $vrmBoneName")
+            }
+        }
+
+        Log.d(TAG, "Built humanoid mapping: ${humanoidNodeMap.size} bones from animation")
     }
 
     /**
@@ -100,6 +334,11 @@ class VrmaAnimationPlayer(
         loop: Boolean = animation.isLooping,
         speed: Float = 1.0f
     ) {
+        if (!isInitialized) {
+            Log.e(TAG, "Cannot play animation - player not initialized!")
+            return
+        }
+
         stop()
 
         _currentAnimation.value = animation
@@ -108,10 +347,41 @@ class VrmaAnimationPlayer(
         playbackSpeed = speed
         blendWeight = 0f // Start blending in
 
-        // Build humanoid mapping
+        // Build humanoid mapping from animation to model bones
         buildHumanoidMapping(animation)
 
-        Log.d(TAG, "<Playing animation: ${animation.name}, duration: ${animation.durationSeconds}s, loop: $loop")
+        // Set animation rest pose data for proper retargeting (following amica pattern)
+        setAnimationRestPoseData(animation)
+
+        // Reset debug frame counter at start of new animation
+        rotationDebugFrameCount = 0
+
+        Log.d(TAG, "=== Playing Animation ===")
+        Log.d(TAG, "Name: ${animation.name}, Duration: ${animation.durationSeconds}s, Loop: $loop")
+        Log.d(TAG, "Tracks: ${animation.tracks.size}, HumanoidBoneMapping: ${animation.humanoidBoneMapping.size}")
+        Log.d(TAG, "HumanoidNodeMap after build: ${humanoidNodeMap.size} entries")
+
+        // Log detailed mapping resolution
+        var resolvedCount = 0
+        var unresolvedCount = 0
+        animation.tracks.take(5).forEach { track ->
+            val entity = resolveEntity(track.nodeName)
+            if (entity != null) {
+                resolvedCount++
+                Log.d(TAG, "Track '${track.nodeName}' (${track.path}) -> entity $entity")
+            } else {
+                unresolvedCount++
+                Log.w(TAG, "Track '${track.nodeName}' (${track.path}) -> UNRESOLVED")
+            }
+        }
+        if (animation.tracks.size > 5) {
+            Log.d(TAG, "... and ${animation.tracks.size - 5} more tracks")
+        }
+
+        // Count total resolved
+        val totalResolved = animation.tracks.count { resolveEntity(it.nodeName) != null }
+        Log.d(TAG, "Resolution stats: $totalResolved/${animation.tracks.size} tracks resolved")
+        Log.d(TAG, "=== Starting Playback ===")
 
         playbackJob = scope.launch {
             var lastFrameTime = System.nanoTime()
@@ -212,54 +482,168 @@ class VrmaAnimationPlayer(
     }
 
     /**
-     * Apply animation at a specific time
+     * Apply animation at a specific time.
+     *
+     * Following amica-master pattern:
+     * - Rotations need to be transformed from animation space to local bone space
+     * - Translations need to be scaled based on model proportions
      */
     private fun applyAnimation(animation: VrmaAnimation, time: Float) {
         val tm = engine.transformManager
+        var appliedCount = 0
+        var skippedCount = 0
 
         animation.tracks.forEach { track ->
-            val entity = resolveEntity(track.nodeName) ?: return@forEach
+            val entity = resolveEntity(track.nodeName)
+            if (entity == null) {
+                skippedCount++
+                return@forEach
+            }
+
             val instance = tm.getInstance(entity)
-            if (instance == 0) return@forEach
+            if (instance == 0) {
+                skippedCount++
+                return@forEach
+            }
 
             // Interpolate keyframes
             val interpolatedValues = interpolateTrack(track, time)
-            if (interpolatedValues.isEmpty()) return@forEach
+            if (interpolatedValues.isEmpty()) {
+                skippedCount++
+                return@forEach
+            }
+
+            // Get the humanoid bone for this track (if it is one)
+            val humanoidBone = resolveHumanoidBone(track.nodeName)
 
             // Apply based on path type
             when (track.path) {
-                AnimationPath.ROTATION -> applyRotation(tm, instance, entity, interpolatedValues)
-                AnimationPath.TRANSLATION -> applyTranslation(tm, instance, entity, interpolatedValues)
-                AnimationPath.SCALE -> applyScale(tm, instance, entity, interpolatedValues)
+                AnimationPath.ROTATION -> {
+                    applyRotationWithWorldTransform(tm, instance, entity, interpolatedValues, humanoidBone)
+                    appliedCount++
+                }
+                AnimationPath.TRANSLATION -> {
+                    // Only apply translation to hips (root motion)
+                    if (humanoidBone == HumanoidBone.HIPS) {
+                        applyTranslationWithScale(tm, instance, entity, interpolatedValues)
+                        appliedCount++
+                    }
+                }
+                AnimationPath.SCALE -> {
+                    applyScale(tm, instance, entity, interpolatedValues)
+                    appliedCount++
+                }
                 AnimationPath.WEIGHTS -> { /* Handle morph targets if needed */ }
             }
+        }
+
+        // CRITICAL: Update bone matrices for skinning!
+        // Without this call, the transform changes don't affect the visible skinned mesh.
+        // This is the key step that was missing - Filament separates transform updates
+        // from skinning matrix updates for performance reasons.
+        animator?.updateBoneMatrices()
+
+        // Increment debug frame counter after processing all tracks
+        rotationDebugFrameCount++
+
+        // Log stats periodically (every 60 frames = ~1 second)
+        if ((time * 60).toInt() % 60 == 0) {
+            Log.d(TAG, "Animation frame: applied=$appliedCount, skipped=$skippedCount tracks, time=${time}s, updateBoneMatrices called")
         }
     }
 
     /**
-     * Resolve a node name to its Filament entity
+     * Resolve a node name from animation to its Filament entity.
+     *
+     * VRMA animations use their own node names in tracks that must be mapped to
+     * the model's bone entities through the humanoidBoneMapping.
+     *
+     * Flow: animation node name -> animNodeToHumanoidBone -> HumanoidBone -> model entity
      */
     private fun resolveEntity(nodeName: String): Int? {
-        // Try direct node name mapping
+        // Strategy 1: Use animNodeToHumanoidBone mapping from VRMA extension (HIGHEST PRIORITY)
+        // This directly maps animation node names to humanoid bones
+        val boneFromVrmaMapping = animNodeToHumanoidBone[nodeName]
+        if (boneFromVrmaMapping != null) {
+            val entity = boneMapper.getBoneEntity(boneFromVrmaMapping)
+            if (entity != null) {
+                return entity
+            }
+        }
+
+        // Strategy 2: Use ANIMATION_TO_VRM_BONE_MAP to translate common animation bone names to VRM names
+        val mappedVrmBoneName = ANIMATION_TO_VRM_BONE_MAP[nodeName.lowercase()]
+            ?: ANIMATION_TO_VRM_BONE_MAP[nodeName]
+
+        if (mappedVrmBoneName != null) {
+            val bone = vrmBoneNameToEnum[mappedVrmBoneName.lowercase()]
+                ?: vrmBoneNameToEnum[mappedVrmBoneName]
+                ?: HumanoidBone.entries.firstOrNull {
+                    it.vrmName.equals(mappedVrmBoneName, ignoreCase = true)
+                }
+
+            if (bone != null) {
+                val entity = boneMapper.getBoneEntity(bone)
+                if (entity != null) {
+                    return entity
+                }
+            }
+        }
+
+        // Strategy 3: Try direct VRM bone name lookup (e.g., nodeName = "hips", "spine", etc.)
+        val directBone = vrmBoneNameToEnum[nodeName.lowercase()]
+            ?: vrmBoneNameToEnum[nodeName]
+            ?: HumanoidBone.entries.firstOrNull {
+                it.vrmName.equals(nodeName, ignoreCase = true)
+            }
+
+        if (directBone != null) {
+            val entity = boneMapper.getBoneEntity(directBone)
+            if (entity != null) {
+                return entity
+            }
+        }
+
+        // Strategy 4: Try direct node name in the model's node mapping
         nodeEntityMap[nodeName]?.let { return it }
 
-        // Try humanoid bone mapping
-        val humanoidBone = HumanoidBone.entries.firstOrNull { bone ->
-            humanoidNodeMap[bone] == nodeName
-        }
-        if (humanoidBone != null) {
-            return boneMapper.getBoneEntity(humanoidBone)
-        }
+        // Strategy 5: Case-insensitive search in node names
+        val lowerNodeName = nodeName.lowercase()
+        nodeEntityMap.entries.firstOrNull { (name, _) ->
+            name.lowercase() == lowerNodeName
+        }?.let { return it.value }
 
-        // Try VRM bone name directly
-        val directBone = HumanoidBone.entries.firstOrNull {
-            it.vrmName.equals(nodeName, ignoreCase = true)
-        }
-        if (directBone != null) {
-            return boneMapper.getBoneEntity(directBone)
-        }
-
+        // Don't log every frame - only log once per unique unresolved node
         return null
+    }
+
+    /**
+     * Resolve the HumanoidBone for an animation track node name.
+     * Returns null if the node is not a humanoid bone.
+     */
+    private fun resolveHumanoidBone(nodeName: String): HumanoidBone? {
+        // Strategy 1: Use animNodeToHumanoidBone mapping from VRMA extension (HIGHEST PRIORITY)
+        animNodeToHumanoidBone[nodeName]?.let { return it }
+
+        // Strategy 2: Use ANIMATION_TO_VRM_BONE_MAP
+        val mappedVrmBoneName = ANIMATION_TO_VRM_BONE_MAP[nodeName.lowercase()]
+            ?: ANIMATION_TO_VRM_BONE_MAP[nodeName]
+
+        if (mappedVrmBoneName != null) {
+            val bone = vrmBoneNameToEnum[mappedVrmBoneName.lowercase()]
+                ?: vrmBoneNameToEnum[mappedVrmBoneName]
+                ?: HumanoidBone.entries.firstOrNull {
+                    it.vrmName.equals(mappedVrmBoneName, ignoreCase = true)
+                }
+            if (bone != null) return bone
+        }
+
+        // Strategy 3: Try direct VRM bone name
+        return vrmBoneNameToEnum[nodeName.lowercase()]
+            ?: vrmBoneNameToEnum[nodeName]
+            ?: HumanoidBone.entries.firstOrNull {
+                it.vrmName.equals(nodeName, ignoreCase = true)
+            }
     }
 
     /**
@@ -370,74 +754,334 @@ class VrmaAnimationPlayer(
         return floatArrayOf(q[0] / length, q[1] / length, q[2] / length, q[3] / length)
     }
 
+    // Flag to enable detailed rotation debugging (enable for first few seconds then disable)
+    private var rotationDebugFrameCount = 0
+    private val MAX_DEBUG_FRAMES = 5
+
+    // Animation rest pose world quaternions (extracted from animation's own skeleton)
+    private val animationBoneWorldQuaternions = mutableMapOf<HumanoidBone, FloatArray>()
+    private val animationBoneWorldQuaternionInverses = mutableMapOf<HumanoidBone, FloatArray>()
+    private var animationHipsParentWorldQuaternion: FloatArray = floatArrayOf(0f, 0f, 0f, 1f)
+
+    // Animation rest hips position for translation scaling
+    private var animationRestHipsPosition: FloatArray = floatArrayOf(0f, 0f, 0f)
+    private var modelRestHipsPosition: FloatArray = floatArrayOf(0f, 0f, 0f)
+    private var translationScale: Float = 1.0f
+
     /**
-     * Apply rotation to a transform
+     * Store animation rest pose data from VrmaAnimation.
+     * This is crucial for proper rotation retargeting.
+     *
+     * Following amica VRMAnimationLoaderPlugin.ts pattern.
      */
-    private fun applyRotation(tm: TransformManager, instance: Int, entity: Int, rotation: FloatArray) {
+    fun setAnimationRestPoseData(animation: VrmaAnimation) {
+        animationBoneWorldQuaternions.clear()
+        animationBoneWorldQuaternionInverses.clear()
+
+        // For VRMA animations, the rest pose is embedded in the animation file
+        // We use the animation's humanoidBoneMapping and restHipsPosition
+        animation.restHipsPosition?.let { pos ->
+            animationRestHipsPosition = pos.copyOf()
+        }
+
+        // Calculate translation scale factor
+        val hipsEntity = boneMapper.getBoneEntity(HumanoidBone.HIPS)
+        if (hipsEntity != null) {
+            val tm = engine.transformManager
+            val instance = tm.getInstance(hipsEntity)
+            if (instance != 0) {
+                val worldTransform = FloatArray(16)
+                tm.getWorldTransform(instance, worldTransform)
+                modelRestHipsPosition = floatArrayOf(worldTransform[12], worldTransform[13], worldTransform[14])
+
+                // Scale factor: model hips Y / animation hips Y
+                if (animationRestHipsPosition[1] > 0.01f) {
+                    translationScale = modelRestHipsPosition[1] / animationRestHipsPosition[1]
+                    Log.d(TAG, "Translation scale: $translationScale (model hips Y: ${modelRestHipsPosition[1]}, anim hips Y: ${animationRestHipsPosition[1]})")
+                }
+            }
+        }
+
+        // For bones that have world quaternion data in the animation
+        animation.boneWorldQuaternions?.forEach { (boneName, quatArray) ->
+            val bone = vrmBoneNameToEnum[boneName.lowercase()]
+                ?: vrmBoneNameToEnum[boneName]
+                ?: HumanoidBone.entries.firstOrNull { it.vrmName.equals(boneName, ignoreCase = true) }
+
+            if (bone != null && quatArray.size == 4) {
+                val normalizedQuat = normalizeQuaternion(quatArray)
+                animationBoneWorldQuaternions[bone] = normalizedQuat
+                animationBoneWorldQuaternionInverses[bone] = invertQuaternion(normalizedQuat)
+            }
+        }
+
+        Log.d(TAG, "Set animation rest pose data: ${animationBoneWorldQuaternions.size} bone quaternions, scale=$translationScale")
+    }
+
+    /**
+     * Apply rotation with proper animation retargeting.
+     *
+     * Following amica-master VRMAnimationLoaderPlugin.ts pattern:
+     * The key insight is that VRMA animations store rotations in the animation's rest pose space.
+     * To apply to a different model, we must transform:
+     *
+     * Formula (from amica): finalLocalQuat = parentWorldQuat * animQuat * boneWorldQuat^-1
+     *
+     * Where:
+     * - parentWorldQuat: World rotation of parent bone in animation's rest pose
+     * - animQuat: The animation quaternion value (what we're applying)
+     * - boneWorldQuat^-1: Inverse of bone's world rotation in animation's rest pose
+     *
+     * However, for VRMA animations targeting VRM models, since both use the same humanoid spec,
+     * the rotations are already normalized. We apply them directly as local rotations.
+     */
+    private fun applyRotationWithWorldTransform(
+        tm: TransformManager,
+        instance: Int,
+        entity: Int,
+        rotation: FloatArray,
+        humanoidBone: HumanoidBone?
+    ) {
         if (rotation.size != 4) return
 
         val original = originalTransforms[entity] ?: return
-        val transform = original.copyOf()
 
-        // Convert quaternion to rotation matrix
-        val rotMatrix = quaternionToMatrix(rotation)
-
-        // Extract position from original
-        val px = transform[12]
-        val py = transform[13]
-        val pz = transform[14]
-
-        // Apply rotation (keeping original scale)
+        // Extract original scale (from original T-pose transform)
         val sx = kotlin.math.sqrt(original[0] * original[0] + original[1] * original[1] + original[2] * original[2])
         val sy = kotlin.math.sqrt(original[4] * original[4] + original[5] * original[5] + original[6] * original[6])
         val sz = kotlin.math.sqrt(original[8] * original[8] + original[9] * original[9] + original[10] * original[10])
 
-        // Combine rotation and scale
-        transform[0] = rotMatrix[0] * sx
-        transform[1] = rotMatrix[1] * sx
-        transform[2] = rotMatrix[2] * sx
-        transform[4] = rotMatrix[4] * sy
-        transform[5] = rotMatrix[5] * sy
-        transform[6] = rotMatrix[6] * sy
-        transform[8] = rotMatrix[8] * sz
-        transform[9] = rotMatrix[9] * sz
-        transform[10] = rotMatrix[10] * sz
+        // Normalize the animation quaternion
+        var animQuat = normalizeQuaternion(rotation.copyOf())
 
-        // Restore position
-        transform[12] = px
-        transform[13] = py
-        transform[14] = pz
+        // Apply retargeting if we have animation rest pose data
+        if (humanoidBone != null && animationBoneWorldQuaternions.isNotEmpty()) {
+            // Get parent bone for this bone
+            val parentBone = findParentBoneInAnimation(humanoidBone)
 
-        // Blend with original if needed
-        if (blendWeight < 1f) {
-            for (i in 0..15) {
-                transform[i] = original[i] + (transform[i] - original[i]) * blendWeight
+            // Get parent world quaternion (or identity for root)
+            val parentWorldQuat = if (parentBone != null) {
+                animationBoneWorldQuaternions[parentBone] ?: floatArrayOf(0f, 0f, 0f, 1f)
+            } else {
+                animationHipsParentWorldQuaternion
+            }
+
+            // Get bone world quaternion inverse
+            val boneWorldQuatInv = animationBoneWorldQuaternionInverses[humanoidBone]
+
+            if (boneWorldQuatInv != null) {
+                // Apply retargeting formula: parentWorldQuat * animQuat * boneWorldQuat^-1
+                animQuat = multiplyQuaternions(
+                    multiplyQuaternions(parentWorldQuat, animQuat),
+                    boneWorldQuatInv
+                )
+                animQuat = normalizeQuaternion(animQuat)
             }
         }
 
-        tm.setTransform(instance, transform)
+        // Debug logging for first few frames
+        if (rotationDebugFrameCount < MAX_DEBUG_FRAMES && humanoidBone != null) {
+            Log.d(TAG, "Rotation for ${humanoidBone.vrmName}: quat=[${animQuat.joinToString { "%.3f".format(it) }}]")
+        }
+
+        // Convert animation quaternion to rotation matrix
+        val rotMatrix = quaternionToMatrix(animQuat)
+
+        // Build new transform: animation rotation with original scale and position
+        val newTransform = FloatArray(16)
+
+        // Apply rotation * scale (column-major order)
+        newTransform[0] = rotMatrix[0] * sx
+        newTransform[1] = rotMatrix[1] * sx
+        newTransform[2] = rotMatrix[2] * sx
+        newTransform[3] = 0f
+
+        newTransform[4] = rotMatrix[4] * sy
+        newTransform[5] = rotMatrix[5] * sy
+        newTransform[6] = rotMatrix[6] * sy
+        newTransform[7] = 0f
+
+        newTransform[8] = rotMatrix[8] * sz
+        newTransform[9] = rotMatrix[9] * sz
+        newTransform[10] = rotMatrix[10] * sz
+        newTransform[11] = 0f
+
+        // Keep original position from rest pose
+        newTransform[12] = original[12]
+        newTransform[13] = original[13]
+        newTransform[14] = original[14]
+        newTransform[15] = 1f
+
+        // Apply blend weight for smooth transitions
+        val finalTransform = if (blendWeight < 1f) {
+            // Blend using quaternion slerp for rotation part
+            val originalQuat = extractQuaternionFromMatrix(original, sx, sy, sz)
+            val blendedQuat = slerpQuaternion(originalQuat, animQuat, blendWeight)
+            val blendedRotMatrix = quaternionToMatrix(blendedQuat)
+
+            FloatArray(16).apply {
+                this[0] = blendedRotMatrix[0] * sx
+                this[1] = blendedRotMatrix[1] * sx
+                this[2] = blendedRotMatrix[2] * sx
+                this[3] = 0f
+                this[4] = blendedRotMatrix[4] * sy
+                this[5] = blendedRotMatrix[5] * sy
+                this[6] = blendedRotMatrix[6] * sy
+                this[7] = 0f
+                this[8] = blendedRotMatrix[8] * sz
+                this[9] = blendedRotMatrix[9] * sz
+                this[10] = blendedRotMatrix[10] * sz
+                this[11] = 0f
+                this[12] = original[12]
+                this[13] = original[13]
+                this[14] = original[14]
+                this[15] = 1f
+            }
+        } else {
+            newTransform
+        }
+
+        tm.setTransform(instance, finalTransform)
     }
 
     /**
-     * Apply translation to a transform
+     * Find the parent bone for a given humanoid bone in the animation hierarchy.
+     * Walks up the parent chain to find a bone that exists in the animation.
      */
-    private fun applyTranslation(tm: TransformManager, instance: Int, entity: Int, translation: FloatArray) {
+    private fun findParentBoneInAnimation(bone: HumanoidBone): HumanoidBone? {
+        var parentBone = humanoidBoneParentMap[bone]
+        while (parentBone != null && !animationBoneWorldQuaternions.containsKey(parentBone)) {
+            parentBone = humanoidBoneParentMap[parentBone]
+        }
+        return parentBone
+    }
+
+    /**
+     * Extract quaternion from transform matrix.
+     */
+    private fun extractQuaternionFromMatrix(m: FloatArray, sx: Float, sy: Float, sz: Float): FloatArray {
+        return matrixToQuaternion(m, sx, sy, sz)
+    }
+
+    /**
+     * Extract quaternion from a 4x4 transform matrix (column-major).
+     * Scale components are passed in to properly normalize the rotation part.
+     */
+    private fun matrixToQuaternion(m: FloatArray, sx: Float, sy: Float, sz: Float): FloatArray {
+        // Normalize the rotation part by dividing by scale
+        val r00 = m[0] / sx
+        val r10 = m[1] / sx
+        val r20 = m[2] / sx
+        val r01 = m[4] / sy
+        val r11 = m[5] / sy
+        val r21 = m[6] / sy
+        val r02 = m[8] / sz
+        val r12 = m[9] / sz
+        val r22 = m[10] / sz
+
+        // Convert rotation matrix to quaternion using Shepperd's method
+        val trace = r00 + r11 + r22
+
+        val x: Float
+        val y: Float
+        val z: Float
+        val w: Float
+
+        if (trace > 0) {
+            val s = 0.5f / kotlin.math.sqrt(trace + 1.0f)
+            w = 0.25f / s
+            x = (r21 - r12) * s
+            y = (r02 - r20) * s
+            z = (r10 - r01) * s
+        } else if (r00 > r11 && r00 > r22) {
+            val s = 2.0f * kotlin.math.sqrt(1.0f + r00 - r11 - r22)
+            w = (r21 - r12) / s
+            x = 0.25f * s
+            y = (r01 + r10) / s
+            z = (r02 + r20) / s
+        } else if (r11 > r22) {
+            val s = 2.0f * kotlin.math.sqrt(1.0f + r11 - r00 - r22)
+            w = (r02 - r20) / s
+            x = (r01 + r10) / s
+            y = 0.25f * s
+            z = (r12 + r21) / s
+        } else {
+            val s = 2.0f * kotlin.math.sqrt(1.0f + r22 - r00 - r11)
+            w = (r10 - r01) / s
+            x = (r02 + r20) / s
+            y = (r12 + r21) / s
+            z = 0.25f * s
+        }
+
+        return normalizeQuaternion(floatArrayOf(x, y, z, w))
+    }
+
+    /**
+     * Multiply two quaternions: result = q1 * q2
+     * Quaternion format: [x, y, z, w]
+     */
+    private fun multiplyQuaternions(q1: FloatArray, q2: FloatArray): FloatArray {
+        val x1 = q1[0]; val y1 = q1[1]; val z1 = q1[2]; val w1 = q1[3]
+        val x2 = q2[0]; val y2 = q2[1]; val z2 = q2[2]; val w2 = q2[3]
+
+        return floatArrayOf(
+            w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2,  // x
+            w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2,  // y
+            w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2,  // z
+            w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2   // w
+        )
+    }
+
+    /**
+     * Apply translation with scale factor based on model proportions.
+     *
+     * Following amica-master pattern: translations should be scaled
+     * based on the ratio between animation rest pose and model pose.
+     */
+    private fun applyTranslationWithScale(
+        tm: TransformManager,
+        instance: Int,
+        entity: Int,
+        translation: FloatArray
+    ) {
         if (translation.size != 3) return
 
         val original = originalTransforms[entity] ?: return
         val transform = FloatArray(16)
         tm.getTransform(instance, transform)
 
-        // Apply translation with blend
-        val blendedX = original[12] + (translation[0] - original[12]) * blendWeight
-        val blendedY = original[13] + (translation[1] - original[13]) * blendWeight
-        val blendedZ = original[14] + (translation[2] - original[14]) * blendWeight
+        // Scale factor: for now use 1.0, but could be calculated from
+        // model hips position / animation rest hips position
+        val scaleFactor = 1.0f
+
+        // Apply scaled translation with blend
+        val targetX = translation[0] * scaleFactor
+        val targetY = translation[1] * scaleFactor
+        val targetZ = translation[2] * scaleFactor
+
+        val blendedX = original[12] + (targetX - original[12]) * blendWeight
+        val blendedY = original[13] + (targetY - original[13]) * blendWeight
+        val blendedZ = original[14] + (targetZ - original[14]) * blendWeight
 
         transform[12] = blendedX
         transform[13] = blendedY
         transform[14] = blendedZ
 
         tm.setTransform(instance, transform)
+    }
+
+    /**
+     * Apply rotation to a transform (legacy method kept for compatibility)
+     */
+    private fun applyRotation(tm: TransformManager, instance: Int, entity: Int, rotation: FloatArray) {
+        applyRotationWithWorldTransform(tm, instance, entity, rotation, null)
+    }
+
+    /**
+     * Apply translation to a transform (legacy method kept for compatibility)
+     */
+    private fun applyTranslation(tm: TransformManager, instance: Int, entity: Int, translation: FloatArray) {
+        applyTranslationWithScale(tm, instance, entity, translation)
     }
 
     /**
@@ -458,7 +1102,10 @@ class VrmaAnimationPlayer(
     }
 
     /**
-     * Convert quaternion to 4x4 rotation matrix
+     * Convert quaternion to 4x4 rotation matrix in COLUMN-MAJOR order (for Filament/OpenGL).
+     *
+     * Quaternion format: [x, y, z, w]
+     * Matrix layout: column-major, indices 0-3 = column 0, 4-7 = column 1, etc.
      */
     private fun quaternionToMatrix(q: FloatArray): FloatArray {
         val x = q[0]
@@ -479,10 +1126,30 @@ class VrmaAnimationPlayer(
         val wy = w * y2
         val wz = w * z2
 
+        // Column-major order for Filament/OpenGL
+        // Column 0
+        val m00 = 1f - (yy + zz)
+        val m10 = xy + wz
+        val m20 = xz - wy
+
+        // Column 1
+        val m01 = xy - wz
+        val m11 = 1f - (xx + zz)
+        val m21 = yz + wx
+
+        // Column 2
+        val m02 = xz + wy
+        val m12 = yz - wx
+        val m22 = 1f - (xx + yy)
+
         return floatArrayOf(
-            1f - (yy + zz), xy + wz, xz - wy, 0f,
-            xy - wz, 1f - (xx + zz), yz + wx, 0f,
-            xz + wy, yz - wx, 1f - (xx + yy), 0f,
+            // Column 0
+            m00, m10, m20, 0f,
+            // Column 1
+            m01, m11, m21, 0f,
+            // Column 2
+            m02, m12, m22, 0f,
+            // Column 3 (translation)
             0f, 0f, 0f, 1f
         )
     }
@@ -492,6 +1159,8 @@ class VrmaAnimationPlayer(
      */
     private fun storeOriginalTransforms() {
         val tm = engine.transformManager
+        var nodeMapStored = 0
+        var boneMapStored = 0
 
         nodeEntityMap.values.forEach { entity ->
             val instance = tm.getInstance(entity)
@@ -499,6 +1168,7 @@ class VrmaAnimationPlayer(
                 val transform = FloatArray(16)
                 tm.getTransform(instance, transform)
                 originalTransforms[entity] = transform.copyOf()
+                nodeMapStored++
             }
         }
 
@@ -509,11 +1179,12 @@ class VrmaAnimationPlayer(
                     val transform = FloatArray(16)
                     tm.getTransform(instance, transform)
                     originalTransforms[entity] = transform.copyOf()
+                    boneMapStored++
                 }
             }
         }
 
-        Log.d(TAG, "Stored ${originalTransforms.size} original transforms")
+        Log.d(TAG, "Stored original transforms: $nodeMapStored from nodeMap, $boneMapStored from boneMapper, total: ${originalTransforms.size}")
     }
 
     /**
@@ -528,5 +1199,9 @@ class VrmaAnimationPlayer(
                 tm.setTransform(instance, transform)
             }
         }
+
+        // CRITICAL: Update bone matrices after reset too!
+        animator?.updateBoneMatrices()
+        Log.d(TAG, "Reset to original pose, updateBoneMatrices called")
     }
 }

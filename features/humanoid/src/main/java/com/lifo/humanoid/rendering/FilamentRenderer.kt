@@ -105,6 +105,30 @@ class FilamentRenderer(
     fun getTransformManager(): TransformManager? = if (isInitialized) engine.transformManager else null
 
     /**
+     * Get the Animator from the current asset for bone matrix updates.
+     * The Animator is crucial for skinning - it updates bone matrices after transform changes.
+     *
+     * Workflow: After modifying bone transforms via TransformManager,
+     * call updateBoneMatrices() on the Animator to apply changes to skinning.
+     *
+     * Note: Animator is obtained from FilamentInstance (asset.getInstance()), not directly from FilamentAsset.
+     */
+    fun getAnimator(): com.google.android.filament.gltfio.Animator? {
+        return currentAsset?.getInstance()?.animator
+    }
+
+    /**
+     * Update bone matrices for the current asset.
+     * Must be called after modifying bone transforms to apply changes to skinning.
+     *
+     * This is the key step that was missing - without this call,
+     * transform changes don't affect the skinned mesh.
+     */
+    fun updateBoneMatrices() {
+        currentAsset?.getInstance()?.animator?.updateBoneMatrices()
+    }
+
+    /**
      * Callback interface for when a model is loaded
      */
     interface OnModelLoadedListener {

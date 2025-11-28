@@ -243,6 +243,9 @@ class VrmaAnimationLoader(private val context: Context) {
         // Parse humanoid bone mapping from VRMC_vrm_animation extension
         val humanoidBoneMap = parseHumanoidMapping(vrmAnimExt, nodes)
 
+        // Extract rest pose data for animation retargeting (following amica pattern)
+        val restPoseData = extractRestPoseData(gltf, nodes, humanoidBoneMap, bufferViews, binaryData)
+
         // Use fileName for display name if animation name is generic
         val displayName = if (animationName == "animation" || animationName.isBlank()) {
             fileName.removeSuffix(".vrma")
@@ -254,14 +257,39 @@ class VrmaAnimationLoader(private val context: Context) {
         val shouldLoop = fileName.contains("loop", ignoreCase = true) ||
                 fileName.contains("idle", ignoreCase = true)
 
-        Log.d(TAG, "Parsed animation '$displayName' from file '$fileName': ${tracks.size} tracks, duration: ${maxDuration}s, looping: $shouldLoop")
+        // Log detailed debug info for animation
+        Log.d(TAG, "=== Animation Debug Info ===")
+        Log.d(TAG, "Animation: '$displayName' from file '$fileName'")
+        Log.d(TAG, "Duration: ${maxDuration}s, Looping: $shouldLoop")
+        Log.d(TAG, "Tracks: ${tracks.size}")
+        Log.d(TAG, "Humanoid bone mapping: ${humanoidBoneMap.size} entries")
+        humanoidBoneMap.forEach { (vrmBoneName, animNodeName) ->
+            Log.d(TAG, "  $vrmBoneName -> $animNodeName")
+        }
+
+        // Log rest pose data
+        if (restPoseData.first != null) {
+            Log.d(TAG, "Rest hips position: [${restPoseData.first!!.joinToString()}]")
+        }
+        Log.d(TAG, "Bone world quaternions: ${restPoseData.second.size} bones")
+
+        // Log track details
+        tracks.take(10).forEach { track ->
+            Log.d(TAG, "Track: nodeName='${track.nodeName}', path=${track.path}, keyframes=${track.keyframes.size}")
+        }
+        if (tracks.size > 10) {
+            Log.d(TAG, "... and ${tracks.size - 10} more tracks")
+        }
+        Log.d(TAG, "=== End Animation Debug ===")
 
         return VrmaAnimation(
             name = displayName,
             durationSeconds = maxDuration,
             tracks = tracks,
             humanoidBoneMapping = humanoidBoneMap,
-            isLooping = shouldLoop
+            isLooping = shouldLoop,
+            restHipsPosition = restPoseData.first,
+            boneWorldQuaternions = restPoseData.second.takeIf { it.isNotEmpty() }
         )
     }
 
@@ -345,21 +373,240 @@ class VrmaAnimationLoader(private val context: Context) {
     }
 
     /**
+     * Extract rest pose data from animation skeleton for retargeting.
+     *
+     * Following amica-master VRMAnimationLoaderPlugin.ts pattern:
+     * - Extract hips rest position for translation scaling
+     * - Calculate world quaternions for each bone in the animation's rest pose
+     *
+     * @return Pair of (hipsPosition, boneWorldQuaternions map)
+     */
+    private fun extractRestPoseData(
+        gltf: JsonObject,
+        nodes: com.google.gson.JsonArray?,
+        humanoidBoneMap: Map<String, String>,
+        bufferViews: com.google.gson.JsonArray,
+        binaryData: ByteBuffer?
+    ): Pair<FloatArray?, Map<String, FloatArray>> {
+        if (nodes == null) return Pair(null, emptyMap())
+
+        val boneWorldQuaternions = mutableMapOf<String, FloatArray>()
+        var hipsPosition: FloatArray? = null
+
+        // Build node hierarchy for world transform calculation
+        val nodeTransforms = mutableMapOf<Int, NodeTransform>()
+        val nodeParents = mutableMapOf<Int, Int>()
+
+        // Parse all node transforms
+        nodes.forEachIndexed { index, nodeElement ->
+            val node = nodeElement.asJsonObject
+
+            // Extract local transform
+            val translation = node.getAsJsonArray("translation")?.let { arr ->
+                floatArrayOf(arr[0].asFloat, arr[1].asFloat, arr[2].asFloat)
+            } ?: floatArrayOf(0f, 0f, 0f)
+
+            val rotation = node.getAsJsonArray("rotation")?.let { arr ->
+                floatArrayOf(arr[0].asFloat, arr[1].asFloat, arr[2].asFloat, arr[3].asFloat)
+            } ?: floatArrayOf(0f, 0f, 0f, 1f)
+
+            val scale = node.getAsJsonArray("scale")?.let { arr ->
+                floatArrayOf(arr[0].asFloat, arr[1].asFloat, arr[2].asFloat)
+            } ?: floatArrayOf(1f, 1f, 1f)
+
+            nodeTransforms[index] = NodeTransform(translation, rotation, scale)
+
+            // Build parent relationships from children arrays
+            node.getAsJsonArray("children")?.forEach { childElement ->
+                val childIndex = childElement.asInt
+                nodeParents[childIndex] = index
+            }
+        }
+
+        // Calculate world transforms for each humanoid bone
+        humanoidBoneMap.forEach { (vrmBoneName, animNodeName) ->
+            // Find node index for this bone
+            val nodeIndex = nodes.indexOfFirst { nodeElement ->
+                nodeElement.asJsonObject?.get("name")?.asString == animNodeName
+            }
+
+            if (nodeIndex >= 0) {
+                // Calculate world quaternion by walking up the parent chain
+                val worldQuat = calculateWorldQuaternion(nodeIndex, nodeTransforms, nodeParents)
+                boneWorldQuaternions[vrmBoneName] = worldQuat
+
+                // Store hips position for translation scaling
+                if (vrmBoneName == "hips") {
+                    val worldPos = calculateWorldPosition(nodeIndex, nodeTransforms, nodeParents)
+                    hipsPosition = worldPos
+                    Log.d(TAG, "Hips world position: [${worldPos.joinToString()}]")
+                }
+            }
+        }
+
+        return Pair(hipsPosition, boneWorldQuaternions)
+    }
+
+    /**
+     * Calculate world quaternion for a node by walking up parent chain.
+     */
+    private fun calculateWorldQuaternion(
+        nodeIndex: Int,
+        nodeTransforms: Map<Int, NodeTransform>,
+        nodeParents: Map<Int, Int>
+    ): FloatArray {
+        var worldQuat = floatArrayOf(0f, 0f, 0f, 1f) // Identity
+        var currentIndex: Int? = nodeIndex
+
+        // Build chain from node to root
+        val chain = mutableListOf<Int>()
+        while (currentIndex != null) {
+            chain.add(currentIndex)
+            currentIndex = nodeParents[currentIndex]
+        }
+
+        // Apply rotations from root to node (reverse order)
+        chain.reversed().forEach { idx ->
+            val transform = nodeTransforms[idx]
+            if (transform != null) {
+                worldQuat = multiplyQuaternions(worldQuat, transform.rotation)
+            }
+        }
+
+        return normalizeQuaternion(worldQuat)
+    }
+
+    /**
+     * Calculate world position for a node.
+     */
+    private fun calculateWorldPosition(
+        nodeIndex: Int,
+        nodeTransforms: Map<Int, NodeTransform>,
+        nodeParents: Map<Int, Int>
+    ): FloatArray {
+        var worldPos = floatArrayOf(0f, 0f, 0f)
+        var currentIndex: Int? = nodeIndex
+
+        // Build chain from node to root
+        val chain = mutableListOf<Int>()
+        while (currentIndex != null) {
+            chain.add(currentIndex)
+            currentIndex = nodeParents[currentIndex]
+        }
+
+        // Apply transforms from root to node (reverse order)
+        // Simplified: just sum translations (proper implementation would apply full transforms)
+        chain.reversed().forEach { idx ->
+            val transform = nodeTransforms[idx]
+            if (transform != null) {
+                worldPos[0] += transform.translation[0]
+                worldPos[1] += transform.translation[1]
+                worldPos[2] += transform.translation[2]
+            }
+        }
+
+        return worldPos
+    }
+
+    /**
+     * Multiply two quaternions: result = q1 * q2
+     * Format: [x, y, z, w]
+     */
+    private fun multiplyQuaternions(q1: FloatArray, q2: FloatArray): FloatArray {
+        val x1 = q1[0]; val y1 = q1[1]; val z1 = q1[2]; val w1 = q1[3]
+        val x2 = q2[0]; val y2 = q2[1]; val z2 = q2[2]; val w2 = q2[3]
+
+        return floatArrayOf(
+            w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2,  // x
+            w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2,  // y
+            w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2,  // z
+            w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2   // w
+        )
+    }
+
+    /**
+     * Normalize a quaternion
+     */
+    private fun normalizeQuaternion(q: FloatArray): FloatArray {
+        val length = kotlin.math.sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3])
+        if (length < 0.0001f) return floatArrayOf(0f, 0f, 0f, 1f)
+        return floatArrayOf(q[0] / length, q[1] / length, q[2] / length, q[3] / length)
+    }
+
+    /**
+     * Node transform data
+     */
+    private data class NodeTransform(
+        val translation: FloatArray,
+        val rotation: FloatArray,
+        val scale: FloatArray
+    ) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+            other as NodeTransform
+            return translation.contentEquals(other.translation) &&
+                   rotation.contentEquals(other.rotation) &&
+                   scale.contentEquals(other.scale)
+        }
+        override fun hashCode(): Int {
+            var result = translation.contentHashCode()
+            result = 31 * result + rotation.contentHashCode()
+            result = 31 * result + scale.contentHashCode()
+            return result
+        }
+    }
+
+    /**
      * Get list of all available animation assets
      */
     fun getAvailableAnimations(): List<AnimationAsset> = AnimationAsset.entries
 }
 
 /**
- * Represents a loaded VRMA animation
+ * Represents a loaded VRMA animation.
+ *
+ * Following amica-master VRMAnimation.ts pattern:
+ * - humanoidBoneMapping: Maps VRM bone names to animation node names
+ * - restHipsPosition: Rest pose position of hips for translation scaling
+ * - boneWorldQuaternions: World quaternions of each bone in animation's rest pose (for retargeting)
  */
 data class VrmaAnimation(
     val name: String,
     val durationSeconds: Float,
     val tracks: List<AnimationTrack>,
     val humanoidBoneMapping: Map<String, String>,
-    val isLooping: Boolean
-)
+    val isLooping: Boolean,
+    // Rest pose data for animation retargeting (following amica pattern)
+    val restHipsPosition: FloatArray? = null,
+    val boneWorldQuaternions: Map<String, FloatArray>? = null
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        other as VrmaAnimation
+        if (name != other.name) return false
+        if (durationSeconds != other.durationSeconds) return false
+        if (tracks != other.tracks) return false
+        if (humanoidBoneMapping != other.humanoidBoneMapping) return false
+        if (isLooping != other.isLooping) return false
+        if (restHipsPosition != null) {
+            if (other.restHipsPosition == null) return false
+            if (!restHipsPosition.contentEquals(other.restHipsPosition)) return false
+        } else if (other.restHipsPosition != null) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = name.hashCode()
+        result = 31 * result + durationSeconds.hashCode()
+        result = 31 * result + tracks.hashCode()
+        result = 31 * result + humanoidBoneMapping.hashCode()
+        result = 31 * result + isLooping.hashCode()
+        result = 31 * result + (restHipsPosition?.contentHashCode() ?: 0)
+        return result
+    }
+}
 
 /**
  * Animation track for a single node/bone
