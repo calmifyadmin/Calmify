@@ -1,12 +1,19 @@
 package com.lifo.humanoid.presentation
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lifo.humanoid.animation.BlinkController
+import com.lifo.humanoid.animation.VrmaAnimation
+import com.lifo.humanoid.animation.VrmaAnimationLoader
 import com.lifo.humanoid.data.vrm.VrmBlendShapeController
+import com.lifo.humanoid.data.vrm.VrmBlendShapePresets
 import com.lifo.humanoid.data.vrm.VrmExtensions
+import com.lifo.humanoid.data.vrm.VrmHumanoidBoneMapper
 import com.lifo.humanoid.data.vrm.VrmLoader
 import com.lifo.humanoid.domain.model.AvatarState
 import com.lifo.humanoid.domain.model.Emotion
+import com.lifo.humanoid.lipsync.LipSyncController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -15,13 +22,28 @@ import javax.inject.Inject
 
 /**
  * ViewModel for the Humanoid avatar screen.
- * Manages avatar state, loading, and updates.
+ * Manages avatar state, loading, animations, and blend shapes.
+ *
+ * Integrates:
+ * - VRM model loading
+ * - Blend shape control
+ * - Blink animation
+ * - Lip-sync animation
+ * - VRMA animation playback
  */
 @HiltViewModel
 class HumanoidViewModel @Inject constructor(
     private val vrmLoader: VrmLoader,
-    private val blendShapeController: VrmBlendShapeController
+    private val blendShapeController: VrmBlendShapeController,
+    private val boneMapper: VrmHumanoidBoneMapper,
+    private val blinkController: BlinkController,
+    private val lipSyncController: LipSyncController,
+    private val vrmaAnimationLoader: VrmaAnimationLoader
 ) : ViewModel() {
+
+    companion object {
+        private const val TAG = "HumanoidViewModel"
+    }
 
     private val _uiState = MutableStateFlow(HumanoidUiState())
     val uiState: StateFlow<HumanoidUiState> = _uiState.asStateFlow()
@@ -40,9 +62,30 @@ class HumanoidViewModel @Inject constructor(
     // Blend shape weights from controller
     val blendShapeWeights: StateFlow<Map<String, Float>> = blendShapeController.currentWeights
 
+    // Available animations
+    private val _availableAnimations = MutableStateFlow<List<VrmaAnimationLoader.AnimationAsset>>(emptyList())
+    val availableAnimations: StateFlow<List<VrmaAnimationLoader.AnimationAsset>> = _availableAnimations.asStateFlow()
+
+    // Loaded animations cache
+    private val loadedAnimations = mutableMapOf<VrmaAnimationLoader.AnimationAsset, VrmaAnimation>()
+
+    // Current animation being played
+    private val _currentAnimation = MutableStateFlow<VrmaAnimation?>(null)
+    val currentAnimation: StateFlow<VrmaAnimation?> = _currentAnimation.asStateFlow()
+
+    // Animation states from controllers
+    val isBlinking: StateFlow<Boolean> = blinkController.isBlinking
+    val isSpeaking: StateFlow<Boolean> = lipSyncController.isSpeaking
+
     init {
+        // Load available animations
+        _availableAnimations.value = vrmaAnimationLoader.getAvailableAnimations()
+
         // Auto-load default avatar on initialization
         loadDefaultAvatar()
+
+        // Start blink controller
+        blinkController.start(viewModelScope)
 
         // Observe avatar state changes and update blend shapes
         viewModelScope.launch {
@@ -50,6 +93,22 @@ class HumanoidViewModel @Inject constructor(
                 updateBlendShapesForState(state)
             }
         }
+
+        // Integrate blink controller with blend shapes
+        viewModelScope.launch {
+            blinkController.blinkWeight.collect { weight ->
+                if (weight > 0.001f) {
+                    blendShapeController.setCategoryWeights(
+                        VrmBlendShapeController.CATEGORY_BLINK,
+                        mapOf("blink" to weight)
+                    )
+                } else {
+                    blendShapeController.clearCategory(VrmBlendShapeController.CATEGORY_BLINK)
+                }
+            }
+        }
+
+        Log.d(TAG, "HumanoidViewModel initialized with ${_availableAnimations.value.size} animations available")
     }
 
     /**
@@ -60,16 +119,22 @@ class HumanoidViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
             try {
-                // TODO: Add actual default avatar to assets
                 val modelData = vrmLoader.loadVrmFromAssets("models/default_avatar.vrm")
 
                 if (modelData != null) {
                     _vrmModelData.value = modelData
                     _vrmExtensions.value = modelData.second
+
+                    // Set available presets in blend shape controller
+                    val presetNames = modelData.second.blendShapes.map { it.name }.toSet()
+                    blendShapeController.setAvailablePresets(presetNames)
+
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         avatarLoaded = true
                     )
+
+                    Log.d(TAG, "Avatar loaded with ${presetNames.size} blend shape presets")
                 } else {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
@@ -77,6 +142,7 @@ class HumanoidViewModel @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
+                Log.e(TAG, "Error loading avatar", e)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = "Error loading avatar: ${e.message}"
@@ -86,12 +152,9 @@ class HumanoidViewModel @Inject constructor(
     }
 
     /**
-     * Set avatar emotion.
-     * The blend shape controller will automatically fade out previous emotion.
+     * Set avatar emotion with improved preset matching
      */
     fun setEmotion(emotion: Emotion) {
-        // Immediately update emotion state
-        // VrmBlendShapeController.update() will fade out old weights automatically
         _avatarState.value = _avatarState.value.copy(emotion = emotion)
     }
 
@@ -120,62 +183,87 @@ class HumanoidViewModel @Inject constructor(
         _avatarState.value = _avatarState.value.copy(visionEnabled = enabled)
     }
 
+    // ==================== Animation Methods ====================
+
+    /**
+     * Play a VRMA animation by asset type
+     */
+    fun playAnimation(animationAsset: VrmaAnimationLoader.AnimationAsset) {
+        viewModelScope.launch {
+            // Check cache first
+            val animation = loadedAnimations.getOrPut(animationAsset) {
+                vrmaAnimationLoader.loadAnimation(animationAsset) ?: run {
+                    Log.e(TAG, "Failed to load animation: ${animationAsset.fileName}")
+                    return@launch
+                }
+            }
+
+            _currentAnimation.value = animation
+            Log.d(TAG, "Playing animation: ${animation.name}")
+
+            // TODO: Integrate with VrmaAnimationPlayer when FilamentRenderer is available
+        }
+    }
+
+    /**
+     * Stop current animation
+     */
+    fun stopAnimation() {
+        _currentAnimation.value = null
+    }
+
+    // ==================== Lip-Sync Methods ====================
+
+    /**
+     * Start lip-sync for text
+     *
+     * @param text The text to speak
+     * @param durationMs Duration of the speech in milliseconds
+     */
+    fun speakText(text: String, durationMs: Long) {
+        lipSyncController.speak(text, durationMs, viewModelScope)
+    }
+
+    /**
+     * Stop lip-sync
+     */
+    fun stopSpeaking() {
+        lipSyncController.stop()
+    }
+
+    // ==================== Blink Methods ====================
+
+    /**
+     * Trigger a manual blink
+     */
+    fun triggerBlink() {
+        viewModelScope.launch {
+            blinkController.triggerBlink()
+        }
+    }
+
+    // ==================== Blend Shape Updates ====================
+
     /**
      * Update blend shapes based on current avatar state.
-     * Maps emotions to VRM standard blend shape presets.
-     * VRM Spec: https://github.com/vrm-c/vrm-specification/blob/master/specification/0.0/schema/vrmBlendShape.schema.json
+     * Uses VrmBlendShapePresets for better compatibility.
      */
     private fun updateBlendShapesForState(state: AvatarState) {
-        val weights = mutableMapOf<String, Float>()
+        val emotionName = state.emotion.getName().lowercase()
+        val intensity = state.emotion.intensity
 
-        // Map emotion to VRM standard blend shape presets
-        // VRM presets: neutral, joy, angry, sorrow, fun, surprised, blink, blink_l, blink_r, a, i, u, e, o
-        when (state.emotion) {
-            is Emotion.Happy -> {
-                weights["joy"] = state.emotion.intensity
-                // Also try common variations
-                weights["happy"] = state.emotion.intensity
-                weights["smile"] = state.emotion.intensity
-            }
-            is Emotion.Sad -> {
-                weights["sorrow"] = state.emotion.intensity
-                weights["sad"] = state.emotion.intensity
-            }
-            is Emotion.Angry -> {
-                weights["angry"] = state.emotion.intensity
-            }
-            is Emotion.Surprised -> {
-                weights["surprised"] = state.emotion.intensity
-            }
-            is Emotion.Thinking -> {
-                // Thinking might not be a standard VRM preset, try common names
-                weights["thinking"] = state.emotion.intensity
-                weights["serious"] = state.emotion.intensity * 0.5f
-            }
-            is Emotion.Calm, is Emotion.Neutral -> {
-                weights["neutral"] = state.emotion.intensity
-            }
-            is Emotion.Excited -> {
-                weights["fun"] = state.emotion.intensity
-                weights["excited"] = state.emotion.intensity
-            }
-            is Emotion.Confused -> {
-                weights["confused"] = state.emotion.intensity
-            }
-            is Emotion.Worried -> {
-                weights["worried"] = state.emotion.intensity
-            }
-            is Emotion.Disappointed -> {
-                weights["sorrow"] = state.emotion.intensity * 0.7f
-                weights["disappointed"] = state.emotion.intensity
-            }
-            else -> {
-                weights["neutral"] = 1.0f
-            }
-        }
+        // Use preset system for better matching
+        val weights = VrmBlendShapePresets.getEmotionWeights(
+            emotionName,
+            intensity,
+            blendShapeController.availablePresets
+        )
 
-
-        blendShapeController.setTargetWeights(weights)
+        // Set as emotion category
+        blendShapeController.setCategoryWeights(
+            VrmBlendShapeController.CATEGORY_EMOTION,
+            weights
+        )
     }
 
     /**
@@ -191,6 +279,22 @@ class HumanoidViewModel @Inject constructor(
     fun resetAvatar() {
         _avatarState.value = AvatarState.Default
         blendShapeController.reset()
+        stopAnimation()
+        stopSpeaking()
+    }
+
+    /**
+     * Toggle debug mode
+     */
+    fun toggleDebugMode() {
+        _uiState.value = _uiState.value.copy(debugMode = !_uiState.value.debugMode)
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        blinkController.stop()
+        lipSyncController.stop()
+        Log.d(TAG, "HumanoidViewModel cleared")
     }
 }
 
@@ -201,5 +305,7 @@ data class HumanoidUiState(
     val isLoading: Boolean = false,
     val avatarLoaded: Boolean = false,
     val error: String? = null,
-    val debugMode: Boolean = false
+    val debugMode: Boolean = false,
+    val isPlayingAnimation: Boolean = false,
+    val currentAnimationName: String? = null
 )

@@ -1,10 +1,17 @@
 package com.lifo.humanoid.presentation
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -13,12 +20,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.lifo.humanoid.animation.VrmaAnimationLoader
 import com.lifo.humanoid.domain.model.Emotion
 import com.lifo.humanoid.presentation.components.FilamentView
 
 /**
  * Main Humanoid Avatar screen.
- * Displays the 3D avatar with controls and status indicators.
+ * Displays the 3D avatar with comprehensive controls for:
+ * - Emotions
+ * - Animations (VRMA)
+ * - Lip-sync
+ * - Blink control
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,6 +43,13 @@ fun HumanoidScreen(
     val vrmModelData by viewModel.vrmModelData.collectAsStateWithLifecycle()
     val vrmExtensions by viewModel.vrmExtensions.collectAsStateWithLifecycle()
     val blendShapeWeights by viewModel.blendShapeWeights.collectAsStateWithLifecycle()
+    val availableAnimations by viewModel.availableAnimations.collectAsStateWithLifecycle()
+    val currentAnimation by viewModel.currentAnimation.collectAsStateWithLifecycle()
+    val isBlinking by viewModel.isBlinking.collectAsStateWithLifecycle()
+    val isSpeaking by viewModel.isSpeaking.collectAsStateWithLifecycle()
+
+    // State for control panel visibility
+    var showControlPanel by remember { mutableStateOf(true) }
 
     // Update blend shapes every frame
     LaunchedEffect(Unit) {
@@ -53,6 +72,18 @@ fun HumanoidScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { showControlPanel = !showControlPanel }) {
+                        Icon(
+                            imageVector = if (showControlPanel) Icons.Default.Settings else Icons.Outlined.Settings,
+                            contentDescription = if (showControlPanel) "Hide controls" else "Show controls"
+                        )
+                    }
+                    IconButton(onClick = { viewModel.toggleDebugMode() }) {
+                        Icon(
+                            imageVector = if (uiState.debugMode) Icons.Default.BugReport else Icons.Default.Info,
+                            contentDescription = "Toggle debug"
+                        )
+                    }
                     IconButton(onClick = { viewModel.resetAvatar() }) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
@@ -84,10 +115,21 @@ fun HumanoidScreen(
                         vrmExtensions = vrmExtensions,
                         blendShapeWeights = blendShapeWeights,
                         avatarState = avatarState,
+                        availableAnimations = availableAnimations,
+                        currentAnimation = currentAnimation?.name,
+                        isBlinking = isBlinking,
+                        isSpeaking = isSpeaking,
+                        debugMode = uiState.debugMode,
+                        showControlPanel = showControlPanel,
                         onEmotionChange = { viewModel.setEmotion(it) },
                         onSpeakingChange = { viewModel.setSpeaking(it) },
                         onListeningChange = { viewModel.setListening(it) },
-                        onVisionToggle = { viewModel.setVisionEnabled(!avatarState.visionEnabled) }
+                        onVisionToggle = { viewModel.setVisionEnabled(!avatarState.visionEnabled) },
+                        onPlayAnimation = { viewModel.playAnimation(it) },
+                        onStopAnimation = { viewModel.stopAnimation() },
+                        onTriggerBlink = { viewModel.triggerBlink() },
+                        onSpeakText = { text, duration -> viewModel.speakText(text, duration) },
+                        onStopSpeaking = { viewModel.stopSpeaking() }
                     )
                 }
                 else -> {
@@ -104,11 +146,25 @@ private fun AvatarContent(
     vrmExtensions: com.lifo.humanoid.data.vrm.VrmExtensions?,
     blendShapeWeights: Map<String, Float>,
     avatarState: com.lifo.humanoid.domain.model.AvatarState,
+    availableAnimations: List<VrmaAnimationLoader.AnimationAsset>,
+    currentAnimation: String?,
+    isBlinking: Boolean,
+    isSpeaking: Boolean,
+    debugMode: Boolean,
+    showControlPanel: Boolean,
     onEmotionChange: (Emotion) -> Unit,
     onSpeakingChange: (Boolean) -> Unit,
     onListeningChange: (Boolean) -> Unit,
-    onVisionToggle: () -> Unit
+    onVisionToggle: () -> Unit,
+    onPlayAnimation: (VrmaAnimationLoader.AnimationAsset) -> Unit,
+    onStopAnimation: () -> Unit,
+    onTriggerBlink: () -> Unit,
+    onSpeakText: (String, Long) -> Unit,
+    onStopSpeaking: () -> Unit
 ) {
+    var lipSyncText by remember { mutableStateOf("Hello, I am your AI assistant!") }
+    var speechDuration by remember { mutableStateOf(3000L) }
+
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
@@ -127,13 +183,20 @@ private fun AvatarContent(
             )
 
             // Status indicator overlay
-            Row(
+            Column(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                if (avatarState.isSpeaking) {
+                if (isBlinking) {
+                    StatusChip(
+                        text = "Blinking",
+                        icon = Icons.Default.Visibility,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+                }
+                if (isSpeaking) {
                     StatusChip(
                         text = "Speaking",
                         icon = Icons.Default.RecordVoiceOver,
@@ -154,26 +217,52 @@ private fun AvatarContent(
                         color = MaterialTheme.colorScheme.tertiary
                     )
                 }
+                if (currentAnimation != null) {
+                    StatusChip(
+                        text = currentAnimation,
+                        icon = Icons.Default.PlayArrow,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            // Debug panel
+            if (debugMode) {
+                DebugPanel(
+                    blendShapeWeights = blendShapeWeights,
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(8.dp)
+                )
             }
         }
 
-        // Control Panel
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            tonalElevation = 2.dp
+        // Control Panel (scrollable)
+        AnimatedVisibility(
+            visible = showControlPanel,
+            enter = expandVertically(),
+            exit = shrinkVertically()
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                tonalElevation = 2.dp
             ) {
-                Text(
-                    text = "Emotion: ${avatarState.emotion.getName()}",
-                    style = MaterialTheme.typography.titleMedium
-                )
+                Column(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Emotion section
+                    Text(
+                        text = "Emotion: ${avatarState.emotion.getName()}",
+                        style = MaterialTheme.typography.titleMedium
+                    )
 
-                // Emotion selector
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     EmotionButton("😊", "Happy") { onEmotionChange(Emotion.Happy()) }
@@ -181,20 +270,113 @@ private fun AvatarContent(
                     EmotionButton("😠", "Angry") { onEmotionChange(Emotion.Angry()) }
                     EmotionButton("😲", "Surprised") { onEmotionChange(Emotion.Surprised()) }
                     EmotionButton("🤔", "Thinking") { onEmotionChange(Emotion.Thinking()) }
+                    EmotionButton("😌", "Calm") { onEmotionChange(Emotion.Calm()) }
+                    EmotionButton("😐", "Neutral") { onEmotionChange(Emotion.Neutral) }
                 }
 
-                // Action buttons
+                HorizontalDivider()
+
+                // Animation section
+                Text(
+                    text = "Animations",
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    availableAnimations.forEach { animation ->
+                        AnimationButton(
+                            name = animation.displayName,
+                            isPlaying = currentAnimation == animation.displayName,
+                            onClick = {
+                                if (currentAnimation == animation.displayName) {
+                                    onStopAnimation()
+                                } else {
+                                    onPlayAnimation(animation)
+                                }
+                            }
+                        )
+                    }
+                }
+
+                HorizontalDivider()
+
+                // Lip-Sync section
+                Text(
+                    text = "Lip-Sync Test",
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                OutlinedTextField(
+                    value = lipSyncText,
+                    onValueChange = { lipSyncText = it },
+                    label = { Text("Text to speak") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Duration: ${speechDuration}ms", modifier = Modifier.width(120.dp))
+                    Slider(
+                        value = speechDuration.toFloat(),
+                        onValueChange = { speechDuration = it.toLong() },
+                        valueRange = 1000f..10000f,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = { onSpeakText(lipSyncText, speechDuration) },
+                        modifier = Modifier.weight(1f),
+                        enabled = !isSpeaking
+                    ) {
+                        Icon(Icons.Default.RecordVoiceOver, null)
+                        Spacer(Modifier.width(4.dp))
+                        Text("Test Lip-Sync")
+                    }
+
+                    OutlinedButton(
+                        onClick = onStopSpeaking,
+                        modifier = Modifier.weight(1f),
+                        enabled = isSpeaking
+                    ) {
+                        Icon(Icons.Default.Stop, null)
+                        Spacer(Modifier.width(4.dp))
+                        Text("Stop")
+                    }
+                }
+
+                HorizontalDivider()
+
+                // Quick actions
+                Text(
+                    text = "Quick Actions",
+                    style = MaterialTheme.typography.titleMedium
+                )
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     FilledTonalButton(
-                        onClick = { onSpeakingChange(!avatarState.isSpeaking) },
+                        onClick = onTriggerBlink,
                         modifier = Modifier.weight(1f)
                     ) {
-                        Icon(Icons.Default.RecordVoiceOver, null)
+                        Icon(Icons.Default.Visibility, null)
                         Spacer(Modifier.width(4.dp))
-                        Text(if (avatarState.isSpeaking) "Stop Speaking" else "Speak")
+                        Text("Blink")
                     }
 
                     FilledTonalButton(
@@ -203,7 +385,7 @@ private fun AvatarContent(
                     ) {
                         Icon(Icons.Default.Mic, null)
                         Spacer(Modifier.width(4.dp))
-                        Text(if (avatarState.isListening) "Stop Listening" else "Listen")
+                        Text(if (avatarState.isListening) "Stop" else "Listen")
                     }
 
                     IconButton(onClick = onVisionToggle) {
@@ -214,6 +396,7 @@ private fun AvatarContent(
                     }
                 }
             }
+        }
         }
     }
 }
@@ -226,13 +409,34 @@ private fun EmotionButton(
 ) {
     FilledTonalButton(
         onClick = onClick,
-        modifier = Modifier.size(60.dp),
+        modifier = Modifier.size(56.dp),
         contentPadding = PaddingValues(4.dp)
     ) {
         Text(
             text = emoji,
-            style = MaterialTheme.typography.headlineMedium
+            style = MaterialTheme.typography.headlineSmall
         )
+    }
+}
+
+@Composable
+private fun AnimationButton(
+    name: String,
+    isPlaying: Boolean,
+    onClick: () -> Unit
+) {
+    if (isPlaying) {
+        Button(onClick = onClick) {
+            Icon(Icons.Default.Stop, null, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(4.dp))
+            Text(name, style = MaterialTheme.typography.labelMedium)
+        }
+    } else {
+        OutlinedButton(onClick = onClick) {
+            Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(4.dp))
+            Text(name, style = MaterialTheme.typography.labelMedium)
+        }
     }
 }
 
@@ -262,6 +466,61 @@ private fun StatusChip(
                 style = MaterialTheme.typography.labelSmall,
                 color = color
             )
+        }
+    }
+}
+
+@Composable
+private fun DebugPanel(
+    blendShapeWeights: Map<String, Float>,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = "Active Blend Shapes",
+                style = MaterialTheme.typography.labelMedium
+            )
+
+            val activeWeights = blendShapeWeights.filter { it.value > 0.01f }
+            if (activeWeights.isEmpty()) {
+                Text(
+                    text = "None",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                activeWeights.entries.take(8).forEach { (name, weight) ->
+                    Row(
+                        modifier = Modifier.width(150.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = name,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            text = "%.2f".format(weight),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    LinearProgressIndicator(
+                        progress = { weight },
+                        modifier = Modifier
+                            .width(150.dp)
+                            .height(4.dp),
+                    )
+                }
+            }
         }
     }
 }

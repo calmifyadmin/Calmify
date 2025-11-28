@@ -73,6 +73,9 @@ class NavigationState(
                 route.startsWith("${Screen.Settings.route}/") -> false
                 route.startsWith("settings_") -> false // Catches settings_main, settings_personal_info, etc.
 
+                // Hide on humanoid avatar screen
+                route == Screen.Humanoid.route -> false
+
                 // Show on all other screens (Home, Profile, etc.)
                 else -> true
             }

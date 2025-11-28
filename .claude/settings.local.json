@@ -31,7 +31,8 @@
       "Bash(Select-Object -Last 50)",
       "Bash(dir /s /b \"c:\\Users\\lifoe\\AndroidStudioProjects\\CalmifyAppAndroid\\features\\humanoid\\src\")",
       "Bash(Select-String \"error:\" -Context 2,2)",
-      "Bash(Select-Object -Last 5)"
+      "Bash(Select-Object -Last 5)",
+      "Bash(Select-String -Pattern \"error:|BUILD\" -Context 1,2)"
     ],
     "deny": [],
     "ask": []
