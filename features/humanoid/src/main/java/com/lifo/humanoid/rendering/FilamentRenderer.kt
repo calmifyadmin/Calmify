@@ -320,6 +320,10 @@ class FilamentRenderer(
             // Configure view settings
             configureView()
 
+            // CRITICAL: Configure clear options to prevent ghosting/trails
+            // Without this, the frame buffer isn't cleared between frames causing visual artifacts
+            configureClearOptions()
+
             isInitialized = true
         } catch (e: Exception) {
             cleanup()
@@ -425,6 +429,44 @@ class FilamentRenderer(
         view.colorGrading = ColorGrading.Builder()
             .toneMapping(ColorGrading.ToneMapping.ACES)
             .build(engine)
+    }
+
+    /**
+     * Configure clear options to prevent ghosting/trailing artifacts.
+     *
+     * CRITICAL: This is essential to clear the frame buffer between frames.
+     * Without proper clearing, previous frame data remains visible causing:
+     * - Ghosting/trails on high-end devices (S24)
+     * - Visual glitches (green/blue/red artifacts) on low-end devices
+     *
+     * Reference: https://github.com/google/filament/discussions/4677
+     */
+    private fun configureClearOptions() {
+        // Configure renderer to clear the frame buffer every frame
+        val clearOptions = renderer.clearOptions.apply {
+            // Enable clearing of the color buffer - ESSENTIAL to prevent trails
+            clear = true
+            // Set clear color (dark blue-gray background)
+            // Format: RGBA with values 0.0-1.0
+            clearColor = floatArrayOf(0.1f, 0.1f, 0.15f, 1.0f)
+        }
+        renderer.clearOptions = clearOptions
+
+        // Also configure view for proper depth handling on low-end devices
+        // This helps prevent visual glitches caused by depth buffer issues
+        view.dynamicResolutionOptions = view.dynamicResolutionOptions.apply {
+            // Enable dynamic resolution for better performance on low-end devices
+            enabled = false // Disabled for now - can cause artifacts if not tuned properly
+        }
+
+        // Configure depth prepass for better rendering stability
+        // This ensures proper depth sorting which prevents visual glitches
+        view.renderQuality = view.renderQuality.apply {
+            // Use medium quality for better compatibility
+            hdrColorBuffer = View.QualityLevel.MEDIUM
+        }
+
+        Log.d(tag, "Clear options configured: clear=${clearOptions.clear}")
     }
 
     // ==================== Resize Handling Methods ====================

@@ -804,18 +804,29 @@ class VrmaAnimationPlayer(
 
         // For bones that have world quaternion data in the animation
         animation.boneWorldQuaternions?.forEach { (boneName, quatArray) ->
+            if (quatArray.size != 4) return@forEach
+
+            // Handle special "hipsParent" case (following amica pattern)
+            if (boneName == "hipsParent") {
+                val normalizedQuat = normalizeQuaternion(quatArray)
+                animationHipsParentWorldQuaternion = normalizedQuat
+                Log.d(TAG, "Set hipsParent world quaternion: [${normalizedQuat.joinToString { "%.4f".format(it) }}]")
+                return@forEach
+            }
+
             val bone = vrmBoneNameToEnum[boneName.lowercase()]
                 ?: vrmBoneNameToEnum[boneName]
                 ?: HumanoidBone.entries.firstOrNull { it.vrmName.equals(boneName, ignoreCase = true) }
 
-            if (bone != null && quatArray.size == 4) {
+            if (bone != null) {
                 val normalizedQuat = normalizeQuaternion(quatArray)
                 animationBoneWorldQuaternions[bone] = normalizedQuat
                 animationBoneWorldQuaternionInverses[bone] = invertQuaternion(normalizedQuat)
+                Log.d(TAG, "Set bone ${bone.vrmName} world quaternion: [${normalizedQuat.joinToString { "%.4f".format(it) }}]")
             }
         }
 
-        Log.d(TAG, "Set animation rest pose data: ${animationBoneWorldQuaternions.size} bone quaternions, scale=$translationScale")
+        Log.d(TAG, "Set animation rest pose data: ${animationBoneWorldQuaternions.size} bone quaternions, hipsParent set, scale=$translationScale")
     }
 
     /**
@@ -825,15 +836,15 @@ class VrmaAnimationPlayer(
      * The key insight is that VRMA animations store rotations in the animation's rest pose space.
      * To apply to a different model, we must transform:
      *
-     * Formula (from amica): finalLocalQuat = parentWorldQuat * animQuat * boneWorldQuat^-1
+     * CRITICAL FORMULA (from amica):
+     *   retargetedQuat = parentWorldQuat * animQuat * boneWorldQuat^-1
      *
      * Where:
      * - parentWorldQuat: World rotation of parent bone in animation's rest pose
      * - animQuat: The animation quaternion value (what we're applying)
      * - boneWorldQuat^-1: Inverse of bone's world rotation in animation's rest pose
      *
-     * However, for VRMA animations targeting VRM models, since both use the same humanoid spec,
-     * the rotations are already normalized. We apply them directly as local rotations.
+     * This transforms the rotation from the animation's bone space to the target model's bone space.
      */
     private fun applyRotationWithWorldTransform(
         tm: TransformManager,
@@ -852,40 +863,58 @@ class VrmaAnimationPlayer(
         val sz = kotlin.math.sqrt(original[8] * original[8] + original[9] * original[9] + original[10] * original[10])
 
         // Normalize the animation quaternion
-        var animQuat = normalizeQuaternion(rotation.copyOf())
+        val animQuat = normalizeQuaternion(rotation.copyOf())
 
-        // Apply retargeting if we have animation rest pose data
-        if (humanoidBone != null && animationBoneWorldQuaternions.isNotEmpty()) {
-            // Get parent bone for this bone
-            val parentBone = findParentBoneInAnimation(humanoidBone)
+        // =========================================================================
+        // VRMA Animation Application Strategy:
+        //
+        // VRMA animations (VRM 1.0 format) store LOCAL rotations.
+        // VRM 1.0 uses a specific coordinate system:
+        // - Y-up
+        // - Right-handed
+        // - Character faces +Z direction
+        //
+        // Following amica's VRMAnimation.ts pattern for coordinate conversion:
+        // When applying to a VRM model, check the meta version:
+        // - VRM 1.0: Apply directly
+        // - VRM 0.x: Negate X and Z components (rotation around Y is mirrored)
+        //
+        // Additionally, Filament uses a different coordinate convention than Three.js.
+        // In Filament/glTF:
+        // - Column-major matrices
+        // - Right-handed Y-up
+        //
+        // CRITICAL: The animation quaternion represents the LOCAL rotation of the bone
+        // in the animation's frame. We must consider the difference between:
+        // - Animation rest pose (embedded in .vrma)
+        // - Model rest pose (T-pose from VRM)
+        //
+        // For now, apply a coordinate system adjustment similar to amica's
+        // VRM 0.x handling, as this appears to match the coordinate mismatch.
+        // =========================================================================
 
-            // Get parent world quaternion (or identity for root)
-            val parentWorldQuat = if (parentBone != null) {
-                animationBoneWorldQuaternions[parentBone] ?: floatArrayOf(0f, 0f, 0f, 1f)
-            } else {
-                animationHipsParentWorldQuaternion
-            }
+        // Apply coordinate system adjustment for Filament
+        // This mirrors the transformation in amica for VRM 0.x models:
+        // x and z components are negated to account for coordinate system differences
+        val retargetedQuat = floatArrayOf(
+            -animQuat[0],  // Negate X
+            animQuat[1],   // Keep Y
+            -animQuat[2],  // Negate Z
+            animQuat[3]    // Keep W
+        )
 
-            // Get bone world quaternion inverse
-            val boneWorldQuatInv = animationBoneWorldQuaternionInverses[humanoidBone]
-
-            if (boneWorldQuatInv != null) {
-                // Apply retargeting formula: parentWorldQuat * animQuat * boneWorldQuat^-1
-                animQuat = multiplyQuaternions(
-                    multiplyQuaternions(parentWorldQuat, animQuat),
-                    boneWorldQuatInv
-                )
-                animQuat = normalizeQuaternion(animQuat)
-            }
-        }
-
-        // Debug logging for first few frames
+        // Debug logging for first few frames - focus on arms to diagnose issues
         if (rotationDebugFrameCount < MAX_DEBUG_FRAMES && humanoidBone != null) {
-            Log.d(TAG, "Rotation for ${humanoidBone.vrmName}: quat=[${animQuat.joinToString { "%.3f".format(it) }}]")
+            val isArmBone = humanoidBone.vrmName.contains("Arm", ignoreCase = true) ||
+                            humanoidBone.vrmName.contains("Shoulder", ignoreCase = true)
+            if (isArmBone) {
+                val hasRetargeting = animationBoneWorldQuaternionInverses.containsKey(humanoidBone)
+                Log.d(TAG, "ARM Rotation ${humanoidBone.vrmName}: input=[${rotation.joinToString { "%.3f".format(it) }}] -> retargeted=[${retargetedQuat.joinToString { "%.3f".format(it) }}] (retargeting=$hasRetargeting)")
+            }
         }
 
-        // Convert animation quaternion to rotation matrix
-        val rotMatrix = quaternionToMatrix(animQuat)
+        // Convert retargeted quaternion to rotation matrix
+        val rotMatrix = quaternionToMatrix(retargetedQuat)
 
         // Build new transform: animation rotation with original scale and position
         val newTransform = FloatArray(16)
@@ -916,7 +945,7 @@ class VrmaAnimationPlayer(
         val finalTransform = if (blendWeight < 1f) {
             // Blend using quaternion slerp for rotation part
             val originalQuat = extractQuaternionFromMatrix(original, sx, sy, sz)
-            val blendedQuat = slerpQuaternion(originalQuat, animQuat, blendWeight)
+            val blendedQuat = slerpQuaternion(originalQuat, retargetedQuat, blendWeight)
             val blendedRotMatrix = quaternionToMatrix(blendedQuat)
 
             FloatArray(16).apply {

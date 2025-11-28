@@ -4,7 +4,7 @@
     <selectionStates>
       <SelectionState runConfigName="Calmify">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-11-05T00:00:04.617661100Z">
+        <DropdownSelection timestamp="2025-11-28T22:40:03.331467300Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\lifoe\.android\avd\Pixel_7_Pro_API_Baklava.avd" />

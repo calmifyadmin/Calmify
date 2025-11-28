@@ -378,6 +378,7 @@ class VrmaAnimationLoader(private val context: Context) {
      * Following amica-master VRMAnimationLoaderPlugin.ts pattern:
      * - Extract hips rest position for translation scaling
      * - Calculate world quaternions for each bone in the animation's rest pose
+     * - Calculate hipsParent world quaternion for the retargeting formula
      *
      * @return Pair of (hipsPosition, boneWorldQuaternions map)
      */
@@ -435,15 +436,29 @@ class VrmaAnimationLoader(private val context: Context) {
                 val worldQuat = calculateWorldQuaternion(nodeIndex, nodeTransforms, nodeParents)
                 boneWorldQuaternions[vrmBoneName] = worldQuat
 
-                // Store hips position for translation scaling
+                Log.d(TAG, "Bone '$vrmBoneName' world quaternion: [${worldQuat.joinToString { "%.4f".format(it) }}]")
+
+                // For hips, also calculate and store the parent's world quaternion
                 if (vrmBoneName == "hips") {
                     val worldPos = calculateWorldPosition(nodeIndex, nodeTransforms, nodeParents)
                     hipsPosition = worldPos
                     Log.d(TAG, "Hips world position: [${worldPos.joinToString()}]")
+
+                    // CRITICAL: Calculate hipsParent world quaternion (following amica pattern)
+                    val hipsParentIndex = nodeParents[nodeIndex]
+                    val hipsParentWorldQuat = if (hipsParentIndex != null) {
+                        calculateWorldQuaternion(hipsParentIndex, nodeTransforms, nodeParents)
+                    } else {
+                        // No parent - use identity quaternion
+                        floatArrayOf(0f, 0f, 0f, 1f)
+                    }
+                    boneWorldQuaternions["hipsParent"] = hipsParentWorldQuat
+                    Log.d(TAG, "HipsParent world quaternion: [${hipsParentWorldQuat.joinToString { "%.4f".format(it) }}]")
                 }
             }
         }
 
+        Log.d(TAG, "Extracted rest pose data for ${boneWorldQuaternions.size} bones (including hipsParent)")
         return Pair(hipsPosition, boneWorldQuaternions)
     }
 
