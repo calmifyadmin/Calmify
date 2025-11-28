@@ -243,15 +243,25 @@ class VrmaAnimationLoader(private val context: Context) {
         // Parse humanoid bone mapping from VRMC_vrm_animation extension
         val humanoidBoneMap = parseHumanoidMapping(vrmAnimExt, nodes)
 
-        Log.d(TAG, "Parsed animation '$animationName': ${tracks.size} tracks, duration: ${maxDuration}s")
+        // Use fileName for display name if animation name is generic
+        val displayName = if (animationName == "animation" || animationName.isBlank()) {
+            fileName.removeSuffix(".vrma")
+        } else {
+            animationName
+        }
+
+        // Determine if animation should loop based on fileName (more reliable than internal name)
+        val shouldLoop = fileName.contains("loop", ignoreCase = true) ||
+                fileName.contains("idle", ignoreCase = true)
+
+        Log.d(TAG, "Parsed animation '$displayName' from file '$fileName': ${tracks.size} tracks, duration: ${maxDuration}s, looping: $shouldLoop")
 
         return VrmaAnimation(
-            name = animationName,
+            name = displayName,
             durationSeconds = maxDuration,
             tracks = tracks,
             humanoidBoneMapping = humanoidBoneMap,
-            isLooping = animationName.contains("loop", ignoreCase = true) ||
-                    animationName.contains("idle", ignoreCase = true)
+            isLooping = shouldLoop
         )
     }
 

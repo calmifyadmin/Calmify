@@ -3,6 +3,7 @@ package com.lifo.humanoid.di
 import android.content.Context
 import com.lifo.humanoid.animation.BlinkController
 import com.lifo.humanoid.animation.VrmaAnimationLoader
+import com.lifo.humanoid.animation.VrmaAnimationPlayerFactory
 import com.lifo.humanoid.data.vrm.VrmBlendShapeController
 import com.lifo.humanoid.data.vrm.VrmHumanoidBoneMapper
 import com.lifo.humanoid.data.vrm.VrmLoader
@@ -60,6 +61,14 @@ object HumanoidModule {
         @ApplicationContext context: Context
     ): VrmaAnimationLoader {
         return VrmaAnimationLoader(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideVrmaAnimationPlayerFactory(
+        boneMapper: VrmHumanoidBoneMapper
+    ): VrmaAnimationPlayerFactory {
+        return VrmaAnimationPlayerFactory(boneMapper)
     }
 
     // ==================== Lip-Sync Layer ====================

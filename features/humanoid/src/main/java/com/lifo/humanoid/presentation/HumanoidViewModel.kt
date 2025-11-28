@@ -3,9 +3,12 @@ package com.lifo.humanoid.presentation
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.android.filament.gltfio.FilamentAsset
 import com.lifo.humanoid.animation.BlinkController
 import com.lifo.humanoid.animation.VrmaAnimation
 import com.lifo.humanoid.animation.VrmaAnimationLoader
+import com.lifo.humanoid.animation.VrmaAnimationPlayer
+import com.lifo.humanoid.animation.VrmaAnimationPlayerFactory
 import com.lifo.humanoid.data.vrm.VrmBlendShapeController
 import com.lifo.humanoid.data.vrm.VrmBlendShapePresets
 import com.lifo.humanoid.data.vrm.VrmExtensions
@@ -14,6 +17,7 @@ import com.lifo.humanoid.data.vrm.VrmLoader
 import com.lifo.humanoid.domain.model.AvatarState
 import com.lifo.humanoid.domain.model.Emotion
 import com.lifo.humanoid.lipsync.LipSyncController
+import com.lifo.humanoid.rendering.FilamentRenderer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -38,7 +42,8 @@ class HumanoidViewModel @Inject constructor(
     private val boneMapper: VrmHumanoidBoneMapper,
     private val blinkController: BlinkController,
     private val lipSyncController: LipSyncController,
-    private val vrmaAnimationLoader: VrmaAnimationLoader
+    private val vrmaAnimationLoader: VrmaAnimationLoader,
+    private val vrmaAnimationPlayerFactory: VrmaAnimationPlayerFactory
 ) : ViewModel() {
 
     companion object {
@@ -76,6 +81,18 @@ class HumanoidViewModel @Inject constructor(
     // Animation states from controllers
     val isBlinking: StateFlow<Boolean> = blinkController.isBlinking
     val isSpeaking: StateFlow<Boolean> = lipSyncController.isSpeaking
+
+    // ==================== Animation Player State ====================
+
+    // Reference to FilamentRenderer for animation
+    private var filamentRenderer: FilamentRenderer? = null
+
+    // Animation player (initialized when model is loaded)
+    private var vrmaAnimationPlayer: VrmaAnimationPlayer? = null
+
+    // Flag to track if animation system is ready
+    private val _isAnimationSystemReady = MutableStateFlow(false)
+    val isAnimationSystemReady: StateFlow<Boolean> = _isAnimationSystemReady.asStateFlow()
 
     init {
         // Load available animations
@@ -183,6 +200,68 @@ class HumanoidViewModel @Inject constructor(
         _avatarState.value = _avatarState.value.copy(visionEnabled = enabled)
     }
 
+    // ==================== Model Loaded Callback ====================
+
+    /**
+     * Called when the VRM model is loaded by FilamentRenderer.
+     * Initializes the animation player with the loaded asset.
+     *
+     * @param renderer The FilamentRenderer instance
+     * @param asset The loaded FilamentAsset
+     * @param nodeNames List of node names from the asset
+     */
+    fun onModelLoaded(
+        renderer: FilamentRenderer,
+        asset: FilamentAsset,
+        nodeNames: List<String>
+    ) {
+        Log.d(TAG, "onModelLoaded called - initializing animation system")
+
+        filamentRenderer = renderer
+
+        // Get Engine from renderer
+        val engine = renderer.getEngine()
+        if (engine == null) {
+            Log.e(TAG, "Engine not available from renderer")
+            return
+        }
+
+        // Initialize bone mapper with the asset
+        boneMapper.initialize(engine, asset, nodeNames)
+        Log.d(TAG, "BoneMapper initialized with ${boneMapper.getBoneEntityMap().size} bones")
+
+        // Initialize animation player
+        vrmaAnimationPlayer = vrmaAnimationPlayerFactory.initializeWithAsset(engine, asset, nodeNames)
+        Log.d(TAG, "VrmaAnimationPlayer initialized")
+
+        _isAnimationSystemReady.value = true
+        Log.d(TAG, "Animation system is ready")
+
+        // Pre-load idle animation for immediate use
+        viewModelScope.launch {
+            preloadCommonAnimations()
+        }
+    }
+
+    /**
+     * Pre-load commonly used animations
+     */
+    private suspend fun preloadCommonAnimations() {
+        val animationsToPreload = listOf(
+            VrmaAnimationLoader.AnimationAsset.IDLE_LOOP,
+            VrmaAnimationLoader.AnimationAsset.GREETING
+        )
+
+        animationsToPreload.forEach { animationAsset ->
+            if (!loadedAnimations.containsKey(animationAsset)) {
+                vrmaAnimationLoader.loadAnimation(animationAsset)?.let { animation ->
+                    loadedAnimations[animationAsset] = animation
+                    Log.d(TAG, "Pre-loaded animation: ${animation.name}")
+                }
+            }
+        }
+    }
+
     // ==================== Animation Methods ====================
 
     /**
@@ -190,7 +269,19 @@ class HumanoidViewModel @Inject constructor(
      */
     fun playAnimation(animationAsset: VrmaAnimationLoader.AnimationAsset) {
         viewModelScope.launch {
-            // Check cache first
+            // Check if animation system is ready
+            if (!_isAnimationSystemReady.value) {
+                Log.w(TAG, "Animation system not ready yet")
+                return@launch
+            }
+
+            val player = vrmaAnimationPlayer
+            if (player == null) {
+                Log.e(TAG, "Animation player not initialized")
+                return@launch
+            }
+
+            // Check cache first, load if needed
             val animation = loadedAnimations.getOrPut(animationAsset) {
                 vrmaAnimationLoader.loadAnimation(animationAsset) ?: run {
                     Log.e(TAG, "Failed to load animation: ${animationAsset.fileName}")
@@ -198,10 +289,21 @@ class HumanoidViewModel @Inject constructor(
                 }
             }
 
+            // Update UI state
             _currentAnimation.value = animation
-            Log.d(TAG, "Playing animation: ${animation.name}")
+            _uiState.value = _uiState.value.copy(
+                isPlayingAnimation = true,
+                currentAnimationName = animation.name
+            )
 
-            // TODO: Integrate with VrmaAnimationPlayer when FilamentRenderer is available
+            Log.d(TAG, "Playing animation: ${animation.name}, duration: ${animation.durationSeconds}s, looping: ${animation.isLooping}")
+
+            // Play the animation on the player
+            player.play(
+                animation = animation,
+                scope = viewModelScope,
+                loop = animation.isLooping
+            )
         }
     }
 
@@ -209,7 +311,13 @@ class HumanoidViewModel @Inject constructor(
      * Stop current animation
      */
     fun stopAnimation() {
+        vrmaAnimationPlayer?.stop()
         _currentAnimation.value = null
+        _uiState.value = _uiState.value.copy(
+            isPlayingAnimation = false,
+            currentAnimationName = null
+        )
+        Log.d(TAG, "Animation stopped")
     }
 
     // ==================== Lip-Sync Methods ====================
@@ -294,6 +402,10 @@ class HumanoidViewModel @Inject constructor(
         super.onCleared()
         blinkController.stop()
         lipSyncController.stop()
+        vrmaAnimationPlayer?.stop(blendOut = false)
+        vrmaAnimationPlayerFactory.clear()
+        filamentRenderer = null
+        _isAnimationSystemReady.value = false
         Log.d(TAG, "HumanoidViewModel cleared")
     }
 }

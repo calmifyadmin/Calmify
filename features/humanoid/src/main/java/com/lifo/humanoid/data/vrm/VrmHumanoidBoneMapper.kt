@@ -1,6 +1,7 @@
 package com.lifo.humanoid.data.vrm
 
 import android.util.Log
+import com.google.android.filament.Engine
 import com.google.android.filament.gltfio.FilamentAsset
 import com.google.gson.JsonObject
 
@@ -107,8 +108,67 @@ class VrmHumanoidBoneMapper {
     // Mapping: Node index -> Filament entity
     private val nodeToEntityMap = mutableMapOf<Int, Int>()
 
+    // Mapping: Node name -> Filament entity
+    private val nodeNameToEntityMap = mutableMapOf<String, Int>()
+
     // Store original transforms for reset
     private val originalTransforms = mutableMapOf<Int, FloatArray>()
+
+    // Reference to Engine for transform operations
+    private var engine: Engine? = null
+
+    /**
+     * Initialize the bone mapper with Engine, asset, and node names.
+     * This builds a mapping from node names to entities and attempts to
+     * match VRM humanoid bone names automatically.
+     *
+     * @param engine The Filament Engine instance
+     * @param asset The loaded FilamentAsset
+     * @param nodeNames List of node names from the asset
+     */
+    fun initialize(engine: Engine, asset: FilamentAsset, nodeNames: List<String>) {
+        this.engine = engine
+        nodeNameToEntityMap.clear()
+
+        // Build node name to entity mapping
+        nodeNames.forEachIndexed { index, name ->
+            if (index < asset.entities.size) {
+                val entity = asset.entities[index]
+                nodeNameToEntityMap[name] = entity
+                nodeToEntityMap[index] = entity
+
+                // Try to match to humanoid bone by name
+                val humanoidBone = HumanoidBone.fromVrmName(name)
+                if (humanoidBone != null) {
+                    boneEntityMap[humanoidBone] = entity
+                    Log.d(TAG, "Auto-mapped bone ${humanoidBone.name} from node name '$name' -> entity $entity")
+                }
+            }
+        }
+
+        // Store original transforms for all entities
+        val tm = engine.transformManager
+        asset.entities.forEach { entity ->
+            val instance = tm.getInstance(entity)
+            if (instance != 0) {
+                val transform = FloatArray(16)
+                tm.getTransform(instance, transform)
+                originalTransforms[entity] = transform.copyOf()
+            }
+        }
+
+        Log.d(TAG, "Initialized with ${nodeNameToEntityMap.size} nodes, ${boneEntityMap.size} auto-mapped bones")
+    }
+
+    /**
+     * Get entity by node name
+     */
+    fun getEntityByNodeName(nodeName: String): Int? = nodeNameToEntityMap[nodeName]
+
+    /**
+     * Get all node names
+     */
+    fun getNodeNames(): Set<String> = nodeNameToEntityMap.keys.toSet()
 
     /**
      * Build the mapping from VRM humanoid extension data

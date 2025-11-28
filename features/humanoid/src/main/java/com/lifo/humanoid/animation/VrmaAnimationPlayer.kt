@@ -111,7 +111,7 @@ class VrmaAnimationPlayer(
         // Build humanoid mapping
         buildHumanoidMapping(animation)
 
-        Log.d(TAG, "Playing animation: ${animation.name}, duration: ${animation.durationSeconds}s, loop: $loop")
+        Log.d(TAG, "<Playing animation: ${animation.name}, duration: ${animation.durationSeconds}s, loop: $loop")
 
         playbackJob = scope.launch {
             var lastFrameTime = System.nanoTime()

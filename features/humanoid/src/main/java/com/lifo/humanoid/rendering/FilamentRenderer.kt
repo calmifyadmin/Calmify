@@ -1,6 +1,8 @@
 package com.lifo.humanoid.rendering
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.Surface
 import android.view.SurfaceView
@@ -13,7 +15,13 @@ import com.google.android.filament.gltfio.UbershaderProvider
 import com.google.android.filament.gltfio.ResourceLoader
 import com.google.android.filament.utils.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.nio.ByteBuffer
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.math.abs
 
 /**
  * Load Filament native libraries
@@ -76,6 +84,42 @@ class FilamentRenderer(
     // VRM blend shape mapping: blend shape name -> (entity, morph target index)
     private val blendShapeMapping = mutableMapOf<String, MutableList<Pair<Int, Int>>>()
 
+    // ==================== Public Accessors for Animation System ====================
+
+    /**
+     * Get the Filament Engine instance for animation systems.
+     * Returns null if renderer is not initialized.
+     */
+    fun getEngine(): Engine? = if (isInitialized) engine else null
+
+    /**
+     * Get the currently loaded FilamentAsset.
+     * Returns null if no model is loaded.
+     */
+    fun getCurrentAsset(): FilamentAsset? = currentAsset
+
+    /**
+     * Get the TransformManager for bone manipulation.
+     * Returns null if renderer is not initialized.
+     */
+    fun getTransformManager(): TransformManager? = if (isInitialized) engine.transformManager else null
+
+    /**
+     * Callback interface for when a model is loaded
+     */
+    interface OnModelLoadedListener {
+        fun onModelLoaded(asset: FilamentAsset, nodeNames: List<String>)
+    }
+
+    private var modelLoadedListener: OnModelLoadedListener? = null
+
+    /**
+     * Set listener for model loaded events
+     */
+    fun setOnModelLoadedListener(listener: OnModelLoadedListener?) {
+        modelLoadedListener = listener
+    }
+
     // Rendering state
     private var isInitialized = false
     private val frameScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -86,6 +130,85 @@ class FilamentRenderer(
     // Lighting components
     private var iblEntity: Int = 0
     private var sunEntity: Int = 0
+
+    // ==================== Resize State Management ====================
+
+    /**
+     * Renderer state machine for safe resize handling.
+     * Prevents race conditions between resize events and render loop.
+     */
+    enum class RendererState {
+        IDLE,           // Not rendering
+        RENDERING,      // Actively rendering frames
+        RESIZING,       // Resize in progress - render paused
+        PAUSED          // Explicitly paused
+    }
+
+    private val _rendererState = MutableStateFlow(RendererState.IDLE)
+    val rendererState: StateFlow<RendererState> = _rendererState.asStateFlow()
+
+    // Thread-safe flags for resize synchronization
+    private val isResizing = AtomicBoolean(false)
+    private val pendingResize = AtomicBoolean(false)
+    private val frameInProgress = AtomicBoolean(false)
+
+    // Resize debounce handler
+    private val resizeHandler = Handler(Looper.getMainLooper())
+    private var pendingResizeRunnable: Runnable? = null
+
+    // Current viewport dimensions for change detection
+    private val currentWidth = AtomicInteger(0)
+    private val currentHeight = AtomicInteger(0)
+
+    // Resize configuration
+    companion object {
+        private const val RESIZE_DEBOUNCE_MS = 100L  // Debounce rapid resize events
+        private const val MIN_DIMENSION_CHANGE = 10   // Minimum pixels change to trigger resize
+        private const val FRAME_WAIT_TIMEOUT_MS = 50L // Max wait for frame completion
+    }
+
+    /**
+     * Check if renderer is ready to render frames.
+     * Returns false during resize operations to prevent race conditions.
+     */
+    fun canRender(): Boolean {
+        return isInitialized &&
+               !isResizing.get() &&
+               !pendingResize.get() &&
+               swapChain != null &&
+               _rendererState.value == RendererState.RENDERING
+    }
+
+    /**
+     * Pause rendering explicitly.
+     * Call before layout changes that will trigger resize.
+     */
+    fun pauseRendering() {
+        if (_rendererState.value == RendererState.RENDERING) {
+            _rendererState.value = RendererState.PAUSED
+            Log.d(tag, "Rendering paused")
+        }
+    }
+
+    /**
+     * Resume rendering after pause.
+     * Call after layout changes are complete.
+     */
+    fun resumeRendering() {
+        if (_rendererState.value == RendererState.PAUSED) {
+            _rendererState.value = RendererState.RENDERING
+            Log.d(tag, "Rendering resumed")
+        }
+    }
+
+    /**
+     * Notify renderer that a layout change is about to happen.
+     * This prepares the renderer for an incoming resize.
+     */
+    fun prepareForLayoutChange() {
+        pendingResize.set(true)
+        Log.d(tag, "Preparing for layout change")
+    }
 
     /**
      * Initialize the Filament rendering engine.
@@ -129,12 +252,23 @@ class FilamentRenderer(
             uiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK).apply {
                 renderCallback = object : UiHelper.RendererCallback {
                     override fun onNativeWindowChanged(surface: Surface) {
+                        Log.d(tag, "onNativeWindowChanged - recreating SwapChain")
+                        // Wait for any frame in progress to complete
+                        waitForFrameCompletion()
+
                         swapChain?.let { engine.destroySwapChain(it) }
                         swapChain = engine.createSwapChain(surface)
                         displayHelper.attach(renderer, surfaceView.display)
+
+                        // Clear pending resize flag
+                        pendingResize.set(false)
                     }
 
                     override fun onDetachedFromSurface() {
+                        Log.d(tag, "onDetachedFromSurface - cleaning up SwapChain")
+                        // Wait for any frame in progress
+                        waitForFrameCompletion()
+
                         swapChain?.let {
                             engine.destroySwapChain(it)
                             swapChain = null
@@ -143,8 +277,7 @@ class FilamentRenderer(
                     }
 
                     override fun onResized(width: Int, height: Int) {
-                        view.viewport = Viewport(0, 0, width, height)
-                        configureCameraProjection(width, height)
+                        handleResizeWithDebounce(width, height)
                     }
                 }
 
@@ -270,6 +403,97 @@ class FilamentRenderer(
             .build(engine)
     }
 
+    // ==================== Resize Handling Methods ====================
+
+    /**
+     * Handle resize with debouncing to prevent rapid consecutive resizes.
+     * This is crucial when hiding/showing UI panels that cause layout changes.
+     */
+    private fun handleResizeWithDebounce(width: Int, height: Int) {
+        // Validate dimensions
+        if (width <= 0 || height <= 0) {
+            Log.w(tag, "Invalid resize dimensions: ${width}x${height}")
+            return
+        }
+
+        // Check if this is a significant change
+        val widthChange = abs(width - currentWidth.get())
+        val heightChange = abs(height - currentHeight.get())
+
+        if (widthChange < MIN_DIMENSION_CHANGE && heightChange < MIN_DIMENSION_CHANGE) {
+            Log.d(tag, "Resize ignored - change too small: ${widthChange}x${heightChange}")
+            return
+        }
+
+        Log.d(tag, "Resize requested: ${currentWidth.get()}x${currentHeight.get()} -> ${width}x${height}")
+
+        // Cancel any pending resize
+        pendingResizeRunnable?.let { resizeHandler.removeCallbacks(it) }
+
+        // Mark as resizing
+        isResizing.set(true)
+        pendingResize.set(true)
+        _rendererState.value = RendererState.RESIZING
+
+        // Debounce the actual resize
+        pendingResizeRunnable = Runnable {
+            performResize(width, height)
+        }.also {
+            resizeHandler.postDelayed(it, RESIZE_DEBOUNCE_MS)
+        }
+    }
+
+    /**
+     * Perform the actual resize operation.
+     * Called after debounce delay.
+     */
+    private fun performResize(width: Int, height: Int) {
+        Log.d(tag, "Performing resize to ${width}x${height}")
+
+        try {
+            // Wait for any frame in progress
+            waitForFrameCompletion()
+
+            // Update viewport
+            view.viewport = Viewport(0, 0, width, height)
+
+            // Update camera projection
+            configureCameraProjection(width, height)
+
+            // Store new dimensions
+            currentWidth.set(width)
+            currentHeight.set(height)
+
+            Log.d(tag, "Resize completed successfully")
+
+        } catch (e: Exception) {
+            Log.e(tag, "Error during resize", e)
+        } finally {
+            // Clear resize flags and resume rendering
+            isResizing.set(false)
+            pendingResize.set(false)
+            _rendererState.value = RendererState.RENDERING
+            pendingResizeRunnable = null
+        }
+    }
+
+    /**
+     * Wait for any in-progress frame to complete.
+     * Prevents race conditions between resize and render.
+     */
+    private fun waitForFrameCompletion() {
+        if (!frameInProgress.get()) return
+
+        val startTime = System.currentTimeMillis()
+        while (frameInProgress.get()) {
+            if (System.currentTimeMillis() - startTime > FRAME_WAIT_TIMEOUT_MS) {
+                Log.w(tag, "Timeout waiting for frame completion")
+                break
+            }
+            Thread.sleep(1)
+        }
+    }
+
     /**
      * Load a VRM/glTF model into the scene.
      *
@@ -318,6 +542,13 @@ class FilamentRenderer(
                 // Center and scale the model
                 Log.d(tag, "Centering and scaling asset")
                 centerAndScaleAsset(asset)
+
+                // Extract node names for animation system
+                val nodeNames = extractNodeNames(asset)
+                Log.d(tag, "Extracted ${nodeNames.size} node names for animation mapping")
+
+                // Notify listener that model is loaded
+                modelLoadedListener?.onModelLoaded(asset, nodeNames)
 
                 Log.d(tag, "Model loaded and configured successfully!")
             } else {
@@ -375,24 +606,67 @@ class FilamentRenderer(
 
     /**
      * Main render loop. Call this continuously to render frames.
+     * Thread-safe with respect to resize operations.
      *
      * @param frameTimeNanos Current frame time in nanoseconds
+     * @return true if frame was rendered, false if skipped
      */
-    fun render(frameTimeNanos: Long) {
-        if (!isInitialized) return
+    fun render(frameTimeNanos: Long): Boolean {
+        // Quick checks first (no synchronization needed)
+        if (!isInitialized) return false
 
-        val swapChain = swapChain ?: return
-
-        // Check if we can render
-        if (!renderer.beginFrame(swapChain, frameTimeNanos)) {
-            return
+        // Check resize state - skip rendering during resize
+        if (isResizing.get() || pendingResize.get()) {
+            return false
         }
 
-        // Render the view
-        renderer.render(view)
+        val currentSwapChain = swapChain ?: return false
 
-        // End frame and present
-        renderer.endFrame()
+        // Mark frame as in progress
+        if (!frameInProgress.compareAndSet(false, true)) {
+            // Another frame is already in progress
+            return false
+        }
+
+        try {
+            // Double-check resize state after acquiring frame lock
+            if (isResizing.get() || pendingResize.get()) {
+                return false
+            }
+
+            // Update state to rendering if not already
+            if (_rendererState.value == RendererState.IDLE) {
+                _rendererState.value = RendererState.RENDERING
+            }
+
+            // Check if we can begin frame
+            if (!renderer.beginFrame(currentSwapChain, frameTimeNanos)) {
+                return false
+            }
+
+            // Render the view
+            renderer.render(view)
+
+            // End frame and present
+            renderer.endFrame()
+
+            return true
+
+        } catch (e: Exception) {
+            Log.e(tag, "Error during render", e)
+            return false
+        } finally {
+            // Always clear frame in progress flag
+            frameInProgress.set(false)
+        }
+    }
+
+    /**
+     * Render with automatic frame timing.
+     * Convenience method that uses System.nanoTime().
+     */
+    fun renderFrame(): Boolean {
+        return render(System.nanoTime())
     }
 
     /**
@@ -441,6 +715,34 @@ class FilamentRenderer(
     }
 
     /**
+     * Extract node names from FilamentAsset for animation bone mapping.
+     * Uses the Filament naming convention to retrieve entity names.
+     *
+     * @param asset The loaded FilamentAsset
+     * @return List of node names in entity order
+     */
+    private fun extractNodeNames(asset: FilamentAsset): List<String> {
+        val nodeNames = mutableListOf<String>()
+        val nameManager = engine.entityManager
+
+        asset.entities.forEachIndexed { index, entity ->
+            // Try to get node name from the asset's name component
+            // Filament stores names via the NameComponentManager
+            val name = try {
+                // The asset provides entity names through its internal structure
+                // We use index-based naming as fallback since Filament doesn't expose
+                // name retrieval directly in all versions
+                asset.getName(entity) ?: "node_$index"
+            } catch (e: Exception) {
+                "node_$index"
+            }
+            nodeNames.add(name)
+        }
+
+        return nodeNames
+    }
+
+    /**
      * Update blend shape weights for facial animation.
      * Uses VRM blend shape mapping to apply weights correctly.
      *
@@ -486,7 +788,19 @@ class FilamentRenderer(
     fun cleanup() {
         if (!isInitialized) return
 
+        Log.d(tag, "Cleanup started")
+
         try {
+            // Stop rendering
+            _rendererState.value = RendererState.IDLE
+
+            // Cancel any pending resize operations
+            pendingResizeRunnable?.let { resizeHandler.removeCallbacks(it) }
+            pendingResizeRunnable = null
+
+            // Wait for any frame in progress
+            waitForFrameCompletion()
+
             frameScope.cancel()
 
             // Destroy current asset
@@ -522,7 +836,10 @@ class FilamentRenderer(
             engine.destroy()
 
             isInitialized = false
+
+            Log.d(tag, "Cleanup completed")
         } catch (e: Exception) {
+            Log.e(tag, "Error during cleanup", e)
             e.printStackTrace()
         }
     }

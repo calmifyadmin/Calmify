@@ -1,6 +1,7 @@
 package com.lifo.humanoid.presentation
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
@@ -129,7 +130,10 @@ fun HumanoidScreen(
                         onStopAnimation = { viewModel.stopAnimation() },
                         onTriggerBlink = { viewModel.triggerBlink() },
                         onSpeakText = { text, duration -> viewModel.speakText(text, duration) },
-                        onStopSpeaking = { viewModel.stopSpeaking() }
+                        onStopSpeaking = { viewModel.stopSpeaking() },
+                        onModelLoaded = { renderer, asset, nodeNames ->
+                            viewModel.onModelLoaded(renderer, asset, nodeNames)
+                        }
                     )
                 }
                 else -> {
@@ -160,10 +164,18 @@ private fun AvatarContent(
     onStopAnimation: () -> Unit,
     onTriggerBlink: () -> Unit,
     onSpeakText: (String, Long) -> Unit,
-    onStopSpeaking: () -> Unit
+    onStopSpeaking: () -> Unit,
+    onModelLoaded: (com.lifo.humanoid.rendering.FilamentRenderer, com.google.android.filament.gltfio.FilamentAsset, List<String>) -> Unit
 ) {
     var lipSyncText by remember { mutableStateOf("Hello, I am your AI assistant!") }
     var speechDuration by remember { mutableStateOf(3000L) }
+
+    // Track panel visibility transition state
+    val panelVisibilityState = remember { MutableTransitionState(showControlPanel) }
+    panelVisibilityState.targetState = showControlPanel
+
+    // Derive if layout is currently animating (panel showing/hiding)
+    val isLayoutChanging = panelVisibilityState.isIdle.not()
 
     Column(
         modifier = Modifier.fillMaxSize()
@@ -179,7 +191,9 @@ private fun AvatarContent(
                 modifier = Modifier.fillMaxSize(),
                 vrmModelData = vrmModelData,
                 vrmExtensions = vrmExtensions,
-                blendShapeWeights = blendShapeWeights
+                blendShapeWeights = blendShapeWeights,
+                isLayoutChanging = isLayoutChanging,
+                onModelLoaded = onModelLoaded
             )
 
             // Status indicator overlay
@@ -237,9 +251,9 @@ private fun AvatarContent(
             }
         }
 
-        // Control Panel (scrollable)
+        // Control Panel (scrollable) - uses transition state for layout change tracking
         AnimatedVisibility(
-            visible = showControlPanel,
+            visibleState = panelVisibilityState,
             enter = expandVertically(),
             exit = shrinkVertically()
         ) {
