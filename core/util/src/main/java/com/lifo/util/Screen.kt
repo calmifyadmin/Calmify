@@ -16,6 +16,7 @@ sealed class Screen(val route: String) {
     object Profile : Screen(route = "profile_screen")
     object WellbeingSnapshot : Screen(route = "wellbeing_snapshot_screen")
     object Humanoid : Screen(route = "humanoid_screen")
+    object AvatarChat : Screen(route = "avatar_chat_screen")
     object Insight : Screen(route = "insight_screen?diaryId={diaryId}") {
         fun passDiaryId(diaryId: String) = "insight_screen?diaryId=$diaryId"
     }

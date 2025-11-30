@@ -13,15 +13,17 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.BufferedReader
 import java.io.IOException
-import java.util.concurrent.ConcurrentLinkedQueue
+import java.io.InputStreamReader
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Sistema di voce naturale utilizzando l'audio nativo di Gemini 2.5 Pro TTS
- * Basato sulla documentazione ufficiale Google
+ * FIXED V6:
+ * - NO endian conversion (data is already Little Endian)
+ * - Create fresh AudioTrack just before playback to avoid underrun
  */
 @Singleton
 open class GeminiNativeVoiceSystem @Inject constructor(
@@ -30,46 +32,35 @@ open class GeminiNativeVoiceSystem @Inject constructor(
     companion object {
         private const val TAG = "GeminiNativeVoice"
 
-        // ✅ CORRECT: Configuration from official documentation
         private const val GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/"
         private const val MODEL_ID = "gemini-2.5-flash-preview-tts"
         private const val GENERATE_CONTENT_API = "streamGenerateContent"
 
-        // Audio configuration for Android
+        // Audio: PCM 16-bit, 24kHz, mono (Little Endian for Android)
         private const val SAMPLE_RATE = 24000
         private const val CHANNEL_CONFIG = AudioFormat.CHANNEL_OUT_MONO
         private const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
 
-        // Voice names - only using documented voices
         private val VOICE_MAP = mapOf(
-            Emotion.HAPPY to "Zephyr",
-            Emotion.EXCITED to "Zephyr",
-            Emotion.THOUGHTFUL to "Zephyr",
-            Emotion.SAD to "Zephyr",
-            Emotion.EMPATHETIC to "Zephyr",
-            Emotion.NEUTRAL to "Zephyr",
+            Emotion.HAPPY to "Puck",
+            Emotion.EXCITED to "Fenrir",
+            Emotion.THOUGHTFUL to "Charon",
+            Emotion.SAD to "Enceladus",
+            Emotion.EMPATHETIC to "Aoede",
+            Emotion.NEUTRAL to "Kore",
             Emotion.CURIOUS to "Zephyr"
         )
     }
 
-    // Core components
     private var audioTrack: AudioTrack? = null
     private var audioFocusRequest: AudioFocusRequest? = null
     protected var okHttpClient: OkHttpClient
 
-    // State management
     protected val _voiceState = MutableStateFlow(VoiceState())
     val voiceState: StateFlow<VoiceState> = _voiceState.asStateFlow()
 
-    // Audio pipeline
-    private val audioQueue = ConcurrentLinkedQueue<AudioChunk>()
-    private var playbackJob: Job? = null
     private var currentStreamJob: Job? = null
-
-    // API key
     private var apiKey: String = ""
-
-    // Coroutine scope
     protected val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     init {
@@ -80,13 +71,24 @@ open class GeminiNativeVoiceSystem @Inject constructor(
             .build()
     }
 
+    enum class PlaybackState {
+        IDLE,           // No audio playing
+        STARTED,        // AudioTrack.play() called, playback beginning
+        PLAYING,        // Actively writing/playing audio data
+        FINISHING,      // All data written, waiting for buffer to drain
+        ENDED           // Playback complete
+    }
+
     data class VoiceState(
         val isInitialized: Boolean = false,
         val isSpeaking: Boolean = false,
         val currentMessageId: String? = null,
         val currentSpeakingMessageId: String? = null,
-        val currentVoice: String = "Zephyr",
+        val currentVoice: String = "Kore",
         val latencyMs: Long = 0,
+        val playbackState: PlaybackState = PlaybackState.IDLE,
+        val totalBytesPlayed: Int = 0,
+        val estimatedDurationMs: Long = 0,
         val emotion: Emotion = Emotion.NEUTRAL,
         val naturalness: Float = 1.0f,
         val streamProgress: Float = 0f,
@@ -97,14 +99,8 @@ open class GeminiNativeVoiceSystem @Inject constructor(
         NEUTRAL, HAPPY, SAD, EXCITED, THOUGHTFUL, EMPATHETIC, CURIOUS
     }
 
-    data class AudioChunk(
-        val data: ByteArray,
-        val timestamp: Long = System.currentTimeMillis()
-    )
-
     open suspend fun initialize(apiKey: String = "") = withContext(Dispatchers.Main) {
-        Log.d(TAG, "🎙️ Initializing Gemini Native Voice System")
-        Log.d(TAG, "🔑 API Key length: ${apiKey.length}")
+        Log.d(TAG, "🎙️ Initializing Gemini Native Voice System V6")
 
         this@GeminiNativeVoiceSystem.apiKey = apiKey
 
@@ -115,19 +111,13 @@ open class GeminiNativeVoiceSystem @Inject constructor(
         }
 
         try {
-            // Request audio focus
             requestAudioFocus()
-
-            // Initialize AudioTrack
-            initializeAudioTrack()
-
-            // Start audio playback pipeline
-            startAudioPlayback()
+            checkDeviceVolume()
 
             _voiceState.update {
                 it.copy(isInitialized = true, error = null)
             }
-            Log.d(TAG, "✅ Gemini Voice System initialized successfully")
+            Log.d(TAG, "✅ Gemini Voice System V6 initialized")
 
         } catch (e: Exception) {
             Log.e(TAG, "❌ Initialization failed", e)
@@ -149,75 +139,63 @@ open class GeminiNativeVoiceSystem @Inject constructor(
                     .build()
             )
             .setAcceptsDelayedFocusGain(false)
-            .setOnAudioFocusChangeListener { focusChange ->
-                when (focusChange) {
-                    AudioManager.AUDIOFOCUS_GAIN -> audioTrack?.play()
-                    AudioManager.AUDIOFOCUS_LOSS -> audioTrack?.pause()
-                    AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> audioTrack?.pause()
-                    AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> audioTrack?.setVolume(0.3f)
-                }
-            }
             .build()
 
         val result = audioManager.requestAudioFocus(audioFocusRequest!!)
-        Log.d(TAG, "🔊 Audio focus request result: $result")
+        Log.d(TAG, "🔊 Audio focus: $result (1=GRANTED)")
     }
 
-    private fun initializeAudioTrack() {
-        try {
-            val minBufferSize = AudioTrack.getMinBufferSize(
+    /**
+     * Create a FRESH AudioTrack right before playback
+     */
+    private fun createFreshAudioTrack(): AudioTrack {
+        // Release old track if exists
+        audioTrack?.release()
+
+        val minBufferSize = AudioTrack.getMinBufferSize(
+            SAMPLE_RATE,
+            CHANNEL_CONFIG,
+            AUDIO_FORMAT
+        )
+
+        Log.d(TAG, "🔊 Creating fresh AudioTrack, minBuffer=$minBufferSize")
+
+        val bufferSize = maxOf(minBufferSize * 4, SAMPLE_RATE * 2) // At least 1 sec buffer
+
+        val track = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            AudioTrack.Builder()
+                .setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                        .build()
+                )
+                .setAudioFormat(
+                    AudioFormat.Builder()
+                        .setSampleRate(SAMPLE_RATE)
+                        .setChannelMask(CHANNEL_CONFIG)
+                        .setEncoding(AUDIO_FORMAT)
+                        .build()
+                )
+                .setBufferSizeInBytes(bufferSize)
+                .setTransferMode(AudioTrack.MODE_STREAM)
+                .build()
+        } else {
+            @Suppress("DEPRECATION")
+            AudioTrack(
+                AudioManager.STREAM_MUSIC,
                 SAMPLE_RATE,
                 CHANNEL_CONFIG,
-                AUDIO_FORMAT
+                AUDIO_FORMAT,
+                bufferSize,
+                AudioTrack.MODE_STREAM
             )
-
-            if (minBufferSize == AudioTrack.ERROR || minBufferSize == AudioTrack.ERROR_BAD_VALUE) {
-                throw IllegalStateException("AudioTrack configuration not supported")
-            }
-
-            val bufferSize = minBufferSize * 4
-            Log.d(TAG, "🔊 AudioTrack buffer size: $bufferSize")
-
-            audioTrack = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                AudioTrack.Builder()
-                    .setAudioAttributes(
-                        AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_MEDIA)
-                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                            .build()
-                    )
-                    .setAudioFormat(
-                        AudioFormat.Builder()
-                            .setSampleRate(SAMPLE_RATE)
-                            .setChannelMask(CHANNEL_CONFIG)
-                            .setEncoding(AUDIO_FORMAT)
-                            .build()
-                    )
-                    .setBufferSizeInBytes(bufferSize)
-                    .setTransferMode(AudioTrack.MODE_STREAM)
-                    .build()
-            } else {
-                @Suppress("DEPRECATION")
-                AudioTrack(
-                    AudioManager.STREAM_MUSIC,
-                    SAMPLE_RATE,
-                    CHANNEL_CONFIG,
-                    AUDIO_FORMAT,
-                    bufferSize,
-                    AudioTrack.MODE_STREAM
-                )
-            }
-
-            audioTrack?.play()
-            Log.d(TAG, "✅ AudioTrack initialized and playing")
-
-            // Check device volume
-            checkDeviceVolume()
-
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ AudioTrack initialization error", e)
-            throw e
         }
+
+        Log.d(TAG, "🔊 AudioTrack created, state=${track.state}")
+
+        audioTrack = track
+        return track
     }
 
     private fun checkDeviceVolume() {
@@ -228,7 +206,7 @@ open class GeminiNativeVoiceSystem @Inject constructor(
         Log.d(TAG, "🔊 Device volume: $currentVolume/$maxVolume")
 
         if (currentVolume == 0) {
-            Log.w(TAG, "⚠️ Device volume is muted!")
+            Log.w(TAG, "⚠️ VOLUME IS ZERO!")
         }
     }
 
@@ -240,13 +218,11 @@ open class GeminiNativeVoiceSystem @Inject constructor(
         Log.d(TAG, "🎤 Speaking: ${text.take(50)}... [Emotion: $emotion]")
 
         if (!_voiceState.value.isInitialized) {
-            Log.e(TAG, "❌ Voice system not initialized")
+            Log.e(TAG, "❌ Not initialized!")
             return
         }
 
-        // Cancel any existing stream
         currentStreamJob?.cancel()
-        audioQueue.clear()
 
         currentStreamJob = scope.launch {
             val startTime = System.currentTimeMillis()
@@ -263,19 +239,19 @@ open class GeminiNativeVoiceSystem @Inject constructor(
             }
 
             try {
-                // Create and execute request
                 streamAudioFromGemini(text, emotion)
 
-                // Calculate latency
                 val latency = System.currentTimeMillis() - startTime
-                _voiceState.update { it.copy(latencyMs = latency) }
+                _voiceState.update { it.copy(latencyMs = latency, streamProgress = 1f) }
 
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Error in speech generation", e)
+                Log.e(TAG, "❌ Error", e)
+                _voiceState.update { it.copy(error = e.message) }
+            } finally {
                 _voiceState.update {
                     it.copy(
-                        error = e.message,
-                        isSpeaking = false
+                        isSpeaking = false,
+                        currentSpeakingMessageId = null
                     )
                 }
             }
@@ -286,23 +262,8 @@ open class GeminiNativeVoiceSystem @Inject constructor(
         text: String,
         emotion: Emotion
     ) = withContext(Dispatchers.IO) {
-        // Reduce latency by using lower temperature for shorter texts
-        val temperature = when {
-            text.length < 50 -> when (emotion) {
-                Emotion.EXCITED -> 0.8
-                Emotion.THOUGHTFUL -> 0.3
-                else -> 0.5
-            }
-            else -> when (emotion) {
-                Emotion.EXCITED -> 1.2
-                Emotion.HAPPY -> 1.0
-                Emotion.THOUGHTFUL -> 0.7
-                Emotion.SAD -> 0.6
-                else -> 1.0
-            }
-        }
+        val voiceName = VOICE_MAP[emotion] ?: "Kore"
 
-        // ✅ EXACT structure from documentation
         val payload = JSONObject().apply {
             put("contents", JSONArray().apply {
                 put(JSONObject().apply {
@@ -315,23 +276,22 @@ open class GeminiNativeVoiceSystem @Inject constructor(
                 })
             })
             put("generationConfig", JSONObject().apply {
+                put("temperature", 1)
                 put("responseModalities", JSONArray().apply {
                     put("audio")
                 })
-                put("temperature", temperature)
-                put("speech_config", JSONObject().apply {
-                    put("voice_config", JSONObject().apply {
-                        put("prebuilt_voice_config", JSONObject().apply {
-                            put("voice_name", "Zephyr")
+                put("speechConfig", JSONObject().apply {
+                    put("voiceConfig", JSONObject().apply {
+                        put("prebuiltVoiceConfig", JSONObject().apply {
+                            put("voiceName", voiceName)
                         })
                     })
                 })
             })
         }
 
-        val url = "$GEMINI_API_URL$MODEL_ID:$GENERATE_CONTENT_API?key=$apiKey"
-        Log.d(TAG, "🌐 Request URL: $url")
-        Log.d(TAG, "📦 Request payload: ${payload.toString(2)}")
+        val url = "$GEMINI_API_URL$MODEL_ID:$GENERATE_CONTENT_API?alt=sse&key=$apiKey"
+        Log.d(TAG, "🌐 Calling API...")
 
         val request = Request.Builder()
             .url(url)
@@ -339,231 +299,181 @@ open class GeminiNativeVoiceSystem @Inject constructor(
             .addHeader("Content-Type", "application/json")
             .build()
 
-        try {
-            val startTime = System.currentTimeMillis()
+        val startTime = System.currentTimeMillis()
 
-            okHttpClient.newCall(request).execute().use { response ->
-                val networkTime = System.currentTimeMillis() - startTime
-                Log.d(TAG, "📡 Response code: ${response.code} (Network time: ${networkTime}ms)")
+        okHttpClient.newCall(request).execute().use { response ->
+            val networkTime = System.currentTimeMillis() - startTime
+            Log.d(TAG, "📡 Response: ${response.code} (${networkTime}ms)")
 
-                if (!response.isSuccessful) {
-                    val error = response.body?.string() ?: "Unknown error"
-                    Log.e(TAG, "❌ API Error: ${response.code} - $error")
-                    throw IOException("API Error ${response.code}: $error")
-                }
-
-                response.body?.let { body ->
-                    processStreamingResponse(body)
-                } ?: throw IOException("Empty response")
+            if (!response.isSuccessful) {
+                val error = response.body?.string() ?: "Unknown"
+                throw IOException("API Error ${response.code}: $error")
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Streaming error", e)
-            throw e
+
+            response.body?.let { body ->
+                processStreamingResponseSSE(body)
+            } ?: throw IOException("Empty response")
         }
     }
 
-    private suspend fun processStreamingResponse(body: ResponseBody) {
-        try {
-            // Read the entire response as text first
-            val responseText = body.string()
-            Log.d(TAG, "📄 Full response length: ${responseText.length}")
+    private fun processStreamingResponseSSE(body: ResponseBody) {
+        var chunkCount = 0
+        var totalBytesPlayed = 0
+        var audioTrackCreated = false
 
-            // Log first 500 chars for debugging
-            Log.d(TAG, "📄 Response preview: ${responseText.take(500)}...")
+        val reader = BufferedReader(InputStreamReader(body.byteStream()))
+        var line: String?
 
-            var audioDataBuffer = StringBuilder()
-            var totalAudioReceived = 0
+        while (reader.readLine().also { line = it } != null) {
+            val currentLine = line ?: continue
 
-            try {
-                // Parse as JSON array
-                val jsonArray = JSONArray(responseText)
-                Log.d(TAG, "📦 Parsing JSON array with ${jsonArray.length()} elements")
+            if (currentLine.startsWith("data: ")) {
+                val jsonString = currentLine.removePrefix("data: ").trim()
 
-                // Process each element in the array
-                for (idx in 0 until jsonArray.length()) {
-                    val json = jsonArray.getJSONObject(idx)
+                if (jsonString.isEmpty() || jsonString == "[DONE]") continue
 
-                    if (json.has("candidates")) {
-                        val candidates = json.getJSONArray("candidates")
-
-                        for (i in 0 until candidates.length()) {
-                            val candidate = candidates.getJSONObject(i)
-
-                            if (candidate.has("content")) {
-                                val content = candidate.getJSONObject("content")
-
-                                if (content.has("parts")) {
-                                    val parts = content.getJSONArray("parts")
-
-                                    for (j in 0 until parts.length()) {
-                                        val part = parts.getJSONObject(j)
-
-                                        // Check for inline audio data
-                                        if (part.has("inlineData")) {
-                                            val inlineData = part.getJSONObject("inlineData")
-                                            val mimeType = inlineData.optString("mimeType", "")
-                                            val data = inlineData.optString("data", "")
-
-                                            Log.d(TAG, "🎵 Found audio data: MIME=$mimeType, Size=${data.length}")
-
-                                            if (mimeType.contains("audio") && data.isNotEmpty()) {
-                                                // Process audio data immediately
-                                                processAudioData(data)
-                                                totalAudioReceived += data.length
-
-                                                // Update progress
-                                                val progress = (idx + 1).toFloat() / jsonArray.length()
-                                                _voiceState.update {
-                                                    it.copy(streamProgress = progress)
-                                                }
-                                            }
-                                        }
-
-                                        // Also check for text response
-                                        if (part.has("text")) {
-                                            val text = part.getString("text")
-                                            Log.d(TAG, "📝 Text response: ${text.take(100)}")
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Check finish reason
-                            if (candidate.has("finishReason")) {
-                                val finishReason = candidate.getString("finishReason")
-                                Log.d(TAG, "✅ Finish reason: $finishReason")
-                            }
-                        }
-                    }
-                }
-
-            } catch (e: Exception) {
-                Log.e(TAG, "❌ Error parsing JSON array", e)
-
-                // Try parsing as single object if array parsing fails
                 try {
-                    val json = JSONObject(responseText)
-                    Log.d(TAG, "📦 Parsing as single JSON object")
-                    processSingleJsonResponse(json)
-                } catch (e2: Exception) {
-                    Log.e(TAG, "❌ Error parsing as single JSON object", e2)
-                    throw e
-                }
-            }
+                    val json = JSONObject(jsonString)
+                    chunkCount++
 
-            Log.d(TAG, "✅ Stream complete. Total audio data received: $totalAudioReceived bytes")
-            _voiceState.update { it.copy(streamProgress = 1f) }
+                    val candidates = json.optJSONArray("candidates")
+                    if (candidates != null && candidates.length() > 0) {
+                        val candidate = candidates.getJSONObject(0)
+                        val content = candidate.optJSONObject("content")
+                        val parts = content?.optJSONArray("parts")
 
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Error processing stream", e)
-            throw e
-        }
-    }
+                        if (parts != null && parts.length() > 0) {
+                            val part = parts.getJSONObject(0)
+                            val inlineData = part.optJSONObject("inlineData")
 
-    private fun processSingleJsonResponse(json: JSONObject) {
-        if (json.has("candidates")) {
-            val candidates = json.getJSONArray("candidates")
-
-            for (i in 0 until candidates.length()) {
-                val candidate = candidates.getJSONObject(i)
-
-                if (candidate.has("content")) {
-                    val content = candidate.getJSONObject("content")
-
-                    if (content.has("parts")) {
-                        val parts = content.getJSONArray("parts")
-
-                        for (j in 0 until parts.length()) {
-                            val part = parts.getJSONObject(j)
-
-                            if (part.has("inlineData")) {
-                                val inlineData = part.getJSONObject("inlineData")
+                            if (inlineData != null) {
                                 val mimeType = inlineData.optString("mimeType", "")
                                 val data = inlineData.optString("data", "")
 
-                                Log.d(TAG, "🎵 Found audio data in single response: MIME=$mimeType, Size=${data.length}")
+                                Log.d(TAG, "🎵 Chunk #$chunkCount: ${data.length} base64 chars")
 
-                                if (mimeType.contains("audio") && data.isNotEmpty()) {
-                                    processAudioData(data)
+                                if (data.isNotEmpty()) {
+                                    // ✅ Create AudioTrack JUST before first audio chunk
+                                    if (!audioTrackCreated) {
+                                        val track = createFreshAudioTrack()
+                                        track.play()
+                                        Log.d(TAG, "🔊 AudioTrack started, playState=${track.playState}")
+                                        audioTrackCreated = true
+
+                                        // 🎬 PLAYBACK STARTED EVENT
+                                        _voiceState.update {
+                                            it.copy(
+                                                playbackState = PlaybackState.STARTED,
+                                                totalBytesPlayed = 0
+                                            )
+                                        }
+                                    }
+
+                                    val bytesPlayed = playAudioData(data)
+                                    totalBytesPlayed += bytesPlayed
+
+                                    // 🎵 PLAYBACK PROGRESS EVENT
+                                    _voiceState.update {
+                                        it.copy(
+                                            playbackState = PlaybackState.PLAYING,
+                                            totalBytesPlayed = totalBytesPlayed
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
+
+                } catch (e: Exception) {
+                    Log.w(TAG, "⚠️ Parse error: ${e.message}")
                 }
             }
         }
+
+        reader.close()
+
+        // Wait for AudioTrack to finish playing buffered data
+        if (audioTrackCreated && totalBytesPlayed > 0) {
+            val durationMs = (totalBytesPlayed / (SAMPLE_RATE * 2)) * 1000 // 2 bytes per sample
+            Log.d(TAG, "⏳ Waiting ${durationMs}ms for playback to complete...")
+
+            // 🎬 PLAYBACK FINISHING EVENT (all data written, draining buffer)
+            _voiceState.update {
+                it.copy(
+                    playbackState = PlaybackState.FINISHING,
+                    estimatedDurationMs = durationMs.toLong()
+                )
+            }
+
+            Thread.sleep(durationMs.toLong() + 500) // Extra buffer
+
+            // 🎬 PLAYBACK ENDED EVENT
+            _voiceState.update {
+                it.copy(
+                    playbackState = PlaybackState.ENDED
+                )
+            }
+        }
+
+        Log.d(TAG, "✅ Complete. Chunks: $chunkCount, Bytes: $totalBytesPlayed")
     }
 
-    private fun processAudioData(base64Data: String) {
+    /**
+     * Play audio data - NO endian conversion needed!
+     * Gemini returns Little Endian PCM data despite the L16 name
+     */
+    private fun playAudioData(base64Data: String): Int {
         try {
-            // Decode base64 to raw audio bytes
+            // Decode base64 - data is already Little Endian PCM
             val audioBytes = Base64.decode(base64Data, Base64.DEFAULT)
-            Log.d(TAG, "🎵 Decoded audio: ${audioBytes.size} bytes")
+            Log.d(TAG, "🎵 Decoded: ${audioBytes.size} bytes")
 
-            // Gemini returns 16-bit PCM at 24kHz which matches our AudioTrack config
-            // Add directly to playback queue
-            audioQueue.offer(AudioChunk(audioBytes))
+            // Debug: show first samples (Little Endian: low byte first)
+            if (audioBytes.size >= 10) {
+                val samples = StringBuilder("Samples: ")
+                for (i in 0 until minOf(5, audioBytes.size / 2)) {
+                    // Little Endian: [LOW][HIGH]
+                    val low = audioBytes[i * 2].toInt() and 0xFF
+                    val high = audioBytes[i * 2 + 1].toInt()
+                    val sample = (high shl 8) or low
+                    samples.append("$sample ")
+                }
+                Log.d(TAG, "🔊 $samples")
+            }
+
+            val track = audioTrack
+            if (track == null || track.playState != AudioTrack.PLAYSTATE_PLAYING) {
+                Log.e(TAG, "❌ AudioTrack not ready!")
+                return 0
+            }
+
+            // Write all data
+            var offset = 0
+            while (offset < audioBytes.size) {
+                val remaining = audioBytes.size - offset
+                val written = track.write(audioBytes, offset, remaining)
+
+                if (written > 0) {
+                    offset += written
+                } else if (written < 0) {
+                    Log.e(TAG, "❌ Write error: $written")
+                    break
+                }
+            }
+
+            Log.d(TAG, "🔊 Wrote $offset/${audioBytes.size} bytes")
+            return offset
 
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Error decoding audio data", e)
-        }
-    }
-
-    private fun startAudioPlayback() {
-        playbackJob?.cancel()
-        playbackJob = scope.launch {
-            Log.d(TAG, "🔊 Audio playback pipeline started")
-
-            var totalBytesPlayed = 0
-            var consecutiveEmptyChecks = 0
-
-            while (isActive) {
-                val chunk = audioQueue.poll()
-
-                if (chunk != null) {
-                    consecutiveEmptyChecks = 0
-                    try {
-                        val written = audioTrack?.write(chunk.data, 0, chunk.data.size) ?: 0
-
-                        if (written > 0) {
-                            totalBytesPlayed += written
-                            Log.d(TAG, "🔊 Played $written bytes (total: $totalBytesPlayed)")
-                        } else if (written < 0) {
-                            Log.e(TAG, "❌ AudioTrack write error: $written")
-                        }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "❌ Playback error", e)
-                    }
-                } else {
-                    // Only mark as complete if stream is done AND queue has been empty for a bit
-                    if (_voiceState.value.streamProgress >= 1f) {
-                        consecutiveEmptyChecks++
-
-                        // Wait for 100ms of empty queue before marking complete
-                        if (consecutiveEmptyChecks > 10) {
-                            if (_voiceState.value.isSpeaking) {
-                                Log.d(TAG, "🔇 Playback complete")
-                                _voiceState.update {
-                                    it.copy(
-                                        isSpeaking = false,
-                                        currentSpeakingMessageId = null
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    delay(10)
-                }
-            }
-
-            Log.d(TAG, "🔊 Audio playback pipeline stopped")
+            Log.e(TAG, "❌ Error", e)
+            return 0
         }
     }
 
     open fun stop() {
-        Log.d(TAG, "🛑 Stopping voice")
+        Log.d(TAG, "🛑 Stopping")
         currentStreamJob?.cancel()
-        audioQueue.clear()
+        audioTrack?.pause()
         audioTrack?.flush()
 
         _voiceState.update {
@@ -571,17 +481,19 @@ open class GeminiNativeVoiceSystem @Inject constructor(
                 isSpeaking = false,
                 currentMessageId = null,
                 currentSpeakingMessageId = null,
-                streamProgress = 0f
+                streamProgress = 0f,
+                playbackState = PlaybackState.IDLE,
+                totalBytesPlayed = 0,
+                estimatedDurationMs = 0
             )
         }
     }
 
     open fun cleanup() {
-        Log.d(TAG, "🧹 Cleaning up")
+        Log.d(TAG, "🧹 Cleanup")
         stop()
-        playbackJob?.cancel()
-        audioTrack?.stop()
         audioTrack?.release()
+        audioTrack = null
 
         audioFocusRequest?.let {
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager

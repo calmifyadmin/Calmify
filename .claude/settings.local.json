@@ -33,7 +33,9 @@
       "Bash(Select-String \"error:\" -Context 2,2)",
       "Bash(Select-Object -Last 5)",
       "Bash(Select-String -Pattern \"error:|BUILD\" -Context 1,2)",
-      "Bash(Select-Object -First 80)"
+      "Bash(Select-Object -First 80)",
+      "Bash(Select-Object -First 100)",
+      "Bash(timeout:*)"
     ],
     "deny": [],
     "ask": []

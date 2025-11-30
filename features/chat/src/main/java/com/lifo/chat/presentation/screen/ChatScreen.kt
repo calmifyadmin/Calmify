@@ -32,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Warning
@@ -71,6 +72,7 @@ fun ChatScreen(
     navigateBack: () -> Unit,
     navigateToWriteWithContent: (String) -> Unit,
     navigateToLiveScreen: () -> Unit = {},
+    navigateToAvatarChat: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     sessionId: String? = null,
     viewModel: ChatViewModel = hiltViewModel(),
@@ -191,7 +193,8 @@ fun ChatScreen(
                             isLiveChatMode = false
                         }
                         navigateBack()
-                    }
+                    },
+                    onNavigateToAvatarChat = navigateToAvatarChat
                 )
             },
             bottomBar = {
@@ -410,7 +413,8 @@ fun ChatScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MinimalTopBar(
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToAvatarChat: (() -> Unit)? = null
 ) {
     TopAppBar(
         title = {
@@ -425,7 +429,16 @@ private fun MinimalTopBar(
             }
         },
         actions = {
-            // No actions - all voice functionality moved to Live Chat screen
+            // Avatar Chat button - opens immersive 3D avatar interface
+            onNavigateToAvatarChat?.let { navigate ->
+                IconButton(onClick = navigate) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Avatar Chat",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
         }
     )
 }

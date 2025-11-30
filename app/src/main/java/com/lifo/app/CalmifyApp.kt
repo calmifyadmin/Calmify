@@ -50,6 +50,7 @@ import com.lifo.history.navigation.historyRoute
 import com.lifo.home.navigation.homeRoute
 import com.lifo.humanoid.presentation.navigation.humanoidRoute
 import com.lifo.settings.navigation.settingsRoute
+import com.lifo.app.navigation.avatarChatRoute
 import com.lifo.insight.InsightScreen
 import com.lifo.mongo.repository.MongoRepository
 import com.lifo.onboarding.navigation.onboardingRoute
@@ -731,6 +732,11 @@ private fun CalmifyNavHost(
                 navController.navigate(Screen.LiveChat.route) {
                     launchSingleTop = true
                 }
+            },
+            navigateToAvatarChat = {
+                navController.navigate(Screen.AvatarChat.route) {
+                    launchSingleTop = true
+                }
             }
         )
 
@@ -750,6 +756,15 @@ private fun CalmifyNavHost(
 
         // Humanoid Avatar - 3D Avatar with Filament
         humanoidRoute(
+            navigateBack = {
+                if (navController.currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
+                    navController.popBackStack()
+                }
+            }
+        )
+
+        // Avatar Chat - Integrated VRM + Chat
+        avatarChatRoute(
             navigateBack = {
                 if (navController.currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
                     navController.popBackStack()

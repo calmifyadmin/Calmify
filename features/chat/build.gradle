@@ -156,4 +156,6 @@ dependencies {
     implementation(project(":core:ui"))
     implementation(project(":core:util"))
     implementation(project(":data:mongo"))
+    // NOTE: DO NOT add features:humanoid here - causes circular dependency
+    // Integration happens at app level via HumanoidViewModel injection
 }

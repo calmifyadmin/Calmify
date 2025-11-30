@@ -16,7 +16,8 @@ import com.lifo.util.Screen
 fun NavGraphBuilder.chatRoute(
     navigateBack: () -> Unit,
     navigateToWriteWithContent: (String) -> Unit,
-    navigateToLiveScreen: () -> Unit
+    navigateToLiveScreen: () -> Unit,
+    navigateToAvatarChat: (() -> Unit)? = null
 ) {
     composable(
         route = Screen.Chat.route,
@@ -48,7 +49,8 @@ fun NavGraphBuilder.chatRoute(
         ChatScreen(
             navigateBack = navigateBack,
             navigateToWriteWithContent = navigateToWriteWithContent,
-            navigateToLiveScreen = navigateToLiveScreen
+            navigateToLiveScreen = navigateToLiveScreen,
+            navigateToAvatarChat = navigateToAvatarChat
         )
     }
 
@@ -78,6 +80,7 @@ fun NavGraphBuilder.chatRoute(
             navigateBack = navigateBack,
             navigateToWriteWithContent = navigateToWriteWithContent,
             navigateToLiveScreen = navigateToLiveScreen,
+            navigateToAvatarChat = navigateToAvatarChat,
             sessionId = sessionId
         )
     }
@@ -128,3 +131,6 @@ fun NavGraphBuilder.liveRoute(
         )
     }
 }
+
+// NOTE: Avatar Chat route moved to app module to avoid circular dependency
+// See app/src/main/java/com/lifo/app/navigation/AvatarChatNavigation.kt
