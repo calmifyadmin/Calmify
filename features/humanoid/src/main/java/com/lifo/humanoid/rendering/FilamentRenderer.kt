@@ -84,6 +84,10 @@ class FilamentRenderer(
     // VRM blend shape mapping: blend shape name -> (entity, morph target index)
     private val blendShapeMapping = mutableMapOf<String, MutableList<Pair<Int, Int>>>()
 
+    // Pending blend shapes to build after first render (AAA-grade deferred initialization)
+    private var pendingBlendShapes: Pair<FilamentAsset, List<com.lifo.humanoid.data.vrm.VrmBlendShape>>? = null
+    private val blendShapesInitialized = AtomicBoolean(false)
+
     // ==================== Public Accessors for Animation System ====================
 
     /**
@@ -591,19 +595,41 @@ class FilamentRenderer(
             if (asset != null) {
                 Log.d(tag, "Asset created successfully! Entities: ${asset.entities.size}, Root: ${asset.root}")
 
-                // Load resources (textures, buffers)
+                // CRITICAL FIX: Load resources SYNCHRONOUSLY and wait for completion
+                // This ensures morph targets are fully registered before mapping
+                Log.d(tag, "Loading resources (textures, buffers) - BLOCKING until complete...")
+
+                // AAA-GRADE FIX: Load resources synchronously
                 Log.d(tag, "Loading resources (textures, buffers)...")
                 resourceLoader.loadResources(asset)
 
-                // Add to scene
+                // AAA-GRADE FIX: Begin async loading
+                resourceLoader.asyncBeginLoad(asset)
+
+                // Pump the async loader to completion
+                Log.d(tag, "Pumping async resource loader...")
+                var pumpIterations = 0
+                while (pumpIterations < 50) {
+                    resourceLoader.asyncUpdateLoad()
+                    Thread.sleep(1)
+                    pumpIterations++
+                }
+                Log.d(tag, "Async resource loading pumped for ${pumpIterations}ms")
+
+                // Add to scene FIRST - morph targets need entities to be in the scene
                 Log.d(tag, "Adding ${asset.entities.size} entities to scene")
                 scene.addEntities(asset.entities)
 
                 // Store reference
                 currentAsset = asset
 
-                // Build blend shape mapping from VRM data
-                buildBlendShapeMapping(asset, vrmBlendShapes)
+                // AAA-GRADE FIX: DEFER blend shape mapping until after first render
+                // Morph targets are only uploaded to GPU during the first render pass
+                // This is a critical Filament behavior that requires deferred initialization
+                Log.d(tag, "Deferring blend shape mapping until after first GPU upload (AAA-grade pattern)")
+                pendingBlendShapes = Pair(asset, vrmBlendShapes)
+                blendShapesInitialized.set(false)
+                blendShapeMapping.clear()
 
                 // Center and scale the model
                 Log.d(tag, "Centering and scaling asset")
@@ -716,6 +742,17 @@ class FilamentRenderer(
             // End frame and present
             renderer.endFrame()
 
+            // AAA-GRADE DEFERRED INITIALIZATION: Build blend shapes AFTER first successful render
+            // Morph targets are uploaded to GPU during rendering, so we must wait until after
+            if (!blendShapesInitialized.get() && pendingBlendShapes != null) {
+                Log.d(tag, "═══ AAA-GRADE: First render complete - initializing blend shapes ═══")
+                val (asset, vrmBlendShapes) = pendingBlendShapes!!
+                buildBlendShapeMapping(asset, vrmBlendShapes)
+                blendShapesInitialized.set(true)
+                pendingBlendShapes = null
+                Log.d(tag, "═══ AAA-GRADE: Blend shape initialization complete ═══")
+            }
+
             return true
 
         } catch (e: Exception) {
@@ -738,6 +775,9 @@ class FilamentRenderer(
     /**
      * Build blend shape mapping from VRM definitions.
      * Maps VRM blend shape names to Filament morph target indices.
+     *
+     * CRITICAL: This must be called AFTER resourceLoader has completed loading,
+     * otherwise morph targets may not be registered in RenderableManager yet.
      */
     private fun buildBlendShapeMapping(asset: FilamentAsset, vrmBlendShapes: List<com.lifo.humanoid.data.vrm.VrmBlendShape>) {
         if (vrmBlendShapes.isEmpty()) {
@@ -747,37 +787,81 @@ class FilamentRenderer(
 
         Log.d(tag, "Building blend shape mapping from ${vrmBlendShapes.size} VRM blend shapes")
 
-        // Process each VRM blend shape
-        vrmBlendShapes.forEach { vrmBlendShape ->
-            val blendShapeName = vrmBlendShape.name.lowercase()
+        val renderableManager = engine.renderableManager
+        var totalMappings = 0
+        var failedMappings = 0
 
-            // Also map preset names (Joy, Angry, etc.)
-            val presetName = vrmBlendShape.preset?.name?.lowercase()
+        // AAA-GRADE FIX: Scan ALL entities to find which ones have morph targets
+        Log.d(tag, "═══ Scanning ${asset.entities.size} entities for morph targets ═══")
+        val entitiesWithMorphTargets = mutableListOf<Triple<Int, Int, Int>>() // (entity, entityIndex, morphTargetCount)
 
-            // Process each binding (mesh + morph target index)
-            vrmBlendShape.bindings.forEach { binding ->
-                // Find the entity for this mesh index
-                val entity = asset.entities.getOrNull(binding.meshIndex)
-
-                if (entity != null) {
-                    val morphTargetIndex = binding.morphTargetIndex
-
-                    // Add to mapping for blend shape name
-                    blendShapeMapping.getOrPut(blendShapeName) { mutableListOf() }
-                        .add(Pair(entity, morphTargetIndex))
-
-                    // Also map preset name if available
-                    if (presetName != null && presetName != "unknown") {
-                        blendShapeMapping.getOrPut(presetName) { mutableListOf() }
-                            .add(Pair(entity, morphTargetIndex))
-                    }
-
-                    Log.d(tag, "Mapped blend shape '$blendShapeName' (preset: $presetName) -> entity $entity, morph target $morphTargetIndex")
+        asset.entities.forEachIndexed { index, entity ->
+            val instance = renderableManager.getInstance(entity)
+            if (instance != 0) {
+                val morphTargetCount = renderableManager.getMorphTargetCount(instance)
+                if (morphTargetCount > 0) {
+                    entitiesWithMorphTargets.add(Triple(entity, index, morphTargetCount))
+                    Log.d(tag, "  Entity $entity (index $index) has $morphTargetCount morph targets")
                 }
             }
         }
+        Log.d(tag, "═══ Found ${entitiesWithMorphTargets.size} entities with morph targets ═══")
 
-        Log.d(tag, "Blend shape mapping built: ${blendShapeMapping.keys.joinToString()}")
+        // If we found entities with morph targets, use the FIRST one for ALL blend shapes
+        // This is the AAA-grade approach - VRM blend shapes all target the same mesh (Face mesh)
+        if (entitiesWithMorphTargets.isNotEmpty()) {
+            val (targetEntity, targetIndex, targetMorphCount) = entitiesWithMorphTargets.first()
+            Log.d(tag, "Using entity $targetEntity (index $targetIndex) with $targetMorphCount morph targets for ALL blend shapes")
+
+            // Map ALL blend shapes to this entity
+            vrmBlendShapes.forEach { vrmBlendShape ->
+                val blendShapeName = vrmBlendShape.name.lowercase()
+                val presetName = vrmBlendShape.preset?.name?.lowercase()
+
+                vrmBlendShape.bindings.forEach { binding ->
+                    val morphTargetIndex = binding.morphTargetIndex
+
+                    // Validate morph target index
+                    if (morphTargetIndex < targetMorphCount) {
+                        // Add to mapping
+                        blendShapeMapping.getOrPut(blendShapeName) { mutableListOf() }
+                            .add(Pair(targetEntity, morphTargetIndex))
+
+                        // Also map preset name
+                        if (presetName != null && presetName != "unknown") {
+                            blendShapeMapping.getOrPut(presetName) { mutableListOf() }
+                                .add(Pair(targetEntity, morphTargetIndex))
+                        }
+
+                        totalMappings++
+                        Log.d(tag, "✓ Mapped blend shape '$blendShapeName' (preset: $presetName) -> entity $targetEntity, morph target $morphTargetIndex/$targetMorphCount")
+                    } else {
+                        Log.e(tag, "Morph target index $morphTargetIndex out of bounds (max: $targetMorphCount) for blend shape '$blendShapeName'")
+                        failedMappings++
+                    }
+                }
+            }
+        } else {
+            Log.e(tag, "⚠️ NO entities with morph targets found! Cannot map blend shapes!")
+            failedMappings = vrmBlendShapes.sumOf { it.bindings.size }
+        }
+
+        Log.i(tag, "═══════════════════════════════════════════════════════════")
+        Log.i(tag, "Blend shape mapping completed:")
+        Log.i(tag, "  Total blend shapes: ${vrmBlendShapes.size}")
+        Log.i(tag, "  Total mappings created: $totalMappings")
+        Log.i(tag, "  Failed mappings: $failedMappings")
+        Log.i(tag, "  Unique blend shape names: ${blendShapeMapping.keys.size}")
+        Log.i(tag, "  Available blend shapes: ${blendShapeMapping.keys.joinToString()}")
+        Log.i(tag, "═══════════════════════════════════════════════════════════")
+
+        if (failedMappings > 0) {
+            Log.e(tag, "⚠️ WARNING: $failedMappings blend shape mappings FAILED! Facial animations may not work correctly!")
+        }
+
+        if (totalMappings == 0) {
+            Log.e(tag, "⚠️ CRITICAL: NO blend shape mappings created! Lip-sync, blink, and expressions WILL NOT WORK!")
+        }
     }
 
     /**
@@ -817,6 +901,15 @@ class FilamentRenderer(
     fun updateBlendShapes(blendShapes: Map<String, Float>) {
         if (blendShapes.isEmpty()) return
 
+        // Safety check: if mapping is empty, blend shapes can't work
+        if (blendShapeMapping.isEmpty()) {
+            // Only log this error once per second to avoid spam
+            if (System.currentTimeMillis() % 1000 < 16) { // ~once per second at 60fps
+                Log.e(tag, "⚠️ Blend shape mapping is EMPTY! Cannot update blend shapes. Lip-sync/blink/expressions will not work!")
+            }
+            return
+        }
+
         val renderableManager = engine.renderableManager
 
         // Apply each blend shape weight using the mapping
@@ -831,15 +924,21 @@ class FilamentRenderer(
                 targets.forEach { (entity, morphTargetIndex) ->
                     val instance = renderableManager.getInstance(entity)
                     if (instance != 0) {
-                        renderableManager.setMorphWeights(
-                            instance,
-                            floatArrayOf(targetWeight),
-                            morphTargetIndex
-                        )
+                        try {
+                            renderableManager.setMorphWeights(
+                                instance,
+                                floatArrayOf(targetWeight),
+                                morphTargetIndex
+                            )
+                        } catch (e: Exception) {
+                            Log.e(tag, "Failed to set morph weight for blend shape '$name' (entity=$entity, index=$morphTargetIndex): ${e.message}")
+                        }
+                    } else {
+                        Log.w(tag, "Blend shape '$name' has invalid renderable instance for entity $entity")
                     }
                 }
             } else {
-                // Log warning only once per unknown blend shape
+                // Log warning only for significant weights to reduce noise
                 if (weight > 0.01f) {
                     Log.w(tag, "Blend shape '$name' not found in mapping. Available: ${blendShapeMapping.keys.take(5).joinToString()}")
                 }
