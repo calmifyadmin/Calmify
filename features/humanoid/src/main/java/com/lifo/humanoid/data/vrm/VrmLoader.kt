@@ -29,14 +29,18 @@ class VrmLoader(private val context: Context) {
      * The FilamentAsset loading is handled by FilamentRenderer.
      *
      * @param assetPath Path to VRM file in assets (e.g., "models/avatar.vrm")
+     * @param optimizeBones Whether to optimize bone count (default: true)
      * @return Pair of ByteBuffer (for Filament) and VRM extensions data
      */
-    suspend fun loadVrmFromAssets(assetPath: String): Pair<ByteBuffer, VrmExtensions>? {
+    suspend fun loadVrmFromAssets(
+        assetPath: String,
+        optimizeBones: Boolean = true
+    ): Pair<ByteBuffer, VrmExtensions>? {
         return try {
             Log.d(tag, "Attempting to load VRM from assets: $assetPath")
 
             // Read VRM file from assets
-            val buffer = context.assets.open(assetPath).use { inputStream ->
+            val originalBuffer = context.assets.open(assetPath).use { inputStream ->
                 val bytes = inputStream.readBytes()
                 Log.d(tag, "Successfully read ${bytes.size} bytes from $assetPath")
 
@@ -47,12 +51,41 @@ class VrmLoader(private val context: Context) {
                 }
             }
 
+            // Optimize bones if requested
+            val buffer = if (optimizeBones) {
+                Log.i(tag, "╔═══════════════════════════════════════════════════════════╗")
+                Log.i(tag, "║      Optimizing VRM for Filament 256 Bone Limit         ║")
+                Log.i(tag, "╚═══════════════════════════════════════════════════════════╝")
+
+                val optimizer = GltfBoneOptimizer(context)
+                val result = optimizer.optimize(originalBuffer, maxBonesPerSkin = 256)
+
+                if (result.bonesSaved > 0) {
+                    Log.i(tag, "✓ Bone optimization successful:")
+                    Log.i(tag, "  Original bones: ${result.originalBoneCount}")
+                    Log.i(tag, "  Optimized bones: ${result.optimizedBoneCount}")
+                    Log.i(tag, "  Bones saved: ${result.bonesSaved}")
+                    Log.i(tag, "  Skins optimized: ${result.skinsOptimized}")
+                    result.optimizedBuffer
+                } else {
+                    Log.i(tag, "✓ Model already within bone limit (${result.originalBoneCount} bones)")
+                    originalBuffer
+                }
+            } else {
+                Log.d(tag, "Bone optimization disabled")
+                originalBuffer
+            }
+
             Log.d(tag, "Created ByteBuffer with ${buffer.capacity()} bytes, position=${buffer.position()}, limit=${buffer.limit()}")
 
-            // Parse VRM extensions
+            // Parse VRM extensions (from original buffer to preserve original data)
             Log.d(tag, "Parsing VRM extensions...")
-            val vrmExtensions = parseVrmExtensions(buffer)
+            originalBuffer.position(0) // Reset position for parsing
+            val vrmExtensions = parseVrmExtensions(originalBuffer)
             Log.d(tag, "VRM extensions parsed successfully: ${vrmExtensions.blendShapes.size} blend shapes, ${vrmExtensions.springBones.size} spring bones")
+
+            // Reset final buffer position
+            buffer.position(0)
 
             Pair(buffer, vrmExtensions)
         } catch (e: Exception) {
