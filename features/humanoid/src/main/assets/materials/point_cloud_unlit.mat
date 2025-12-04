@@ -1,0 +1,48 @@
+material {
+    name : point_cloud_unlit,
+
+    // Shading model: unlit (no lighting calculations)
+    shadingModel : unlit,
+
+    // Support vertex colors
+    requires : [color],
+
+    // Material parameters
+    parameters : [
+        {
+            type : float,
+            name : pointSize,
+            default : 8.0
+        },
+        {
+            type : float,
+            name : brightness,
+            default : 1.0
+        }
+    ],
+
+    // Vertex shader - set point size and pass vertex color
+    vertex {
+        void materialVertex(inout MaterialVertexInputs material) {
+            // Set point size for star rendering
+            gl_PointSize = materialParams.pointSize;
+        }
+    },
+
+    // Fragment shader - use vertex color as base color
+    fragment {
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+
+            // Use vertex color (COLOR_0 attribute from glTF)
+            vec4 vertexColor = getColor();
+
+            // Apply brightness multiplier for HDR effect
+            vec3 color = vertexColor.rgb * materialParams.brightness;
+
+            // Output as emissive for unlit rendering
+            material.baseColor.rgb = color;
+            material.baseColor.a = vertexColor.a;
+        }
+    }
+}

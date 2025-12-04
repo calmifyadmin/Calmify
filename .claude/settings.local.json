@@ -43,7 +43,9 @@
       "Bash(dir \"c:\\Users\\lifoe\\AndroidStudioProjects\\CalmifyAppAndroid\\features\\humanoid\\src\\main\\assets\\models\\scene.bin\")",
       "Bash(copy \"C:\\Users\\lifoe\\Desktop\\need_some_space.glb\" \"c:\\Users\\lifoe\\AndroidStudioProjects\\CalmifyAppAndroid\\features\\humanoid\\src\\main\\assets\\models\\scene.glb\")",
       "Bash(Select-String \"error\" -Context 1,1)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(python:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": []

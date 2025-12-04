@@ -65,7 +65,7 @@ fun FilamentView(
     val spaceBackgroundData: ByteBuffer? by remember {
         mutableStateOf(
             try {
-                context.assets.open("space.glb").use { input ->
+                context.assets.open("abstract_red_background.glb").use { input ->
                     val bytes = input.readBytes()
                     ByteBuffer
                         .allocateDirect(bytes.size)
@@ -100,8 +100,8 @@ fun FilamentView(
                 Log.d(TAG, "Loading space.glb as background environment")
                 renderer?.loadBackgroundEnvironment(
                     glbData = spaceBackgroundData!!,
-                    scale = 200.0f,
-                    position = floatArrayOf(0f, 0f, 5f)
+                    scale = 20.0f,
+                    position = floatArrayOf(0f, 10f, 5f)
                 )
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load background environment", e)

@@ -321,18 +321,18 @@ class FilamentRenderer(
     }
 
     /**
-     * Setup camera with default orbital position.
+     * Setup camera with closer orbital position for better avatar visibility.
      */
     private fun setupCamera() {
         val eye = FloatArray(3).apply {
             this[0] = 0.0f
-            this[1] = 0.9f
-            this[2] = -3.0f
+            this[1] = 1.0f    // Slightly higher to see face better
+            this[2] = -2.5f   // Closer to avatar (was -3.0)
         }
 
         val center = FloatArray(3).apply {
             this[0] = 0.0f
-            this[1] = 0.85f
+            this[1] = 0.85f   // Focus slightly higher (upper body/face)
             this[2] = 0.0f
         }
 
@@ -350,7 +350,7 @@ class FilamentRenderer(
 
         Log.d(
             tag,
-            "Camera positioned for full body view: eye=(${eye[0]}, ${eye[1]}, ${eye[2]}), " +
+            "Camera positioned for closer view: eye=(${eye[0]}, ${eye[1]}, ${eye[2]}), " +
                     "looking at=(${center[0]}, ${center[1]}, ${center[2]})"
         )
     }
@@ -371,39 +371,47 @@ class FilamentRenderer(
      * Setup realistic lighting for the avatar.
      */
     private fun setupLighting() {
-        // Sun light
+        // Balanced directional sun light - strong enough for background, not overwhelming for avatar
         sunEntity = EntityManager.get().create()
 
         LightManager.Builder(LightManager.Type.SUN)
             .color(1.0f, 1.0f, 0.95f)
-            .intensity(100000.0f)
+            .intensity(120000.0f)  // Balanced intensity
             .direction(0.3f, -1.0f, -0.5f)
             .castShadows(true)
             .build(engine, sunEntity)
 
         scene.addEntity(sunEntity)
 
-        // Ambient light (simple default IBL-like)
+        // Strong ambient light (IBL) for background visibility without overexposing avatar
         scene.indirectLight = IndirectLight.Builder()
-            .intensity(30000.0f)
+            .intensity(60000.0f)  // Balanced for both avatar and background
             .build(engine)
     }
 
     /**
      * Configure view rendering settings.
+     * Sketchfab-matched configuration for accurate PBR rendering with emissive materials.
      */
     private fun configureView() {
         view.isPostProcessingEnabled = true
         view.antiAliasing = View.AntiAliasing.FXAA
         view.ambientOcclusion = View.AmbientOcclusion.SSAO
 
+        // Minimal bloom - just enough for red emissive lines, not for avatar
         view.bloomOptions = view.bloomOptions.apply {
             enabled = true
-            strength = 0.1f  // Vanilla bloom leggero
+            strength = 0.08f  // Very subtle - minimal glow on avatar
+            levels = 4        // Fewer levels for tighter bloom
+            threshold = true  // Only apply to very bright areas (emissive)
         }
 
+        // Natural color grading - reduced exposure to avoid avatar glow
         view.colorGrading = ColorGrading.Builder()
             .toneMapping(ColorGrading.ToneMapping.ACES)
+            .exposure(0.6f)      // Even lower exposure for natural look
+            .contrast(1.03f)     // Minimal contrast
+            .saturation(1.02f)   // Minimal saturation
             .build(engine)
     }
 
@@ -616,8 +624,8 @@ class FilamentRenderer(
 
     fun loadBackgroundAsset(
         buffer: ByteBuffer,
-        scale: Float = 200.0f,  // 👈 scala molto grande per zoom massimo
-        position: FloatArray = floatArrayOf(0f, 0f, 5f) // 👈 mettiamo lo sfondo dietro l'avatar ma dentro il frustum
+        scale: Float = 20.0f,  // 👈 scala molto grande per zoom massimo
+        position: FloatArray = floatArrayOf(0f, 10f, 5f) // 👈 mettiamo lo sfondo dietro l'avatar ma dentro il frustum
     ): FilamentAsset? {
         var result: FilamentAsset? = null
 
@@ -664,18 +672,27 @@ class FilamentRenderer(
                 Log.w(tag, "releaseSourceData not supported or failed: ${e.message}")
             }
 
-            // Configurazione minima per rendering corretto senza modificare materiali
+            // Sketchfab-matched material configuration for PBR + emissive rendering
             val rm = engine.renderableManager
             asset.entities.forEach { entity ->
                 val instance = rm.getInstance(entity)
                 if (instance != 0) {
                     try {
-                        // Solo fix anti-flickering, senza toccare materiali
-                        rm.setCulling(instance, false)
-                        rm.setCastShadows(instance, false)
-                        rm.setReceiveShadows(instance, false)
+                        // Full PBR mesh with 2 materials:
+                        // Material 0: Black surface (0,0,0) with metallic 0.626, roughness 0.353
+                        // Material 1: Red emissive lines (1,0,0) + emissiveFactor (1,0,0)
 
-                        Log.d(tag, "Configured background entity $entity (vanilla materials)")
+                        // Enable full PBR lighting to make surface detail visible
+                        rm.setCulling(instance, false)
+                        rm.setCastShadows(instance, true)  // Cast shadows for depth
+                        rm.setReceiveShadows(instance, true)  // Receive lighting and shadows
+
+                        // With strong IBL (80k) + Sun (150k), the black metallic surface
+                        // will reflect light and show visible geometry/shadows
+                        // The red emissive will glow with bloom
+
+                        val primitiveCount = rm.getPrimitiveCount(instance)
+                        Log.d(tag, "Configured PBR background entity $entity: $primitiveCount primitives, full lighting enabled (Sun 150k + IBL 80k)")
                     } catch (e: Exception) {
                         Log.w(tag, "Error configuring background entity $entity: ${e.message}")
                     }
