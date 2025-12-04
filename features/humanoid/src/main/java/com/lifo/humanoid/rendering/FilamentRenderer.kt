@@ -62,16 +62,16 @@ class FilamentRenderer(
     private val surfaceView: SurfaceView
 ) {
     // Core Filament components
-    private lateinit var engine: Engine
-    private lateinit var renderer: Renderer
-    private lateinit var scene: Scene
-    private lateinit var view: View
-    private lateinit var camera: Camera
+    internal lateinit var engine: Engine
+    internal lateinit var renderer: Renderer
+    internal lateinit var scene: Scene
+    internal lateinit var view: View
+    internal lateinit var camera: Camera
 
     // Asset loading
-    private lateinit var assetLoader: AssetLoader
-    private lateinit var resourceLoader: ResourceLoader
-    private lateinit var materialProvider: UbershaderProvider
+    internal lateinit var assetLoader: AssetLoader
+    internal lateinit var resourceLoader: ResourceLoader
+    internal lateinit var materialProvider: UbershaderProvider
 
     // Surface management
     private lateinit var uiHelper: UiHelper
@@ -80,6 +80,22 @@ class FilamentRenderer(
 
     // Current loaded avatar
     private var currentAsset: FilamentAsset? = null
+
+    // Background scene asset (space.glb, ecc.)
+    private var backgroundAsset: FilamentAsset? = null
+
+    // Background image texture (background.jpg)
+    private var backgroundTexture: com.google.android.filament.Texture? = null
+    private var backgroundEntity: Int = 0
+    private var backgroundMaterial: com.google.android.filament.Material? = null
+
+    // Background rotation state for slow animation
+    private var backgroundRotationAngle = 0.0f
+    private val backgroundRotationSpeed = 0.05f // 0.05 degrees per frame (~3 degrees/sec at 60fps -> 2 min per rotation)
+
+    // Skybox (se vuoi ancora usarla in altri contesti)
+    private var skyboxTexture: com.google.android.filament.Texture? = null
+    private var skybox: com.google.android.filament.Skybox? = null
 
     // VRM blend shape mapping: blend shape name -> (entity, morph target index)
     private val blendShapeMapping = mutableMapOf<String, MutableList<Pair<Int, Int>>>()
@@ -110,12 +126,6 @@ class FilamentRenderer(
 
     /**
      * Get the Animator from the current asset for bone matrix updates.
-     * The Animator is crucial for skinning - it updates bone matrices after transform changes.
-     *
-     * Workflow: After modifying bone transforms via TransformManager,
-     * call updateBoneMatrices() on the Animator to apply changes to skinning.
-     *
-     * Note: Animator is obtained from FilamentInstance (asset.getInstance()), not directly from FilamentAsset.
      */
     fun getAnimator(): com.google.android.filament.gltfio.Animator? {
         return currentAsset?.getInstance()?.animator
@@ -124,9 +134,6 @@ class FilamentRenderer(
     /**
      * Update bone matrices for the current asset.
      * Must be called after modifying bone transforms to apply changes to skinning.
-     *
-     * This is the key step that was missing - without this call,
-     * transform changes don't affect the skinned mesh.
      */
     fun updateBoneMatrices() {
         currentAsset?.getInstance()?.animator?.updateBoneMatrices()
@@ -161,10 +168,6 @@ class FilamentRenderer(
 
     // ==================== Resize State Management ====================
 
-    /**
-     * Renderer state machine for safe resize handling.
-     * Prevents race conditions between resize events and render loop.
-     */
     enum class RendererState {
         IDLE,           // Not rendering
         RENDERING,      // Actively rendering frames
@@ -197,20 +200,15 @@ class FilamentRenderer(
 
     /**
      * Check if renderer is ready to render frames.
-     * Returns false during resize operations to prevent race conditions.
      */
     fun canRender(): Boolean {
         return isInitialized &&
-               !isResizing.get() &&
-               !pendingResize.get() &&
-               swapChain != null &&
-               _rendererState.value == RendererState.RENDERING
+                !isResizing.get() &&
+                !pendingResize.get() &&
+                swapChain != null &&
+                _rendererState.value == RendererState.RENDERING
     }
 
-    /**
-     * Pause rendering explicitly.
-     * Call before layout changes that will trigger resize.
-     */
     fun pauseRendering() {
         if (_rendererState.value == RendererState.RENDERING) {
             _rendererState.value = RendererState.PAUSED
@@ -218,10 +216,6 @@ class FilamentRenderer(
         }
     }
 
-    /**
-     * Resume rendering after pause.
-     * Call after layout changes are complete.
-     */
     fun resumeRendering() {
         if (_rendererState.value == RendererState.PAUSED) {
             _rendererState.value = RendererState.RENDERING
@@ -229,10 +223,6 @@ class FilamentRenderer(
         }
     }
 
-    /**
-     * Notify renderer that a layout change is about to happen.
-     * This prepares the renderer for an incoming resize.
-     */
     fun prepareForLayoutChange() {
         pendingResize.set(true)
         Log.d(tag, "Preparing for layout change")
@@ -240,7 +230,6 @@ class FilamentRenderer(
 
     /**
      * Initialize the Filament rendering engine.
-     * Must be called before any rendering operations.
      */
     fun initialize() {
         if (isInitialized) return
@@ -281,20 +270,17 @@ class FilamentRenderer(
                 renderCallback = object : UiHelper.RendererCallback {
                     override fun onNativeWindowChanged(surface: Surface) {
                         Log.d(tag, "onNativeWindowChanged - recreating SwapChain")
-                        // Wait for any frame in progress to complete
                         waitForFrameCompletion()
 
                         swapChain?.let { engine.destroySwapChain(it) }
                         swapChain = engine.createSwapChain(surface)
                         displayHelper.attach(renderer, surfaceView.display)
 
-                        // Clear pending resize flag
                         pendingResize.set(false)
                     }
 
                     override fun onDetachedFromSurface() {
                         Log.d(tag, "onDetachedFromSurface - cleaning up SwapChain")
-                        // Wait for any frame in progress
                         waitForFrameCompletion()
 
                         swapChain?.let {
@@ -324,8 +310,7 @@ class FilamentRenderer(
             // Configure view settings
             configureView()
 
-            // CRITICAL: Configure clear options to prevent ghosting/trails
-            // Without this, the frame buffer isn't cleared between frames causing visual artifacts
+            // Configure clear options (deep black for space)
             configureClearOptions()
 
             isInitialized = true
@@ -337,25 +322,20 @@ class FilamentRenderer(
 
     /**
      * Setup camera with default orbital position.
-     * Avatar will be at origin, camera looks at it from the front, framing full body.
      */
     private fun setupCamera() {
-        // Position camera in front of the avatar, positioned to see full body
-        // In Filament's coordinate system: +X = right, +Y = up, +Z = towards viewer (out of screen)
         val eye = FloatArray(3).apply {
-            this[0] = 0.0f   // x: centered horizontally
-            this[1] = 0.9f   // y: Lower camera to see full body (chest/torso level)
-            this[2] = -3.0f  // z: NEGATIVE = camera in front, farther for full body view
+            this[0] = 0.0f
+            this[1] = 0.9f
+            this[2] = -3.0f
         }
 
-        // Look at the avatar's chest/torso area to frame full body nicely
         val center = FloatArray(3).apply {
             this[0] = 0.0f
-            this[1] = 0.85f  // Look at center of body (torso level, not face)
+            this[1] = 0.85f
             this[2] = 0.0f
         }
 
-        // Up vector (Y axis points up)
         val up = FloatArray(3).apply {
             this[0] = 0.0f
             this[1] = 1.0f
@@ -368,7 +348,11 @@ class FilamentRenderer(
             up[0].toDouble(), up[1].toDouble(), up[2].toDouble()
         )
 
-        Log.d(tag, "Camera positioned for full body view: eye=(${eye[0]}, ${eye[1]}, ${eye[2]}), looking at=(${center[0]}, ${center[1]}, ${center[2]})")
+        Log.d(
+            tag,
+            "Camera positioned for full body view: eye=(${eye[0]}, ${eye[1]}, ${eye[2]}), " +
+                    "looking at=(${center[0]}, ${center[1]}, ${center[2]})"
+        )
     }
 
     /**
@@ -376,35 +360,30 @@ class FilamentRenderer(
      */
     private fun configureCameraProjection(width: Int, height: Int) {
         val aspect = width.toDouble() / height.toDouble()
-        val fov = 45.0 // Field of view in degrees
-        val near = 0.1  // Near clipping plane
-        val far = 20.0  // Far clipping plane
+        val fov = 45.0
+        val near = 0.1
+        val far = 100.0
 
         camera.setProjection(fov, aspect, near, far, Camera.Fov.VERTICAL)
     }
 
     /**
      * Setup realistic lighting for the avatar.
-     * Uses Image-Based Lighting (IBL) for ambient + directional sun light.
      */
     private fun setupLighting() {
-        // Create IBL (Image-Based Lighting)
-        // TODO: Load actual IBL texture from assets
-        // For now, use default ambient light
-
-        // Create sun light (directional light)
+        // Sun light
         sunEntity = EntityManager.get().create()
 
         LightManager.Builder(LightManager.Type.SUN)
-            .color(1.0f, 1.0f, 0.95f) // Warm white
+            .color(1.0f, 1.0f, 0.95f)
             .intensity(100000.0f)
-            .direction(0.3f, -1.0f, -0.5f) // From top-front
+            .direction(0.3f, -1.0f, -0.5f)
             .castShadows(true)
             .build(engine, sunEntity)
 
         scene.addEntity(sunEntity)
 
-        // Set default ambient light
+        // Ambient light (simple default IBL-like)
         scene.indirectLight = IndirectLight.Builder()
             .intensity(30000.0f)
             .build(engine)
@@ -414,22 +393,15 @@ class FilamentRenderer(
      * Configure view rendering settings.
      */
     private fun configureView() {
-        // Enable post-processing for better quality
         view.isPostProcessingEnabled = true
-
-        // Enable anti-aliasing
         view.antiAliasing = View.AntiAliasing.FXAA
-
-        // Enable ambient occlusion for depth
         view.ambientOcclusion = View.AmbientOcclusion.SSAO
 
-        // Enable bloom for nice glow effects
         view.bloomOptions = view.bloomOptions.apply {
             enabled = true
-            strength = 0.1f
+            strength = 0.1f  // Vanilla bloom leggero
         }
 
-        // Configure tone mapping
         view.colorGrading = ColorGrading.Builder()
             .toneMapping(ColorGrading.ToneMapping.ACES)
             .build(engine)
@@ -437,36 +409,20 @@ class FilamentRenderer(
 
     /**
      * Configure clear options to prevent ghosting/trailing artifacts.
-     *
-     * CRITICAL: This is essential to clear the frame buffer between frames.
-     * Without proper clearing, previous frame data remains visible causing:
-     * - Ghosting/trails on high-end devices (S24)
-     * - Visual glitches (green/blue/red artifacts) on low-end devices
-     *
-     * Reference: https://github.com/google/filament/discussions/4677
+     * Using deep black for space.
      */
     private fun configureClearOptions() {
-        // Configure renderer to clear the frame buffer every frame
         val clearOptions = renderer.clearOptions.apply {
-            // Enable clearing of the color buffer - ESSENTIAL to prevent trails
             clear = true
-            // Set clear color (dark blue-gray background)
-            // Format: RGBA with values 0.0-1.0
-            clearColor = floatArrayOf(0.1f, 0.1f, 0.15f, 1.0f)
+            clearColor = floatArrayOf(0.0f, 0.0f, 0.0f, 1.0f)
         }
         renderer.clearOptions = clearOptions
 
-        // Also configure view for proper depth handling on low-end devices
-        // This helps prevent visual glitches caused by depth buffer issues
         view.dynamicResolutionOptions = view.dynamicResolutionOptions.apply {
-            // Enable dynamic resolution for better performance on low-end devices
-            enabled = false // Disabled for now - can cause artifacts if not tuned properly
+            enabled = false
         }
 
-        // Configure depth prepass for better rendering stability
-        // This ensures proper depth sorting which prevents visual glitches
         view.renderQuality = view.renderQuality.apply {
-            // Use medium quality for better compatibility
             hdrColorBuffer = View.QualityLevel.MEDIUM
         }
 
@@ -475,18 +431,12 @@ class FilamentRenderer(
 
     // ==================== Resize Handling Methods ====================
 
-    /**
-     * Handle resize with debouncing to prevent rapid consecutive resizes.
-     * This is crucial when hiding/showing UI panels that cause layout changes.
-     */
     private fun handleResizeWithDebounce(width: Int, height: Int) {
-        // Validate dimensions
         if (width <= 0 || height <= 0) {
             Log.w(tag, "Invalid resize dimensions: ${width}x${height}")
             return
         }
 
-        // Check if this is a significant change
         val widthChange = abs(width - currentWidth.get())
         val heightChange = abs(height - currentHeight.get())
 
@@ -497,15 +447,12 @@ class FilamentRenderer(
 
         Log.d(tag, "Resize requested: ${currentWidth.get()}x${currentHeight.get()} -> ${width}x${height}")
 
-        // Cancel any pending resize
         pendingResizeRunnable?.let { resizeHandler.removeCallbacks(it) }
 
-        // Mark as resizing
         isResizing.set(true)
         pendingResize.set(true)
         _rendererState.value = RendererState.RESIZING
 
-        // Debounce the actual resize
         pendingResizeRunnable = Runnable {
             performResize(width, height)
         }.also {
@@ -513,33 +460,22 @@ class FilamentRenderer(
         }
     }
 
-    /**
-     * Perform the actual resize operation.
-     * Called after debounce delay.
-     */
     private fun performResize(width: Int, height: Int) {
         Log.d(tag, "Performing resize to ${width}x${height}")
 
         try {
-            // Wait for any frame in progress
             waitForFrameCompletion()
 
-            // Update viewport
             view.viewport = Viewport(0, 0, width, height)
-
-            // Update camera projection
             configureCameraProjection(width, height)
 
-            // Store new dimensions
             currentWidth.set(width)
             currentHeight.set(height)
 
             Log.d(tag, "Resize completed successfully")
-
         } catch (e: Exception) {
             Log.e(tag, "Error during resize", e)
         } finally {
-            // Clear resize flags and resume rendering
             isResizing.set(false)
             pendingResize.set(false)
             _rendererState.value = RendererState.RENDERING
@@ -547,10 +483,6 @@ class FilamentRenderer(
         }
     }
 
-    /**
-     * Wait for any in-progress frame to complete.
-     * Prevents race conditions between resize and render.
-     */
     private fun waitForFrameCompletion() {
         if (!frameInProgress.get()) return
 
@@ -566,47 +498,34 @@ class FilamentRenderer(
 
     /**
      * Load a VRM/glTF model into the scene.
-     *
-     * @param buffer ByteBuffer containing the glTF/VRM file data
-     * @param vrmBlendShapes VRM blend shape definitions (optional)
-     * @return FilamentAsset representing the loaded model
      */
-    fun loadModel(buffer: ByteBuffer, vrmBlendShapes: List<com.lifo.humanoid.data.vrm.VrmBlendShape> = emptyList()): FilamentAsset? {
+    fun loadModel(
+        buffer: ByteBuffer,
+        vrmBlendShapes: List<com.lifo.humanoid.data.vrm.VrmBlendShape> = emptyList()
+    ): FilamentAsset? {
         return try {
             Log.d(tag, "loadModel called with buffer: capacity=${buffer.capacity()}, position=${buffer.position()}, limit=${buffer.limit()}")
 
-            // Remove previous asset if exists
             currentAsset?.let { asset ->
                 Log.d(tag, "Removing previous asset")
                 scene.removeEntities(asset.entities)
                 assetLoader.destroyAsset(asset)
             }
 
-            // Clear previous blend shape mapping
             blendShapeMapping.clear()
 
-            // Ensure buffer is positioned at the start
             buffer.position(0)
             Log.d(tag, "Buffer reset to position 0, attempting to create asset...")
 
-            // Load new asset
             val asset = assetLoader.createAsset(buffer)
 
             if (asset != null) {
                 Log.d(tag, "Asset created successfully! Entities: ${asset.entities.size}, Root: ${asset.root}")
 
-                // CRITICAL FIX: Load resources SYNCHRONOUSLY and wait for completion
-                // This ensures morph targets are fully registered before mapping
                 Log.d(tag, "Loading resources (textures, buffers) - BLOCKING until complete...")
-
-                // AAA-GRADE FIX: Load resources synchronously
-                Log.d(tag, "Loading resources (textures, buffers)...")
                 resourceLoader.loadResources(asset)
 
-                // AAA-GRADE FIX: Begin async loading
                 resourceLoader.asyncBeginLoad(asset)
-
-                // Pump the async loader to completion
                 Log.d(tag, "Pumping async resource loader...")
                 var pumpIterations = 0
                 while (pumpIterations < 50) {
@@ -616,30 +535,22 @@ class FilamentRenderer(
                 }
                 Log.d(tag, "Async resource loading pumped for ${pumpIterations}ms")
 
-                // Add to scene FIRST - morph targets need entities to be in the scene
                 Log.d(tag, "Adding ${asset.entities.size} entities to scene")
                 scene.addEntities(asset.entities)
 
-                // Store reference
                 currentAsset = asset
 
-                // AAA-GRADE FIX: DEFER blend shape mapping until after first render
-                // Morph targets are only uploaded to GPU during the first render pass
-                // This is a critical Filament behavior that requires deferred initialization
                 Log.d(tag, "Deferring blend shape mapping until after first GPU upload (AAA-grade pattern)")
                 pendingBlendShapes = Pair(asset, vrmBlendShapes)
                 blendShapesInitialized.set(false)
                 blendShapeMapping.clear()
 
-                // Center and scale the model
                 Log.d(tag, "Centering and scaling asset")
                 centerAndScaleAsset(asset)
 
-                // Extract node names for animation system
                 val nodeNames = extractNodeNames(asset)
                 Log.d(tag, "Extracted ${nodeNames.size} node names for animation mapping")
 
-                // Notify listener that model is loaded
                 modelLoadedListener?.onModelLoaded(asset, nodeNames)
 
                 Log.d(tag, "Model loaded and configured successfully!")
@@ -655,95 +566,353 @@ class FilamentRenderer(
         }
     }
 
+    // =========================================================
+    // BACKGROUND: space.glb (o altre scene)
+    // =========================================================
+
     /**
-     * Center and scale the asset to fit nicely in view.
-     * Positions avatar so feet are at Y=0 (ground) and centered at X=0, Z=0.
+     * API usata da FilamentView:
+     * carica un GLB come ambiente di sfondo (es. space.glb).
+     */
+    /**
+     * Load an image as background (background.jpg)
+     * Creates a simple colored skybox instead of trying to use the image as environment
+     */
+    fun loadBackgroundImage(imageData: ByteArray) {
+        try {
+            Log.d(tag, "Creating simple space background")
+
+            // Remove existing skybox
+            skybox?.let {
+                scene.skybox = null
+                engine.destroySkybox(it)
+                skybox = null
+            }
+
+            // Create a deep space blue/black skybox
+            val skyboxBuilder = com.google.android.filament.Skybox.Builder()
+            skyboxBuilder.color(0.0f, 0.0f, 0.05f, 1.0f)  // Very dark blue for space
+            skyboxBuilder.showSun(false)
+
+            skybox = skyboxBuilder.build(engine)
+            scene.skybox = skybox
+
+            Log.d(tag, "Simple space background created successfully")
+        } catch (e: Exception) {
+            Log.e(tag, "Failed to create background", e)
+            e.printStackTrace()
+        }
+    }
+
+    fun loadBackgroundEnvironment(
+        glbData: ByteBuffer,
+        scale: Float = 1.0f,
+        position: FloatArray = floatArrayOf(0f, 0f, 0f)
+    ): FilamentAsset? {
+        Log.d(tag, "loadBackgroundEnvironment called (scale=$scale, position=${position.joinToString()})")
+        return loadBackgroundAsset(glbData, scale, position)
+    }
+
+
+    fun loadBackgroundAsset(
+        buffer: ByteBuffer,
+        scale: Float = 200.0f,  // 👈 scala molto grande per zoom massimo
+        position: FloatArray = floatArrayOf(0f, 0f, 5f) // 👈 mettiamo lo sfondo dietro l'avatar ma dentro il frustum
+    ): FilamentAsset? {
+        var result: FilamentAsset? = null
+
+        try {
+            Log.d(tag, "loadBackgroundAsset called with buffer: capacity=${buffer.capacity()}")
+
+            // Rimuovi eventuale background precedente
+            backgroundAsset?.let { asset ->
+                Log.d(tag, "Removing previous background asset")
+                scene.removeEntities(asset.entities)
+                assetLoader.destroyAsset(asset)
+                backgroundAsset = null
+            }
+
+            // Riparti da inizio buffer
+            buffer.position(0)
+
+            // ⚠️ stesso loader che usi per il VRM (funziona sia per .gltf che .glb)
+            val asset: FilamentAsset? = assetLoader.createAsset(buffer)
+            if (asset == null) {
+                Log.e(tag, "Failed to create background asset from buffer (createAsset returned null)")
+                return null
+            }
+
+            Log.d(tag, "Background asset created successfully! Entities: ${asset.entities.size}")
+
+            // Carica risorse
+            resourceLoader.loadResources(asset)
+            resourceLoader.asyncBeginLoad(asset)
+
+            var pumpIterations = 0
+            while (pumpIterations < 50) {
+                resourceLoader.asyncUpdateLoad()
+                Thread.sleep(1)
+                pumpIterations++
+            }
+            Log.d(tag, "Background resources loaded (async pumped $pumpIterations steps)")
+
+            // Crea le renderable
+            try {
+                asset.releaseSourceData()
+                Log.d(tag, "Background source data released - renderables created")
+            } catch (e: Exception) {
+                Log.w(tag, "releaseSourceData not supported or failed: ${e.message}")
+            }
+
+            // Configurazione minima per rendering corretto senza modificare materiali
+            val rm = engine.renderableManager
+            asset.entities.forEach { entity ->
+                val instance = rm.getInstance(entity)
+                if (instance != 0) {
+                    try {
+                        // Solo fix anti-flickering, senza toccare materiali
+                        rm.setCulling(instance, false)
+                        rm.setCastShadows(instance, false)
+                        rm.setReceiveShadows(instance, false)
+
+                        Log.d(tag, "Configured background entity $entity (vanilla materials)")
+                    } catch (e: Exception) {
+                        Log.w(tag, "Error configuring background entity $entity: ${e.message}")
+                    }
+                }
+            }
+
+            // Aggiungi alla scena
+            scene.addEntities(asset.entities)
+            backgroundAsset = asset
+
+            // Posiziona e scala il background
+            positionAndScaleBackground(asset, scale, position)
+
+            Log.d(tag, "Background asset loaded and configured successfully!")
+            result = asset
+        } catch (e: Exception) {
+            Log.e(tag, "Exception in loadBackgroundAsset", e)
+            e.printStackTrace()
+        }
+
+        return result
+    }
+
+
+
+
+    /**
+     * Optional: create a very simple space skybox (still disponibile se ti serve altrove).
+     */
+    fun createSpaceSkybox(starCount: Int = 2000, starBrightness: Float = 1.0f) {
+        try {
+            Log.d(tag, "Creating space skybox")
+
+            skybox?.let {
+                scene.skybox = null
+                engine.destroySkybox(it)
+                skybox = null
+            }
+            skyboxTexture?.let {
+                engine.destroyTexture(it)
+                skyboxTexture = null
+            }
+
+            val skyboxBuilder = Skybox.Builder()
+            skyboxBuilder.color(0.0f, 0.0f, 0.05f, 1.0f)
+
+            skybox = skyboxBuilder.build(engine)
+            scene.skybox = skybox
+
+            Log.d(tag, "Space skybox created successfully!")
+        } catch (e: Exception) {
+            Log.e(tag, "Failed to create space skybox", e)
+            e.printStackTrace()
+        }
+    }
+
+    private fun positionAndScaleBackground(
+        asset: FilamentAsset,
+        scale: Float,
+        position: FloatArray
+    ) {
+        val tm = engine.transformManager
+        val root = asset.root
+        val instance = tm.getInstance(root)
+
+        if (instance == 0) {
+            Log.w(tag, "positionAndScaleBackground: invalid TransformManager instance for background root")
+            return
+        }
+
+        val aabb = asset.boundingBox
+        val center = aabb.center
+        val halfExtent = aabb.halfExtent
+
+        // Store for rotation updates
+        backgroundInitialScale = scale
+        backgroundInitialPosition = position
+        backgroundCenter = center.clone()
+
+        Log.d(
+            tag,
+            "Background bounding box - center: (${center[0]}, ${center[1]}, ${center[2]}), " +
+                    "halfExtent: (${halfExtent[0]}, ${halfExtent[1]}, ${halfExtent[2]})"
+        )
+
+        val t = FloatArray(16) { 0f }
+
+        // Scala (diagonale)
+        t[0] = scale
+        t[5] = scale
+        t[10] = scale
+
+        // Traslazione: lo centro rispetto al proprio bounding box
+        // e poi applico l'offset richiesto (0,0,5 di default, quindi dietro l'avatar).
+        t[12] = position[0] - center[0] * scale
+        t[13] = position[1] - center[1] * scale
+        t[14] = position[2] - center[2] * scale
+        t[15] = 1.0f
+
+        Log.d(
+            tag,
+            "Background transform applied - scale=$scale, translation=(${t[12]}, ${t[13]}, ${t[14]})"
+        )
+
+        tm.setTransform(instance, t)
+    }
+
+    // Store initial background transform to apply rotation correctly
+    private var backgroundInitialScale = 15.0f
+    private var backgroundInitialPosition = floatArrayOf(0f, 0f, 5f)
+    private var backgroundCenter = floatArrayOf(0f, 0f, 0f)
+
+    /**
+     * Update background rotation for slow continuous animation.
+     * Call this every frame to animate the background.
+     * Rotates around its own center (Y axis), not around world origin.
+     */
+    fun updateBackgroundRotation() {
+        val asset = backgroundAsset ?: return
+
+        val tm = engine.transformManager
+        val root = asset.root
+        val instance = tm.getInstance(root)
+
+        if (instance == 0) return
+
+        // Increment rotation angle (very slow)
+        backgroundRotationAngle += backgroundRotationSpeed
+        if (backgroundRotationAngle >= 360.0f) {
+            backgroundRotationAngle -= 360.0f
+        }
+
+        // Create rotation matrix (rotation around Y axis at object's center)
+        val angleRad = Math.toRadians(backgroundRotationAngle.toDouble()).toFloat()
+        val cos = kotlin.math.cos(angleRad)
+        val sin = kotlin.math.sin(angleRad)
+
+        val scale = backgroundInitialScale
+
+        // Calculate the final position: translate to position, then center the object
+        val finalPosX = backgroundInitialPosition[0] - backgroundCenter[0] * scale
+        val finalPosY = backgroundInitialPosition[1] - backgroundCenter[1] * scale
+        val finalPosZ = backgroundInitialPosition[2] - backgroundCenter[2] * scale
+
+        // Build transform: Translate to world position, then rotate around object center
+        // Matrix = Translation * Rotation * Scale
+        val t = FloatArray(16) { 0f }
+
+        // Rotation + Scale combined (rotate around object's own Y axis)
+        t[0] = scale * cos
+        t[2] = scale * sin
+        t[5] = scale
+        t[8] = -scale * sin
+        t[10] = scale * cos
+
+        // Translation (apply to final position)
+        t[12] = finalPosX
+        t[13] = finalPosY
+        t[14] = finalPosZ
+        t[15] = 1.0f
+
+        tm.setTransform(instance, t)
+    }
+
+
+
+    /**
+     * Center and scale the avatar asset to fit nicely in view.
      */
     private fun centerAndScaleAsset(asset: FilamentAsset) {
         val tm = engine.transformManager
         val root = asset.root
         val instance = tm.getInstance(root)
 
-        // Get bounding box
         val aabb = asset.boundingBox
         val center = aabb.center
         val halfExtent = aabb.halfExtent
 
-        Log.d(tag, "Asset bounding box - center: (${center[0]}, ${center[1]}, ${center[2]}), halfExtent: (${halfExtent[0]}, ${halfExtent[1]}, ${halfExtent[2]})")
+        Log.d(
+            tag,
+            "Asset bounding box - center: (${center[0]}, ${center[1]}, ${center[2]}), " +
+                    "halfExtent: (${halfExtent[0]}, ${halfExtent[1]}, ${halfExtent[2]})"
+        )
 
-        // Calculate scale to fit avatar (assume human is ~1.7m tall)
-        val heightExtent = halfExtent[1] * 2.0f // Full height of the model
+        val heightExtent = halfExtent[1] * 2.0f
         val targetHeight = 1.7f
         val scale = targetHeight / heightExtent
 
         Log.d(tag, "Model height: ${heightExtent}m, scale factor: $scale")
 
-        // Create transform matrix
         val transform = FloatArray(16)
-        // Scale
         transform[0] = scale
         transform[5] = scale
         transform[10] = scale
 
-        // Translation: Center horizontally (X, Z) but put feet at ground (Y=0)
-        transform[12] = -center[0] * scale  // Center horizontally on X
-        transform[13] = (-center[1] + halfExtent[1]) * scale  // Feet at Y=0 (ground level)
-        transform[14] = -center[2] * scale  // Center on Z
+        transform[12] = -center[0] * scale
+        transform[13] = (-center[1] + halfExtent[1]) * scale
+        transform[14] = -center[2] * scale
         transform[15] = 1.0f
 
-        Log.d(tag, "Transform applied - translation: (${transform[12]}, ${transform[13]}, ${transform[14]})")
+        Log.d(
+            tag,
+            "Transform applied - translation: (${transform[12]}, ${transform[13]}, ${transform[14]})"
+        )
 
         tm.setTransform(instance, transform)
     }
 
     /**
-     * Main render loop. Call this continuously to render frames.
-     * Thread-safe with respect to resize operations.
-     *
-     * @param frameTimeNanos Current frame time in nanoseconds
-     * @return true if frame was rendered, false if skipped
+     * Main render loop.
      */
     fun render(frameTimeNanos: Long): Boolean {
-        // Quick checks first (no synchronization needed)
         if (!isInitialized) return false
-
-        // Check resize state - skip rendering during resize
-        if (isResizing.get() || pendingResize.get()) {
-            return false
-        }
+        if (isResizing.get() || pendingResize.get()) return false
 
         val currentSwapChain = swapChain ?: return false
 
-        // Mark frame as in progress
         if (!frameInProgress.compareAndSet(false, true)) {
-            // Another frame is already in progress
             return false
         }
 
         try {
-            // Double-check resize state after acquiring frame lock
             if (isResizing.get() || pendingResize.get()) {
                 return false
             }
 
-            // Update state to rendering if not already
             if (_rendererState.value == RendererState.IDLE) {
                 _rendererState.value = RendererState.RENDERING
             }
 
-            // Check if we can begin frame
             if (!renderer.beginFrame(currentSwapChain, frameTimeNanos)) {
                 return false
             }
 
-            // Render the view
             renderer.render(view)
-
-            // End frame and present
             renderer.endFrame()
 
-            // AAA-GRADE DEFERRED INITIALIZATION: Build blend shapes AFTER first successful render
-            // Morph targets are uploaded to GPU during rendering, so we must wait until after
             if (!blendShapesInitialized.get() && pendingBlendShapes != null) {
                 Log.d(tag, "═══ AAA-GRADE: First render complete - initializing blend shapes ═══")
                 val (asset, vrmBlendShapes) = pendingBlendShapes!!
@@ -754,32 +923,25 @@ class FilamentRenderer(
             }
 
             return true
-
         } catch (e: Exception) {
             Log.e(tag, "Error during render", e)
             return false
         } finally {
-            // Always clear frame in progress flag
             frameInProgress.set(false)
         }
     }
 
-    /**
-     * Render with automatic frame timing.
-     * Convenience method that uses System.nanoTime().
-     */
     fun renderFrame(): Boolean {
         return render(System.nanoTime())
     }
 
     /**
      * Build blend shape mapping from VRM definitions.
-     * Maps VRM blend shape names to Filament morph target indices.
-     *
-     * CRITICAL: This must be called AFTER resourceLoader has completed loading,
-     * otherwise morph targets may not be registered in RenderableManager yet.
      */
-    private fun buildBlendShapeMapping(asset: FilamentAsset, vrmBlendShapes: List<com.lifo.humanoid.data.vrm.VrmBlendShape>) {
+    private fun buildBlendShapeMapping(
+        asset: FilamentAsset,
+        vrmBlendShapes: List<com.lifo.humanoid.data.vrm.VrmBlendShape>
+    ) {
         if (vrmBlendShapes.isEmpty()) {
             Log.w(tag, "No VRM blend shapes provided - blend shape mapping will be empty")
             return
@@ -791,9 +953,8 @@ class FilamentRenderer(
         var totalMappings = 0
         var failedMappings = 0
 
-        // AAA-GRADE FIX: Scan ALL entities to find which ones have morph targets
         Log.d(tag, "═══ Scanning ${asset.entities.size} entities for morph targets ═══")
-        val entitiesWithMorphTargets = mutableListOf<Triple<Int, Int, Int>>() // (entity, entityIndex, morphTargetCount)
+        val entitiesWithMorphTargets = mutableListOf<Triple<Int, Int, Int>>()
 
         asset.entities.forEachIndexed { index, entity ->
             val instance = renderableManager.getInstance(entity)
@@ -807,13 +968,13 @@ class FilamentRenderer(
         }
         Log.d(tag, "═══ Found ${entitiesWithMorphTargets.size} entities with morph targets ═══")
 
-        // If we found entities with morph targets, use the FIRST one for ALL blend shapes
-        // This is the AAA-grade approach - VRM blend shapes all target the same mesh (Face mesh)
         if (entitiesWithMorphTargets.isNotEmpty()) {
             val (targetEntity, targetIndex, targetMorphCount) = entitiesWithMorphTargets.first()
-            Log.d(tag, "Using entity $targetEntity (index $targetIndex) with $targetMorphCount morph targets for ALL blend shapes")
+            Log.d(
+                tag,
+                "Using entity $targetEntity (index $targetIndex) with $targetMorphCount morph targets for ALL blend shapes"
+            )
 
-            // Map ALL blend shapes to this entity
             vrmBlendShapes.forEach { vrmBlendShape ->
                 val blendShapeName = vrmBlendShape.name.lowercase()
                 val presetName = vrmBlendShape.preset?.name?.lowercase()
@@ -821,22 +982,26 @@ class FilamentRenderer(
                 vrmBlendShape.bindings.forEach { binding ->
                     val morphTargetIndex = binding.morphTargetIndex
 
-                    // Validate morph target index
                     if (morphTargetIndex < targetMorphCount) {
-                        // Add to mapping
                         blendShapeMapping.getOrPut(blendShapeName) { mutableListOf() }
                             .add(Pair(targetEntity, morphTargetIndex))
 
-                        // Also map preset name
                         if (presetName != null && presetName != "unknown") {
                             blendShapeMapping.getOrPut(presetName) { mutableListOf() }
                                 .add(Pair(targetEntity, morphTargetIndex))
                         }
 
                         totalMappings++
-                        Log.d(tag, "✓ Mapped blend shape '$blendShapeName' (preset: $presetName) -> entity $targetEntity, morph target $morphTargetIndex/$targetMorphCount")
+                        Log.d(
+                            tag,
+                            "✓ Mapped blend shape '$blendShapeName' (preset: $presetName) -> entity $targetEntity, " +
+                                    "morph target $morphTargetIndex/$targetMorphCount"
+                        )
                     } else {
-                        Log.e(tag, "Morph target index $morphTargetIndex out of bounds (max: $targetMorphCount) for blend shape '$blendShapeName'")
+                        Log.e(
+                            tag,
+                            "Morph target index $morphTargetIndex out of bounds (max: $targetMorphCount) for blend shape '$blendShapeName'"
+                        )
                         failedMappings++
                     }
                 }
@@ -856,32 +1021,28 @@ class FilamentRenderer(
         Log.i(tag, "═══════════════════════════════════════════════════════════")
 
         if (failedMappings > 0) {
-            Log.e(tag, "⚠️ WARNING: $failedMappings blend shape mappings FAILED! Facial animations may not work correctly!")
+            Log.e(
+                tag,
+                "⚠️ WARNING: $failedMappings blend shape mappings FAILED! Facial animations may not work correctly!"
+            )
         }
 
         if (totalMappings == 0) {
-            Log.e(tag, "⚠️ CRITICAL: NO blend shape mappings created! Lip-sync, blink, and expressions WILL NOT WORK!")
+            Log.e(
+                tag,
+                "⚠️ CRITICAL: NO blend shape mappings created! Lip-sync, blink, and expressions WILL NOT WORK!"
+            )
         }
     }
 
     /**
      * Extract node names from FilamentAsset for animation bone mapping.
-     * Uses the Filament naming convention to retrieve entity names.
-     *
-     * @param asset The loaded FilamentAsset
-     * @return List of node names in entity order
      */
     private fun extractNodeNames(asset: FilamentAsset): List<String> {
         val nodeNames = mutableListOf<String>()
-        val nameManager = engine.entityManager
 
         asset.entities.forEachIndexed { index, entity ->
-            // Try to get node name from the asset's name component
-            // Filament stores names via the NameComponentManager
             val name = try {
-                // The asset provides entity names through its internal structure
-                // We use index-based naming as fallback since Filament doesn't expose
-                // name retrieval directly in all versions
                 asset.getName(entity) ?: "node_$index"
             } catch (e: Exception) {
                 "node_$index"
@@ -894,30 +1055,26 @@ class FilamentRenderer(
 
     /**
      * Update blend shape weights for facial animation.
-     * Uses VRM blend shape mapping to apply weights correctly.
-     *
-     * @param blendShapes Map of blend shape names to weights (0.0-1.0)
      */
     fun updateBlendShapes(blendShapes: Map<String, Float>) {
         if (blendShapes.isEmpty()) return
 
-        // Safety check: if mapping is empty, blend shapes can't work
         if (blendShapeMapping.isEmpty()) {
-            // Only log this error once per second to avoid spam
-            if (System.currentTimeMillis() % 1000 < 16) { // ~once per second at 60fps
-                Log.e(tag, "⚠️ Blend shape mapping is EMPTY! Cannot update blend shapes. Lip-sync/blink/expressions will not work!")
+            if (System.currentTimeMillis() % 1000 < 16) {
+                Log.e(
+                    tag,
+                    "⚠️ Blend shape mapping is EMPTY! Cannot update blend shapes. Lip-sync/blink/expressions will not work!"
+                )
             }
             return
         }
 
         val renderableManager = engine.renderableManager
 
-        // Apply each blend shape weight using the mapping
         blendShapes.forEach { (name, weight) ->
             val normalizedName = name.lowercase()
             val targetWeight = weight.coerceIn(0f, 1f)
 
-            // Get all morph targets for this blend shape name
             val targets = blendShapeMapping[normalizedName]
 
             if (targets != null) {
@@ -931,16 +1088,28 @@ class FilamentRenderer(
                                 morphTargetIndex
                             )
                         } catch (e: Exception) {
-                            Log.e(tag, "Failed to set morph weight for blend shape '$name' (entity=$entity, index=$morphTargetIndex): ${e.message}")
+                            Log.e(
+                                tag,
+                                "Failed to set morph weight for blend shape '$name' (entity=$entity, index=$morphTargetIndex): ${e.message}"
+                            )
                         }
                     } else {
-                        Log.w(tag, "Blend shape '$name' has invalid renderable instance for entity $entity")
+                        Log.w(
+                            tag,
+                            "Blend shape '$name' has invalid renderable instance for entity $entity"
+                        )
                     }
                 }
             } else {
-                // Log warning only for significant weights to reduce noise
                 if (weight > 0.01f) {
-                    Log.w(tag, "Blend shape '$name' not found in mapping. Available: ${blendShapeMapping.keys.take(5).joinToString()}")
+                    Log.w(
+                        tag,
+                        "Blend shape '$name' not found in mapping. Available: ${
+                            blendShapeMapping.keys.take(
+                                5
+                            ).joinToString()
+                        }"
+                    )
                 }
             }
         }
@@ -948,7 +1117,6 @@ class FilamentRenderer(
 
     /**
      * Cleanup all Filament resources.
-     * Must be called when renderer is no longer needed.
      */
     fun cleanup() {
         if (!isInitialized) return
@@ -956,48 +1124,54 @@ class FilamentRenderer(
         Log.d(tag, "Cleanup started")
 
         try {
-            // Stop rendering
             _rendererState.value = RendererState.IDLE
 
-            // Cancel any pending resize operations
             pendingResizeRunnable?.let { resizeHandler.removeCallbacks(it) }
             pendingResizeRunnable = null
 
-            // Wait for any frame in progress
             waitForFrameCompletion()
 
             frameScope.cancel()
 
-            // Destroy current asset
             currentAsset?.let { asset ->
                 scene.removeEntities(asset.entities)
                 assetLoader.destroyAsset(asset)
                 currentAsset = null
             }
 
-            // Destroy lights
+            backgroundAsset?.let { asset ->
+                scene.removeEntities(asset.entities)
+                assetLoader.destroyAsset(asset)
+                backgroundAsset = null
+            }
+
+            skybox?.let {
+                scene.skybox = null
+                engine.destroySkybox(it)
+                skybox = null
+            }
+            skyboxTexture?.let {
+                engine.destroyTexture(it)
+                skyboxTexture = null
+            }
+
             engine.destroyEntity(sunEntity)
             engine.destroyEntity(iblEntity)
 
-            // Cleanup loaders
             assetLoader.destroy()
             resourceLoader.destroy()
             materialProvider.destroy()
 
-            // Cleanup UI helper
             uiHelper.detach()
 
-            // Destroy swap chain
             swapChain?.let { engine.destroySwapChain(it) }
 
-            // Destroy Filament components
             engine.destroyRenderer(renderer)
             engine.destroyView(view)
             engine.destroyScene(scene)
             engine.destroyCameraComponent(camera.entity)
             EntityManager.get().destroy(camera.entity)
 
-            // Destroy engine last
             engine.destroy()
 
             isInitialized = false

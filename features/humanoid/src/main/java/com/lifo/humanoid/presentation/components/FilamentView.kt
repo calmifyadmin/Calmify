@@ -11,10 +11,12 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.google.android.filament.gltfio.FilamentAsset
+import com.lifo.humanoid.data.vrm.VrmExtensions
 import com.lifo.humanoid.rendering.FilamentRenderer
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 private const val TAG = "FilamentView"
 
@@ -40,7 +42,7 @@ private const val TAG = "FilamentView"
 fun FilamentView(
     modifier: Modifier = Modifier,
     vrmModelData: ByteBuffer? = null,
-    vrmExtensions: com.lifo.humanoid.data.vrm.VrmExtensions? = null,
+    vrmExtensions: VrmExtensions? = null,
     blendShapeWeights: Map<String, Float> = emptyMap(),
     isLayoutChanging: Boolean = false,
     onRendererReady: (FilamentRenderer) -> Unit = {},
@@ -59,12 +61,50 @@ fun FilamentView(
     // Track current size to detect changes
     var lastSize by remember { mutableStateOf(Pair(0, 0)) }
 
+    // Load background GLB (space.glb) ONCE and keep it in memory
+    val spaceBackgroundData: ByteBuffer? by remember {
+        mutableStateOf(
+            try {
+                context.assets.open("space.glb").use { input ->
+                    val bytes = input.readBytes()
+                    ByteBuffer
+                        .allocateDirect(bytes.size)
+                        .order(ByteOrder.nativeOrder())
+                        .apply {
+                            put(bytes)
+                            rewind()
+                        }
+                }.also {
+                    Log.d(TAG, "Loaded space.glb from assets (${it.capacity()} bytes)")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load space.glb from assets", e)
+                null
+            }
+        )
+    }
+
     // Handle layout change notifications
     LaunchedEffect(isLayoutChanging) {
         renderer?.let { r ->
             if (isLayoutChanging) {
                 Log.d(TAG, "Layout change started - preparing renderer")
                 r.prepareForLayoutChange()
+            }
+        }
+    }
+// Load space.glb background when renderer is ready
+    LaunchedEffect(spaceBackgroundData, isRendererReady) {
+        if (spaceBackgroundData != null && isRendererReady) {
+            try {
+                Log.d(TAG, "Loading space.glb as background environment")
+                renderer?.loadBackgroundEnvironment(
+                    glbData = spaceBackgroundData!!,
+                    scale = 200.0f,
+                    position = floatArrayOf(0f, 0f, 5f)
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load background environment", e)
             }
         }
     }
@@ -90,12 +130,17 @@ fun FilamentView(
                 filamentRenderer.initialize()
 
                 // Set up model loaded listener for animation system
-                filamentRenderer.setOnModelLoadedListener(object : FilamentRenderer.OnModelLoadedListener {
-                    override fun onModelLoaded(asset: FilamentAsset, nodeNames: List<String>) {
-                        Log.d(TAG, "Model loaded callback - notifying parent")
-                        onModelLoaded(filamentRenderer, asset, nodeNames)
+                filamentRenderer.setOnModelLoadedListener(
+                    object : FilamentRenderer.OnModelLoadedListener {
+                        override fun onModelLoaded(
+                            asset: FilamentAsset,
+                            nodeNames: List<String>
+                        ) {
+                            Log.d(TAG, "Model loaded callback - notifying parent")
+                            onModelLoaded(filamentRenderer, asset, nodeNames)
+                        }
                     }
-                })
+                )
 
                 renderer = filamentRenderer
                 isRendererReady = true
@@ -117,13 +162,16 @@ fun FilamentView(
                     Log.d(TAG, "Lifecycle ON_PAUSE - pausing renderer")
                     renderer?.pauseRendering()
                 }
+
                 Lifecycle.Event.ON_RESUME -> {
                     Log.d(TAG, "Lifecycle ON_RESUME - resuming renderer")
                     renderer?.resumeRendering()
                 }
+
                 Lifecycle.Event.ON_DESTROY -> {
                     Log.d(TAG, "Lifecycle ON_DESTROY")
                 }
+
                 else -> {}
             }
         }
@@ -169,8 +217,6 @@ fun FilamentView(
             }
 
             // Target ~60 FPS with adaptive delay
-            // If we skipped rendering (due to resize), use a shorter delay
-            // to check again sooner
             val canCurrentlyRender = renderer?.canRender() ?: false
             delay(if (canCurrentlyRender) 16L else 8L)
         }
