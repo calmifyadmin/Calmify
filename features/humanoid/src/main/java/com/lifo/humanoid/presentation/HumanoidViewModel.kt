@@ -438,11 +438,27 @@ class HumanoidViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(debugMode = !_uiState.value.debugMode)
     }
 
+    /**
+     * Stop all animation controllers before Filament cleanup.
+     * CRITICAL: Must be called BEFORE FilamentRenderer.cleanup() to prevent
+     * accessing destroyed Filament assets.
+     * See: https://github.com/google/filament/issues/7650
+     */
+    fun stopAllControllersBeforeCleanup() {
+        Log.d(TAG, "stopAllControllersBeforeCleanup - stopping all animation controllers")
+        blinkController.stop()
+        lipSyncController.stop()
+        // Mark animation player as destroyed to prevent accessing Filament assets
+        vrmaAnimationPlayer?.stop(blendOut = false, destroy = true)
+        _isAnimationSystemReady.value = false
+        Log.d(TAG, "All controllers stopped and marked as destroyed")
+    }
+
     override fun onCleared() {
         super.onCleared()
         blinkController.stop()
         lipSyncController.stop()
-        vrmaAnimationPlayer?.stop(blendOut = false)
+        vrmaAnimationPlayer?.stop(blendOut = false, destroy = true)
         vrmaAnimationPlayerFactory.clear()
         filamentRenderer = null
         _isAnimationSystemReady.value = false

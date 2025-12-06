@@ -197,6 +197,9 @@ class VrmaAnimationPlayer(
     // Track if properly initialized
     private var isInitialized = false
 
+    // Track if destroyed - CRITICAL for preventing native crashes
+    private var isDestroyed = false
+
     // Reference to Animator for updateBoneMatrices() - CRITICAL for skinning
     private var animator: Animator? = null
 
@@ -204,6 +207,11 @@ class VrmaAnimationPlayer(
      * Initialize with a FilamentAsset to build node mapping
      */
     fun initialize(asset: FilamentAsset, nodeNames: List<String>) {
+        if (isDestroyed) {
+            Log.w(TAG, "Cannot initialize - player is destroyed")
+            return
+        }
+
         nodeEntityMap.clear()
         vrmBoneNameToEnum.clear()
         boneWorldMatrices.clear()
@@ -215,14 +223,25 @@ class VrmaAnimationPlayer(
         // Store reference to Animator for bone matrix updates
         // This is CRITICAL - without updateBoneMatrices(), transforms don't affect skinned mesh!
         // Note: Animator is obtained from FilamentInstance (asset.getInstance()), not directly from FilamentAsset
-        animator = asset.getInstance()?.animator
-        Log.d(TAG, "Animator obtained from asset instance: ${animator != null}")
+        try {
+            animator = asset.getInstance()?.animator
+            Log.d(TAG, "Animator obtained from asset instance: ${animator != null}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error obtaining animator: ${e.message}")
+            return
+        }
 
-        // Build node name to entity mapping
+        // Build node name to entity mapping with safety checks
         nodeNames.forEachIndexed { index, name ->
-            if (index < asset.entities.size) {
-                nodeEntityMap[name] = asset.entities[index]
-                Log.d(TAG, "Node mapping: '$name' -> entity ${asset.entities[index]}")
+            if (isDestroyed) return
+
+            try {
+                if (index < asset.entities.size) {
+                    nodeEntityMap[name] = asset.entities[index]
+                    Log.d(TAG, "Node mapping: '$name' -> entity ${asset.entities[index]}")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error mapping node '$name': ${e.message}")
             }
         }
 
@@ -253,34 +272,49 @@ class VrmaAnimationPlayer(
      * - Compute inverse quaternions for the animation retargeting formula
      */
     private fun calculateBoneWorldMatrices() {
-        val tm = engine.transformManager
-
-        boneMapper.getBoneEntityMap().forEach { (bone, entity) ->
-            val instance = tm.getInstance(entity)
-            if (instance != 0) {
-                val worldMatrix = FloatArray(16)
-                tm.getWorldTransform(instance, worldMatrix)
-                boneWorldMatrices[bone] = worldMatrix
-
-                // Extract world quaternion from world matrix
-                val sx = kotlin.math.sqrt(worldMatrix[0] * worldMatrix[0] + worldMatrix[1] * worldMatrix[1] + worldMatrix[2] * worldMatrix[2])
-                val sy = kotlin.math.sqrt(worldMatrix[4] * worldMatrix[4] + worldMatrix[5] * worldMatrix[5] + worldMatrix[6] * worldMatrix[6])
-                val sz = kotlin.math.sqrt(worldMatrix[8] * worldMatrix[8] + worldMatrix[9] * worldMatrix[9] + worldMatrix[10] * worldMatrix[10])
-
-                val worldQuat = matrixToQuaternion(worldMatrix, sx, sy, sz)
-                boneWorldQuaternions[bone] = worldQuat
-                boneWorldQuaternionInverses[bone] = invertQuaternion(worldQuat)
-
-                // Store hips parent world matrix and quaternion
-                if (bone == HumanoidBone.HIPS) {
-                    // For now, use identity as parent (root level)
-                    hipsParentWorldMatrix = FloatArray(16) { if (it % 5 == 0) 1f else 0f }
-                    hipsParentWorldQuaternion = floatArrayOf(0f, 0f, 0f, 1f) // Identity
-                }
-            }
+        if (isDestroyed) {
+            Log.w(TAG, "Cannot calculate bone matrices - player is destroyed")
+            return
         }
 
-        Log.d(TAG, "Calculated world matrices and quaternions for ${boneWorldMatrices.size} bones")
+        try {
+            val tm = engine.transformManager
+
+            boneMapper.getBoneEntityMap().forEach { (bone, entity) ->
+                if (isDestroyed) return
+
+                try {
+                    val instance = tm.getInstance(entity)
+                    if (instance != 0) {
+                        val worldMatrix = FloatArray(16)
+                        tm.getWorldTransform(instance, worldMatrix)
+                        boneWorldMatrices[bone] = worldMatrix
+
+                        // Extract world quaternion from world matrix
+                        val sx = kotlin.math.sqrt(worldMatrix[0] * worldMatrix[0] + worldMatrix[1] * worldMatrix[1] + worldMatrix[2] * worldMatrix[2])
+                        val sy = kotlin.math.sqrt(worldMatrix[4] * worldMatrix[4] + worldMatrix[5] * worldMatrix[5] + worldMatrix[6] * worldMatrix[6])
+                        val sz = kotlin.math.sqrt(worldMatrix[8] * worldMatrix[8] + worldMatrix[9] * worldMatrix[9] + worldMatrix[10] * worldMatrix[10])
+
+                        val worldQuat = matrixToQuaternion(worldMatrix, sx, sy, sz)
+                        boneWorldQuaternions[bone] = worldQuat
+                        boneWorldQuaternionInverses[bone] = invertQuaternion(worldQuat)
+
+                        // Store hips parent world matrix and quaternion
+                        if (bone == HumanoidBone.HIPS) {
+                            // For now, use identity as parent (root level)
+                            hipsParentWorldMatrix = FloatArray(16) { if (it % 5 == 0) 1f else 0f }
+                            hipsParentWorldQuaternion = floatArrayOf(0f, 0f, 0f, 1f) // Identity
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error calculating world matrix for bone $bone: ${e.message}")
+                }
+            }
+
+            Log.d(TAG, "Calculated world matrices and quaternions for ${boneWorldMatrices.size} bones")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in calculateBoneWorldMatrices: ${e.message}")
+        }
     }
 
     /**
@@ -441,9 +475,12 @@ class VrmaAnimationPlayer(
     }
 
     /**
-     * Stop the current animation with optional blend out
+     * Stop the current animation with optional blend out.
+     *
+     * @param blendOut Whether to blend out (currently not implemented)
+     * @param destroy If true, marks the player as destroyed to prevent further use
      */
-    fun stop(blendOut: Boolean = true) {
+    fun stop(blendOut: Boolean = true, destroy: Boolean = false) {
         if (blendOut && _isPlaying.value) {
             // Could implement blend out here
         }
@@ -455,8 +492,17 @@ class VrmaAnimationPlayer(
         currentTimeSeconds = 0f
         _playbackProgress.value = 0f
 
-        // Reset to original pose
-        resetToOriginalPose()
+        // Reset to original pose (if not destroying)
+        if (!destroy && !isDestroyed) {
+            resetToOriginalPose()
+        }
+
+        // Mark as destroyed if requested
+        if (destroy) {
+            Log.d(TAG, "VrmaAnimationPlayer destroyed")
+            isDestroyed = true
+            animator = null
+        }
     }
 
     /**
@@ -642,66 +688,86 @@ class VrmaAnimationPlayer(
      * - Translations need to be scaled based on model proportions
      */
     private fun applyAnimation(animation: VrmaAnimation, time: Float) {
-        val tm = engine.transformManager
-        var appliedCount = 0
-        var skippedCount = 0
-
-        animation.tracks.forEach { track ->
-            val entity = resolveEntity(track.nodeName)
-            if (entity == null) {
-                skippedCount++
-                return@forEach
-            }
-
-            val instance = tm.getInstance(entity)
-            if (instance == 0) {
-                skippedCount++
-                return@forEach
-            }
-
-            // Interpolate keyframes
-            val interpolatedValues = interpolateTrack(track, time)
-            if (interpolatedValues.isEmpty()) {
-                skippedCount++
-                return@forEach
-            }
-
-            // Get the humanoid bone for this track (if it is one)
-            val humanoidBone = resolveHumanoidBone(track.nodeName)
-
-            // Apply based on path type
-            when (track.path) {
-                AnimationPath.ROTATION -> {
-                    applyRotationWithWorldTransform(tm, instance, entity, interpolatedValues, humanoidBone)
-                    appliedCount++
-                }
-                AnimationPath.TRANSLATION -> {
-                    // Only apply translation to hips (root motion)
-                    if (humanoidBone == HumanoidBone.HIPS) {
-                        applyTranslationWithScale(tm, instance, entity, interpolatedValues)
-                        appliedCount++
-                    }
-                }
-                AnimationPath.SCALE -> {
-                    applyScale(tm, instance, entity, interpolatedValues)
-                    appliedCount++
-                }
-                AnimationPath.WEIGHTS -> { /* Handle morph targets if needed */ }
-            }
+        if (isDestroyed) {
+            return
         }
 
-        // CRITICAL: Update bone matrices for skinning!
-        // Without this call, the transform changes don't affect the visible skinned mesh.
-        // This is the key step that was missing - Filament separates transform updates
-        // from skinning matrix updates for performance reasons.
-        animator?.updateBoneMatrices()
+        try {
+            val tm = engine.transformManager
+            var appliedCount = 0
+            var skippedCount = 0
 
-        // Increment debug frame counter after processing all tracks
-        rotationDebugFrameCount++
+            animation.tracks.forEach { track ->
+                if (isDestroyed) return
 
-        // Log stats periodically (every 60 frames = ~1 second)
-        if ((time * 60).toInt() % 60 == 0) {
-            Log.d(TAG, "Animation frame: applied=$appliedCount, skipped=$skippedCount tracks, time=${time}s, updateBoneMatrices called")
+                val entity = resolveEntity(track.nodeName)
+                if (entity == null) {
+                    skippedCount++
+                    return@forEach
+                }
+
+                val instance = tm.getInstance(entity)
+                if (instance == 0) {
+                    skippedCount++
+                    return@forEach
+                }
+
+                // Interpolate keyframes
+                val interpolatedValues = interpolateTrack(track, time)
+                if (interpolatedValues.isEmpty()) {
+                    skippedCount++
+                    return@forEach
+                }
+
+                // Get the humanoid bone for this track (if it is one)
+                val humanoidBone = resolveHumanoidBone(track.nodeName)
+
+                // Apply based on path type
+                try {
+                    when (track.path) {
+                        AnimationPath.ROTATION -> {
+                            applyRotationWithWorldTransform(tm, instance, entity, interpolatedValues, humanoidBone)
+                            appliedCount++
+                        }
+                        AnimationPath.TRANSLATION -> {
+                            // Only apply translation to hips (root motion)
+                            if (humanoidBone == HumanoidBone.HIPS) {
+                                applyTranslationWithScale(tm, instance, entity, interpolatedValues)
+                                appliedCount++
+                            }
+                        }
+                        AnimationPath.SCALE -> {
+                            applyScale(tm, instance, entity, interpolatedValues)
+                            appliedCount++
+                        }
+                        AnimationPath.WEIGHTS -> { /* Handle morph targets if needed */ }
+                    }
+                } catch (e: Exception) {
+                    // Silently ignore transform errors during cleanup
+                }
+            }
+
+            // CRITICAL: Update bone matrices for skinning!
+            // Without this call, the transform changes don't affect the visible skinned mesh.
+            // This is the key step that was missing - Filament separates transform updates
+            // from skinning matrix updates for performance reasons.
+            if (!isDestroyed) {
+                try {
+                    animator?.updateBoneMatrices()
+                } catch (e: Exception) {
+                    // Silently ignore updateBoneMatrices errors during cleanup
+                }
+            }
+
+            // Increment debug frame counter after processing all tracks
+            rotationDebugFrameCount++
+
+            // Log stats periodically (every 60 frames = ~1 second)
+            if ((time * 60).toInt() % 60 == 0) {
+                Log.d(TAG, "Animation frame: applied=$appliedCount, skipped=$skippedCount tracks, time=${time}s, updateBoneMatrices called")
+            }
+        } catch (e: Exception) {
+            // Silently ignore applyAnimation errors during cleanup
         }
     }
 
@@ -1340,33 +1406,54 @@ class VrmaAnimationPlayer(
      * Store original transforms for all mapped nodes
      */
     private fun storeOriginalTransforms() {
-        val tm = engine.transformManager
-        var nodeMapStored = 0
-        var boneMapStored = 0
-
-        nodeEntityMap.values.forEach { entity ->
-            val instance = tm.getInstance(entity)
-            if (instance != 0) {
-                val transform = FloatArray(16)
-                tm.getTransform(instance, transform)
-                originalTransforms[entity] = transform.copyOf()
-                nodeMapStored++
-            }
+        if (isDestroyed) {
+            Log.w(TAG, "Cannot store original transforms - player is destroyed")
+            return
         }
 
-        boneMapper.getBoneEntityMap().values.forEach { entity ->
-            if (!originalTransforms.containsKey(entity)) {
-                val instance = tm.getInstance(entity)
-                if (instance != 0) {
-                    val transform = FloatArray(16)
-                    tm.getTransform(instance, transform)
-                    originalTransforms[entity] = transform.copyOf()
-                    boneMapStored++
+        try {
+            val tm = engine.transformManager
+            var nodeMapStored = 0
+            var boneMapStored = 0
+
+            nodeEntityMap.values.forEach { entity ->
+                if (isDestroyed) return
+
+                try {
+                    val instance = tm.getInstance(entity)
+                    if (instance != 0) {
+                        val transform = FloatArray(16)
+                        tm.getTransform(instance, transform)
+                        originalTransforms[entity] = transform.copyOf()
+                        nodeMapStored++
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error storing transform for entity $entity: ${e.message}")
                 }
             }
-        }
 
-        Log.d(TAG, "Stored original transforms: $nodeMapStored from nodeMap, $boneMapStored from boneMapper, total: ${originalTransforms.size}")
+            boneMapper.getBoneEntityMap().values.forEach { entity ->
+                if (isDestroyed) return
+
+                if (!originalTransforms.containsKey(entity)) {
+                    try {
+                        val instance = tm.getInstance(entity)
+                        if (instance != 0) {
+                            val transform = FloatArray(16)
+                            tm.getTransform(instance, transform)
+                            originalTransforms[entity] = transform.copyOf()
+                            boneMapStored++
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error storing transform for bone entity $entity: ${e.message}")
+                    }
+                }
+            }
+
+            Log.d(TAG, "Stored original transforms: $nodeMapStored from nodeMap, $boneMapStored from boneMapper, total: ${originalTransforms.size}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in storeOriginalTransforms: ${e.message}")
+        }
     }
 
     /**

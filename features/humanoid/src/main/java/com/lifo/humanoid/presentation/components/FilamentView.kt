@@ -52,7 +52,8 @@ fun FilamentView(
     blendShapeWeights: Map<String, Float> = emptyMap(),
     isLayoutChanging: Boolean = false,
     onRendererReady: (FilamentRenderer) -> Unit = {},
-    onModelLoaded: (FilamentRenderer, FilamentAsset, List<String>) -> Unit = { _, _, _ -> }
+    onModelLoaded: (FilamentRenderer, FilamentAsset, List<String>) -> Unit = { _, _, _ -> },
+    onBeforeCleanup: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -65,6 +66,9 @@ fun FilamentView(
 
     // Track current size to detect changes
     var lastSize by remember { mutableStateOf(Pair(0, 0)) }
+
+    // Track if model has been loaded to prevent double loading
+    var loadedModelData by remember { mutableStateOf<ByteBuffer?>(null) }
 
     // Handle layout change notifications
     LaunchedEffect(isLayoutChanging) {
@@ -154,12 +158,13 @@ fun FilamentView(
         }
     }
 
-    // Load VRM model when data is available
+    // Load VRM model when data is available (only once per model)
     LaunchedEffect(vrmModelData, vrmExtensions, isRendererReady) {
-        if (vrmModelData != null && isRendererReady) {
-            Log.d(TAG, "Loading VRM model")
+        if (vrmModelData != null && isRendererReady && vrmModelData != loadedModelData) {
+            Log.d(TAG, "Loading VRM model (new model detected)")
             val blendShapes = vrmExtensions?.blendShapes ?: emptyList()
             renderer?.loadModel(vrmModelData, blendShapes)
+            loadedModelData = vrmModelData
         }
     }
 
@@ -197,6 +202,12 @@ fun FilamentView(
         onDispose {
             Log.d(TAG, "Disposing FilamentView - cleaning up renderer")
             isRendererReady = false
+            loadedModelData = null
+
+            // CRITICAL: Stop all controllers BEFORE cleanup to prevent accessing destroyed assets
+            // See: https://github.com/google/filament/issues/7650
+            onBeforeCleanup()
+
             renderer?.cleanup()
             renderer = null
         }

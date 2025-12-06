@@ -55,24 +55,26 @@ class FilamentRenderer(
     private val context: Context,
     private val textureView: TextureView
 ) {
-    // Core Filament components
-    internal lateinit var engine: Engine
-    internal lateinit var renderer: Renderer
-    internal lateinit var scene: Scene
-    internal lateinit var view: View
-    internal lateinit var camera: Camera
+    // Core Filament components - nullable for safe cleanup
+    private var engine: Engine? = null
+    private var renderer: Renderer? = null
+    private var scene: Scene? = null
+    private var view: View? = null
+    private var camera: Camera? = null
+    private var cameraEntity: Int = 0
 
-    // Asset loading
-    internal lateinit var assetLoader: AssetLoader
-    internal lateinit var resourceLoader: ResourceLoader
-    internal lateinit var materialProvider: UbershaderProvider
+    // Asset loading - nullable for safe cleanup
+    private var assetLoader: AssetLoader? = null
+    private var resourceLoader: ResourceLoader? = null
+    private var materialProvider: UbershaderProvider? = null
 
     // Surface management
-    private lateinit var uiHelper: UiHelper
-    private lateinit var displayHelper: DisplayHelper
+    private var uiHelper: UiHelper? = null
+    private var displayHelper: DisplayHelper? = null
     private var swapChain: SwapChain? = null
 
     // Current loaded avatar
+    @Volatile
     private var currentAsset: FilamentAsset? = null
 
     // VRM blend shape mapping: blend shape name -> (entity, morph target index)
@@ -82,32 +84,66 @@ class FilamentRenderer(
     private var pendingBlendShapes: Pair<FilamentAsset, List<com.lifo.humanoid.data.vrm.VrmBlendShape>>? = null
     private val blendShapesInitialized = AtomicBoolean(false)
 
+    // ==================== LIFECYCLE FLAGS ====================
+    @Volatile
+    private var isInitialized = false
+
+    private val isDestroyed = AtomicBoolean(false)
+
     // ==================== Public Accessors ====================
 
-    fun getEngine(): Engine? = if (isInitialized) engine else null
-    fun getCurrentAsset(): FilamentAsset? = currentAsset
-    fun getTransformManager(): TransformManager? = if (isInitialized) engine.transformManager else null
+    fun isSafeToUse(): Boolean = isInitialized && !isDestroyed.get()
+
+    fun getEngine(): Engine? {
+        if (!isSafeToUse()) return null
+        return engine
+    }
+
+    fun getCurrentAsset(): FilamentAsset? {
+        if (!isSafeToUse()) return null
+        return currentAsset
+    }
+
+    fun getTransformManager(): TransformManager? {
+        if (!isSafeToUse()) return null
+        return engine?.transformManager
+    }
 
     fun getAnimator(): com.google.android.filament.gltfio.Animator? {
-        return currentAsset?.getInstance()?.animator
+        if (!isSafeToUse()) return null
+        return try {
+            currentAsset?.getInstance()?.animator
+        } catch (e: Exception) {
+            null
+        }
     }
 
     fun updateBoneMatrices() {
-        currentAsset?.getInstance()?.animator?.updateBoneMatrices()
+        if (isDestroyed.get() || !isInitialized) return
+        try {
+            val asset = currentAsset ?: return
+            val instance = asset.getInstance() ?: return
+            val animator = instance.animator ?: return
+            if (isDestroyed.get()) return
+            animator.updateBoneMatrices()
+        } catch (e: Exception) {
+            // Silently ignore during cleanup
+        }
     }
 
     interface OnModelLoadedListener {
         fun onModelLoaded(asset: FilamentAsset, nodeNames: List<String>)
     }
 
+    @Volatile
     private var modelLoadedListener: OnModelLoadedListener? = null
 
     fun setOnModelLoadedListener(listener: OnModelLoadedListener?) {
-        modelLoadedListener = listener
+        if (!isDestroyed.get()) {
+            modelLoadedListener = listener
+        }
     }
 
-    // Rendering state
-    private var isInitialized = false
     private val frameScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     private val tag = "FilamentRenderer"
@@ -118,7 +154,7 @@ class FilamentRenderer(
     // ==================== Resize State Management ====================
 
     enum class RendererState {
-        IDLE, RENDERING, RESIZING, PAUSED
+        IDLE, RENDERING, RESIZING, PAUSED, DESTROYED
     }
 
     private val _rendererState = MutableStateFlow(RendererState.IDLE)
@@ -142,6 +178,7 @@ class FilamentRenderer(
 
     fun canRender(): Boolean {
         return isInitialized &&
+                !isDestroyed.get() &&
                 !isResizing.get() &&
                 !pendingResize.get() &&
                 swapChain != null &&
@@ -149,6 +186,7 @@ class FilamentRenderer(
     }
 
     fun pauseRendering() {
+        if (isDestroyed.get()) return
         if (_rendererState.value == RendererState.RENDERING) {
             _rendererState.value = RendererState.PAUSED
             Log.d(tag, "Rendering paused")
@@ -156,6 +194,7 @@ class FilamentRenderer(
     }
 
     fun resumeRendering() {
+        if (isDestroyed.get()) return
         if (_rendererState.value == RendererState.PAUSED) {
             _rendererState.value = RendererState.RENDERING
             Log.d(tag, "Rendering resumed")
@@ -163,6 +202,7 @@ class FilamentRenderer(
     }
 
     fun prepareForLayoutChange() {
+        if (isDestroyed.get()) return
         pendingResize.set(true)
         Log.d(tag, "Preparing for layout change")
     }
@@ -171,25 +211,26 @@ class FilamentRenderer(
      * Initialize the Filament rendering engine with transparent background.
      */
     fun initialize() {
-        if (isInitialized) return
+        if (isInitialized || isDestroyed.get()) return
 
         try {
             FilamentNativeLoader.ensureLoaded()
 
-            engine = Engine.create()
-            renderer = engine.createRenderer()
-            scene = engine.createScene()
+            val newEngine = Engine.create()
+            engine = newEngine
+            renderer = newEngine.createRenderer()
+            scene = newEngine.createScene()
 
-            view = engine.createView()
-            view.scene = scene
+            view = newEngine.createView()
+            view?.scene = scene
 
-            val cameraEntity = EntityManager.get().create()
-            camera = engine.createCamera(cameraEntity)
-            view.camera = camera
+            cameraEntity = EntityManager.get().create()
+            camera = newEngine.createCamera(cameraEntity)
+            view?.camera = camera
 
-            materialProvider = UbershaderProvider(engine)
-            assetLoader = AssetLoader(engine, materialProvider, EntityManager.get())
-            resourceLoader = ResourceLoader(engine)
+            materialProvider = UbershaderProvider(newEngine)
+            assetLoader = AssetLoader(newEngine, materialProvider!!, EntityManager.get())
+            resourceLoader = ResourceLoader(newEngine)
 
             // IMPORTANT: Initialize displayHelper BEFORE uiHelper.attachTo()
             displayHelper = DisplayHelper(context)
@@ -203,31 +244,47 @@ class FilamentRenderer(
 
                 renderCallback = object : UiHelper.RendererCallback {
                     override fun onNativeWindowChanged(surface: Surface) {
+                        if (isDestroyed.get()) {
+                            Log.d(tag, "onNativeWindowChanged skipped - destroyed")
+                            return
+                        }
+
                         Log.d(tag, "onNativeWindowChanged - creating SwapChain")
                         waitForFrameCompletion()
 
-                        swapChain?.let { engine.destroySwapChain(it) }
+                        val eng = engine ?: return
+                        swapChain?.let { eng.destroySwapChain(it) }
+                        swapChain = eng.createSwapChain(surface)
 
-                        // Let UiHelper handle transparency - DO NOT pass flags manually
-                        // The isOpaque = false setting handles everything
-                        swapChain = engine.createSwapChain(surface)
-
-                        displayHelper.attach(renderer, textureView.display)
+                        displayHelper?.attach(renderer!!, textureView.display)
                         pendingResize.set(false)
                     }
 
                     override fun onDetachedFromSurface() {
+                        // CRITICAL: Early return if already destroyed to prevent native crashes
+                        if (isDestroyed.get()) {
+                            Log.d(tag, "onDetachedFromSurface skipped - renderer already destroyed")
+                            return
+                        }
+
                         Log.d(tag, "onDetachedFromSurface - cleaning up SwapChain")
                         waitForFrameCompletion()
-                        swapChain?.let {
-                            engine.destroySwapChain(it)
+                        val eng = engine
+                        if (eng != null && !isDestroyed.get()) {
+                            swapChain?.let {
+                                eng.destroySwapChain(it)
+                                swapChain = null
+                            }
+                        } else {
                             swapChain = null
                         }
-                        displayHelper.detach()
+                        displayHelper?.detach()
                     }
 
                     override fun onResized(width: Int, height: Int) {
-                        handleResizeWithDebounce(width, height)
+                        if (!isDestroyed.get()) {
+                            handleResizeWithDebounce(width, height)
+                        }
                     }
                 }
 
@@ -249,11 +306,12 @@ class FilamentRenderer(
     }
 
     private fun setupCamera() {
+        val cam = camera ?: return
         val eye = floatArrayOf(0.0f, 1.0f, -2.5f)
         val center = floatArrayOf(0.0f, 0.85f, 0.0f)
         val up = floatArrayOf(0.0f, 1.0f, 0.0f)
 
-        camera.lookAt(
+        cam.lookAt(
             eye[0].toDouble(), eye[1].toDouble(), eye[2].toDouble(),
             center[0].toDouble(), center[1].toDouble(), center[2].toDouble(),
             up[0].toDouble(), up[1].toDouble(), up[2].toDouble()
@@ -263,11 +321,15 @@ class FilamentRenderer(
     }
 
     private fun configureCameraProjection(width: Int, height: Int) {
+        val cam = camera ?: return
         val aspect = width.toDouble() / height.toDouble()
-        camera.setProjection(45.0, aspect, 0.1, 100.0, Camera.Fov.VERTICAL)
+        cam.setProjection(45.0, aspect, 0.1, 100.0, Camera.Fov.VERTICAL)
     }
 
     private fun setupLighting() {
+        val eng = engine ?: return
+        val scn = scene ?: return
+
         sunEntity = EntityManager.get().create()
 
         LightManager.Builder(LightManager.Type.SUN)
@@ -275,33 +337,36 @@ class FilamentRenderer(
             .intensity(120000.0f)
             .direction(0.3f, -1.0f, -0.5f)
             .castShadows(true)
-            .build(engine, sunEntity)
+            .build(eng, sunEntity)
 
-        scene.addEntity(sunEntity)
+        scn.addEntity(sunEntity)
 
-        scene.indirectLight = IndirectLight.Builder()
+        scn.indirectLight = IndirectLight.Builder()
             .intensity(60000.0f)
-            .build(engine)
+            .build(eng)
     }
 
     private fun configureView() {
-        view.isPostProcessingEnabled = true
-        view.antiAliasing = View.AntiAliasing.FXAA
-        view.ambientOcclusion = View.AmbientOcclusion.SSAO
+        val v = view ?: return
+        val eng = engine ?: return
 
-        view.bloomOptions = view.bloomOptions.apply {
+        v.isPostProcessingEnabled = true
+        v.antiAliasing = View.AntiAliasing.FXAA
+        v.ambientOcclusion = View.AmbientOcclusion.SSAO
+
+        v.bloomOptions = v.bloomOptions.apply {
             enabled = true
             strength = 0.08f
             levels = 4
             threshold = true
         }
 
-        view.colorGrading = ColorGrading.Builder()
+        v.colorGrading = ColorGrading.Builder()
             .toneMapping(ColorGrading.ToneMapping.ACES)
             .exposure(0.6f)
             .contrast(1.03f)
             .saturation(1.02f)
-            .build(engine)
+            .build(eng)
     }
 
     /**
@@ -309,29 +374,23 @@ class FilamentRenderer(
      * This is the key to making the background transparent.
      */
     private fun configureTransparency() {
-        // ═══════════════════════════════════════════════════════════
-        // TRANSPARENCY SETUP - Step 2: View blend mode
-        // ═══════════════════════════════════════════════════════════
-        view.blendMode = View.BlendMode.TRANSLUCENT
+        val v = view ?: return
+        val scn = scene ?: return
+        val rend = renderer ?: return
 
-        // ═══════════════════════════════════════════════════════════
-        // TRANSPARENCY SETUP - Step 3: No skybox
-        // ═══════════════════════════════════════════════════════════
-        scene.skybox = null
+        v.blendMode = View.BlendMode.TRANSLUCENT
+        scn.skybox = null
 
-        // ═══════════════════════════════════════════════════════════
-        // TRANSPARENCY SETUP - Step 4: Clear options
-        // ═══════════════════════════════════════════════════════════
-        val clearOptions = renderer.clearOptions.apply {
+        val clearOptions = rend.clearOptions.apply {
             clear = true
         }
-        renderer.clearOptions = clearOptions
+        rend.clearOptions = clearOptions
 
-        view.dynamicResolutionOptions = view.dynamicResolutionOptions.apply {
+        v.dynamicResolutionOptions = v.dynamicResolutionOptions.apply {
             enabled = false
         }
 
-        view.renderQuality = view.renderQuality.apply {
+        v.renderQuality = v.renderQuality.apply {
             hdrColorBuffer = View.QualityLevel.MEDIUM
         }
 
@@ -341,6 +400,7 @@ class FilamentRenderer(
     // ==================== Resize Handling ====================
 
     private fun handleResizeWithDebounce(width: Int, height: Int) {
+        if (isDestroyed.get()) return
         if (width <= 0 || height <= 0) {
             Log.w(tag, "Invalid resize dimensions: ${width}x${height}")
             return
@@ -369,12 +429,17 @@ class FilamentRenderer(
     }
 
     private fun performResize(width: Int, height: Int) {
+        if (isDestroyed.get()) {
+            Log.d(tag, "performResize skipped - destroyed")
+            return
+        }
+
         Log.d(tag, "Performing resize to ${width}x${height}")
 
         try {
             waitForFrameCompletion()
 
-            view.viewport = Viewport(0, 0, width, height)
+            view?.viewport = Viewport(0, 0, width, height)
             configureCameraProjection(width, height)
 
             currentWidth.set(width)
@@ -386,7 +451,9 @@ class FilamentRenderer(
         } finally {
             isResizing.set(false)
             pendingResize.set(false)
-            _rendererState.value = RendererState.RENDERING
+            if (!isDestroyed.get()) {
+                _rendererState.value = RendererState.RENDERING
+            }
             pendingResizeRunnable = null
         }
     }
@@ -411,34 +478,49 @@ class FilamentRenderer(
         buffer: ByteBuffer,
         vrmBlendShapes: List<com.lifo.humanoid.data.vrm.VrmBlendShape> = emptyList()
     ): FilamentAsset? {
+        if (isDestroyed.get() || !isInitialized) {
+            Log.d(tag, "loadModel skipped - not safe to use")
+            return null
+        }
+
+        val eng = engine ?: return null
+        val scn = scene ?: return null
+        val loader = assetLoader ?: return null
+        val resLoader = resourceLoader ?: return null
+
         return try {
             Log.d(tag, "loadModel called with buffer: capacity=${buffer.capacity()}")
 
             currentAsset?.let { asset ->
                 Log.d(tag, "Removing previous asset")
-                scene.removeEntities(asset.entities)
-                assetLoader.destroyAsset(asset)
+                scn.removeEntities(asset.entities)
+                loader.destroyAsset(asset)
             }
 
             blendShapeMapping.clear()
             buffer.position(0)
 
-            val asset = assetLoader.createAsset(buffer)
+            val asset = loader.createAsset(buffer)
 
             if (asset != null) {
                 Log.d(tag, "Asset created successfully! Entities: ${asset.entities.size}")
 
-                resourceLoader.loadResources(asset)
-                resourceLoader.asyncBeginLoad(asset)
+                resLoader.loadResources(asset)
+                resLoader.asyncBeginLoad(asset)
 
                 var pumpIterations = 0
-                while (pumpIterations < 50) {
-                    resourceLoader.asyncUpdateLoad()
+                while (pumpIterations < 50 && !isDestroyed.get()) {
+                    resLoader.asyncUpdateLoad()
                     Thread.sleep(1)
                     pumpIterations++
                 }
 
-                scene.addEntities(asset.entities)
+                if (isDestroyed.get()) {
+                    loader.destroyAsset(asset)
+                    return null
+                }
+
+                scn.addEntities(asset.entities)
                 currentAsset = asset
 
                 pendingBlendShapes = Pair(asset, vrmBlendShapes)
@@ -448,7 +530,10 @@ class FilamentRenderer(
                 centerAndScaleAsset(asset)
 
                 val nodeNames = extractNodeNames(asset)
-                modelLoadedListener?.onModelLoaded(asset, nodeNames)
+
+                if (!isDestroyed.get()) {
+                    modelLoadedListener?.onModelLoaded(asset, nodeNames)
+                }
 
                 Log.d(tag, "Model loaded successfully!")
             } else {
@@ -463,7 +548,8 @@ class FilamentRenderer(
     }
 
     private fun centerAndScaleAsset(asset: FilamentAsset) {
-        val tm = engine.transformManager
+        val eng = engine ?: return
+        val tm = eng.transformManager
         val root = asset.root
         val instance = tm.getInstance(root)
 
@@ -491,17 +577,19 @@ class FilamentRenderer(
      * Main render loop.
      */
     fun render(frameTimeNanos: Long): Boolean {
-        if (!isInitialized) return false
+        if (!isInitialized || isDestroyed.get()) return false
         if (isResizing.get() || pendingResize.get()) return false
 
         val currentSwapChain = swapChain ?: return false
+        val rend = renderer ?: return false
+        val v = view ?: return false
 
         if (!frameInProgress.compareAndSet(false, true)) {
             return false
         }
 
         try {
-            if (isResizing.get() || pendingResize.get()) {
+            if (isResizing.get() || pendingResize.get() || isDestroyed.get()) {
                 return false
             }
 
@@ -509,14 +597,14 @@ class FilamentRenderer(
                 _rendererState.value = RendererState.RENDERING
             }
 
-            if (!renderer.beginFrame(currentSwapChain, frameTimeNanos)) {
+            if (!rend.beginFrame(currentSwapChain, frameTimeNanos)) {
                 return false
             }
 
-            renderer.render(view)
-            renderer.endFrame()
+            rend.render(v)
+            rend.endFrame()
 
-            if (!blendShapesInitialized.get() && pendingBlendShapes != null) {
+            if (!blendShapesInitialized.get() && pendingBlendShapes != null && !isDestroyed.get()) {
                 Log.d(tag, "First render complete - initializing blend shapes")
                 val (asset, vrmBlendShapes) = pendingBlendShapes!!
                 buildBlendShapeMapping(asset, vrmBlendShapes)
@@ -546,9 +634,10 @@ class FilamentRenderer(
             return
         }
 
+        val eng = engine ?: return
         Log.d(tag, "Building blend shape mapping from ${vrmBlendShapes.size} VRM blend shapes")
 
-        val renderableManager = engine.renderableManager
+        val renderableManager = eng.renderableManager
         var totalMappings = 0
         var failedMappings = 0
 
@@ -607,69 +696,158 @@ class FilamentRenderer(
     }
 
     fun updateBlendShapes(blendShapes: Map<String, Float>) {
+        if (isDestroyed.get() || !isInitialized) return
         if (blendShapes.isEmpty() || blendShapeMapping.isEmpty()) return
 
-        val renderableManager = engine.renderableManager
+        val eng = engine ?: return
+        val renderableManager = eng.renderableManager
 
         blendShapes.forEach { (name, weight) ->
+            if (isDestroyed.get()) return
+
             val normalizedName = name.lowercase()
             val targetWeight = weight.coerceIn(0f, 1f)
             val targets = blendShapeMapping[normalizedName]
 
             targets?.forEach { (entity, morphTargetIndex) ->
-                val instance = renderableManager.getInstance(entity)
-                if (instance != 0) {
-                    try {
+                try {
+                    val instance = renderableManager.getInstance(entity)
+                    if (instance != 0 && !isDestroyed.get()) {
                         renderableManager.setMorphWeights(
                             instance,
                             floatArrayOf(targetWeight),
                             morphTargetIndex
                         )
-                    } catch (e: Exception) {
-                        Log.e(tag, "Failed to set morph weight: ${e.message}")
                     }
+                } catch (e: Exception) {
+                    // Ignore - likely during cleanup
                 }
             }
         }
     }
 
     fun cleanup() {
-        if (!isInitialized) return
+        // Set destroyed flag FIRST to block ALL external access
+        if (!isDestroyed.compareAndSet(false, true)) {
+            Log.d(tag, "Cleanup already called, skipping")
+            return
+        }
+
+        if (!isInitialized) {
+            Log.d(tag, "Not initialized, nothing to clean up")
+            return
+        }
 
         Log.d(tag, "Cleanup started")
 
         try {
-            _rendererState.value = RendererState.IDLE
+            // Update state immediately
+            _rendererState.value = RendererState.DESTROYED
 
+            // Clear listener to prevent any callbacks
+            modelLoadedListener = null
+
+            // Cancel pending operations
             pendingResizeRunnable?.let { resizeHandler.removeCallbacks(it) }
             pendingResizeRunnable = null
 
+            // Wait for any in-progress frame
             waitForFrameCompletion()
+
+            // Cancel coroutines
             frameScope.cancel()
 
-            currentAsset?.let { asset ->
-                scene.removeEntities(asset.entities)
-                assetLoader.destroyAsset(asset)
-                currentAsset = null
+            // Get local references before nullifying
+            val assetToDestroy = currentAsset
+            currentAsset = null
+            blendShapeMapping.clear()
+            pendingBlendShapes = null
+
+            val eng = engine
+            val rend = renderer
+            val scn = scene
+            val v = view
+            val cam = camera
+            val camEntity = cameraEntity
+            val loader = assetLoader
+            val resLoader = resourceLoader
+            val matProvider = materialProvider
+            val ui = uiHelper
+            val disp = displayHelper
+            val swap = swapChain
+
+            // Nullify all references IMMEDIATELY
+            engine = null
+            renderer = null
+            scene = null
+            view = null
+            camera = null
+            assetLoader = null
+            resourceLoader = null
+            materialProvider = null
+            uiHelper = null
+            displayHelper = null
+            swapChain = null
+
+            // Flush engine to complete pending GPU work
+            try {
+                eng?.flushAndWait()
+            } catch (e: Exception) {
+                Log.w(tag, "flushAndWait failed: ${e.message}")
             }
 
-            engine.destroyEntity(sunEntity)
+            // Destroy asset first
+            if (eng != null && scn != null && loader != null && assetToDestroy != null) {
+                try {
+                    scn.removeEntities(assetToDestroy.entities)
+                    loader.destroyAsset(assetToDestroy)
+                } catch (e: Exception) {
+                    Log.e(tag, "Error destroying asset: ${e.message}")
+                }
+            }
 
-            assetLoader.destroy()
-            resourceLoader.destroy()
-            materialProvider.destroy()
+            // Destroy lighting
+            if (eng != null && sunEntity != 0) {
+                try {
+                    eng.destroyEntity(sunEntity)
+                } catch (e: Exception) {
+                    Log.e(tag, "Error destroying sun: ${e.message}")
+                }
+            }
 
-            uiHelper.detach()
+            // Destroy loaders
+            try { loader?.destroy() } catch (e: Exception) { Log.e(tag, "Error: ${e.message}") }
+            try { resLoader?.destroy() } catch (e: Exception) { Log.e(tag, "Error: ${e.message}") }
+            try { matProvider?.destroy() } catch (e: Exception) { Log.e(tag, "Error: ${e.message}") }
 
-            swapChain?.let { engine.destroySwapChain(it) }
+            // CRITICAL: Detach UI helper FIRST - this internally calls destroySwapChain()
+            // According to Filament docs: "Always detach the surface before destroying the engine"
+            // See: https://github.com/google/filament/blob/main/android/filament-android/src/main/java/com/google/android/filament/android/UiHelper.java
+            try { ui?.detach() } catch (e: Exception) { Log.e(tag, "Error detaching UI: ${e.message}") }
 
-            engine.destroyRenderer(renderer)
-            engine.destroyView(view)
-            engine.destroyScene(scene)
-            engine.destroyCameraComponent(camera.entity)
-            EntityManager.get().destroy(camera.entity)
+            // NOTE: SwapChain is already destroyed by ui.detach() - do NOT destroy it again!
 
-            engine.destroy()
+            // Destroy Filament components
+            if (eng != null) {
+                try {
+                    rend?.let { eng.destroyRenderer(it) }
+                    v?.let { eng.destroyView(it) }
+                    scn?.let { eng.destroyScene(it) }
+                    if (camEntity != 0) {
+                        eng.destroyCameraComponent(camEntity)
+                        EntityManager.get().destroy(camEntity)
+                    }
+                } catch (e: Exception) {
+                    Log.e(tag, "Error destroying components: ${e.message}")
+                }
+
+                // Finally destroy engine
+                try {
+                    eng.destroy()
+                } catch (e: Exception) {
+                    Log.e(tag, "Error destroying engine: ${e.message}")
+                }
+            }
 
             isInitialized = false
             Log.d(tag, "Cleanup completed")

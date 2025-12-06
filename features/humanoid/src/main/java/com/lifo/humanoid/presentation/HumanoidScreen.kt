@@ -133,6 +133,9 @@ fun HumanoidScreen(
                         onStopSpeaking = { viewModel.stopSpeaking() },
                         onModelLoaded = { renderer, asset, nodeNames ->
                             viewModel.onModelLoaded(renderer, asset, nodeNames)
+                        },
+                        onBeforeCleanup = {
+                            viewModel.stopAllControllersBeforeCleanup()
                         }
                     )
                 }
@@ -165,7 +168,8 @@ private fun AvatarContent(
     onTriggerBlink: () -> Unit,
     onSpeakText: (String, Long) -> Unit,
     onStopSpeaking: () -> Unit,
-    onModelLoaded: (com.lifo.humanoid.rendering.FilamentRenderer, com.google.android.filament.gltfio.FilamentAsset, List<String>) -> Unit
+    onModelLoaded: (com.lifo.humanoid.rendering.FilamentRenderer, com.google.android.filament.gltfio.FilamentAsset, List<String>) -> Unit,
+    onBeforeCleanup: () -> Unit
 ) {
     var lipSyncText by remember { mutableStateOf("Hello, I am your AI assistant!") }
     var speechDuration by remember { mutableStateOf(3000L) }
@@ -198,6 +202,7 @@ private fun AvatarContent(
                 blendShapeWeights = blendShapeWeights,
                 isLayoutChanging = isLayoutChanging,
                 onModelLoaded = onModelLoaded,
+                onBeforeCleanup = onBeforeCleanup
             )
             }
             // Status indicator overlay
