@@ -72,6 +72,7 @@ filament = "1.67.0"
 
 # Camera - CameraX
 camerax = "1.4.1"
+media3-transformer = "1.8.0"
 
 [libraries]
 # Core Android
@@ -195,6 +196,7 @@ camerax-core = { module = "androidx.camera:camera-core", version.ref = "camerax"
 camerax-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "camerax" }
 camerax-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "camerax" }
 camerax-view = { module = "androidx.camera:camera-view", version.ref = "camerax" }
+media3-transformer = { group = "androidx.media3", name = "media3-transformer", version.ref = "media3-transformer" }
 
 [plugins]
 com-android-application = { id = "com.android.application", version.ref = "agp" }

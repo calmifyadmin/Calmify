@@ -1,7 +1,7 @@
 package com.lifo.humanoid.presentation.components
 
 import android.util.Log
-import android.view.SurfaceView
+import android.view.TextureView
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
@@ -16,27 +16,33 @@ import com.lifo.humanoid.rendering.FilamentRenderer
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import java.nio.ByteBuffer
-import java.nio.ByteOrder
 
 private const val TAG = "FilamentView"
 
 /**
- * Composable that displays a Filament 3D rendering surface.
- * Integrates Filament's SurfaceView into Jetpack Compose with robust resize handling.
+ * Composable that displays a Filament 3D rendering surface with TRUE TRANSPARENCY.
+ * Uses TextureView to properly composite with Compose - the Material Surface shows through.
  *
- * Features:
- * - Thread-safe render loop that respects resize state
- * - Automatic pause/resume on lifecycle changes
- * - Debounced resize handling to prevent race conditions
- * - Proper cleanup on disposal
+ * NOTE: Transparency works on physical devices but may show black on emulators.
+ * See: https://www.droidcon.com/2023/07/17/a-guide-to-filament-for-android/
+ *
+ * Usage:
+ * ```
+ * Surface(color = MaterialTheme.colorScheme.surface) {
+ *     FilamentView(
+ *         modifier = Modifier.fillMaxSize(),
+ *         vrmModelData = modelData
+ *     )
+ * }
+ * ```
  *
  * @param modifier Compose modifier
  * @param vrmModelData ByteBuffer containing the VRM model data
  * @param vrmExtensions VRM extension data (blend shapes, etc.)
  * @param blendShapeWeights Current blend shape weights to apply
- * @param isLayoutChanging Set to true when parent layout is animating (e.g., panel hide/show)
+ * @param isLayoutChanging Set to true when parent layout is animating
  * @param onRendererReady Callback when renderer is initialized
- * @param onModelLoaded Callback when the VRM model is loaded with asset and node names
+ * @param onModelLoaded Callback when VRM model is loaded
  */
 @Composable
 fun FilamentView(
@@ -51,38 +57,14 @@ fun FilamentView(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // Renderer and surface state
+    // Renderer state
     var renderer: FilamentRenderer? by remember { mutableStateOf(null) }
-    var surfaceView: SurfaceView? by remember { mutableStateOf(null) }
 
     // Track if renderer is ready for rendering
     var isRendererReady by remember { mutableStateOf(false) }
 
     // Track current size to detect changes
     var lastSize by remember { mutableStateOf(Pair(0, 0)) }
-
-    // Load background GLB (space.glb) ONCE and keep it in memory
-    val spaceBackgroundData: ByteBuffer? by remember {
-        mutableStateOf(
-            try {
-                context.assets.open("abstract_red_background.glb").use { input ->
-                    val bytes = input.readBytes()
-                    ByteBuffer
-                        .allocateDirect(bytes.size)
-                        .order(ByteOrder.nativeOrder())
-                        .apply {
-                            put(bytes)
-                            rewind()
-                        }
-                }.also {
-                    Log.d(TAG, "Loaded space.glb from assets (${it.capacity()} bytes)")
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to load space.glb from assets", e)
-                null
-            }
-        )
-    }
 
     // Handle layout change notifications
     LaunchedEffect(isLayoutChanging) {
@@ -93,43 +75,33 @@ fun FilamentView(
             }
         }
     }
-// Load space.glb background when renderer is ready
-    LaunchedEffect(spaceBackgroundData, isRendererReady) {
-        if (spaceBackgroundData != null && isRendererReady) {
-            try {
-                Log.d(TAG, "Loading space.glb as background environment")
-                renderer?.loadBackgroundEnvironment(
-                    glbData = spaceBackgroundData!!,
-                    scale = 20.0f,
-                    position = floatArrayOf(0f, 10f, 5f)
-                )
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to load background environment", e)
-            }
-        }
-    }
 
-    // Create the SurfaceView and Filament renderer
+    // Create the TextureView and Filament renderer
     AndroidView(
         modifier = modifier.onSizeChanged { size ->
-            // Detect significant size changes
             val newSize = Pair(size.width, size.height)
             if (lastSize != newSize && lastSize.first > 0 && lastSize.second > 0) {
                 Log.d(TAG, "Size changed: $lastSize -> $newSize")
-                // Renderer's internal debounce will handle this via UiHelper callback
             }
             lastSize = newSize
         },
         factory = { ctx ->
-            Log.d(TAG, "Creating SurfaceView and FilamentRenderer")
-            SurfaceView(ctx).also { surface ->
-                surfaceView = surface
+            Log.d(TAG, "Creating TextureView for transparent Filament rendering")
 
+            TextureView(ctx).apply {
+                // ═══════════════════════════════════════════════════════════
+                // CRITICAL: Enable transparency on TextureView
+                // ═══════════════════════════════════════════════════════════
+                isOpaque = false
+
+            }.also { textureView ->
                 // Initialize Filament renderer
-                val filamentRenderer = FilamentRenderer(ctx, surface)
-                filamentRenderer.initialize()
+                val filamentRenderer = FilamentRenderer(
+                    context = ctx,
+                    textureView = textureView
+                )
 
-                // Set up model loaded listener for animation system
+                // Set up model loaded listener BEFORE initialize
                 filamentRenderer.setOnModelLoadedListener(
                     object : FilamentRenderer.OnModelLoadedListener {
                         override fun onModelLoaded(
@@ -142,15 +114,18 @@ fun FilamentView(
                     }
                 )
 
+                // Initialize the renderer
+                filamentRenderer.initialize()
+
                 renderer = filamentRenderer
                 isRendererReady = true
 
                 onRendererReady(filamentRenderer)
-                Log.d(TAG, "FilamentRenderer initialized successfully")
+                Log.d(TAG, "FilamentRenderer initialized with transparent TextureView")
             }
         },
         update = { _ ->
-            // Update is handled in LaunchedEffects for proper coroutine integration
+            // Update is handled in LaunchedEffects
         }
     )
 
@@ -162,16 +137,13 @@ fun FilamentView(
                     Log.d(TAG, "Lifecycle ON_PAUSE - pausing renderer")
                     renderer?.pauseRendering()
                 }
-
                 Lifecycle.Event.ON_RESUME -> {
                     Log.d(TAG, "Lifecycle ON_RESUME - resuming renderer")
                     renderer?.resumeRendering()
                 }
-
                 Lifecycle.Event.ON_DESTROY -> {
                     Log.d(TAG, "Lifecycle ON_DESTROY")
                 }
-
                 else -> {}
             }
         }
@@ -191,7 +163,7 @@ fun FilamentView(
         }
     }
 
-    // Update blend shapes - only when not resizing
+    // Update blend shapes
     LaunchedEffect(blendShapeWeights) {
         if (blendShapeWeights.isNotEmpty() && !isLayoutChanging) {
             renderer?.let { r ->
@@ -202,7 +174,7 @@ fun FilamentView(
         }
     }
 
-    // Render loop with resize-aware scheduling
+    // Render loop
     LaunchedEffect(isRendererReady) {
         if (!isRendererReady) return@LaunchedEffect
 
@@ -210,13 +182,11 @@ fun FilamentView(
 
         while (isActive) {
             renderer?.let { r ->
-                // Only render if the renderer says it's safe
                 if (r.canRender()) {
                     r.renderFrame()
                 }
             }
 
-            // Target ~60 FPS with adaptive delay
             val canCurrentlyRender = renderer?.canRender() ?: false
             delay(if (canCurrentlyRender) 16L else 8L)
         }
@@ -229,7 +199,6 @@ fun FilamentView(
             isRendererReady = false
             renderer?.cleanup()
             renderer = null
-            surfaceView = null
         }
     }
 }

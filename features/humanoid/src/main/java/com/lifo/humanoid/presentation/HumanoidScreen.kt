@@ -187,15 +187,19 @@ private fun AvatarContent(
                 .weight(1f)
                 .background(Color(0xFF1A1A1A))
         ) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.surface  // ← Questo colore si vedrà sotto l'avatar!
+            ) {
             FilamentView(
                 modifier = Modifier.fillMaxSize(),
                 vrmModelData = vrmModelData,
                 vrmExtensions = vrmExtensions,
                 blendShapeWeights = blendShapeWeights,
                 isLayoutChanging = isLayoutChanging,
-                onModelLoaded = onModelLoaded
+                onModelLoaded = onModelLoaded,
             )
-
+            }
             // Status indicator overlay
             Column(
                 modifier = Modifier
