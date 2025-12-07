@@ -1,6 +1,9 @@
 package com.lifo.humanoid.api
 
 import com.lifo.humanoid.domain.model.Emotion
+import com.lifo.util.speech.SpeechAnimationTarget
+import com.lifo.util.speech.SpeechPlaybackEvent
+import com.lifo.util.speech.SpeechEmotion
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -14,8 +17,12 @@ import kotlinx.coroutines.flow.StateFlow
  * - Chat module can depend on this interface
  * - Humanoid module implements this interface
  * - App module wires them together via DI
+ *
+ * Synchronized Speech Support:
+ * - Implements SpeechAnimationTarget for ultra-synchronized audio-lipsync
+ * - Receives real-time audio events to match lip movement to TTS output
  */
-interface HumanoidController {
+interface HumanoidController : SpeechAnimationTarget {
 
     /**
      * Set the avatar's emotional expression.
@@ -32,7 +39,9 @@ interface HumanoidController {
      *
      * @param text The text being spoken
      * @param durationMs Duration of the speech in milliseconds
+     * @deprecated Use synchronized speech via onPlaybackEvent() for accurate sync
      */
+    @Deprecated("Use synchronized speech via onPlaybackEvent() for accurate sync")
     fun speakText(text: String, durationMs: Long)
 
     /**
@@ -73,6 +82,7 @@ interface HumanoidController {
 
     /**
      * Whether the avatar is currently speaking (lip-sync active).
+     * This is the HumanoidController-specific property.
      */
     val isSpeaking: StateFlow<Boolean>
 
@@ -80,6 +90,42 @@ interface HumanoidController {
      * Whether a gesture animation is currently playing.
      */
     val isPlayingGesture: StateFlow<Boolean>
+
+    // ==================== Synchronized Speech (from SpeechAnimationTarget) ====================
+
+    /**
+     * Whether lip-sync animation is currently active.
+     * From SpeechAnimationTarget, maps to isSpeaking.
+     */
+    override val isAnimating: StateFlow<Boolean>
+
+    /**
+     * Current lip-sync progress (0.0-1.0).
+     * Provided by LipSyncController.
+     */
+    override val progress: StateFlow<Float>
+
+    /**
+     * Handle a playback event for synchronized audio-lipsync.
+     * This is the primary method for ultra-synchronized speech.
+     *
+     * @param event The playback event from the audio source
+     */
+    override fun onPlaybackEvent(event: SpeechPlaybackEvent)
+
+    /**
+     * Set the emotion for facial expression using SpeechEmotion.
+     * Maps to the internal Emotion type.
+     */
+    override fun setEmotion(emotion: SpeechEmotion, intensity: Float)
+
+    /**
+     * Update lip-sync intensity based on real-time audio level.
+     * Called frequently during playback for natural lip movement.
+     *
+     * @param level Audio amplitude (0.0-1.0)
+     */
+    override fun updateAudioIntensity(level: Float)
 }
 
 /**

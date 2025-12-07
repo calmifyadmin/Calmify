@@ -9,6 +9,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lifo.chat.audio.GeminiLiveAudioSource
 import com.lifo.chat.config.ApiConfigManager
 import com.lifo.chat.data.websocket.GeminiLiveWebSocketClient
 import com.lifo.chat.data.audio.GeminiLiveAudioManager
@@ -18,6 +19,9 @@ import com.lifo.chat.domain.audio.ConversationContextManager
 import com.lifo.chat.domain.model.*
 import com.lifo.mongo.repository.ChatRepository
 import com.lifo.mongo.repository.MongoRepository
+import com.lifo.util.speech.InterruptionReason
+import com.lifo.util.speech.SpeechAnimationTarget
+import com.lifo.util.speech.SynchronizedSpeechController
 import kotlinx.coroutines.flow.first
 import org.json.JSONArray
 import org.json.JSONObject
@@ -35,6 +39,8 @@ class LiveChatViewModel @Inject constructor(
     private val geminiWebSocketClient: GeminiLiveWebSocketClient,
     private val geminiAudioManager: GeminiLiveAudioManager,
     private val geminiCameraManager: GeminiLiveCameraManager,
+    private val liveAudioSource: GeminiLiveAudioSource,
+    private val synchronizedSpeechController: SynchronizedSpeechController,
     private val audioQualityAnalyzer: AudioQualityAnalyzer,
     private val conversationContextManager: ConversationContextManager,
     private val chatRepository: ChatRepository,
@@ -90,6 +96,9 @@ class LiveChatViewModel @Inject constructor(
     // Current Live session ID for unification with Chat
     private var currentLiveSessionId: String? = null
 
+    // Synchronized speech state for avatar integration
+    val isSynchronizedSpeaking = synchronizedSpeechController.isSpeaking
+
     init {
         Log.d(TAG, "🎙️ Initializing LiveChatViewModel...")
         observeGeminiStates()
@@ -97,6 +106,32 @@ class LiveChatViewModel @Inject constructor(
         setupCameraIntegration()
         setupIntelligentSystems()
         setupFunctionCalling()
+        initializeSynchronizedSpeech()
+    }
+
+    /**
+     * Initialize synchronized speech by attaching the live audio source
+     */
+    private fun initializeSynchronizedSpeech() {
+        Log.d(TAG, "🔗 Initializing synchronized speech for Live mode...")
+        synchronizedSpeechController.attachAudioSource(liveAudioSource)
+    }
+
+    /**
+     * Attach HumanoidController for synchronized lip-sync.
+     * Call this from the UI layer when humanoid is ready.
+     */
+    fun attachHumanoidController(controller: SpeechAnimationTarget) {
+        Log.d(TAG, "🤖 Attaching HumanoidController for synchronized lip-sync (Live mode)")
+        synchronizedSpeechController.attachAnimationTarget(controller)
+    }
+
+    /**
+     * Detach HumanoidController when no longer needed.
+     */
+    fun detachHumanoidController() {
+        Log.d(TAG, "🤖 Detaching HumanoidController (Live mode)")
+        synchronizedSpeechController.detachAnimationTarget()
     }
 
     private fun setupIntelligentSystems() {
@@ -304,6 +339,10 @@ class LiveChatViewModel @Inject constructor(
                 audioLevel = 0f, // AI audio level not applicable for text
                 duration = 0L
             )
+
+            // 🎬 Prepare synchronized lip-sync with the text
+            // Audio will start shortly after, and lip-sync will begin simultaneously
+            liveAudioSource.prepareWithText(text)
         }
 
         // Audio from Gemini
@@ -496,6 +535,9 @@ class LiveChatViewModel @Inject constructor(
             geminiCameraManager.stopCameraPreview()
             geminiWebSocketClient.disconnect()
 
+            // Reset synchronized speech
+            liveAudioSource.reset()
+
             _uiState.update {
                 it.copy(
                     connectionStatus = ConnectionStatus.Disconnected,
@@ -540,6 +582,9 @@ class LiveChatViewModel @Inject constructor(
         // ✅ Ferma subito la riproduzione TTS locale
         geminiAudioManager.handleInterruption()
 
+        // 🎬 Stop synchronized lip-sync immediately
+        liveAudioSource.handleInterruption(InterruptionReason.USER_BARGE_IN)
+
         // ✅ Aggiorna la UI: ora è turno utente
         _uiState.update {
             it.copy(
@@ -555,6 +600,9 @@ class LiveChatViewModel @Inject constructor(
 
         // ✅ Stop immediato TTS locale
         geminiAudioManager.handleInterruption()
+
+        // 🎬 Stop synchronized lip-sync immediately
+        liveAudioSource.handleInterruption(InterruptionReason.USER_BARGE_IN)
 
         // ✅ Reset stato AI speaking (permette invio audio utente)
         aiSpeaking = false
@@ -794,6 +842,7 @@ class LiveChatViewModel @Inject constructor(
         super.onCleared()
         viewModelScope.launch {
             disconnectFromRealtime()
+            synchronizedSpeechController.release()
             geminiAudioManager.release()
             geminiCameraManager.release()
         }

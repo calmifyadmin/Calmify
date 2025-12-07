@@ -17,19 +17,33 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lifo.app.integration.EmotionBridge
-import com.lifo.app.integration.TTSLipSyncAdapter
 import com.lifo.chat.presentation.components.ChatBubble
 import com.lifo.chat.presentation.components.ChatInput
 import com.lifo.chat.presentation.viewmodel.ChatViewModel
 import com.lifo.humanoid.api.HumanoidAvatarView
 import com.lifo.humanoid.api.asHumanoidController
+import com.lifo.humanoid.lipsync.LipSyncController
 import com.lifo.humanoid.presentation.HumanoidViewModel
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+/**
+ * Entry point for accessing LipSyncController from Hilt
+ */
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface LipSyncControllerEntryPoint {
+    fun lipSyncController(): LipSyncController
+}
 
 /**
  * Avatar Chat Screen - JARVIS/Amica Integration
@@ -42,7 +56,7 @@ import kotlinx.coroutines.launch
  *
  * The avatar reacts to chat events in real-time:
  * - Emotions sync automatically from voice system
- * - Lip sync synchronized with TTS playback
+ * - Lip sync ULTRA-SYNCHRONIZED with TTS audio playback
  * - Blur effect applied when history is visible
  */
 @RequiresApi(Build.VERSION_CODES.O)
@@ -56,6 +70,7 @@ fun AvatarChatScreen(
     humanoidViewModel: HumanoidViewModel = hiltViewModel()
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     // Chat state
     val chatState by chatViewModel.uiState.collectAsStateWithLifecycle()
@@ -67,21 +82,34 @@ fun AvatarChatScreen(
     var showHistory by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
 
-    // Integration components
-    val humanoidController = remember(humanoidViewModel) {
-        humanoidViewModel.asHumanoidController()
+    // Get LipSyncController from Hilt
+    val lipSyncController = remember {
+        val entryPoint = EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            LipSyncControllerEntryPoint::class.java
+        )
+        entryPoint.lipSyncController()
+    }
+
+    // Integration components - now with synchronized speech
+    val humanoidController = remember(humanoidViewModel, lipSyncController) {
+        humanoidViewModel.asHumanoidController(lipSyncController)
     }
 
     val emotionBridge = remember(humanoidController) {
         EmotionBridge(humanoidController)
     }
 
-    val lipSyncAdapter = remember(humanoidController, chatViewModel, scope) {
-        TTSLipSyncAdapter(
-            humanoidController = humanoidController,
-            voiceStateFlow = chatViewModel.voiceState,
-            scope = scope
-        )
+    // Connect HumanoidController for synchronized lip-sync
+    LaunchedEffect(humanoidController) {
+        chatViewModel.attachHumanoidController(humanoidController)
+    }
+
+    // Cleanup on dispose
+    DisposableEffect(Unit) {
+        onDispose {
+            chatViewModel.detachHumanoidController()
+        }
     }
 
     // Load session
@@ -102,17 +130,8 @@ fun AvatarChatScreen(
         emotionBridge.applyChatEmotion(voiceEmotion)
     }
 
-    // EVENT BRIDGE: Synchronized Lip-sync
-    LaunchedEffect(isVoiceActive) {
-        if (isVoiceActive) {
-            val message = chatState.messages.lastOrNull { !it.isUser }?.content ?: ""
-            if (message.isNotEmpty()) {
-                lipSyncAdapter.startSyncedLipSync(message)
-            }
-        } else {
-            lipSyncAdapter.stopLipSync()
-        }
-    }
+    // NOTE: Lip-sync is now automatically handled by the SynchronizedSpeechController
+    // No need for manual LaunchedEffect - it's all event-driven!
 
     Box(
         modifier = modifier

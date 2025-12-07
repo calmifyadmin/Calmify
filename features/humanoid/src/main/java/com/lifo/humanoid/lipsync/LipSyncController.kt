@@ -7,6 +7,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Main controller for lip-sync animation.
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * - Smooth transitions between visemes
  * - Coarticulation for natural speech
  * - Priority-based integration with other blend shapes
+ * - SYNCHRONIZED MODE: Real-time audio-driven lip-sync for ultra-accurate sync
  */
 class LipSyncController(
     private val phonemeConverter: PhonemeConverter,
@@ -41,6 +43,25 @@ class LipSyncController(
     // Configuration for viseme transitions
     private var config = LipSyncConfig()
 
+    // ==================== Synchronized Speech State ====================
+
+    /**
+     * State for synchronized audio-driven lip-sync
+     */
+    private data class SyncState(
+        val text: String = "",
+        val messageId: String = "",
+        val visemeTimings: List<VisemeTiming> = emptyList(),
+        val totalDurationMs: Long = 0L,
+        val audioStartTime: Long = 0L,
+        val isPrepared: Boolean = false,
+        val isPlaying: Boolean = false
+    )
+
+    private val syncState = AtomicReference(SyncState())
+    private var syncJob: Job? = null
+    private var audioIntensityMultiplier = 1.0f
+
     /**
      * Lip-sync configuration
      */
@@ -51,6 +72,251 @@ class LipSyncController(
         val coarticulationStrength: Float = 0.25f, // Influence of previous viseme
         val intensity: Float = 1.0f          // Overall lip movement intensity
     )
+
+    // ==================== Synchronized Speech Methods ====================
+
+    /**
+     * Prepare lip-sync for synchronized playback.
+     * Generates viseme sequence but does NOT start animation until startSynchronized() is called.
+     *
+     * @param text The text to speak
+     * @param estimatedDurationMs Estimated duration (will be adjusted when audio starts)
+     * @param messageId Unique identifier for this speech instance
+     * @param scope CoroutineScope for execution
+     */
+    fun prepareSynchronized(
+        text: String,
+        estimatedDurationMs: Long,
+        messageId: String,
+        scope: CoroutineScope
+    ) {
+        stop() // Clear any existing lip-sync
+
+        if (text.isBlank()) {
+            Log.w(TAG, "prepareSynchronized: Empty text, skipping")
+            return
+        }
+
+        val durationToUse = if (estimatedDurationMs > 0) estimatedDurationMs else {
+            // Estimate ~100ms per character as fallback
+            (text.length * 100L).coerceIn(1000L, 30000L)
+        }
+
+        Log.d(TAG, "🎬 Preparing synchronized lip-sync: '${text.take(50)}...' (${durationToUse}ms)")
+
+        // Generate phonemes and visemes
+        val phonemeTimings = phonemeConverter.textToPhonemes(text, durationToUse)
+        val visemeTimings = VisemeMapper.phonemesToVisemes(phonemeTimings)
+
+        Log.d(TAG, "📝 Generated ${visemeTimings.size} visemes for synchronized playback")
+
+        syncState.set(SyncState(
+            text = text,
+            messageId = messageId,
+            visemeTimings = visemeTimings,
+            totalDurationMs = durationToUse,
+            isPrepared = true,
+            isPlaying = false
+        ))
+    }
+
+    /**
+     * Start synchronized lip-sync playback NOW.
+     * Call this when audio playback actually starts (e.g., AudioTrack.play()).
+     *
+     * @param actualDurationMs The actual audio duration (if known, otherwise 0 to use estimate)
+     * @param scope CoroutineScope for execution
+     */
+    fun startSynchronized(actualDurationMs: Long = 0, scope: CoroutineScope) {
+        val state = syncState.get()
+
+        if (!state.isPrepared) {
+            Log.w(TAG, "startSynchronized: Not prepared, call prepareSynchronized first")
+            return
+        }
+
+        if (state.isPlaying) {
+            Log.w(TAG, "startSynchronized: Already playing")
+            return
+        }
+
+        // Use actual duration if provided, otherwise use estimate
+        val durationToUse = if (actualDurationMs > 0) actualDurationMs else state.totalDurationMs
+
+        // Re-calculate timings if duration changed significantly
+        val visemeTimings = if (actualDurationMs > 0 &&
+            kotlin.math.abs(actualDurationMs - state.totalDurationMs) > 500) {
+            Log.d(TAG, "⏱️ Recalculating visemes for actual duration: ${actualDurationMs}ms (was ${state.totalDurationMs}ms)")
+            val phonemeTimings = phonemeConverter.textToPhonemes(state.text, actualDurationMs)
+            VisemeMapper.phonemesToVisemes(phonemeTimings)
+        } else {
+            state.visemeTimings
+        }
+
+        val startTime = System.currentTimeMillis()
+        syncState.set(state.copy(
+            audioStartTime = startTime,
+            totalDurationMs = durationToUse,
+            visemeTimings = visemeTimings,
+            isPlaying = true
+        ))
+
+        _isSpeaking.value = true
+        _progress.value = 0f
+
+        Log.d(TAG, "▶️ Starting synchronized lip-sync playback (${durationToUse}ms)")
+
+        syncJob = scope.launch {
+            try {
+                playSynchronizedSequence(visemeTimings, durationToUse, startTime)
+            } catch (e: CancellationException) {
+                Log.d(TAG, "⏹️ Synchronized lip-sync cancelled")
+            } finally {
+                _isSpeaking.value = false
+                _progress.value = 0f
+                syncState.set(SyncState())
+            }
+        }
+    }
+
+    /**
+     * Update synchronized playback progress based on audio position.
+     * Call this regularly during playback for real-time sync.
+     *
+     * @param progressMs Current audio playback position in milliseconds
+     * @param totalDurationMs Total audio duration (may update as streaming continues)
+     */
+    fun updateSyncProgress(progressMs: Long, totalDurationMs: Long) {
+        val state = syncState.get()
+        if (!state.isPlaying) return
+
+        // Update progress
+        val normalizedProgress = (progressMs.toFloat() / totalDurationMs.toFloat()).coerceIn(0f, 1f)
+        _progress.value = normalizedProgress
+
+        // If duration changed significantly, we may need to adjust timing
+        if (totalDurationMs > 0 && kotlin.math.abs(totalDurationMs - state.totalDurationMs) > 1000) {
+            syncState.set(state.copy(totalDurationMs = totalDurationMs))
+            Log.d(TAG, "📊 Updated total duration: ${totalDurationMs}ms")
+        }
+    }
+
+    /**
+     * Update lip-sync intensity based on real-time audio amplitude.
+     * Call this frequently for natural lip movement that matches audio volume.
+     *
+     * @param audioLevel Audio amplitude (0.0-1.0)
+     */
+    fun updateAudioIntensity(audioLevel: Float) {
+        // Map audio level to intensity multiplier (0.3-1.5 range for natural variation)
+        audioIntensityMultiplier = 0.3f + (audioLevel * 1.2f)
+    }
+
+    /**
+     * Stop synchronized lip-sync immediately.
+     * Call this when audio is interrupted or stopped.
+     */
+    fun stopSynchronized() {
+        syncJob?.cancel()
+        syncJob = null
+        syncState.set(SyncState())
+        _isSpeaking.value = false
+        _progress.value = 0f
+        audioIntensityMultiplier = 1.0f
+
+        // Clear lip-sync blend shapes with quick fade
+        blendShapeController.clearCategory(VrmBlendShapeController.CATEGORY_LIPSYNC)
+
+        Log.d(TAG, "⏹️ Synchronized lip-sync stopped")
+    }
+
+    /**
+     * Play viseme sequence synchronized to audio timeline
+     */
+    private suspend fun playSynchronizedSequence(
+        visemes: List<VisemeTiming>,
+        totalDurationMs: Long,
+        startTime: Long
+    ) {
+        if (visemes.isEmpty()) return
+
+        var previousViseme: Viseme? = null
+
+        for (visemeTiming in visemes) {
+            // Calculate target time relative to audio start
+            val targetTime = startTime + visemeTiming.startTimeMs
+            val now = System.currentTimeMillis()
+            val waitTime = targetTime - now
+
+            if (waitTime > 0) {
+                delay(waitTime)
+            } else if (waitTime < -100) {
+                // We're running behind, skip to catch up
+                continue
+            }
+
+            // Check if still playing
+            if (!syncState.get().isPlaying) break
+
+            // Update progress
+            _progress.value = visemeTiming.startTimeMs.toFloat() / totalDurationMs
+
+            // Apply viseme with audio-modulated intensity
+            val modulatedIntensity = config.intensity * audioIntensityMultiplier
+            applyVisemeWithCoarticulation(
+                visemeTiming.viseme,
+                previousViseme,
+                visemeTiming.durationMs,
+                modulatedIntensity
+            )
+
+            _currentViseme.value = visemeTiming.viseme
+            previousViseme = visemeTiming.viseme
+
+            // Hold for duration (minus fade time)
+            val holdTime = visemeTiming.durationMs - config.fadeInMs
+            if (holdTime > 0) {
+                delay(holdTime)
+            }
+        }
+
+        // Final fade out
+        fadeToNeutral()
+        _progress.value = 1f
+    }
+
+    /**
+     * Apply a viseme with coarticulation and custom intensity
+     */
+    private suspend fun applyVisemeWithCoarticulation(
+        viseme: Viseme,
+        previousViseme: Viseme?,
+        durationMs: Long,
+        intensityOverride: Float = config.intensity
+    ) {
+        // Get base blend shapes for this viseme
+        val blendShapes = VisemeMapper.getVisemeBlendShapes(viseme, intensityOverride).toMutableMap()
+
+        // Apply coarticulation from previous viseme
+        if (previousViseme != null) {
+            val prevShapes = VisemeMapper.getVisemeBlendShapes(previousViseme, intensityOverride)
+            prevShapes.forEach { (name, prevWeight) ->
+                val currentWeight = blendShapes[name] ?: 0f
+                blendShapes[name] = currentWeight + prevWeight * config.coarticulationStrength
+            }
+        }
+
+        // Normalize weights if any exceed 1.0
+        val maxWeight = blendShapes.values.maxOrNull() ?: 1f
+        if (maxWeight > 1f) {
+            blendShapes.forEach { (name, weight) ->
+                blendShapes[name] = weight / maxWeight
+            }
+        }
+
+        // Apply with smooth fade-in
+        fadeToViseme(blendShapes, config.fadeInMs.coerceAtMost(durationMs / 2))
+    }
 
     /**
      * Start lip-sync for a text with specified duration
@@ -115,7 +381,7 @@ class LipSyncController(
     }
 
     /**
-     * Play the viseme sequence with smooth transitions
+     * Play the viseme sequence with smooth transitions (legacy method)
      */
     private suspend fun playVisemeSequence(visemes: List<VisemeTiming>, totalDurationMs: Long) {
         if (visemes.isEmpty()) return
@@ -137,11 +403,12 @@ class LipSyncController(
             // Update progress
             _progress.value = visemeTiming.startTimeMs.toFloat() / totalDurationMs
 
-            // Apply viseme with coarticulation
+            // Apply viseme with coarticulation (using default intensity)
             applyVisemeWithCoarticulation(
                 visemeTiming.viseme,
                 previousViseme,
-                visemeTiming.durationMs
+                visemeTiming.durationMs,
+                config.intensity
             )
 
             _currentViseme.value = visemeTiming.viseme
@@ -157,38 +424,6 @@ class LipSyncController(
         // Final fade out
         fadeToNeutral()
         _progress.value = 1f
-    }
-
-    /**
-     * Apply a viseme with coarticulation (influence from previous viseme)
-     */
-    private suspend fun applyVisemeWithCoarticulation(
-        viseme: Viseme,
-        previousViseme: Viseme?,
-        durationMs: Long
-    ) {
-        // Get base blend shapes for this viseme
-        val blendShapes = VisemeMapper.getVisemeBlendShapes(viseme, config.intensity).toMutableMap()
-
-        // Apply coarticulation from previous viseme
-        if (previousViseme != null) {
-            val prevShapes = VisemeMapper.getVisemeBlendShapes(previousViseme, config.intensity)
-            prevShapes.forEach { (name, prevWeight) ->
-                val currentWeight = blendShapes[name] ?: 0f
-                blendShapes[name] = currentWeight + prevWeight * config.coarticulationStrength
-            }
-        }
-
-        // Normalize weights if any exceed 1.0
-        val maxWeight = blendShapes.values.maxOrNull() ?: 1f
-        if (maxWeight > 1f) {
-            blendShapes.forEach { (name, weight) ->
-                blendShapes[name] = weight / maxWeight
-            }
-        }
-
-        // Apply with smooth fade-in
-        fadeToViseme(blendShapes, config.fadeInMs.coerceAtMost(durationMs / 2))
     }
 
     /**

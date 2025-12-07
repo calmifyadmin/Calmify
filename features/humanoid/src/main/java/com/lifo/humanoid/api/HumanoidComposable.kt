@@ -6,6 +6,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.lifo.humanoid.lipsync.LipSyncController
 import com.lifo.humanoid.presentation.HumanoidViewModel
 import com.lifo.humanoid.presentation.components.FilamentView
 
@@ -70,8 +71,12 @@ fun HumanoidAvatarView(
 
 /**
  * Extension function to create a HumanoidController from HumanoidViewModel.
- * Useful for chat integration.
+ * Useful for chat integration with synchronized speech.
+ *
+ * @param lipSyncController The LipSyncController for synchronized audio-lipsync
  */
-fun HumanoidViewModel.asHumanoidController(): HumanoidController {
-    return HumanoidControllerImpl(this)
+fun HumanoidViewModel.asHumanoidController(
+    lipSyncController: LipSyncController
+): HumanoidController {
+    return HumanoidControllerImpl(this, lipSyncController)
 }

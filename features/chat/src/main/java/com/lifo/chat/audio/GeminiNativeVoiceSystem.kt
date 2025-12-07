@@ -42,13 +42,13 @@ open class GeminiNativeVoiceSystem @Inject constructor(
         private const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
 
         private val VOICE_MAP = mapOf(
-            Emotion.HAPPY to "Puck",
-            Emotion.EXCITED to "Fenrir",
-            Emotion.THOUGHTFUL to "Charon",
-            Emotion.SAD to "Enceladus",
-            Emotion.EMPATHETIC to "Aoede",
+            Emotion.HAPPY to "Kore",
+            Emotion.EXCITED to "Kore",
+            Emotion.THOUGHTFUL to "Kore",
+            Emotion.SAD to "Kore",
+            Emotion.EMPATHETIC to "Kore",
             Emotion.NEUTRAL to "Kore",
-            Emotion.CURIOUS to "Zephyr"
+            Emotion.CURIOUS to "Kore"
         )
     }
 

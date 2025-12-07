@@ -9,11 +9,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.lifo.chat.audio.GeminiNativeVoiceSystem
+import com.lifo.chat.audio.GeminiVoiceAudioSource
 import com.lifo.chat.config.ApiConfigManager
 import com.lifo.chat.domain.model.*
 import com.lifo.mongo.repository.ChatMessage
 import com.lifo.mongo.repository.ChatRepository
 import com.lifo.util.model.RequestState
+import com.lifo.util.speech.SpeechEmotion
+import com.lifo.util.speech.SpeechRequest
+import com.lifo.util.speech.SynchronizedSpeechController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
@@ -26,6 +30,8 @@ class ChatViewModel @Inject constructor(
     private val repository: ChatRepository,
     @ApplicationContext private val context: Context,
     private val voiceSystem: GeminiNativeVoiceSystem,
+    private val voiceAudioSource: GeminiVoiceAudioSource,
+    private val synchronizedSpeechController: SynchronizedSpeechController,
     private val apiConfigManager: ApiConfigManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -36,7 +42,7 @@ class ChatViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
-    
+
     // Current session tracking
     private var currentSessionId: String? = null
 
@@ -64,6 +70,9 @@ class ChatViewModel @Inject constructor(
             initialValue = 0L
         )
 
+    // Synchronized speech state for avatar integration
+    val isSynchronizedSpeaking = synchronizedSpeechController.isSpeaking
+
     private val emotionDetector = SimpleEmotionDetector()
 
     // SEMPLIFICATO: niente più chunking, solo messaggi completi
@@ -74,6 +83,7 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch {
             Log.d(TAG, "🎙️ Initializing ChatViewModel...")
             initializeVoiceSystem()
+            initializeSynchronizedSpeech()
             // Only create new session if no existing session is loaded
             if (currentSessionId == null) {
                 Log.d(TAG, "📝 Creating new session (no existing session loaded)")
@@ -82,6 +92,31 @@ class ChatViewModel @Inject constructor(
                 Log.d(TAG, "♻️ Skipping new session creation - existing session loaded: $currentSessionId")
             }
         }
+    }
+
+    /**
+     * Initialize synchronized speech by attaching the audio source
+     */
+    private fun initializeSynchronizedSpeech() {
+        Log.d(TAG, "🔗 Initializing synchronized speech controller...")
+        synchronizedSpeechController.attachAudioSource(voiceAudioSource)
+    }
+
+    /**
+     * Attach HumanoidController for synchronized lip-sync.
+     * Call this from the UI layer when humanoid is ready.
+     */
+    fun attachHumanoidController(controller: com.lifo.util.speech.SpeechAnimationTarget) {
+        Log.d(TAG, "🤖 Attaching HumanoidController for synchronized lip-sync")
+        synchronizedSpeechController.attachAnimationTarget(controller)
+    }
+
+    /**
+     * Detach HumanoidController when no longer needed.
+     */
+    fun detachHumanoidController() {
+        Log.d(TAG, "🤖 Detaching HumanoidController")
+        synchronizedSpeechController.detachAnimationTarget()
     }
 
     private suspend fun initializeVoiceSystem() {
@@ -255,13 +290,22 @@ class ChatViewModel @Inject constructor(
                 // Detect overall emotion for the entire message
                 val emotion = emotionDetector.detectEmotion(cleanText)
 
-                Log.d(TAG, "🎤 Speaking complete message: ${cleanText.take(50)}...")
+                // Map to SpeechEmotion for synchronized speech
+                val speechEmotion = mapToSpeechEmotion(emotion)
 
-                // Speak the ENTIRE message in one go
-                voiceSystem.speakWithEmotion(
-                    text = cleanText,
-                    emotion = emotion,
-                    messageId = messageId
+                Log.d(TAG, "🎤 Speaking complete message (synchronized): ${cleanText.take(50)}...")
+
+                // Estimate duration for lip-sync preparation
+                val estimatedDuration = voiceAudioSource.estimateDuration(cleanText)
+
+                // Use synchronized speech controller for ultra-accurate lip-sync
+                synchronizedSpeechController.speakSynchronized(
+                    SpeechRequest(
+                        text = cleanText,
+                        messageId = messageId,
+                        emotion = speechEmotion,
+                        estimatedDurationMs = estimatedDuration
+                    )
                 )
             } catch (e: Exception) {
                 Log.e(TAG, "Error speaking message", e)
@@ -269,23 +313,44 @@ class ChatViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Map internal emotion to SpeechEmotion for synchronized speech
+     */
+    private fun mapToSpeechEmotion(emotion: GeminiNativeVoiceSystem.Emotion): SpeechEmotion {
+        return when (emotion) {
+            GeminiNativeVoiceSystem.Emotion.NEUTRAL -> SpeechEmotion.NEUTRAL
+            GeminiNativeVoiceSystem.Emotion.HAPPY -> SpeechEmotion.HAPPY
+            GeminiNativeVoiceSystem.Emotion.SAD -> SpeechEmotion.SAD
+            GeminiNativeVoiceSystem.Emotion.EXCITED -> SpeechEmotion.EXCITED
+            GeminiNativeVoiceSystem.Emotion.THOUGHTFUL -> SpeechEmotion.THOUGHTFUL
+            GeminiNativeVoiceSystem.Emotion.EMPATHETIC -> SpeechEmotion.EMPATHETIC
+            GeminiNativeVoiceSystem.Emotion.CURIOUS -> SpeechEmotion.CURIOUS
+        }
+    }
+
     fun speakMessage(messageId: String) {
         val message = _uiState.value.messages.find { it.id == messageId }
         message?.let {
             if (!it.isUser) {
-                voiceSystem.stop()
+                // Stop any current speech
+                synchronizedSpeechController.stopSynchronized()
 
                 viewModelScope.launch {
                     delay(100) // Small delay to ensure stop is processed
 
                     val cleanText = cleanTextForSpeech(it.content)
                     val emotion = emotionDetector.detectEmotion(cleanText)
+                    val speechEmotion = mapToSpeechEmotion(emotion)
+                    val estimatedDuration = voiceAudioSource.estimateDuration(cleanText)
 
-                    // Speak the ENTIRE message at once
-                    voiceSystem.speakWithEmotion(
-                        text = cleanText,
-                        emotion = emotion,
-                        messageId = messageId
+                    // Use synchronized speech for lip-sync
+                    synchronizedSpeechController.speakSynchronized(
+                        SpeechRequest(
+                            text = cleanText,
+                            messageId = messageId,
+                            emotion = speechEmotion,
+                            estimatedDurationMs = estimatedDuration
+                        )
                     )
                 }
             }
@@ -293,7 +358,7 @@ class ChatViewModel @Inject constructor(
     }
 
     fun stopSpeaking() {
-        voiceSystem.stop()
+        synchronizedSpeechController.stopSynchronized()
         pendingVoiceMessage = null
         pendingVoiceMessageId = null
     }
@@ -400,6 +465,7 @@ class ChatViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
+        synchronizedSpeechController.release()
         voiceSystem.cleanup()
     }
 
