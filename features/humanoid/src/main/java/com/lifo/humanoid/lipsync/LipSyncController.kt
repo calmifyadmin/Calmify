@@ -92,19 +92,26 @@ class LipSyncController(
     ) {
         stop() // Clear any existing lip-sync
 
+        val durationToUse = if (estimatedDurationMs > 0) estimatedDurationMs else 5000L
+
+        // If text is empty, prepare for AUDIO-REACTIVE mode (pure amplitude-based lip-sync)
         if (text.isBlank()) {
-            Log.w(TAG, "prepareSynchronized: Empty text, skipping")
+            Log.d(TAG, "🎬 Preparing AUDIO-REACTIVE lip-sync (no text): $messageId")
+
+            syncState.set(SyncState(
+                text = "",
+                messageId = messageId,
+                visemeTimings = emptyList(), // No pre-calculated visemes
+                totalDurationMs = durationToUse,
+                isPrepared = true,
+                isPlaying = false
+            ))
             return
         }
 
-        val durationToUse = if (estimatedDurationMs > 0) estimatedDurationMs else {
-            // Estimate ~100ms per character as fallback
-            (text.length * 100L).coerceIn(1000L, 30000L)
-        }
+        Log.d(TAG, "🎬 Preparing TEXT-BASED lip-sync: '${text.take(50)}...' (${durationToUse}ms)")
 
-        Log.d(TAG, "🎬 Preparing synchronized lip-sync: '${text.take(50)}...' (${durationToUse}ms)")
-
-        // Generate phonemes and visemes
+        // Generate phonemes and visemes from text
         val phonemeTimings = phonemeConverter.textToPhonemes(text, durationToUse)
         val visemeTimings = VisemeMapper.phonemesToVisemes(phonemeTimings)
 
@@ -164,11 +171,22 @@ class LipSyncController(
         _isSpeaking.value = true
         _progress.value = 0f
 
-        Log.d(TAG, "▶️ Starting synchronized lip-sync playback (${durationToUse}ms)")
+        // Determine if we're in audio-reactive mode (no text/visemes)
+        val isAudioReactiveMode = visemeTimings.isEmpty()
+
+        if (isAudioReactiveMode) {
+            Log.d(TAG, "▶️ Starting AUDIO-REACTIVE lip-sync (amplitude-driven)")
+        } else {
+            Log.d(TAG, "▶️ Starting TEXT-BASED lip-sync (${visemeTimings.size} visemes, ${durationToUse}ms)")
+        }
 
         syncJob = scope.launch {
             try {
-                playSynchronizedSequence(visemeTimings, durationToUse, startTime)
+                if (isAudioReactiveMode) {
+                    playAudioReactiveLoop(startTime)
+                } else {
+                    playSynchronizedSequence(visemeTimings, durationToUse, startTime)
+                }
             } catch (e: CancellationException) {
                 Log.d(TAG, "⏹️ Synchronized lip-sync cancelled")
             } finally {
@@ -228,6 +246,88 @@ class LipSyncController(
         blendShapeController.clearCategory(VrmBlendShapeController.CATEGORY_LIPSYNC)
 
         Log.d(TAG, "⏹️ Synchronized lip-sync stopped")
+    }
+
+    /**
+     * Play audio-reactive lip-sync loop.
+     * Maps real-time audio amplitude directly to mouth blend shapes.
+     * Used when text is not available (streaming audio mode).
+     */
+    private suspend fun playAudioReactiveLoop(startTime: Long) {
+        Log.d(TAG, "🎤 Audio-reactive loop started")
+
+        // Define mouth blend shapes for audio-reactive mode
+        // We'll cycle through AA (open mouth) based on audio intensity
+        val baseViseme = Viseme.AA // Open mouth for speaking
+
+        var lastIntensity = 0f
+        val smoothingFactor = 0.3f // Smooth transitions between intensity levels
+
+        while (syncState.get().isPlaying) {
+            // Get current audio intensity (updated externally via updateAudioIntensity)
+            val targetIntensity = audioIntensityMultiplier.coerceIn(0f, 1.5f)
+
+            // Smooth the intensity change for natural movement
+            lastIntensity = lastIntensity + (targetIntensity - lastIntensity) * smoothingFactor
+
+            // Map intensity to viseme blend shapes
+            val effectiveIntensity = lastIntensity * config.intensity
+
+            if (effectiveIntensity > 0.1f) {
+                // Apply mouth opening based on audio level
+                val blendShapes = getAudioReactiveBlendShapes(effectiveIntensity)
+                blendShapeController.setCategoryWeights(
+                    VrmBlendShapeController.CATEGORY_LIPSYNC,
+                    blendShapes
+                )
+                _currentViseme.value = baseViseme
+            } else {
+                // Low audio - nearly closed mouth
+                blendShapeController.setCategoryWeights(
+                    VrmBlendShapeController.CATEGORY_LIPSYNC,
+                    mapOf("A" to 0.05f) // Minimal mouth opening
+                )
+                _currentViseme.value = Viseme.SILENCE
+            }
+
+            // Update at ~60fps for smooth animation
+            delay(16)
+        }
+
+        // Fade out when done
+        fadeToNeutral()
+        Log.d(TAG, "🎤 Audio-reactive loop ended")
+    }
+
+    /**
+     * Generate blend shapes for audio-reactive lip-sync based on amplitude.
+     * Creates natural-looking mouth movements by combining multiple visemes.
+     */
+    private fun getAudioReactiveBlendShapes(intensity: Float): Map<String, Float> {
+        // For natural speech, we blend between different mouth shapes based on intensity
+        // Low intensity: slight mouth opening (like "eh")
+        // Medium intensity: open mouth (like "ah")
+        // High intensity: wide open (like "AA")
+
+        return when {
+            intensity < 0.3f -> mapOf(
+                "A" to intensity * 0.5f,           // Slight opening
+                "I" to intensity * 0.2f            // Slight smile
+            )
+            intensity < 0.6f -> mapOf(
+                "A" to intensity * 0.7f,           // Medium opening
+                "O" to intensity * 0.2f,           // Slight rounding
+                "I" to 0.1f                        // Natural expression
+            )
+            intensity < 0.9f -> mapOf(
+                "A" to intensity * 0.85f,          // Wide opening
+                "O" to intensity * 0.15f           // Some rounding
+            )
+            else -> mapOf(
+                "A" to 1.0f,                       // Full open
+                "O" to 0.2f                        // Rounding for expressiveness
+            )
+        }
     }
 
     /**

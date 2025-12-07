@@ -72,7 +72,7 @@ fun ChatScreen(
     navigateBack: () -> Unit,
     navigateToWriteWithContent: (String) -> Unit,
     navigateToLiveScreen: () -> Unit = {},
-    navigateToAvatarChat: (() -> Unit)? = null,
+    navigateToAvatarLiveChat: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     sessionId: String? = null,
     viewModel: ChatViewModel = hiltViewModel(),
@@ -194,7 +194,7 @@ fun ChatScreen(
                         }
                         navigateBack()
                     },
-                    onNavigateToAvatarChat = navigateToAvatarChat
+                    onNavigateToAvatarLiveChat = navigateToAvatarLiveChat
                 )
             },
             bottomBar = {
@@ -414,7 +414,7 @@ fun ChatScreen(
 @Composable
 private fun MinimalTopBar(
     onNavigateBack: () -> Unit,
-    onNavigateToAvatarChat: (() -> Unit)? = null
+    onNavigateToAvatarLiveChat: (() -> Unit)? = null
 ) {
     TopAppBar(
         title = {
@@ -429,12 +429,12 @@ private fun MinimalTopBar(
             }
         },
         actions = {
-            // Avatar Chat button - opens immersive 3D avatar interface
-            onNavigateToAvatarChat?.let { navigate ->
+            // Avatar Live Chat button - opens immersive 3D avatar with Gemini Live
+            onNavigateToAvatarLiveChat?.let { navigate ->
                 IconButton(onClick = navigate) {
                     Icon(
                         imageVector = Icons.Default.Person,
-                        contentDescription = "Avatar Chat",
+                        contentDescription = "Avatar Live Chat",
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }

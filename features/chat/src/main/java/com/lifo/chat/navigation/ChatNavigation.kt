@@ -17,7 +17,7 @@ fun NavGraphBuilder.chatRoute(
     navigateBack: () -> Unit,
     navigateToWriteWithContent: (String) -> Unit,
     navigateToLiveScreen: () -> Unit,
-    navigateToAvatarChat: (() -> Unit)? = null
+    navigateToAvatarLiveChat: (() -> Unit)? = null
 ) {
     composable(
         route = Screen.Chat.route,
@@ -50,7 +50,7 @@ fun NavGraphBuilder.chatRoute(
             navigateBack = navigateBack,
             navigateToWriteWithContent = navigateToWriteWithContent,
             navigateToLiveScreen = navigateToLiveScreen,
-            navigateToAvatarChat = navigateToAvatarChat
+            navigateToAvatarLiveChat = navigateToAvatarLiveChat
         )
     }
 
@@ -80,7 +80,7 @@ fun NavGraphBuilder.chatRoute(
             navigateBack = navigateBack,
             navigateToWriteWithContent = navigateToWriteWithContent,
             navigateToLiveScreen = navigateToLiveScreen,
-            navigateToAvatarChat = navigateToAvatarChat,
+            navigateToAvatarLiveChat = navigateToAvatarLiveChat,
             sessionId = sessionId
         )
     }

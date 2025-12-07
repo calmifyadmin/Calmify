@@ -733,8 +733,8 @@ private fun CalmifyNavHost(
                     launchSingleTop = true
                 }
             },
-            navigateToAvatarChat = {
-                navController.navigate(Screen.AvatarChat.route) {
+            navigateToAvatarLiveChat = {
+                navController.navigate(Screen.AvatarLiveChat.route) {
                     launchSingleTop = true
                 }
             }
@@ -765,6 +765,15 @@ private fun CalmifyNavHost(
 
         // Avatar Chat - Integrated VRM + Chat
         avatarChatRoute(
+            navigateBack = {
+                if (navController.currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
+                    navController.popBackStack()
+                }
+            }
+        )
+
+        // Avatar Live Chat - VRM + Gemini Live API (Real-time voice)
+        avatarLiveChatRoute(
             navigateBack = {
                 if (navController.currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
                     navController.popBackStack()
