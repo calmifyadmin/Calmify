@@ -127,10 +127,21 @@ fun NavGraphBuilder.liveRoute(
         }
     ) {
         LiveScreen(
-            onClose = navigateBack
+            onClose = navigateBack,
+            showAvatar = false
         )
     }
 }
 
-// NOTE: Avatar Chat route moved to app module to avoid circular dependency
-// See app/src/main/java/com/lifo/app/navigation/AvatarChatNavigation.kt
+/**
+ * Navigate to Avatar Live Chat screen
+ *
+ * Note: The avatar live route is defined in the app module to avoid circular dependency.
+ * See app/src/main/java/com/lifo/app/CalmifyApp.kt
+ */
+fun NavController.navigateToAvatarLiveChat() {
+    navigate(Screen.AvatarLiveChat.route) {
+        launchSingleTop = true
+        restoreState = true
+    }
+}

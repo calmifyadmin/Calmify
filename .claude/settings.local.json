@@ -45,7 +45,8 @@
       "Bash(Select-String \"error\" -Context 1,1)",
       "Bash(dir:*)",
       "Bash(python:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

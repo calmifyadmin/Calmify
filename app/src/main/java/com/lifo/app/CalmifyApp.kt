@@ -48,9 +48,10 @@ import com.lifo.chat.navigation.liveRoute
 import com.lifo.chat.navigation.navigateToChat
 import com.lifo.history.navigation.historyRoute
 import com.lifo.home.navigation.homeRoute
+import com.lifo.humanoid.api.HumanoidAvatarView
+import com.lifo.humanoid.api.asHumanoidController
 import com.lifo.humanoid.presentation.navigation.humanoidRoute
 import com.lifo.settings.navigation.settingsRoute
-import com.lifo.app.navigation.avatarChatRoute
 import com.lifo.insight.InsightScreen
 import com.lifo.mongo.repository.MongoRepository
 import com.lifo.onboarding.navigation.onboardingRoute
@@ -61,7 +62,9 @@ import com.lifo.ui.components.navigation.CalmifyNavigationBar
 import com.lifo.ui.components.navigation.NavigationDestination
 import com.lifo.util.Screen
 import com.lifo.write.navigation.writeRoute
+import androidx.hilt.navigation.compose.hiltViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -763,22 +766,60 @@ private fun CalmifyNavHost(
             }
         )
 
-        // Avatar Chat - Integrated VRM + Chat
-        avatarChatRoute(
-            navigateBack = {
-                if (navController.currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
-                    navController.popBackStack()
-                }
-            }
-        )
+        // Avatar Chat - Integrated VRM + Chat (Removed temporarily - consolidation in progress)
 
         // Avatar Live Chat - VRM + Gemini Live API (Real-time voice)
-        avatarLiveChatRoute(
-            navigateBack = {
-                if (navController.currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
-                    navController.popBackStack()
-                }
+        // Now uses unified LiveScreen from features/chat with avatar mode enabled
+        composable(
+            route = Screen.AvatarLiveChat.route,
+            enterTransition = {
+                fadeIn(tween(400)) + scaleIn(
+                    initialScale = 0.95f,
+                    animationSpec = tween(400)
+                )
+            },
+            exitTransition = {
+                fadeOut(tween(300)) + scaleOut(
+                    targetScale = 0.95f,
+                    animationSpec = tween(300)
+                )
             }
-        )
+        ) {
+            val humanoidViewModel: com.lifo.humanoid.presentation.HumanoidViewModel = hiltViewModel()
+            val liveChatViewModel: com.lifo.chat.presentation.viewmodel.LiveChatViewModel = hiltViewModel()
+
+            val context = LocalContext.current
+
+            // Setup avatar integration
+            val humanoidController = remember(humanoidViewModel) {
+                val lipSyncController = EntryPointAccessors.fromApplication(
+                    context.applicationContext,
+                    com.lifo.app.integration.avatar.AvatarIntegrationEntryPoint::class.java
+                ).lipSyncController()
+                humanoidViewModel.asHumanoidController(lipSyncController)
+            }
+
+            LaunchedEffect(humanoidController) {
+                liveChatViewModel.attachHumanoidController(humanoidController)
+            }
+
+            com.lifo.chat.presentation.screen.LiveScreen(
+                onClose = {
+                    liveChatViewModel.detachHumanoidController()
+                    if (navController.currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
+                        navController.popBackStack()
+                    }
+                },
+                showAvatar = true,
+                avatarContent = {
+                    HumanoidAvatarView(
+                        modifier = Modifier.fillMaxSize(),
+                        viewModel = humanoidViewModel,
+                        blurAmount = 0f
+                    )
+                },
+                viewModel = liveChatViewModel
+            )
+        }
     }
 }

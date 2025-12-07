@@ -14,8 +14,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.VolumeOff
+import androidx.compose.material.icons.outlined.Waves
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -43,16 +46,25 @@ import com.lifo.chat.presentation.viewmodel.LiveChatViewModel
  * Dedicated Live Screen with minimalist UI inspired by Gemini Live
  *
  * Features:
- * - Full-screen waveform visualization
- * - Minimal controls (Close, Mute, Status)
+ * - Full-screen waveform visualization OR custom avatar content
+ * - Minimal controls (Close, Mute, Camera, Display Mode Toggle)
  * - Real-time audio-reactive animations
  * - Elegant gradient background
+ * - Optional avatar integration via Composable slot
+ *
+ * @param onClose Callback when user closes the screen
+ * @param showAvatar If true, shows avatar content slot instead of visualizer
+ * @param avatarContent Optional Composable content for avatar (required if showAvatar=true)
+ * @param onAvatarSetup Optional callback for avatar integration setup
  */
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun LiveScreen(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    showAvatar: Boolean = false,
+    avatarContent: (@Composable () -> Unit)? = null,
+    onAvatarSetup: ((com.lifo.util.speech.SpeechAnimationTarget) -> Unit)? = null,
     viewModel: LiveChatViewModel = hiltViewModel()
 ) {
     val liveChatState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -68,6 +80,9 @@ fun LiveScreen(
 
     // Local state to track if user wants camera on
     var wantsCameraOn by remember { mutableStateOf(false) }
+
+    // Display mode toggle: true = Avatar, false = Wave visualizer
+    var displayAvatar by remember { mutableStateOf(showAvatar) }
 
     // Permission handling
     val audioPermissionLauncher = rememberLauncherForActivityResult(
@@ -109,43 +124,69 @@ fun LiveScreen(
     Box(
         modifier = modifier.fillMaxSize()
     ) {
-        // Waveform visualizer - full screen with same style as ChatScreen
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            GeminiLiquidVisualizer(
-                isSpeaking = liveChatState.aiEmotion == AIEmotion.Speaking ||
-                            liveChatState.turnState == TurnState.UserTurn,
-                modifier = Modifier.fillMaxSize(),
-                primaryColor = MaterialTheme.colorScheme.primary,
-                secondaryColor = MaterialTheme.colorScheme.tertiary,
-                backgroundColor = MaterialTheme.colorScheme.surface,
-                userVoiceLevel = userVoiceLevel,
-                aiVoiceLevel = aiVoiceLevel,
-                emotionalIntensity = emotionalIntensity,
-                conversationMode = conversationMode,
-                isUserSpeaking = liveChatState.turnState == TurnState.UserTurn && !liveChatState.isMuted,
-                isAiSpeaking = liveChatState.aiEmotion == AIEmotion.Speaking
-            )
+        // LAYER 1: Background - Either Avatar or Waveform Visualizer
+        if (showAvatar && displayAvatar && avatarContent != null) {
+            // Avatar Content (provided from outside)
+            avatarContent()
         } else {
-            // Fallback gradient background for older devices
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.surface,
-                                MaterialTheme.colorScheme.surfaceVariant
+            // Waveform visualizer - full screen with same style as ChatScreen
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                GeminiLiquidVisualizer(
+                    isSpeaking = liveChatState.aiEmotion == AIEmotion.Speaking ||
+                                liveChatState.turnState == TurnState.UserTurn,
+                    modifier = Modifier.fillMaxSize(),
+                    primaryColor = MaterialTheme.colorScheme.primary,
+                    secondaryColor = MaterialTheme.colorScheme.tertiary,
+                    backgroundColor = MaterialTheme.colorScheme.surface,
+                    userVoiceLevel = userVoiceLevel,
+                    aiVoiceLevel = aiVoiceLevel,
+                    emotionalIntensity = emotionalIntensity,
+                    conversationMode = conversationMode,
+                    isUserSpeaking = liveChatState.turnState == TurnState.UserTurn && !liveChatState.isMuted,
+                    isAiSpeaking = liveChatState.aiEmotion == AIEmotion.Speaking
+                )
+            } else {
+                // Fallback gradient background for older devices
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.surface,
+                                    MaterialTheme.colorScheme.surfaceVariant
+                                )
                             )
                         )
-                    )
-            )
+                )
+            }
         }
 
-        // Top bar with close button and status
+        // LAYER 2: Transcript Overlay (Center)
+        AnimatedVisibility(
+            visible = currentTranscript.isNotEmpty() && liveChatState.connectionStatus == ConnectionStatus.Connected,
+            enter = fadeIn() + slideInVertically { -it / 4 },
+            exit = fadeOut() + slideOutVertically { -it / 4 },
+            modifier = Modifier
+                .align(Alignment.Center)
+                .padding(horizontal = 32.dp)
+        ) {
+            TranscriptCard(text = currentTranscript)
+        }
+
+        // LAYER 3: Top bar with close button, display toggle, and status
         LiveTopBar(
             connectionStatus = liveChatState.connectionStatus,
             turnState = liveChatState.turnState,
             isMuted = liveChatState.isMuted,
+            showAvatar = showAvatar,
+            displayAvatar = displayAvatar,
+            onToggleDisplayMode = if (showAvatar) {
+                {
+                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    displayAvatar = !displayAvatar
+                }
+            } else null,
             onClose = {
                 haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 onClose()
@@ -225,11 +266,42 @@ fun LiveScreen(
     }
 }
 
+/**
+ * Transcript Card - Shows AI response text
+ */
+@Composable
+private fun TranscriptCard(
+    text: String,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .padding(20.dp)
+                .fillMaxWidth()
+        )
+    }
+}
+
 @Composable
 private fun LiveTopBar(
     connectionStatus: ConnectionStatus,
     turnState: TurnState,
     isMuted: Boolean,
+    showAvatar: Boolean,
+    displayAvatar: Boolean,
+    onToggleDisplayMode: (() -> Unit)?,
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -247,18 +319,46 @@ private fun LiveTopBar(
             isMuted = isMuted
         )
 
-        // Right side - Close button
-        IconButton(
-            onClick = onClose,
-            colors = IconButtonDefaults.iconButtonColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                contentColor = MaterialTheme.colorScheme.onSurface
-            )
+        // Right side - Display toggle (if avatar enabled) + Close button
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.Close,
-                contentDescription = "Close Live Chat"
-            )
+            // Display mode toggle button (only if avatar mode enabled)
+            if (showAvatar && onToggleDisplayMode != null) {
+                IconButton(
+                    onClick = onToggleDisplayMode,
+                    colors = IconButtonDefaults.iconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
+                        contentColor = MaterialTheme.colorScheme.onSurface
+                    )
+                ) {
+                    Crossfade(
+                        targetState = displayAvatar,
+                        animationSpec = tween(200),
+                        label = "displayModeIcon"
+                    ) { isAvatar ->
+                        Icon(
+                            imageVector = if (isAvatar) Icons.Outlined.Waves else Icons.Filled.Person,
+                            contentDescription = if (isAvatar) "Switch to Wave" else "Switch to Avatar"
+                        )
+                    }
+                }
+            }
+
+            // Close button
+            IconButton(
+                onClick = onClose,
+                colors = IconButtonDefaults.iconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close Live Chat"
+                )
+            }
         }
     }
 }

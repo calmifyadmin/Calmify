@@ -1,4 +1,4 @@
-package com.lifo.app.integration
+package com.lifo.app.integration.avatar
 
 import android.util.Log
 import com.lifo.chat.audio.GeminiNativeVoiceSystem

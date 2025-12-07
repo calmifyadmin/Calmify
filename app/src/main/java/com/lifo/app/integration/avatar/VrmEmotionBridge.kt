@@ -1,33 +1,49 @@
-package com.lifo.app.integration
+package com.lifo.app.integration.avatar
 
+import com.lifo.chat.audio.GeminiNativeVoiceSystem
 import com.lifo.chat.domain.model.AIEmotion
 import com.lifo.humanoid.api.HumanoidController
 import com.lifo.humanoid.domain.model.Emotion
 
 /**
- * Live Emotion Bridge - Gemini Live API Integration
+ * VRM Emotion Bridge - Unified Integration
  *
- * Maps Gemini Live AI emotions to VRM blend shapes for the avatar.
- * This bridge handles real-time emotion synchronization during live
- * voice conversations with the AI.
+ * Centralized emotion mapping for both Chat TTS and Gemini Live API.
+ * Maps various emotion sources to VRM blend shapes with appropriate intensities.
  *
- * Key features:
- * - Real-time AIEmotion -> Emotion mapping
- * - Text-based emotion detection for enhanced expressions
- * - Smooth transitions between emotional states
+ * Supported inputs:
+ * - GeminiNativeVoiceSystem.Emotion (Chat TTS)
+ * - AIEmotion (Gemini Live API)
+ * - Text-based emotion detection (both systems)
  */
-class LiveEmotionBridge(
+class VrmEmotionBridge(
     private val humanoidController: HumanoidController
 ) {
     /**
-     * Applies a Gemini Live AI emotion to the VRM avatar.
+     * Apply emotion from Chat TTS system.
      *
-     * Maps AIEmotion (from Gemini Live) to VRM Emotion with appropriate
-     * intensity levels for natural expressions:
-     * - Speaking: Neutral (lip-sync handles mouth)
-     * - Thinking: Full intensity thinking expression
-     * - Happy: Full intensity happy expression
-     * - Neutral: Reset to neutral state
+     * Maps GeminiNativeVoiceSystem emotions to VRM expressions
+     * with appropriate intensity levels.
+     */
+    fun applyChatEmotion(chatEmotion: GeminiNativeVoiceSystem.Emotion) {
+        val vrmEmotion = when (chatEmotion) {
+            GeminiNativeVoiceSystem.Emotion.NEUTRAL -> Emotion.Neutral
+            GeminiNativeVoiceSystem.Emotion.HAPPY -> Emotion.Happy(1.0f)
+            GeminiNativeVoiceSystem.Emotion.SAD -> Emotion.Sad(1.0f)
+            GeminiNativeVoiceSystem.Emotion.EXCITED -> Emotion.Excited(1.0f)
+            GeminiNativeVoiceSystem.Emotion.THOUGHTFUL -> Emotion.Thinking(1.0f)
+            GeminiNativeVoiceSystem.Emotion.EMPATHETIC -> Emotion.Calm(0.8f)
+            GeminiNativeVoiceSystem.Emotion.CURIOUS -> Emotion.Surprised(0.5f)
+        }
+
+        humanoidController.setEmotion(vrmEmotion)
+    }
+
+    /**
+     * Apply emotion from Gemini Live API.
+     *
+     * Maps AIEmotion states to VRM expressions.
+     * Speaking state uses Neutral to let lip-sync handle the mouth.
      */
     fun applyLiveEmotion(aiEmotion: AIEmotion) {
         val vrmEmotion = when (aiEmotion) {
@@ -41,21 +57,22 @@ class LiveEmotionBridge(
     }
 
     /**
-     * Detects emotion from AI transcript text.
+     * Detect and apply emotion from AI transcript text.
      *
-     * Analyzes the AI's response text to determine the appropriate
-     * emotional expression. This enhances the avatar's reactions
-     * beyond simple turn-based states.
-     *
-     * Keywords analyzed:
-     * - Happy/Positive: felice, contento, bene, ottimo, fantastico, etc.
-     * - Sad/Empathetic: triste, dispiaciuto, mi dispiace, capisco, etc.
-     * - Excited/Interested: interessante, curioso, wow, incredibile, etc.
-     * - Calm/Understanding: capisco, comprendo, certo, naturalmente, etc.
-     * - Surprised: davvero, serio, non ci credo, etc.
+     * Analyzes AI response text to determine appropriate emotional expression.
+     * Works for both Chat TTS and Live API transcripts.
      *
      * @param text The AI transcript text to analyze
      * @return The detected Emotion with appropriate intensity
+     */
+    fun detectAndApplyEmotionFromText(text: String) {
+        val detectedEmotion = detectEmotionFromText(text)
+        humanoidController.setEmotion(detectedEmotion)
+    }
+
+    /**
+     * Detect emotion from text without applying it.
+     * Useful for preview or conditional application.
      */
     fun detectEmotionFromText(text: String): Emotion {
         val lowerText = text.lowercase()
@@ -114,19 +131,6 @@ class LiveEmotionBridge(
             // Default to neutral
             else -> Emotion.Neutral
         }
-    }
-
-    /**
-     * Applies emotion detected from text to the avatar.
-     *
-     * Combines text analysis with current AI state for
-     * the most appropriate emotional expression.
-     *
-     * @param text The AI transcript text
-     */
-    fun applyEmotionFromText(text: String) {
-        val detectedEmotion = detectEmotionFromText(text)
-        humanoidController.setEmotion(detectedEmotion)
     }
 
     /**
