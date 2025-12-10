@@ -334,6 +334,55 @@ Conosci l'utente e i suoi ultimi diari.
         }
     }
 
+    /**
+     * Invia un messaggio testuale durante una conversazione Live.
+     * Utile per inserire testo mentre si è in modalità vocale.
+     */
+    fun sendTextMessage(text: String) {
+        if (_connectionState.value != ConnectionState.CONNECTED) {
+            Log.w(TAG, "Cannot send text - not connected")
+            return
+        }
+        if (text.isBlank()) {
+            Log.w(TAG, "Cannot send empty text message")
+            return
+        }
+
+        try {
+            Log.d(TAG, "💬 Sending text message: ${text.take(50)}...")
+
+            // Costruisce il messaggio nel formato Gemini Live API
+            val msg = JSONObject().apply {
+                put("clientContent", JSONObject().apply {
+                    put("turns", JSONArray().apply {
+                        put(JSONObject().apply {
+                            put("role", "user")
+                            put("parts", JSONArray().apply {
+                                put(JSONObject().apply {
+                                    put("text", text)
+                                })
+                            })
+                        })
+                    })
+                    put("turnComplete", true)
+                })
+            }
+
+            webSocket?.send(msg.toString())
+            Log.d(TAG, "📤 Text message sent successfully")
+
+            // Salva il messaggio nel database
+            saveMessageToChat(text, true)
+
+            // Notifica che il messaggio utente è stato inviato
+            onPartialTranscript?.invoke(text)
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error sending text message", e)
+            onError?.invoke("Failed to send text message: ${e.message}")
+        }
+    }
+
     private fun receiveMessage(message: String?) {
         if (message == null) return
 

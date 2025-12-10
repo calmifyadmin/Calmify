@@ -13,9 +13,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.VolumeOff
 import androidx.compose.material.icons.outlined.Waves
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -83,6 +85,10 @@ fun LiveScreen(
 
     // Display mode toggle: true = Avatar, false = Wave visualizer
     var displayAvatar by remember { mutableStateOf(showAvatar) }
+
+    // Chat input visibility toggle
+    var showChatInput by remember { mutableStateOf(false) }
+    var chatInputText by remember { mutableStateOf("") }
 
     // Permission handling
     val audioPermissionLauncher = rememberLauncherForActivityResult(
@@ -229,40 +235,146 @@ fun LiveScreen(
             )
         }
 
-        // Bottom controls - mute button and status
-        LiveBottomControls(
-            connectionStatus = liveChatState.connectionStatus,
-            isMuted = liveChatState.isMuted,
-            turnState = liveChatState.turnState,
-            isChannelOpen = liveChatState.isChannelOpen,
-            partialTranscript = liveChatState.partialTranscript,
-            error = liveChatState.error,
-            onToggleMute = {
-                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                viewModel.toggleMute()
-            },
-            isCameraActive = liveChatState.isCameraActive,
-            hasCameraPermission = liveChatState.hasCameraPermission,
-            wantsCameraOn = wantsCameraOn,
-            onToggleCamera = {
-                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                if (!liveChatState.hasCameraPermission) {
-                    // Request permission first
-                    wantsCameraOn = true
-                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                } else {
-                    // Toggle camera on/off
-                    wantsCameraOn = !wantsCameraOn
-                    if (!wantsCameraOn && liveChatState.isCameraActive) {
-                        // Stop camera if turning off
-                        viewModel.stopCameraPreview()
-                    }
-                }
-            },
+        // Chat Input overlay (when enabled) - con bottoni integrati
+        AnimatedVisibility(
+            visible = showChatInput,
+            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
+                .fillMaxWidth()
                 .navigationBarsPadding()
-        )
+        ) {
+            com.lifo.chat.presentation.components.ChatInput(
+                value = chatInputText,
+                onValueChange = { chatInputText = it },
+                onSend = {
+                    if (chatInputText.isNotBlank()) {
+                        // Invia messaggio testuale tramite WebSocket
+                        viewModel.sendTextMessage(chatInputText)
+                        chatInputText = ""
+                        showChatInput = false
+                    }
+                },
+                isEnabled = liveChatState.connectionStatus == ConnectionStatus.Connected,
+                isVoiceChatMode = false,
+                trailingActions = {
+                    // Camera button
+                    IconButton(
+                        onClick = {
+                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            if (!liveChatState.hasCameraPermission) {
+                                wantsCameraOn = true
+                                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                            } else {
+                                wantsCameraOn = !wantsCameraOn
+                                if (!wantsCameraOn && liveChatState.isCameraActive) {
+                                    viewModel.stopCameraPreview()
+                                }
+                            }
+                        },
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (liveChatState.isCameraActive)
+                                Icons.Filled.CameraAlt
+                            else
+                                Icons.Outlined.CameraAlt,
+                            contentDescription = "Toggle Camera",
+                            tint = if (liveChatState.isCameraActive)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    // Chat toggle button (chiude la chat input)
+                    IconButton(
+                        onClick = {
+                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            showChatInput = false
+                        },
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Edit,
+                            contentDescription = "Hide Chat Input",
+                            tint = MaterialTheme.colorScheme.tertiary
+                        )
+                    }
+
+                    // Mute button
+                    IconButton(
+                        onClick = {
+                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            viewModel.toggleMute()
+                        },
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (liveChatState.isMuted)
+                                Icons.Outlined.VolumeOff
+                            else
+                                Icons.Filled.Mic,
+                            contentDescription = if (liveChatState.isMuted) "Unmute" else "Mute",
+                            tint = if (liveChatState.isMuted)
+                                MaterialTheme.colorScheme.error
+                            else
+                                MaterialTheme.colorScheme.primary
+                        )
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+        }
+
+        // Bottom controls - nascosti quando chat input è attiva
+        AnimatedVisibility(
+            visible = !showChatInput,
+            enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 }),
+            exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 2 })
+        ) {
+            LiveBottomControls(
+                connectionStatus = liveChatState.connectionStatus,
+                isMuted = liveChatState.isMuted,
+                turnState = liveChatState.turnState,
+                isChannelOpen = liveChatState.isChannelOpen,
+                partialTranscript = liveChatState.partialTranscript,
+                error = liveChatState.error,
+                onToggleMute = {
+                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    viewModel.toggleMute()
+                },
+                isCameraActive = liveChatState.isCameraActive,
+                hasCameraPermission = liveChatState.hasCameraPermission,
+                wantsCameraOn = wantsCameraOn,
+                onToggleCamera = {
+                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    if (!liveChatState.hasCameraPermission) {
+                        // Request permission first
+                        wantsCameraOn = true
+                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                    } else {
+                        // Toggle camera on/off
+                        wantsCameraOn = !wantsCameraOn
+                        if (!wantsCameraOn && liveChatState.isCameraActive) {
+                            // Stop camera if turning off
+                            viewModel.stopCameraPreview()
+                        }
+                    }
+                },
+                onToggleChatInput = {
+                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    showChatInput = !showChatInput
+                },
+                showChatInput = showChatInput,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+            )
+        }
     }
 }
 
@@ -457,20 +569,24 @@ private fun LiveBottomControls(
     hasCameraPermission: Boolean,
     wantsCameraOn: Boolean,
     onToggleCamera: () -> Unit,
+    onToggleChatInput: (() -> Unit)? = null,
+    showChatInput: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier
-            .fillMaxWidth()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Spacer per spingere tutto verso il basso
+        Spacer(modifier = Modifier.weight(1f))
+
         // Partial transcript display
         AnimatedVisibility(
             visible = partialTranscript.isNotEmpty() && connectionStatus == ConnectionStatus.Connected,
             enter = fadeIn() + slideInVertically { it / 2 },
-            exit = fadeOut() + slideOutVertically { it / 2 }
+            exit = fadeOut() + slideOutVertically { it / 2 },
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
         ) {
             Card(
                 colors = CardDefaults.cardColors(
@@ -496,16 +612,15 @@ private fun LiveBottomControls(
         AnimatedVisibility(
             visible = error != null,
             enter = fadeIn() + slideInVertically { it },
-            exit = fadeOut() + slideOutVertically { it }
+            exit = fadeOut() + slideOutVertically { it },
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
         ) {
             error?.let {
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer
                     ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
                         text = it,
@@ -522,6 +637,7 @@ private fun LiveBottomControls(
 
         // Mute/Unmute and Camera buttons row
         Row(
+            modifier = Modifier.padding(bottom = 24.dp, top = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -557,6 +673,28 @@ private fun LiveBottomControls(
                     contentDescription = if (isCameraActive) "Disable Camera" else "Enable Camera",
                     modifier = Modifier.size(28.dp)
                 )
+            }
+
+            // Chat Input toggle button (only if onToggleChatInput is provided)
+            if (onToggleChatInput != null) {
+                FloatingActionButton(
+                    onClick = onToggleChatInput,
+                    modifier = Modifier.size(64.dp),
+                    containerColor = if (showChatInput)
+                        MaterialTheme.colorScheme.tertiaryContainer
+                    else
+                        MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = if (showChatInput)
+                        MaterialTheme.colorScheme.onTertiaryContainer
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                ) {
+                    Icon(
+                        imageVector = if (showChatInput) Icons.Filled.Edit else Icons.Outlined.Edit,
+                        contentDescription = if (showChatInput) "Hide Chat Input" else "Show Chat Input",
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
             }
 
             // Mute/Unmute button - large, prominent

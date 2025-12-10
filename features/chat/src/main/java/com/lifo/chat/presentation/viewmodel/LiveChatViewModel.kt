@@ -636,6 +636,31 @@ class LiveChatViewModel @Inject constructor(
 
     fun isMuted(): Boolean = _uiState.value.isMuted
 
+    /**
+     * Invia un messaggio testuale durante una conversazione Live.
+     * Utile per digitare mentre si è in modalità vocale.
+     */
+    fun sendTextMessage(text: String) {
+        if (text.isBlank()) {
+            Log.w(TAG, "Cannot send empty text message")
+            return
+        }
+
+        Log.d(TAG, "💬 Sending text message from ViewModel: ${text.take(50)}...")
+        geminiWebSocketClient.sendTextMessage(text)
+
+        // Aggiorna lo stato UI per mostrare il messaggio inviato
+        _uiState.update { it.copy(transcript = text, partialTranscript = "") }
+
+        // Aggiungi al context manager per intelligenza conversazionale
+        conversationContextManager.addMessage(
+            content = text,
+            isFromUser = true,
+            audioLevel = 0f,
+            duration = 0L
+        )
+    }
+
     fun clearError() {
         _uiState.update { it.copy(error = null) }
     }

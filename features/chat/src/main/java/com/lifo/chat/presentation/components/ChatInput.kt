@@ -68,7 +68,8 @@ fun ChatInput(
     voiceNaturalness: Float = 1.0f,
     isVoiceChatMode: Boolean = false,
     onVoiceRecord: (() -> Unit)? = null,
-    onNavigateToLiveMode: (() -> Unit)? = null
+    onNavigateToLiveMode: (() -> Unit)? = null,
+    trailingActions: (@Composable RowScope.() -> Unit)? = null
 ) {
     val haptics = LocalHapticFeedback.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -327,6 +328,12 @@ fun ChatInput(
                         }
 
                         Spacer(modifier = Modifier.width(8.dp))
+
+                        // Trailing actions (bottoni personalizzati per Live mode)
+                        if (trailingActions != null) {
+                            trailingActions()
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
 
                         // Send/Mic button con animazioni fluide
                         AnimatedContent(
