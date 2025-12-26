@@ -22,7 +22,8 @@ material = "1.5.0-alpha07"
 splash = "1.0.1"
 
 # Firebase - LATEST 2025 (NO KTX MODULES!)
-firebase-bom = "34.4.0"
+# v34.7.0 includes firebase-ai 17.7.0 with LiveAudioConversationConfig for lip-sync
+firebase-bom = "34.7.0"
 google-services = "4.4.2"
 
 # Database - Room 2.7 + FIRESTORE (no realm!)
@@ -73,6 +74,9 @@ filament = "1.67.0"
 # Camera - CameraX
 camerax = "1.4.1"
 media3-transformer = "1.8.0"
+
+# AAA VAD System - Enterprise-grade Voice Activity Detection
+android-vad = "2.0.10"
 
 [libraries]
 # Core Android
@@ -197,6 +201,10 @@ camerax-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "ca
 camerax-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "camerax" }
 camerax-view = { module = "androidx.camera:camera-view", version.ref = "camerax" }
 media3-transformer = { group = "androidx.media3", name = "media3-transformer", version.ref = "media3-transformer" }
+
+# AAA VAD System - Enterprise-grade Voice Activity Detection
+vad-silero = { module = "com.github.gkonovalov.android-vad:silero", version.ref = "android-vad" }
+vad-webrtc = { module = "com.github.gkonovalov.android-vad:webrtc", version.ref = "android-vad" }
 
 [plugins]
 com-android-application = { id = "com.android.application", version.ref = "agp" }

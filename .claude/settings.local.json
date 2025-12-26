@@ -46,7 +46,11 @@
       "Bash(dir:*)",
       "Bash(python:*)",
       "Bash(mkdir:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(Select-String \"error\")",
+      "Bash(Select-String -Pattern \"error:|BUILD|e:\" -Context 1,2)",
+      "Bash(grep:*)",
+      "Bash(Select-Object -Last 80)"
     ],
     "deny": [],
     "ask": []

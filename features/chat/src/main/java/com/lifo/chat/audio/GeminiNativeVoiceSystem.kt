@@ -131,10 +131,13 @@ open class GeminiNativeVoiceSystem @Inject constructor(
     private fun requestAudioFocus() {
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
+        // USAGE_ASSISTANT: Optimized routing for AI voice assistants
+        // - Ducking: Other media streams are lowered automatically
+        // - Privacy: Cannot be recorded by other apps
         audioFocusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
             .setAudioAttributes(
                 AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setUsage(AudioAttributes.USAGE_ASSISTANT)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                     .build()
             )
@@ -165,8 +168,9 @@ open class GeminiNativeVoiceSystem @Inject constructor(
         val track = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             AudioTrack.Builder()
                 .setAudioAttributes(
+                    // USAGE_ASSISTANT: Optimized routing for AI voice assistants
                     AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setUsage(AudioAttributes.USAGE_ASSISTANT)
                         .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                         .build()
                 )

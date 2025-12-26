@@ -12,6 +12,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.storage.FirebaseStorage
+import com.lifo.home.domain.model.*
+import com.lifo.home.domain.usecase.*
 import com.lifo.mongo.database.dao.ImageToDeleteDao
 import com.lifo.mongo.database.entity.ImageToDelete
 import com.lifo.mongo.repository.Diaries
@@ -67,7 +69,13 @@ internal class HomeViewModel @Inject constructor(
     private val unifiedContentRepository: UnifiedContentRepository,
     private val diaryRepository: MongoRepository,
     private val insightRepository: com.lifo.mongo.repository.InsightRepository,
-    private val savedStateHandle: SavedStateHandle
+    private val savedStateHandle: SavedStateHandle,
+    // New Use Cases for Home Redesign
+    private val calculateMoodDistributionUseCase: CalculateMoodDistributionUseCase,
+    private val aggregateCognitivePatternsUseCase: AggregateCognitivePatternsUseCase,
+    private val calculateTopicsFrequencyUseCase: CalculateTopicsFrequencyUseCase,
+    private val calculateTodayPulseUseCase: CalculateTodayPulseUseCase,
+    private val getAchievementsUseCase: GetAchievementsUseCase
 ) : ViewModel() {
 
     companion object {
@@ -102,6 +110,52 @@ internal class HomeViewModel @Inject constructor(
     // Week navigation state
     private val _currentWeekOffset = MutableStateFlow(0) // 0 = current week, -1 = last week, etc.
     val currentWeekOffset: StateFlow<Int> = _currentWeekOffset.asStateFlow()
+
+    // ==================== NEW REDESIGN STATE ====================
+
+    // Home Redesign complete state
+    private val _homeRedesignState = MutableStateFlow(HomeRedesignState())
+    val homeRedesignState: StateFlow<HomeRedesignState> = _homeRedesignState.asStateFlow()
+
+    // Today's Pulse (Hero Section)
+    private val _todayPulse = MutableStateFlow<TodayPulse?>(null)
+    val todayPulse: StateFlow<TodayPulse?> = _todayPulse.asStateFlow()
+
+    // Mood Distribution (Donut Chart)
+    private val _moodDistribution = MutableStateFlow<MoodDistribution?>(null)
+    val moodDistribution: StateFlow<MoodDistribution?> = _moodDistribution.asStateFlow()
+
+    // Dominant Mood
+    private val _dominantMood = MutableStateFlow<DominantMood?>(null)
+    val dominantMood: StateFlow<DominantMood?> = _dominantMood.asStateFlow()
+
+    // Cognitive Patterns
+    private val _cognitivePatterns = MutableStateFlow<List<CognitivePatternSummary>>(emptyList())
+    val cognitivePatterns: StateFlow<List<CognitivePatternSummary>> = _cognitivePatterns.asStateFlow()
+
+    // Topics Frequency (Word Cloud)
+    private val _topicsFrequency = MutableStateFlow<List<TopicFrequency>>(emptyList())
+    val topicsFrequency: StateFlow<List<TopicFrequency>> = _topicsFrequency.asStateFlow()
+
+    // Emerging Topic
+    private val _emergingTopic = MutableStateFlow<TopicTrend?>(null)
+    val emergingTopic: StateFlow<TopicTrend?> = _emergingTopic.asStateFlow()
+
+    // Achievements State
+    private val _achievementsState = MutableStateFlow<AchievementsState?>(null)
+    val achievementsState: StateFlow<AchievementsState?> = _achievementsState.asStateFlow()
+
+    // Selected time range for insights
+    private val _selectedTimeRange = MutableStateFlow(TimeRange.MONTH)
+    val selectedTimeRange: StateFlow<TimeRange> = _selectedTimeRange.asStateFlow()
+
+    // Quick action state
+    private val _quickActionState = MutableStateFlow(QuickActionState())
+    val quickActionState: StateFlow<QuickActionState> = _quickActionState.asStateFlow()
+
+    // Cached insights and diaries for calculations
+    private var cachedInsights: List<DiaryInsight> = emptyList()
+    private var cachedDiaries: List<Diary> = emptyList()
 
     // Legacy state holders for backward compatibility
     var diaries: MutableState<Diaries> = mutableStateOf(RequestState.Loading)
@@ -143,6 +197,9 @@ internal class HomeViewModel @Inject constructor(
 
         // Load daily insights for chart
         loadDailyInsights()
+
+        // Load redesign data (new components)
+        loadRedesignData()
     }
 
     private fun restoreState() {
@@ -639,6 +696,220 @@ internal class HomeViewModel @Inject constructor(
                 Log.e(TAG, "Error in loadDailyInsights", e)
             }
         }
+    }
+
+    // ==================== REDESIGN DATA LOADING ====================
+
+    /**
+     * Load all redesign data (hero, insights, achievements)
+     */
+    private fun loadRedesignData() {
+        viewModelScope.launch {
+            try {
+                // Update hero loading state
+                _homeRedesignState.update {
+                    it.copy(heroLoadingState = SectionLoadingState(isLoading = true))
+                }
+
+                // Load insights and diaries in parallel
+                val insightsDeferred = async { loadInsightsForRedesign() }
+                val diariesDeferred = async { loadDiariesForRedesign() }
+
+                cachedInsights = insightsDeferred.await()
+                cachedDiaries = diariesDeferred.await()
+
+                // Now calculate all aggregations
+                calculateTodayPulse()
+                calculateMoodDistribution()
+                calculateCognitivePatterns()
+                calculateTopicsFrequency()
+                calculateAchievements()
+
+                // Get user name
+                val userName = FirebaseAuth.getInstance().currentUser?.displayName
+                    ?: FirebaseAuth.getInstance().currentUser?.email?.substringBefore("@")
+                    ?: "Utente"
+
+                // Update complete state
+                _homeRedesignState.update {
+                    it.copy(
+                        userName = userName,
+                        todayPulse = _todayPulse.value,
+                        moodDistribution = _moodDistribution.value,
+                        cognitivePatterns = _cognitivePatterns.value,
+                        topicsFrequency = _topicsFrequency.value,
+                        emergingTopic = _emergingTopic.value,
+                        heroLoadingState = SectionLoadingState(isLoading = false),
+                        insightsLoadingState = SectionLoadingState(isLoading = false),
+                        achievementsLoadingState = SectionLoadingState(isLoading = false)
+                    )
+                }
+
+                Log.d(TAG, "Redesign data loaded successfully")
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading redesign data", e)
+                _homeRedesignState.update {
+                    it.copy(
+                        heroLoadingState = SectionLoadingState(
+                            isLoading = false,
+                            hasError = true,
+                            errorMessage = e.message
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    private suspend fun loadInsightsForRedesign(): List<DiaryInsight> {
+        return try {
+            var result: List<DiaryInsight> = emptyList()
+            insightRepository.getAllInsights().first { requestState ->
+                when (requestState) {
+                    is RequestState.Success -> {
+                        result = requestState.data
+                        true
+                    }
+                    is RequestState.Error -> true
+                    else -> false
+                }
+            }
+            result
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading insights for redesign", e)
+            emptyList()
+        }
+    }
+
+    private suspend fun loadDiariesForRedesign(): List<Diary> {
+        return try {
+            var result: List<Diary> = emptyList()
+            diaryRepository.getAllDiaries().first { requestState ->
+                when (requestState) {
+                    is RequestState.Success -> {
+                        result = requestState.data.values.flatten()
+                        true
+                    }
+                    is RequestState.Error -> true
+                    else -> false
+                }
+            }
+            result
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading diaries for redesign", e)
+            emptyList()
+        }
+    }
+
+    private fun calculateTodayPulse() {
+        try {
+            val result = calculateTodayPulseUseCase(cachedInsights)
+            _todayPulse.value = result.pulse
+
+            // Update quick action state
+            _quickActionState.update {
+                it.copy(
+                    hasUnreadInsights = cachedInsights.any { insight ->
+                        // Check if insight is from today
+                        insight.dayKey == java.time.LocalDate.now().toString()
+                    }
+                )
+            }
+
+            Log.d(TAG, "Today's pulse calculated: ${result.pulse.score}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error calculating today's pulse", e)
+        }
+    }
+
+    private fun calculateMoodDistribution() {
+        try {
+            val timeRange = _selectedTimeRange.value
+            val distribution = calculateMoodDistributionUseCase(cachedInsights, timeRange)
+            val dominant = calculateMoodDistributionUseCase.getDominantMood(distribution)
+
+            _moodDistribution.value = distribution
+            _dominantMood.value = dominant
+
+            Log.d(TAG, "Mood distribution calculated: positive=${distribution.positive}, neutral=${distribution.neutral}, negative=${distribution.negative}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error calculating mood distribution", e)
+        }
+    }
+
+    private fun calculateCognitivePatterns() {
+        try {
+            val timeRange = _selectedTimeRange.value
+            val result = aggregateCognitivePatternsUseCase(cachedInsights, timeRange)
+            _cognitivePatterns.value = result.patterns
+
+            Log.d(TAG, "Cognitive patterns calculated: ${result.patterns.size} patterns found")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error calculating cognitive patterns", e)
+        }
+    }
+
+    private fun calculateTopicsFrequency() {
+        try {
+            val timeRange = _selectedTimeRange.value
+            val result = calculateTopicsFrequencyUseCase(cachedInsights, timeRange)
+            _topicsFrequency.value = result.topics
+            _emergingTopic.value = result.emergingTopic
+
+            Log.d(TAG, "Topics frequency calculated: ${result.topics.size} topics, emerging: ${result.emergingTopic?.topic}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error calculating topics frequency", e)
+        }
+    }
+
+    private fun calculateAchievements() {
+        try {
+            // For now, we don't have earned badges stored - we'll calculate progress
+            val result = getAchievementsUseCase(
+                diaries = cachedDiaries,
+                insights = cachedInsights,
+                earnedBadgeIds = emptySet(),  // TODO: Load from user preferences/Firestore
+                badgeEarnedDates = emptyMap()
+            )
+            _achievementsState.value = result
+
+            Log.d(TAG, "Achievements calculated: streak=${result.streak.currentStreak}, badges=${result.earnedBadges.size}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error calculating achievements", e)
+        }
+    }
+
+    /**
+     * Change time range for insights aggregation
+     */
+    fun updateTimeRange(timeRange: TimeRange) {
+        _selectedTimeRange.value = timeRange
+        _homeRedesignState.update { it.copy(selectedTimeRange = timeRange) }
+
+        // Recalculate with new time range
+        viewModelScope.launch {
+            calculateMoodDistribution()
+            calculateCognitivePatterns()
+            calculateTopicsFrequency()
+        }
+    }
+
+    /**
+     * Refresh all redesign data
+     */
+    fun refreshRedesignData() {
+        loadRedesignData()
+    }
+
+    /**
+     * Get user's first name for greeting
+     */
+    fun getUserFirstName(): String {
+        return FirebaseAuth.getInstance().currentUser?.displayName
+            ?.split(" ")?.firstOrNull()
+            ?: FirebaseAuth.getInstance().currentUser?.email?.substringBefore("@")
+            ?: "Utente"
     }
 
     override fun onCleared() {

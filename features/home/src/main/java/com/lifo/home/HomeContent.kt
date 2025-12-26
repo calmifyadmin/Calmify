@@ -40,7 +40,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
+import com.lifo.home.domain.model.*
+import com.lifo.home.presentation.components.hero.HeroGreetingCard
+import com.lifo.home.presentation.components.hero.QuickActionsRow
+import com.lifo.home.presentation.components.insights.MoodDistributionCard
+import com.lifo.home.presentation.components.insights.CognitivePatternsCard
+import com.lifo.home.presentation.components.insights.TopicsCloudCard
+import com.lifo.home.presentation.components.achievements.AchievementsRow
+import com.lifo.home.presentation.components.common.HeroGreetingCardSkeleton
+import com.lifo.home.presentation.components.common.DailyInsightsChartSkeleton
+import com.lifo.home.presentation.components.common.MoodDistributionCardSkeleton
 import com.lifo.ui.components.loading.*
 import com.lifo.util.DiaryHolder
 import com.lifo.util.model.Diary
@@ -62,13 +73,27 @@ internal fun HomeContent(
     isLoading: Boolean,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel,
-    navigateToWellbeingSnapshot: () -> Unit = {}
+    navigateToWellbeingSnapshot: () -> Unit = {},
+    navigateToWrite: () -> Unit = {},
+    navigateToLive: () -> Unit = {}
 ) {
     val dailyInsights by viewModel.dailyInsights.collectAsState()
     val currentWeekOffset by viewModel.currentWeekOffset.collectAsState()
     var isRefreshing by remember { mutableStateOf(false) }
     val pullToRefreshState = rememberPullToRefreshState()
     val coroutineScope = rememberCoroutineScope()
+
+    // New redesign state
+    val homeRedesignState by viewModel.homeRedesignState.collectAsStateWithLifecycle()
+    val todayPulse by viewModel.todayPulse.collectAsStateWithLifecycle()
+    val moodDistribution by viewModel.moodDistribution.collectAsStateWithLifecycle()
+    val dominantMood by viewModel.dominantMood.collectAsStateWithLifecycle()
+    val cognitivePatterns by viewModel.cognitivePatterns.collectAsStateWithLifecycle()
+    val topicsFrequency by viewModel.topicsFrequency.collectAsStateWithLifecycle()
+    val emergingTopic by viewModel.emergingTopic.collectAsStateWithLifecycle()
+    val achievementsState by viewModel.achievementsState.collectAsStateWithLifecycle()
+    val selectedTimeRange by viewModel.selectedTimeRange.collectAsStateWithLifecycle()
+    val quickActionState by viewModel.quickActionState.collectAsStateWithLifecycle()
 
     // Debug logging
     LaunchedEffect(dailyInsights) {
@@ -86,6 +111,7 @@ internal fun HomeContent(
         coroutineScope.launch {
             viewModel.loadDailyInsights()
             viewModel.refreshDiaries()
+            viewModel.refreshRedesignData()
             kotlinx.coroutines.delay(1000)
             isRefreshing = false
         }
@@ -102,57 +128,67 @@ internal fun HomeContent(
             onRefresh = onRefresh,
             modifier = Modifier.fillMaxSize(),
             indicator = {
-                // Material 3 Expressive LoadingIndicator
-                // Provides expressive animated pull-to-refresh experience
                 PullToRefreshDefaults.LoadingIndicator(
                     state = pullToRefreshState,
                     isRefreshing = isRefreshing,
                     modifier = Modifier.align(Alignment.TopCenter),
-                    // Material 3 Expressive color tokens
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
         ) {
             when {
-                isLoading && dailyInsights.isEmpty() -> {
-                    // Initial loading state with Material 3 Expressive
-                    Box(
+                isLoading && dailyInsights.isEmpty() && homeRedesignState.heroLoadingState.isLoading -> {
+                    // Initial loading state - show skeleton
+                    LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            ContainedLoadingIndicator(
-                                modifier = Modifier.size(64.dp),
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                text = "Loading your insights...",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        item { HeroGreetingCardSkeleton() }
+                        item { DailyInsightsChartSkeleton() }
+                        item { MoodDistributionCardSkeleton() }
                     }
                 }
-                dailyInsights.isEmpty() && !isLoading -> {
+                dailyInsights.isEmpty() && !isLoading && todayPulse == null -> {
                     // Empty state - no insights yet
                     EmptyInsightsState()
                 }
                 else -> {
-                    // Show daily insights chart only
+                    // Main content with new redesign components
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
                             start = 16.dp,
                             end = 16.dp,
-                            top = 16.dp,
+                            top = 8.dp,
                             bottom = 80.dp
                         ),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
+                        // Hero Greeting Card
+                        item(key = "hero_greeting") {
+                            todayPulse?.let { pulse ->
+                                HeroGreetingCard(
+                                    userName = viewModel.getUserFirstName(),
+                                    todayPulse = pulse,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+
+                        // Quick Actions Row
+                        item(key = "quick_actions") {
+                            QuickActionsRow(
+                                onWriteDiary = navigateToWrite,
+                                onStartLive = navigateToLive,
+                                onTakeSnapshot = navigateToWellbeingSnapshot,
+                                snapshotDueIndicator = quickActionState.isSnapshotDue,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+
+                        // Daily Insights Chart (existing)
                         item(key = "daily_insights_chart") {
                             DailyInsightsChart(
                                 dailyInsights = dailyInsights,
@@ -163,15 +199,63 @@ internal fun HomeContent(
                             )
                         }
 
-                        // Large Material Expressive Button for Wellbeing Snapshot
+                        // Mood Distribution Card
+                        if (moodDistribution != null && dominantMood != null) {
+                            item(key = "mood_distribution") {
+                                MoodDistributionCard(
+                                    distribution = moodDistribution!!,
+                                    dominantMood = dominantMood!!,
+                                    timeRange = selectedTimeRange,
+                                    onTimeRangeChange = { viewModel.updateTimeRange(it) },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+
+                        // Cognitive Patterns Card
+                        if (cognitivePatterns.isNotEmpty()) {
+                            item(key = "cognitive_patterns") {
+                                CognitivePatternsCard(
+                                    patterns = cognitivePatterns,
+                                    onLearnMore = { /* TODO: Show pattern details */ },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+
+                        // Topics Cloud Card
+                        if (topicsFrequency.isNotEmpty()) {
+                            item(key = "topics_cloud") {
+                                TopicsCloudCard(
+                                    topics = topicsFrequency,
+                                    emergingTopic = emergingTopic,
+                                    onTopicClick = { /* TODO: Filter by topic */ },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+
+                        // Achievements Row
+                        achievementsState?.let { achievements ->
+                            item(key = "achievements") {
+                                AchievementsRow(
+                                    streak = achievements.streak,
+                                    monthlyStats = achievements.monthlyStats,
+                                    weeklyGoal = achievements.weeklyGoal,
+                                    latestBadge = achievements.latestBadge,
+                                    onViewAllBadges = { /* TODO: Navigate to badges screen */ },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+
+                        // Wellbeing Snapshot Button
                         item(key = "wellbeing_button") {
                             WellbeingSnapshotButton(
                                 onClick = navigateToWellbeingSnapshot,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
-
-                        // Future: Add more insight cards here
                     }
                 }
             }
@@ -470,19 +554,12 @@ fun DailyInsightsChart(
 ) {
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .shadow(
-                elevation = 2.dp,
-                shape = RoundedCornerShape(24.dp),
-                spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-            ),
+            .fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
-        ),
-        shape = RoundedCornerShape(24.dp)
+        )
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Header
@@ -517,6 +594,7 @@ fun DailyInsightsChart(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun DailyInsightsHeader(
     currentWeekOffset: Int = 0,
@@ -536,8 +614,8 @@ private fun DailyInsightsHeader(
                 currentWeekOffset < 0 -> "${-currentWeekOffset} weeks ago"
                 else -> "In ${currentWeekOffset} weeks" // Future weeks
             },
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleLargeEmphasized,
+            fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface
         )
 
@@ -556,21 +634,6 @@ private fun DailyInsightsHeader(
                 )
             }
             IconButton(
-                onClick = onResetWeek,
-                modifier = Modifier.size(32.dp),
-                enabled = currentWeekOffset != 0
-            ) {
-                Icon(
-                    imageVector = Icons.Default.CalendarToday,
-                    contentDescription = "Current week",
-                    tint = if (currentWeekOffset != 0) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                    }
-                )
-            }
-            IconButton(
                 onClick = onNextWeek,
                 modifier = Modifier.size(32.dp),
                 enabled = currentWeekOffset < 0 // Can't go to future weeks beyond current
@@ -580,6 +643,21 @@ private fun DailyInsightsHeader(
                     contentDescription = "Next week",
                     tint = if (currentWeekOffset < 0) {
                         MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                    }
+                )
+            }
+            IconButton(
+                onClick = onResetWeek,
+                modifier = Modifier.size(32.dp),
+                enabled = currentWeekOffset != 0
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CalendarToday,
+                    contentDescription = "Current week",
+                    tint = if (currentWeekOffset != 0) {
+                        MaterialTheme.colorScheme.primary
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                     }
@@ -809,8 +887,13 @@ private fun VerticalPillsDailyChart(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            // Shape-based emotion indicator instead of emoji
+                            com.lifo.home.presentation.components.common.MiniEmotionIndicator(
+                                sentiment = dayData.dominantEmotion,
+                                size = 16.dp
+                            )
                             Text(
-                                text = "${dayData.dominantEmotion.emoji} ${dayData.dominantEmotion.displayName}",
+                                text = dayData.dominantEmotion.displayName,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.inverseOnSurface
                             )

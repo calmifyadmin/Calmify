@@ -143,6 +143,11 @@ dependencies {
     // WebRTC for OpenAI Realtime API
     implementation 'org.webrtc:google-webrtc:1.0.30039@aar'
 
+    // AAA VAD System - Enterprise-grade Voice Activity Detection
+    // Dual-engine architecture: WebRTC pre-filter + Silero VAD v6 (DNN)
+    implementation libs.vad.silero
+    implementation libs.vad.webrtc
+
     // Image Loading - Coil 3.x
     implementation libs.coil
     implementation libs.coil.network.okhttp

@@ -92,7 +92,9 @@ internal fun HomeScreen(
                         onClick = navigateToWriteWithArgs,
                         isLoading = isLoading,
                         viewModel = viewModel,
-                        navigateToWellbeingSnapshot = navigateToWellbeingSnapshot
+                        navigateToWellbeingSnapshot = navigateToWellbeingSnapshot,
+                        navigateToWrite = navigateToWrite,
+                        navigateToLive = navigateToLiveScreen
                     )
                 }
                 is RequestState.Error -> {

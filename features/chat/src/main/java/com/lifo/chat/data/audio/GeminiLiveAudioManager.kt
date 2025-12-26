@@ -4,8 +4,10 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.media.*
 import android.media.audiofx.*
+import android.os.Process
 import android.util.Base64
 import android.util.Log
+import com.lifo.chat.audio.vad.SileroVadEngine
 import com.lifo.chat.domain.audio.AdaptiveBargeinDetector
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
@@ -21,7 +23,8 @@ import javax.inject.Singleton
 @Singleton
 class GeminiLiveAudioManager @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val adaptiveBargeinDetector: AdaptiveBargeinDetector
+    private val adaptiveBargeinDetector: AdaptiveBargeinDetector,
+    private val sileroVadEngine: SileroVadEngine
 ) {
     companion object {
         private const val TAG = "GeminiAudioManager"
@@ -30,17 +33,24 @@ class GeminiLiveAudioManager @Inject constructor(
         private const val AUDIO_CHANNEL_IN = AudioFormat.CHANNEL_IN_MONO
         private const val AUDIO_CHANNEL_OUT = AudioFormat.CHANNEL_OUT_MONO
         private const val AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT
-        private const val INPUT_CHUNK_SIZE_SAMPLES = 320 // 20ms chunks
-        private const val SEND_INTERVAL_MS = 20L
-        private const val BUFFER_SIZE_MULTIPLIER = 4
 
-        // NUOVO: Limiti per evitare overflow
-        private const val MAX_QUEUE_SIZE = 50 // Max chunks in coda
-        private const val MAX_QUEUE_BYTES = 500_000 // ~500KB max
+        // VAD-optimized chunk size: 512 samples = 32ms @ 16kHz (Silero VAD requirement)
+        private const val INPUT_CHUNK_SIZE_SAMPLES = 512
+        private const val SEND_INTERVAL_MS = 32L
 
-        // NUOVO: Barge-in detection
-        private const val SPEECH_THRESHOLD = 0.08f // Soglia per rilevare voce
-        private const val HOT_FRAMES_TO_BARGE = 4 // Frame consecutivi per barge-in (~80ms)
+        // Increased buffer multiplier for better audio quality
+        private const val BUFFER_SIZE_MULTIPLIER = 8
+
+        // Queue limits to prevent overflow
+        private const val MAX_QUEUE_SIZE = 500 // Increased for smoother playback
+        private const val MAX_QUEUE_BYTES = 5_000_000 // ~1MB max
+
+        // Legacy threshold (now handled by SileroVadEngine)
+        private const val SPEECH_THRESHOLD = 0.08f
+        private const val HOT_FRAMES_TO_BARGE = 3 // ~96ms with 32ms frames
+
+        // Use Silero VAD instead of simple threshold
+        private const val USE_SILERO_VAD = true
     }
 
     private var audioRecord: AudioRecord? = null
@@ -89,10 +99,24 @@ class GeminiLiveAudioManager @Inject constructor(
     var onBargeInDetected: (() -> Unit)? = null
 
     // NUOVO: Funzione per notificare quando l'AI sta parlando
+    // Abilita/disabilita dinamicamente la modalità barge-in del VAD
     fun setAiSpeaking(speaking: Boolean) {
+        val wasAiSpeaking = aiCurrentlySpeaking
         aiCurrentlySpeaking = speaking
-        if (!speaking) {
-            hotFrameCount = 0 // Reset barge-in counter
+
+        if (speaking && !wasAiSpeaking) {
+            // AI started speaking - enable barge-in detection
+            Log.d(TAG, "🎙️ AI started speaking - enabling VAD barge-in mode")
+            if (USE_SILERO_VAD) {
+                sileroVadEngine.enableBargeInMode()
+            }
+        } else if (!speaking && wasAiSpeaking) {
+            // AI stopped speaking - disable barge-in detection
+            Log.d(TAG, "🔇 AI stopped speaking - disabling VAD barge-in mode")
+            if (USE_SILERO_VAD) {
+                sileroVadEngine.disableBargeInMode()
+            }
+            hotFrameCount = 0 // Reset legacy barge-in counter
         }
     }
 
@@ -100,6 +124,11 @@ class GeminiLiveAudioManager @Inject constructor(
     fun startVoiceLearning() {
         Log.d(TAG, "🎓 Starting adaptive voice learning")
         adaptiveBargeinDetector.startVoiceLearning()
+
+        // Initialize Silero VAD
+        if (USE_SILERO_VAD && sileroVadEngine.initialize()) {
+            Log.d(TAG, "✅ Silero VAD initialized for voice learning")
+        }
     }
 
     // NUOVO: Get detection stats per analytics
@@ -131,6 +160,9 @@ class GeminiLiveAudioManager @Inject constructor(
         val bufferSize = minBufferSize * BUFFER_SIZE_MULTIPLIER
 
         try {
+            // Use MIC instead of VOICE_COMMUNICATION to avoid phone call mode
+            // VOICE_COMMUNICATION activates telephony routing (earpiece + AEC)
+            // MIC provides standard microphone input with speaker output
             val audioRecord = AudioRecord.Builder()
                 .setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)
                 .setAudioFormat(
@@ -158,9 +190,16 @@ class GeminiLiveAudioManager @Inject constructor(
             _recordingState.value = true
             Log.d(TAG, "🎤 Recording started - buffer size: $bufferSize")
 
-            // Recording thread
-            recordingJob = scope.launch {
+            // Recording thread with high priority for real-time audio
+            recordingJob = scope.launch(Dispatchers.Default) {
+                // Set high priority for audio thread
+                Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO)
+
                 val buffer = ShortArray(INPUT_CHUNK_SIZE_SAMPLES)
+
+                // Note: Barge-in mode is now dynamically enabled/disabled via setAiSpeaking()
+                // This ensures proper tracking even when AI starts speaking during recording
+                Log.d(TAG, "🎤 Recording loop started - VAD ready for barge-in detection")
 
                 while (isRecording && isActive) {
                     try {
@@ -168,24 +207,46 @@ class GeminiLiveAudioManager @Inject constructor(
 
                         when {
                             readSize > 0 -> {
-                                // NUOVO: Adaptive Barge-in detection durante TTS
+                                // Barge-in detection during AI speech
                                 if (aiCurrentlySpeaking) {
-                                    val result = adaptiveBargeinDetector.processAudioFrame(
-                                        buffer, readSize, INPUT_SAMPLE_RATE
-                                    )
+                                    if (USE_SILERO_VAD) {
+                                        // Use Silero VAD for accurate voice detection
+                                        val vadResult = sileroVadEngine.processFrame(buffer, readSize)
 
-                                    if (result.shouldTrigger) {
-                                        Log.d(TAG, "🧠 Adaptive barge-in triggered! Confidence: ${result.confidence}, Reason: ${result.reason}")
-                                        onBargeInDetected?.invoke()
+                                        // Debug logging for VAD during barge-in mode
+                                        if (vadResult.isSpeech) {
+                                            Log.d(TAG, "🎤 VAD speech detected during AI talk: prob=${vadResult.probability}, reason=${vadResult.reason}")
+                                        }
+
+                                        // Check for barge-in event
+                                        val bargeInEvent = sileroVadEngine.bargeInEvent.value
+                                        if (bargeInEvent != null) {
+                                            Log.d(TAG, "🧠 Silero VAD barge-in detected! Confidence: ${bargeInEvent.confidence}, Duration: ${bargeInEvent.durationMs}ms")
+                                            onBargeInDetected?.invoke()
+                                            sileroVadEngine.reset() // Reset after triggering
+                                        }
+                                    } else {
+                                        // Fallback to adaptive detector
+                                        val result = adaptiveBargeinDetector.processAudioFrame(
+                                            buffer, readSize, INPUT_SAMPLE_RATE
+                                        )
+                                        if (result.shouldTrigger) {
+                                            Log.d(TAG, "🧠 Adaptive barge-in triggered! Confidence: ${result.confidence}, Reason: ${result.reason}")
+                                            onBargeInDetected?.invoke()
+                                        }
                                     }
                                 } else {
-                                    // Continue learning voice profile when user speaks normally
+                                    // When AI not speaking: process VAD for user voice detection
+                                    if (USE_SILERO_VAD) {
+                                        sileroVadEngine.processFrame(buffer, readSize)
+                                    }
+                                    // Continue learning voice profile
                                     adaptiveBargeinDetector.processAudioFrame(
                                         buffer, readSize, INPUT_SAMPLE_RATE
                                     )
                                 }
 
-                                // NUOVO: Calculate real-time audio level for visualizer with smoothing
+                                // Calculate real-time audio level for visualizer with smoothing
                                 val rawLevel = calculateAudioLevel(buffer, readSize)
                                 userLevelSmoothing = userLevelSmoothing * (1f - smoothingFactor) + rawLevel * smoothingFactor
                                 _userAudioLevel.value = userLevelSmoothing
@@ -211,6 +272,9 @@ class GeminiLiveAudioManager @Inject constructor(
                         break
                     }
                 }
+
+                // Note: Barge-in mode is managed via setAiSpeaking(), not here
+                Log.d(TAG, "🎤 Recording loop ended")
             }
 
             // Send thread
@@ -417,11 +481,17 @@ class GeminiLiveAudioManager @Inject constructor(
                     return
                 }
 
-                val bufferSize = minBufferSize * BUFFER_SIZE_MULTIPLIER
+                // Buffer aumentato per audio più fluido: almeno 8x min o 1 secondo
+                val bufferSize = maxOf(
+                    minBufferSize * BUFFER_SIZE_MULTIPLIER,
+                    OUTPUT_SAMPLE_RATE * 2 // Almeno 1 secondo di buffer
+                )
 
-                // NUOVO: Attributi "voce" per migliorare AEC/ducking
+                // USAGE_MEDIA with CONTENT_TYPE_SPEECH for speaker output
+                // Note: USAGE_ASSISTANT routes to earpiece on many devices
+                // USAGE_MEDIA ensures output through main speakers
                 val audioAttributes = AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                    .setUsage(AudioAttributes.USAGE_ASSISTANT)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                     .build()
 
@@ -627,6 +697,46 @@ class GeminiLiveAudioManager @Inject constructor(
         Log.i(TAG, "Releasing audio manager...")
         stopRecording()
         stopPlayback()
+
+        // Release Silero VAD engine
+        if (USE_SILERO_VAD) {
+            sileroVadEngine.release()
+            Log.d(TAG, "✅ Silero VAD engine released")
+        }
+
         scope.cancel()
+    }
+
+    /**
+     * Get Silero VAD metrics for debugging/analytics
+     */
+    fun getVadMetrics(): Map<String, Any> {
+        return if (USE_SILERO_VAD) {
+            sileroVadEngine.getStatistics()
+        } else {
+            emptyMap()
+        }
+    }
+
+    /**
+     * Get current speech probability from Silero VAD
+     */
+    fun getSpeechProbability(): Float {
+        return if (USE_SILERO_VAD) {
+            sileroVadEngine.speechProbability.value
+        } else {
+            0f
+        }
+    }
+
+    /**
+     * Check if user is currently speaking (VAD-based)
+     */
+    fun isUserSpeaking(): Boolean {
+        return if (USE_SILERO_VAD) {
+            sileroVadEngine.isSpeechDetected.value
+        } else {
+            _userAudioLevel.value > SPEECH_THRESHOLD
+        }
     }
 }

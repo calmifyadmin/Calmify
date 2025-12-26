@@ -23,7 +23,7 @@ class GeminiLiveWebSocketClient @Inject constructor(
     companion object {
         private const val TAG = "GeminiLiveWebSocket"
         // Modello supportato per Live API realtime
-        private const val MODEL = "models/gemini-2.0-flash-exp"
+        private const val MODEL = "models/gemini-2.5-flash-native-audio-preview-12-2025"
         private const val HOST = "generativelanguage.googleapis.com"
     }
 
