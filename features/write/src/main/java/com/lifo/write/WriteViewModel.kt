@@ -195,6 +195,22 @@ internal class WriteViewModel @Inject constructor(
         uiState = uiState.copy(dominantBodySensation = sensation)
     }
 
+    // Wizard state management
+    fun openMetricsWizard() {
+        uiState = uiState.copy(showMetricsWizard = true)
+    }
+
+    fun closeMetricsWizard() {
+        uiState = uiState.copy(showMetricsWizard = false)
+    }
+
+    fun completeMetricsWizard() {
+        uiState = uiState.copy(
+            showMetricsWizard = false,
+            metricsCompleted = true
+        )
+    }
+
     private fun setPsychologicalMetrics(
         emotionIntensity: Int,
         stressLevel: Int,
@@ -597,5 +613,8 @@ internal data class UiState(
     val energyLevel: Int = 5,
     val calmAnxietyLevel: Int = 5,
     val primaryTrigger: com.lifo.util.model.Trigger = com.lifo.util.model.Trigger.NONE,
-    val dominantBodySensation: com.lifo.util.model.BodySensation = com.lifo.util.model.BodySensation.NONE
+    val dominantBodySensation: com.lifo.util.model.BodySensation = com.lifo.util.model.BodySensation.NONE,
+    // Wizard state
+    val showMetricsWizard: Boolean = false,
+    val metricsCompleted: Boolean = false
 )

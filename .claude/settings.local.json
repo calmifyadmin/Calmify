@@ -50,7 +50,9 @@
       "Bash(Select-String \"error\")",
       "Bash(Select-String -Pattern \"error:|BUILD|e:\" -Context 1,2)",
       "Bash(grep:*)",
-      "Bash(Select-Object -Last 80)"
+      "Bash(Select-Object -Last 80)",
+      "Skill(implement-psychological-metrics-wizard)",
+      "Skill(implement-psychological-metrics-wizard:*)"
     ],
     "deny": [],
     "ask": []
