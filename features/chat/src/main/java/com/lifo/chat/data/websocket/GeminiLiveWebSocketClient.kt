@@ -228,12 +228,13 @@ class GeminiLiveWebSocketClient @Inject constructor(
             }
             put("tools", tools)
 
-            // Realtime input config: VAD server ON con nomi camelCase
+            // Realtime input config: VAD server ON
+            // OPTIMIZED: Lower values for faster speech detection
             val realtimeInputConfig = JSONObject().apply {
                 val aad = JSONObject().apply {
                     put("disabled", false)
-                    put("prefixPaddingMs", 100)   // cattura attacchi
-                    put("silenceDurationMs", 300) // chiusura turno reattiva
+                    put("prefixPaddingMs", 50)    // Minimal buffer before speech (default 20ms)
+                    put("silenceDurationMs", 300) // Wait 300ms silence before ending turn
                 }
                 put("automaticActivityDetection", aad)
                 // Gestione attività: barge-in interrompe la generazione
@@ -277,7 +278,11 @@ Conosci l'utente e i suoi ultimi diari.
     /** Invia chunk audio PCM 16k mono 16-bit in base64 */
     fun sendAudioData(audioBase64: String) {
         if (_connectionState.value != ConnectionState.CONNECTED) {
-            Log.w(TAG, "Cannot send audio - not connected")
+            Log.w(TAG, "Cannot send audio - not connected (state=${_connectionState.value})")
+            return
+        }
+        if (webSocket == null) {
+            Log.e(TAG, "❌ WebSocket is NULL!")
             return
         }
         try {

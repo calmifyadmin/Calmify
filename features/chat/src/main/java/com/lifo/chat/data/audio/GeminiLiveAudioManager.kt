@@ -117,6 +117,15 @@ class GeminiLiveAudioManager @Inject constructor(
                 sileroVadEngine.disableBargeInMode()
             }
             hotFrameCount = 0 // Reset legacy barge-in counter
+
+            // CRITICAL: Clear accumulated audio buffer to avoid sending stale audio
+            // When AI was speaking, audio accumulated but wasn't sent (gated)
+            // Now we clear it so fresh user speech gets sent immediately
+            synchronized(pcmData) {
+                val clearedSamples = pcmData.size
+                pcmData.clear()
+                Log.d(TAG, "🧹 Cleared $clearedSamples stale audio samples - ready for fresh input")
+            }
         }
     }
 
@@ -292,6 +301,15 @@ class GeminiLiveAudioManager @Inject constructor(
     }
 
     private fun sendAccumulatedData() {
+        // CRITICAL: Don't send audio when AI is speaking to prevent echo/self-listening
+        if (aiCurrentlySpeaking) {
+            // Clear the buffer to prevent stale audio buildup
+            synchronized(pcmData) {
+                pcmData.clear()
+            }
+            return
+        }
+
         val dataCopy = synchronized(pcmData) {
             if (pcmData.size >= INPUT_CHUNK_SIZE_SAMPLES) {
                 val copy = pcmData.take(INPUT_CHUNK_SIZE_SAMPLES).toList()
@@ -309,7 +327,6 @@ class GeminiLiveAudioManager @Inject constructor(
                     it.forEach { value -> buffer.putShort(value) }
                     val byteArray = buffer.array()
                     val base64 = Base64.encodeToString(byteArray, Base64.DEFAULT or Base64.NO_WRAP)
-                    Log.v(TAG, "🎤 Sending ${it.size} samples")
                     onAudioChunkReady?.invoke(base64)
                 } catch (e: Exception) {
                     Log.e(TAG, "Error sending audio", e)
@@ -487,9 +504,8 @@ class GeminiLiveAudioManager @Inject constructor(
                     OUTPUT_SAMPLE_RATE * 2 // Almeno 1 secondo di buffer
                 )
 
-                // USAGE_MEDIA with CONTENT_TYPE_SPEECH for speaker output
-                // Note: USAGE_ASSISTANT routes to earpiece on many devices
-                // USAGE_MEDIA ensures output through main speakers
+                // USAGE_ASSISTANT with CONTENT_TYPE_SPEECH for voice assistant
+                // Con MODE_NORMAL (non MODE_IN_COMMUNICATION) l'audio esce dagli speaker
                 val audioAttributes = AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_ASSISTANT)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
@@ -565,18 +581,16 @@ class GeminiLiveAudioManager @Inject constructor(
         _playbackState.value = false
     }
 
-    // NUOVO: Configurazione audio per comunicazione full-duplex
+    // Configurazione audio per assistant voice con output speaker (NON telefonica)
+    // MODE_NORMAL + USAGE_MEDIA = audio dagli speaker principali
+    // AEC/NS sono abilitati separatamente sull'AudioRecord
     private fun configureAudioForCommunication() {
         try {
-            audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
-            audioManager.isSpeakerphoneOn = true // Default speaker
+            // IMPORTANTE: MODE_NORMAL per evitare routing telefonico (earpiece)
+            // MODE_IN_COMMUNICATION forza l'audio verso l'auricolare!
+            audioManager.mode = AudioManager.MODE_NORMAL
 
-            // NUOVO: Configurazione Bluetooth SCO se disponibile
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                configureBluetooth()
-            }
-
-            Log.d(TAG, "🔊 Audio configured for full-duplex communication")
+            Log.d(TAG, "🔊 Audio configured for speaker output (MODE_NORMAL)")
         } catch (e: Exception) {
             Log.w(TAG, "Could not configure audio", e)
         }
@@ -686,8 +700,9 @@ class GeminiLiveAudioManager @Inject constructor(
 
     private fun resetAudioConfiguration() {
         try {
-            audioManager.isSpeakerphoneOn = false
+            // Ensure we're back to normal mode (should already be, but just in case)
             audioManager.mode = AudioManager.MODE_NORMAL
+            Log.d(TAG, "🔊 Audio configuration reset to MODE_NORMAL")
         } catch (e: Exception) {
             Log.w(TAG, "Could not reset audio", e)
         }

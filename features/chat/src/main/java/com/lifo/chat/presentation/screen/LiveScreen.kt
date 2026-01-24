@@ -168,17 +168,7 @@ fun LiveScreen(
             }
         }
 
-        // LAYER 2: Transcript Overlay (Center)
-        AnimatedVisibility(
-            visible = currentTranscript.isNotEmpty() && liveChatState.connectionStatus == ConnectionStatus.Connected,
-            enter = fadeIn() + slideInVertically { -it / 4 },
-            exit = fadeOut() + slideOutVertically { -it / 4 },
-            modifier = Modifier
-                .align(Alignment.Center)
-                .padding(horizontal = 32.dp)
-        ) {
-            TranscriptCard(text = currentTranscript)
-        }
+
 
         // LAYER 3: Top bar with close button, display toggle, and status
         LiveTopBar(
@@ -342,6 +332,7 @@ fun LiveScreen(
                 turnState = liveChatState.turnState,
                 isChannelOpen = liveChatState.isChannelOpen,
                 partialTranscript = liveChatState.partialTranscript,
+                transcript = liveChatState.transcript,  // NEW: pass final transcript
                 error = liveChatState.error,
                 onToggleMute = {
                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -563,6 +554,7 @@ private fun LiveBottomControls(
     turnState: TurnState,
     isChannelOpen: Boolean,
     partialTranscript: String,
+    transcript: String = "",  // NEW: final transcript
     error: String?,
     onToggleMute: () -> Unit,
     isCameraActive: Boolean,
@@ -581,7 +573,7 @@ private fun LiveBottomControls(
         // Spacer per spingere tutto verso il basso
         Spacer(modifier = Modifier.weight(1f))
 
-        // Partial transcript display
+        // Partial transcript display (STT real-time)
         AnimatedVisibility(
             visible = partialTranscript.isNotEmpty() && connectionStatus == ConnectionStatus.Connected,
             enter = fadeIn() + slideInVertically { it / 2 },
@@ -596,15 +588,62 @@ private fun LiveBottomControls(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
             ) {
-                Text(
-                    text = partialTranscript,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .padding(12.dp)
-                        .fillMaxWidth()
-                )
+                Column(
+                    modifier = Modifier.padding(12.dp)
+                ) {
+                    // Debug label
+                    Text(
+                        text = "🎤 STT (partial)",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                    // Transcript text
+                    Text(
+                        text = partialTranscript,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        textAlign = TextAlign.Start,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
+
+        // Final transcript display (when speech ends)
+        AnimatedVisibility(
+            visible = transcript.isNotEmpty() && connectionStatus == ConnectionStatus.Connected,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically(),
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
+        ) {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.9f)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp)
+                ) {
+                    // Debug label
+                    Text(
+                        text = "✅ STT (final)",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                    // Final transcript
+                    Text(
+                        text = transcript,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        textAlign = TextAlign.Start,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         }
 

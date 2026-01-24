@@ -55,17 +55,22 @@ class SileroVadEngine @Inject constructor(
         const val FRAME_SIZE_SAMPLES = 512  // 32ms @ 16kHz
         const val FRAME_SIZE_MS = 32
 
-        // VAD Thresholds
-        const val DEFAULT_SPEECH_THRESHOLD = 0.5f
-        const val DEFAULT_SILENCE_THRESHOLD = 0.35f
-        // Barge-in threshold lowered from 0.7 to 0.55 for faster interruption
-        const val BARGE_IN_THRESHOLD = 0.55f
+        // VAD Thresholds - LOWERED for better detection in normal mode
+        const val DEFAULT_SPEECH_THRESHOLD = 0.35f  // Lowered from 0.5f
+        const val DEFAULT_SILENCE_THRESHOLD = 0.25f  // Lowered from 0.35f
+        // Barge-in threshold: balanced at 0.70 to detect user voice while filtering echo
+        // With AEC enabled, echo residue is typically < 0.60, user voice is > 0.65
+        const val BARGE_IN_THRESHOLD = 0.70f
+
+        // Minimum audio energy required for barge-in (filters residual echo)
+        // Real user speech has energy > 0.08, echo residue is typically < 0.05
+        const val BARGE_IN_MIN_ENERGY = 0.08f
 
         // Timing Configuration
         const val MIN_SPEECH_DURATION_MS = 100   // Min speech to confirm voice
         const val MIN_SILENCE_DURATION_MS = 300  // Min silence to end utterance
-        // Barge-in confirmation reduced from 80ms to 64ms (~2 frames) for faster response
-        const val BARGE_IN_CONFIRMATION_MS = 64
+        // Barge-in confirmation at 100ms (~3 frames) - quick but stable detection
+        const val BARGE_IN_CONFIRMATION_MS = 100
 
         // Frame counts for timing (at 32ms per frame)
         private const val MIN_SPEECH_FRAMES = MIN_SPEECH_DURATION_MS / FRAME_SIZE_MS  // ~3 frames
@@ -106,6 +111,9 @@ class SileroVadEngine @Inject constructor(
     private val isBargeInMode = AtomicBoolean(false)
     private var currentSegmentPeakProbability = 0f
     private var speechStartTimestamp: Long = 0L
+
+    // Last frame energy for barge-in filtering
+    private var lastFrameEnergy = 0f
 
     // Initialization state
     private val isInitialized = AtomicBoolean(false)
@@ -231,19 +239,21 @@ class SileroVadEngine @Inject constructor(
             false
         }
 
+        // Calculate frame energy first (used for both probability estimation and barge-in filtering)
+        val frameEnergy = calculateFrameEnergy(processFrame)
+        lastFrameEnergy = frameEnergy
+
         // Estimate speech probability based on result and audio energy
         // The android-vad library doesn't expose speechProbability() directly
         // We estimate it based on the boolean result and audio characteristics
         val probability = if (sileroResult) {
             // Speech detected - estimate high probability
-            val energy = calculateFrameEnergy(processFrame)
-            val estimatedProb = 0.6f + (energy * 0.4f).coerceIn(0f, 0.4f)
+            val estimatedProb = 0.6f + (frameEnergy * 0.4f).coerceIn(0f, 0.4f)
             lastSileroProbability = estimatedProb
             estimatedProb
         } else {
             // No speech - estimate low probability
-            val energy = calculateFrameEnergy(processFrame)
-            val estimatedProb = (energy * 0.4f).coerceIn(0f, 0.35f)
+            val estimatedProb = (frameEnergy * 0.4f).coerceIn(0f, 0.35f)
             lastSileroProbability = estimatedProb
             estimatedProb
         }
@@ -318,11 +328,20 @@ class SileroVadEngine @Inject constructor(
 
     /**
      * Check if user is attempting to interrupt AI (barge-in).
+     *
+     * Uses multiple criteria to avoid false positives from residual echo:
+     * 1. Speech probability must exceed BARGE_IN_THRESHOLD (0.80)
+     * 2. Audio energy must exceed BARGE_IN_MIN_ENERGY (0.15)
+     * 3. Must maintain for BARGE_IN_CONFIRMATION_MS (150ms)
      */
     private fun checkBargeIn(probability: Float) {
         if (!isBargeInMode.get()) return
 
-        if (probability >= BARGE_IN_THRESHOLD) {
+        // IMPORTANT: Check both probability AND energy to filter residual echo
+        // AEC doesn't perfectly cancel all echo, residual audio has low energy
+        val meetsThreshold = probability >= BARGE_IN_THRESHOLD && lastFrameEnergy >= BARGE_IN_MIN_ENERGY
+
+        if (meetsThreshold) {
             val count = bargeInFrameCount.incrementAndGet()
             if (count >= BARGE_IN_FRAMES) {
                 val event = BargeInEvent(
@@ -331,9 +350,13 @@ class SileroVadEngine @Inject constructor(
                     durationMs = count * FRAME_SIZE_MS
                 )
                 _bargeInEvent.value = event
-                Log.d(TAG, "BARGE-IN DETECTED! Confidence: $probability, Duration: ${event.durationMs}ms")
+                Log.d(TAG, "🎤 BARGE-IN DETECTED! Confidence: $probability, Energy: $lastFrameEnergy, Duration: ${event.durationMs}ms")
             }
         } else {
+            // Reset counter if either threshold not met
+            if (bargeInFrameCount.get() > 0) {
+                Log.v(TAG, "Barge-in reset: prob=$probability (need>=$BARGE_IN_THRESHOLD), energy=$lastFrameEnergy (need>=$BARGE_IN_MIN_ENERGY)")
+            }
             bargeInFrameCount.set(0)
         }
     }
@@ -413,6 +436,7 @@ class SileroVadEngine @Inject constructor(
         currentSegmentPeakProbability = 0f
         isBargeInMode.set(false)
         lastSileroProbability = 0f
+        lastFrameEnergy = 0f
 
         Log.d(TAG, "VAD state reset")
     }

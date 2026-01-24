@@ -33,7 +33,7 @@ open class GeminiNativeVoiceSystem @Inject constructor(
         private const val TAG = "GeminiNativeVoice"
 
         private const val GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/"
-        private const val MODEL_ID = "gemini-2.5-flash-preview-tts"
+        private const val MODEL_ID = "gemini-2.0-flash-exp"
         private const val GENERATE_CONTENT_API = "streamGenerateContent"
 
         // Audio: PCM 16-bit, 24kHz, mono (Little Endian for Android)

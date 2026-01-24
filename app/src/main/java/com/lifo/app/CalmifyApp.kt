@@ -766,10 +766,13 @@ private fun CalmifyNavHost(
             }
         )
 
-        // Avatar Chat - Integrated VRM + Chat (Removed temporarily - consolidation in progress)
-
-        // Avatar Live Chat - VRM + Gemini Live API (Real-time voice)
-        // Now uses unified LiveScreen from features/chat with avatar mode enabled
+        // Avatar Live Chat - Gemini Live Bidirectional Streaming with Avatar
+        // Uses GeminiLiveAudioManager which already has:
+        // - AcousticEchoCanceler for echo cancellation (prevents AI self-listening)
+        // - NoiseSuppressor for cleaner audio input
+        // - AutomaticGainControl for level normalization
+        // - USAGE_ASSISTANT with CONTENT_TYPE_SPEECH for proper audio routing
+        // - Silero VAD for intelligent barge-in detection during AI speech
         composable(
             route = Screen.AvatarLiveChat.route,
             enterTransition = {
@@ -790,7 +793,7 @@ private fun CalmifyNavHost(
 
             val context = LocalContext.current
 
-            // Setup avatar integration
+            // Setup avatar integration for lip-sync
             val humanoidController = remember(humanoidViewModel) {
                 val lipSyncController = EntryPointAccessors.fromApplication(
                     context.applicationContext,
@@ -799,6 +802,7 @@ private fun CalmifyNavHost(
                 humanoidViewModel.asHumanoidController(lipSyncController)
             }
 
+            // Attach avatar as animation target for lip-sync
             LaunchedEffect(humanoidController) {
                 liveChatViewModel.attachHumanoidController(humanoidController)
             }

@@ -243,10 +243,16 @@ class LiveChatViewModel @Inject constructor(
                 }
 
                 _uiState.update { it.copy(connectionStatus = uiConnectionStatus) }
+
+                // Start audio channel when WebSocket connects
+                if (state == GeminiLiveWebSocketClient.ConnectionState.CONNECTED && !isAudioChannelOpen) {
+                    Log.d(TAG, "🎤 WebSocket connected - starting audio streaming")
+                    startAudioChannel()
+                }
             }
         }
 
-        // Observe recording state (channel always open)
+        // Observe recording state from audio manager
         viewModelScope.launch {
             geminiAudioManager.recordingState.collectLatest { isRecording ->
                 _uiState.update {
@@ -258,22 +264,25 @@ class LiveChatViewModel @Inject constructor(
             }
         }
 
-        // Observe playback state (gating half-duplex + flush quando parte il TTS)
+        // Observe user audio level from audio manager
         viewModelScope.launch {
-            var lastIsPlaying = false
-            geminiAudioManager.playbackState.collectLatest { isPlaying ->
-                // Quando inizia a parlare l'AI, chiudiamo il turno utente lato server
-                if (isPlaying && !lastIsPlaying) {
-                    geminiWebSocketClient.sendEndOfStream()
-                }
-                aiSpeaking = isPlaying
-                lastIsPlaying = isPlaying
+            geminiAudioManager.userAudioLevel.collectLatest { level ->
+                _uiState.update { it.copy(audioLevel = level) }
+            }
+        }
 
-                // NUOVO: Notifica al audio manager per barge-in detection
+        // Observe AI playback state
+        viewModelScope.launch {
+            geminiAudioManager.playbackState.collectLatest { isPlaying ->
+                aiSpeaking = isPlaying
                 geminiAudioManager.setAiSpeaking(isPlaying)
 
                 _uiState.update {
                     it.copy(aiEmotion = if (isPlaying) AIEmotion.Speaking else AIEmotion.Neutral)
+                }
+
+                if (!isPlaying) {
+                    Log.d(TAG, "🎤 AI finished speaking - user can now speak again")
                 }
             }
         }
@@ -288,23 +297,23 @@ class LiveChatViewModel @Inject constructor(
 
 
     private fun setupGeminiCallbacks() {
-        // Partial transcript from user speech
+        // Partial transcript from Gemini (user's speech transcribed by server)
         geminiWebSocketClient.onPartialTranscript = { partial ->
             Log.d(TAG, "🎤 Partial transcript: $partial")
             _uiState.update { it.copy(partialTranscript = partial) }
         }
 
-        // Final transcript from user speech
+        // Final transcript from Gemini (user's speech transcribed by server)
         geminiWebSocketClient.onFinalTranscript = { final ->
-            Log.d(TAG, "🎤 Final transcript: $final")
+            Log.d(TAG, "✅ Final transcript: $final")
             _uiState.update { it.copy(transcript = final, partialTranscript = "") }
 
-            // NUOVO: Add to conversation context for intelligent optimization
+            // Add to conversation context
             conversationContextManager.addMessage(
                 content = final,
                 isFromUser = true,
                 audioLevel = _uiState.value.audioLevel,
-                duration = 0L // Could be calculated from speaking event timing
+                duration = 0L
             )
         }
 
@@ -371,12 +380,8 @@ class LiveChatViewModel @Inject constructor(
             }
         }
 
-        // Send audio chunks to Gemini (con gating per half-duplex)
-        geminiAudioManager.onAudioChunkReady = { audioBase64 ->
-            if (!_uiState.value.isMuted && !aiSpeaking) {
-                geminiWebSocketClient.sendAudioData(audioBase64)
-            }
-        }
+        // NO LONGER NEEDED: Audio chunks are not sent, we send text instead
+        // The VAD+STT system handles transcription locally
 
         // Gestione salvataggio messaggi Live in Chat DB
         geminiWebSocketClient.onChatMessageSaved = { sessionId, content, isUser ->
@@ -389,12 +394,6 @@ class LiveChatViewModel @Inject constructor(
                     Log.e(TAG, "❌ Failed to save Live message to Chat DB", e)
                 }
             }
-        }
-
-        // NUOVO: Gestione barge-in smart
-        geminiAudioManager.onBargeInDetected = {
-            Log.d(TAG, "🗣️ Smart barge-in detected - interrupting AI")
-            handleSmartBargeIn()
         }
     }
 
@@ -499,20 +498,11 @@ class LiveChatViewModel @Inject constructor(
                 Log.d(TAG, "🔑 Using API key: ${apiKey.take(10)}...")
                 geminiWebSocketClient.connect(apiKey)
 
-                // Avvio canale audio dopo la connessione
-                delay(500)
-                if (_uiState.value.connectionStatus == ConnectionStatus.Connected) {
-                    // Genera ID sessione per unificare Live e Chat
-                    currentLiveSessionId = "live-${System.currentTimeMillis()}"
-                    Log.d(TAG, "🆔 Generated Live session ID: $currentLiveSessionId")
-
-                    startAudioChannel()
-
-                    // NUOVO: Start voice learning and context reset for new session
-                    geminiAudioManager.startVoiceLearning()
-                    conversationContextManager.resetContext()
-                    Log.d(TAG, "🧠 Intelligent systems initialized for new session")
-                }
+                // Session ID and context will be initialized when connection state changes to CONNECTED
+                // (handled in observeGeminiStates)
+                currentLiveSessionId = "live-${System.currentTimeMillis()}"
+                Log.d(TAG, "🆔 Generated Live session ID: $currentLiveSessionId")
+                conversationContextManager.resetContext()
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Connection failed", e)
                 _uiState.update {
@@ -530,8 +520,8 @@ class LiveChatViewModel @Inject constructor(
             Log.d(TAG, "🔌 Disconnecting...")
 
             isAudioChannelOpen = false
-            geminiAudioManager.stopRecording()
-            geminiAudioManager.stopPlayback()
+            geminiAudioManager.stopRecording()  // Stop audio recording
+            geminiAudioManager.stopPlayback()   // Stop AI audio playback
             geminiCameraManager.stopCameraPreview()
             geminiWebSocketClient.disconnect()
 
@@ -559,18 +549,32 @@ class LiveChatViewModel @Inject constructor(
     }
 
     /**
-     * Avvia il canale audio (always-on con VAD server). Niente commit periodico.
+     * Avvia il canale audio (always-on con VAD server). Audio streaming diretto a Gemini.
      */
     private fun startAudioChannel() {
         if (!isAudioChannelOpen && _uiState.value.connectionStatus == ConnectionStatus.Connected) {
-            Log.d(TAG, "🎤 Starting always-open audio channel with VAD (no commit)")
+            Log.d(TAG, "🎤 Starting audio streaming to Gemini")
             try {
+                // Setup audio callback to send chunks to WebSocket
+                geminiAudioManager.onAudioChunkReady = { audioBase64 ->
+                    geminiWebSocketClient.sendAudioData(audioBase64)
+                }
+
+                // Setup barge-in callback
+                geminiAudioManager.onBargeInDetected = {
+                    Log.d(TAG, "🗣️ Barge-in detected!")
+                    handleSmartBargeIn()
+                }
+
+                // Start recording
                 geminiAudioManager.startRecording()
                 isAudioChannelOpen = true
                 _uiState.update { it.copy(isChannelOpen = true) }
+
+                Log.d(TAG, "✅ Audio streaming started successfully")
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to start audio channel", e)
-                _uiState.update { it.copy(error = "Failed to start audio: ${e.message}") }
+                Log.e(TAG, "Failed to start audio streaming", e)
+                _uiState.update { it.copy(error = "Failed to start voice: ${e.message}") }
             }
         }
     }
