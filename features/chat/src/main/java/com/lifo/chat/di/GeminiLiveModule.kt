@@ -10,6 +10,7 @@ import com.lifo.chat.data.camera.GeminiLiveCameraManager
 import com.lifo.chat.domain.audio.AdaptiveBargeinDetector
 import com.lifo.chat.domain.audio.AudioQualityAnalyzer
 import com.lifo.chat.domain.audio.ConversationContextManager
+import com.lifo.chat.domain.audio.ReferenceSignalBargeInDetector
 import com.google.firebase.auth.FirebaseAuth
 import dagger.Module
 import dagger.Provides
@@ -41,6 +42,21 @@ object GeminiLiveModule {
     @Singleton
     fun provideAdaptiveBargeinDetector(): AdaptiveBargeinDetector {
         return AdaptiveBargeinDetector()
+    }
+
+    /**
+     * Provides ReferenceSignalBargeInDetector for echo-aware barge-in detection
+     *
+     * Features:
+     * - Echo cancellation via reference signal correlation
+     * - Distinguishes AI audio echo from actual user speech
+     * - Sub-32ms latency for immediate barge-in response
+     * - Adaptive thresholds based on noise floor
+     */
+    @Provides
+    @Singleton
+    fun provideReferenceSignalBargeInDetector(): ReferenceSignalBargeInDetector {
+        return ReferenceSignalBargeInDetector()
     }
 
     /**
@@ -98,15 +114,21 @@ object GeminiLiveModule {
 
     /**
      * Provides GeminiLiveAudioManager for audio recording/playback with intelligent systems
+     *
+     * Includes:
+     * - AdaptiveBargeinDetector: Voice profile learning
+     * - SileroVadEngine: Neural network VAD
+     * - ReferenceSignalBargeInDetector: Echo-aware barge-in detection
      */
     @Provides
     @Singleton
     fun provideGeminiLiveAudioManager(
         @ApplicationContext context: Context,
         adaptiveBargeinDetector: AdaptiveBargeinDetector,
-        sileroVadEngine: SileroVadEngine
+        sileroVadEngine: SileroVadEngine,
+        referenceSignalDetector: ReferenceSignalBargeInDetector
     ): GeminiLiveAudioManager {
-        return GeminiLiveAudioManager(context, adaptiveBargeinDetector, sileroVadEngine)
+        return GeminiLiveAudioManager(context, adaptiveBargeinDetector, sileroVadEngine, referenceSignalDetector)
     }
 
     /**

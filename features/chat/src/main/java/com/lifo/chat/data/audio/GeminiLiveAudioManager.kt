@@ -9,6 +9,7 @@ import android.util.Base64
 import android.util.Log
 import com.lifo.chat.audio.vad.SileroVadEngine
 import com.lifo.chat.domain.audio.AdaptiveBargeinDetector
+import com.lifo.chat.domain.audio.ReferenceSignalBargeInDetector
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,7 +25,8 @@ import javax.inject.Singleton
 class GeminiLiveAudioManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val adaptiveBargeinDetector: AdaptiveBargeinDetector,
-    private val sileroVadEngine: SileroVadEngine
+    private val sileroVadEngine: SileroVadEngine,
+    private val referenceSignalDetector: ReferenceSignalBargeInDetector
 ) {
     companion object {
         private const val TAG = "GeminiAudioManager"
@@ -58,6 +60,11 @@ class GeminiLiveAudioManager @Inject constructor(
     // IMPORTANTE: Sincronizzazione thread-safe per AudioTrack
     private val audioTrackLock = Any()
     private var audioTrack: AudioTrack? = null
+
+    // Shared audio session ID for AEC synchronization
+    // When both AudioRecord and AudioTrack use the same session ID,
+    // Android's AcousticEchoCanceler can work more effectively
+    private var sharedAudioSessionId: Int = AudioManager.AUDIO_SESSION_ID_GENERATE
 
     private var recordingJob: Job? = null
     private var playbackJob: Job? = null
@@ -106,13 +113,21 @@ class GeminiLiveAudioManager @Inject constructor(
 
         if (speaking && !wasAiSpeaking) {
             // AI started speaking - enable barge-in detection
-            Log.d(TAG, "🎙️ AI started speaking - enabling VAD barge-in mode")
+            Log.d(TAG, "🎙️ AI started speaking - enabling echo-aware barge-in mode")
+
+            // Clear reference buffer for fresh echo detection
+            referenceSignalDetector.clearReferenceBuffer()
+
             if (USE_SILERO_VAD) {
                 sileroVadEngine.enableBargeInMode()
             }
         } else if (!speaking && wasAiSpeaking) {
             // AI stopped speaking - disable barge-in detection
-            Log.d(TAG, "🔇 AI stopped speaking - disabling VAD barge-in mode")
+            Log.d(TAG, "🔇 AI stopped speaking - disabling barge-in mode")
+
+            // Reset reference signal detector
+            referenceSignalDetector.reset()
+
             if (USE_SILERO_VAD) {
                 sileroVadEngine.disableBargeInMode()
             }
@@ -191,6 +206,11 @@ class GeminiLiveAudioManager @Inject constructor(
                 return
             }
 
+            // CRITICAL: Save AudioRecord session ID for AEC synchronization
+            // This allows AudioTrack to use the same session for better echo cancellation
+            sharedAudioSessionId = audioRecord.audioSessionId
+            Log.d(TAG, "🔗 Captured AudioRecord session ID: $sharedAudioSessionId for AEC sync")
+
             // NUOVO: Abilita effetti audio se disponibili
             enableAudioEffects(audioRecord)
 
@@ -216,33 +236,21 @@ class GeminiLiveAudioManager @Inject constructor(
 
                         when {
                             readSize > 0 -> {
-                                // Barge-in detection during AI speech
+                                // Barge-in detection strategy:
+                                // - During AI speech: Let SERVER handle barge-in detection!
+                                //   The server receives our mic audio and will send "interrupted" when user speaks.
+                                //   This is the CORRECT approach used by Gemini Live desktop.
+                                // - When AI not speaking: Use local VAD for voice activity feedback only.
                                 if (aiCurrentlySpeaking) {
-                                    if (USE_SILERO_VAD) {
-                                        // Use Silero VAD for accurate voice detection
-                                        val vadResult = sileroVadEngine.processFrame(buffer, readSize)
+                                    // SERVER-SIDE BARGE-IN: Don't detect locally, let server handle it
+                                    // The server's VAD doesn't have echo problems because it only
+                                    // receives mic audio, not the AI audio playing locally.
+                                    // We still feed reference signal for potential future local detection
+                                    // but DON'T trigger barge-in locally.
 
-                                        // Debug logging for VAD during barge-in mode
-                                        if (vadResult.isSpeech) {
-                                            Log.d(TAG, "🎤 VAD speech detected during AI talk: prob=${vadResult.probability}, reason=${vadResult.reason}")
-                                        }
-
-                                        // Check for barge-in event
-                                        val bargeInEvent = sileroVadEngine.bargeInEvent.value
-                                        if (bargeInEvent != null) {
-                                            Log.d(TAG, "🧠 Silero VAD barge-in detected! Confidence: ${bargeInEvent.confidence}, Duration: ${bargeInEvent.durationMs}ms")
-                                            onBargeInDetected?.invoke()
-                                            sileroVadEngine.reset() // Reset after triggering
-                                        }
-                                    } else {
-                                        // Fallback to adaptive detector
-                                        val result = adaptiveBargeinDetector.processAudioFrame(
-                                            buffer, readSize, INPUT_SAMPLE_RATE
-                                        )
-                                        if (result.shouldTrigger) {
-                                            Log.d(TAG, "🧠 Adaptive barge-in triggered! Confidence: ${result.confidence}, Reason: ${result.reason}")
-                                            onBargeInDetected?.invoke()
-                                        }
+                                    // Just log for debugging (every ~500ms)
+                                    if (System.currentTimeMillis() % 500 < 50) {
+                                        Log.v(TAG, "🎤 Streaming audio to server during AI speech (server handles barge-in)")
                                     }
                                 } else {
                                     // When AI not speaking: process VAD for user voice detection
@@ -253,6 +261,8 @@ class GeminiLiveAudioManager @Inject constructor(
                                     adaptiveBargeinDetector.processAudioFrame(
                                         buffer, readSize, INPUT_SAMPLE_RATE
                                     )
+                                    // Reset reference signal detector for next AI turn
+                                    referenceSignalDetector.reset()
                                 }
 
                                 // Calculate real-time audio level for visualizer with smoothing
@@ -301,14 +311,11 @@ class GeminiLiveAudioManager @Inject constructor(
     }
 
     private fun sendAccumulatedData() {
-        // CRITICAL: Don't send audio when AI is speaking to prevent echo/self-listening
-        if (aiCurrentlySpeaking) {
-            // Clear the buffer to prevent stale audio buildup
-            synchronized(pcmData) {
-                pcmData.clear()
-            }
-            return
-        }
+        // IMPORTANT: Always send audio to the server, even when AI is speaking!
+        // The server's VAD can detect user speech and will send "interrupted" message.
+        // The server doesn't have echo problems because it only receives mic audio,
+        // not the AI audio being played locally.
+        // This is how Gemini Live desktop works - continuous audio streaming.
 
         val dataCopy = synchronized(pcmData) {
             if (pcmData.size >= INPUT_CHUNK_SIZE_SAMPLES) {
@@ -362,6 +369,8 @@ class GeminiLiveAudioManager @Inject constructor(
             Log.e(TAG, "Error stopping AudioRecord", e)
         } finally {
             audioRecord = null
+            // Reset shared session ID
+            sharedAudioSessionId = AudioManager.AUDIO_SESSION_ID_GENERATE
         }
 
         synchronized(pcmData) {
@@ -457,13 +466,35 @@ class GeminiLiveAudioManager @Inject constructor(
                     return@withContext
                 }
 
+                // BARGE-IN: Feed AI audio to reference signal detector for echo cancellation
+                // Convert PCM bytes to short array (24kHz, mono, 16-bit)
+                val shortBuffer = ShortArray(byteArray.size / 2)
+                val byteBuffer = ByteBuffer.wrap(byteArray).order(ByteOrder.LITTLE_ENDIAN)
+                for (i in shortBuffer.indices) {
+                    if (byteBuffer.remaining() >= 2) {
+                        shortBuffer[i] = byteBuffer.short
+                    }
+                }
+                referenceSignalDetector.feedReferenceSignal(shortBuffer)
+
+                // Apply volume fade if currently fading out (for smooth barge-in)
+                val processedData = if (currentPlaybackVolume < 1.0f && currentPlaybackVolume > 0f) {
+                    applyVolumeFade(byteArray, currentPlaybackVolume)
+                } else if (currentPlaybackVolume <= 0f) {
+                    // Volume is zero during fade-out completion - skip playing
+                    Log.v(TAG, "🔇 Skipping audio chunk during fade-out (volume=0)")
+                    return@withContext
+                } else {
+                    byteArray
+                }
+
                 // Scrivi audio
                 var offset = 0
                 val chunkSize = 1920 // 40ms a 24kHz
 
-                while (offset < byteArray.size && isActive) {
-                    val bytesToWrite = minOf(chunkSize, byteArray.size - offset)
-                    val bytesWritten = track.write(byteArray, offset, bytesToWrite)
+                while (offset < processedData.size && isActive) {
+                    val bytesToWrite = minOf(chunkSize, processedData.size - offset)
+                    val bytesWritten = track.write(processedData, offset, bytesToWrite)
 
                     if (bytesWritten < 0) {
                         Log.e(TAG, "AudioTrack write error: $bytesWritten")
@@ -479,6 +510,30 @@ class GeminiLiveAudioManager @Inject constructor(
                 releaseAudioTrack()
             }
         }
+    }
+
+    /**
+     * Applica fade di volume ai dati PCM 16-bit per smooth barge-in.
+     */
+    private fun applyVolumeFade(data: ByteArray, volume: Float): ByteArray {
+        val result = data.copyOf()
+        val samples = data.size / 2
+
+        for (i in 0 until samples) {
+            val idx = i * 2
+            // Read 16-bit sample (little-endian)
+            val sample = (result[idx].toInt() and 0xFF) or (result[idx + 1].toInt() shl 8)
+            val signedSample = sample.toShort()
+
+            // Apply volume
+            val scaledSample = (signedSample * volume).toInt().coerceIn(-32768, 32767).toShort()
+
+            // Write back (little-endian)
+            result[idx] = (scaledSample.toInt() and 0xFF).toByte()
+            result[idx + 1] = ((scaledSample.toInt() shr 8) and 0xFF).toByte()
+        }
+
+        return result
     }
 
     private fun initializeAudioTrack() {
@@ -517,15 +572,22 @@ class GeminiLiveAudioManager @Inject constructor(
                     .setChannelMask(AUDIO_CHANNEL_OUT)
                     .build()
 
-                audioTrack = AudioTrack.Builder()
+                val trackBuilder = AudioTrack.Builder()
                     .setAudioAttributes(audioAttributes)
                     .setAudioFormat(audioFormat)
                     .setBufferSizeInBytes(bufferSize)
                     .setTransferMode(AudioTrack.MODE_STREAM)
-                    .build()
+
+                // Use shared session ID for AEC synchronization with AudioRecord
+                if (sharedAudioSessionId != AudioManager.AUDIO_SESSION_ID_GENERATE) {
+                    trackBuilder.setSessionId(sharedAudioSessionId)
+                    Log.d(TAG, "🔗 AudioTrack using shared session ID: $sharedAudioSessionId for AEC sync")
+                }
+
+                audioTrack = trackBuilder.build()
 
                 audioTrack?.play()
-                Log.d(TAG, "🔊 AudioTrack initialized - buffer: $bufferSize")
+                Log.d(TAG, "🔊 AudioTrack initialized - buffer: $bufferSize, sessionId: ${audioTrack?.audioSessionId}")
 
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to initialize AudioTrack", e)
@@ -565,20 +627,92 @@ class GeminiLiveAudioManager @Inject constructor(
         resetAudioConfiguration()
     }
 
-    // NUOVO: Metodo per gestire interruzioni da VAD
+    // Fade-out parameters for smooth barge-in (matches Gemini Live desktop behavior)
+    private var currentPlaybackVolume = 1.0f
+    private val isFadingOut = AtomicBoolean(false)
+    private var fadeOutJob: Job? = null
+    private val fadeOutDurationMs = 150L  // 150ms smooth fade
+    private val fadeOutSteps = 15
+
+    // NUOVO: Metodo per gestire interruzioni da VAD con fade-out graduale
     fun handleInterruption() {
-        Log.d(TAG, "⚠️ Handling VAD interruption - clearing audio queue")
+        Log.d(TAG, "⚠️ Handling VAD interruption - starting smooth fade-out")
 
-        // Ferma playback corrente
+        if (isFadingOut.getAndSet(true)) {
+            Log.d(TAG, "Already fading out, skipping")
+            return
+        }
+
+        // Cancel any existing fade-out
+        fadeOutJob?.cancel()
+
+        fadeOutJob = scope.launch {
+            try {
+                val volumeStep = currentPlaybackVolume / fadeOutSteps
+                val stepDelay = fadeOutDurationMs / fadeOutSteps
+
+                // Gradual volume reduction (matches Gemini Live behavior)
+                for (step in 0 until fadeOutSteps) {
+                    if (!isActive) break
+
+                    currentPlaybackVolume = (currentPlaybackVolume - volumeStep).coerceAtLeast(0f)
+                    Log.v(TAG, "🔉 Fade-out step ${step + 1}/$fadeOutSteps: volume=${"%.2f".format(currentPlaybackVolume)}")
+
+                    // Update AI audio level visualization with smooth decay
+                    aiLevelSmoothing *= 0.75f
+                    _aiAudioLevel.value = aiLevelSmoothing
+
+                    delay(stepDelay)
+                }
+
+                // Now completely stop audio
+                currentPlaybackVolume = 0f
+
+                // Ferma playback corrente
+                playbackJob?.cancel()
+                playbackJob = null
+
+                // Pulisci coda audio
+                audioQueue.clear()
+                totalQueueBytes.set(0)
+
+                // Reset stato
+                isPlaying.set(false)
+                _playbackState.value = false
+
+                // Reset AI audio level
+                aiLevelSmoothing = 0f
+                _aiAudioLevel.value = 0f
+
+                Log.d(TAG, "✅ Fade-out complete - ready for user speech")
+
+            } finally {
+                // Reset volume for next playback
+                currentPlaybackVolume = 1.0f
+                isFadingOut.set(false)
+            }
+        }
+    }
+
+    // Immediate stop without fade (for disconnect/cleanup)
+    fun handleImmediateStop() {
+        Log.d(TAG, "🛑 Immediate stop - no fade")
+
+        fadeOutJob?.cancel()
+        isFadingOut.set(false)
+        currentPlaybackVolume = 1.0f
+
         playbackJob?.cancel()
+        playbackJob = null
 
-        // Pulisci coda audio
         audioQueue.clear()
         totalQueueBytes.set(0)
 
-        // Reset stato
         isPlaying.set(false)
         _playbackState.value = false
+
+        aiLevelSmoothing = 0f
+        _aiAudioLevel.value = 0f
     }
 
     // Configurazione audio per assistant voice con output speaker (NON telefonica)

@@ -198,6 +198,16 @@ class GeminiAudioPlayer {
     private var smoothedAudioLevel = 0f
     private val smoothingFactor = 0.25f
 
+    // Fade-out control for smooth barge-in interruption
+    private var currentVolume = 1.0f
+    private val isFadingOut = AtomicBoolean(false)
+    private var fadeOutJob: Job? = null
+
+    // Fade-out parameters (matches Gemini Live behavior)
+    private val fadeOutDurationMs = 150L  // 150ms smooth fade
+    private val fadeOutSteps = 15
+    private val fadeOutStepDelay = fadeOutDurationMs / fadeOutSteps
+
     // ═══════════════════════════════════════════════════════════════════════════════
     // PUBLIC API
     // ═══════════════════════════════════════════════════════════════════════════════
@@ -321,10 +331,67 @@ class GeminiAudioPlayer {
 
     /**
      * Gestisce un'interruzione (barge-in, VAD).
-     * Svuota il buffer e resetta lo stato.
+     * Implementa fade-out graduale del volume come Gemini Live desktop.
      */
     fun handleInterruption() {
-        Log.d(TAG, "⚠️ Handling interruption - clearing buffer")
+        Log.d(TAG, "⚠️ Handling interruption - starting smooth fade-out")
+
+        if (isFadingOut.getAndSet(true)) {
+            Log.d(TAG, "Already fading out, skipping")
+            return
+        }
+
+        // Cancel any existing fade-out
+        fadeOutJob?.cancel()
+
+        // Start smooth fade-out in background
+        fadeOutJob = scope.launch {
+            try {
+                // Gradual volume reduction (matches Gemini Live behavior)
+                val volumeStep = currentVolume / fadeOutSteps
+
+                for (step in 0 until fadeOutSteps) {
+                    if (!isActive) break
+
+                    currentVolume = (currentVolume - volumeStep).coerceAtLeast(0f)
+                    Log.v(TAG, "🔉 Fade-out step ${step + 1}/$fadeOutSteps: volume=${String.format("%.2f", currentVolume)}")
+
+                    // Update audio level visualization
+                    smoothedAudioLevel *= 0.85f
+                    _audioLevel.value = smoothedAudioLevel
+
+                    delay(fadeOutStepDelay)
+                }
+
+                // Now completely stop audio
+                currentVolume = 0f
+                circularBuffer.clear()
+                isBuffering.set(true)
+                consecutiveUnderruns = 0
+
+                _bufferLevel.value = 0f
+                _audioLevel.value = 0f
+                smoothedAudioLevel = 0f
+
+                Log.d(TAG, "✅ Fade-out complete - ready for new audio")
+
+            } finally {
+                // Reset for next audio
+                currentVolume = 1.0f
+                isFadingOut.set(false)
+            }
+        }
+    }
+
+    /**
+     * Immediate stop without fade (for disconnect/cleanup)
+     */
+    fun handleImmediateStop() {
+        Log.d(TAG, "🛑 Immediate stop - no fade")
+
+        fadeOutJob?.cancel()
+        isFadingOut.set(false)
+        currentVolume = 1.0f
 
         circularBuffer.clear()
         isBuffering.set(true)
@@ -333,8 +400,6 @@ class GeminiAudioPlayer {
         _bufferLevel.value = 0f
         _audioLevel.value = 0f
         smoothedAudioLevel = 0f
-
-        Log.d(TAG, "✅ Interruption handled - ready for new audio")
     }
 
     /**
@@ -443,7 +508,7 @@ class GeminiAudioPlayer {
     }
 
     /**
-     * Scrive dati all'AudioTrack.
+     * Scrive dati all'AudioTrack con applicazione del volume fade.
      */
     private fun writeToAudioTrack(data: ByteArray, length: Int) {
         synchronized(audioTrackLock) {
@@ -453,11 +518,21 @@ class GeminiAudioPlayer {
                 return
             }
 
+            // Apply volume fade if needed (during barge-in interruption)
+            val processedData = if (currentVolume < 1.0f && currentVolume > 0f) {
+                applyVolumeFade(data, length, currentVolume)
+            } else if (currentVolume <= 0f) {
+                // Volume is zero, skip writing (silently drop during fade-out completion)
+                return
+            } else {
+                data
+            }
+
             var offset = 0
             var remaining = length
 
             while (remaining > 0) {
-                val written = track.write(data, offset, remaining)
+                val written = track.write(processedData, offset, remaining)
 
                 when {
                     written > 0 -> {
@@ -484,6 +559,30 @@ class GeminiAudioPlayer {
                 }
             }
         }
+    }
+
+    /**
+     * Applica fade di volume ai dati PCM 16-bit.
+     */
+    private fun applyVolumeFade(data: ByteArray, length: Int, volume: Float): ByteArray {
+        val result = data.copyOf()
+        val samples = length / 2
+
+        for (i in 0 until samples) {
+            val idx = i * 2
+            // Read 16-bit sample (little-endian)
+            val sample = (result[idx].toInt() and 0xFF) or (result[idx + 1].toInt() shl 8)
+            val signedSample = sample.toShort()
+
+            // Apply volume
+            val scaledSample = (signedSample * volume).toInt().coerceIn(-32768, 32767).toShort()
+
+            // Write back (little-endian)
+            result[idx] = (scaledSample.toInt() and 0xFF).toByte()
+            result[idx + 1] = ((scaledSample.toInt() shr 8) and 0xFF).toByte()
+        }
+
+        return result
     }
 
     /**

@@ -54,7 +54,10 @@
       "Skill(implement-psychological-metrics-wizard)",
       "Skill(implement-psychological-metrics-wizard:*)",
       "WebFetch(domain:ai.google.dev)",
-      "WebFetch(domain:docs.cloud.google.com)"
+      "WebFetch(domain:docs.cloud.google.com)",
+      "WebFetch(domain:vocal.com)",
+      "WebFetch(domain:sparkco.ai)",
+      "WebFetch(domain:docs.livekit.io)"
     ],
     "deny": [],
     "ask": []

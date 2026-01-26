@@ -581,13 +581,17 @@ class LiveChatViewModel @Inject constructor(
 
     /** Gestisce barge-in (interruzione utente durante risposta AI) */
     private fun handleBargeIn() {
-        Log.d(TAG, "💯 Handling barge-in: stopping AI, switching to user turn")
+        Log.d(TAG, "💯 Handling barge-in: stopping AI with fade-out, switching to user turn")
 
-        // ✅ Ferma subito la riproduzione TTS locale
+        // ✅ Ferma la riproduzione TTS con fade-out graduale (come Gemini Live desktop)
         geminiAudioManager.handleInterruption()
 
         // 🎬 Stop synchronized lip-sync immediately
         liveAudioSource.handleInterruption(InterruptionReason.USER_BARGE_IN)
+
+        // ✅ Reset stato AI speaking (permette invio audio utente IMMEDIATAMENTE)
+        aiSpeaking = false
+        geminiAudioManager.setAiSpeaking(false)
 
         // ✅ Aggiorna la UI: ora è turno utente
         _uiState.update {
@@ -598,18 +602,19 @@ class LiveChatViewModel @Inject constructor(
         }
     }
 
-    /** NUOVO: Gestisce smart barge-in (rilevato localmente) */
+    /** NUOVO: Gestisce smart barge-in (rilevato localmente con echo cancellation) */
     private fun handleSmartBargeIn() {
-        Log.d(TAG, "🎯 Smart barge-in: immediate TTS stop, user audio resumes")
+        Log.d(TAG, "🎯 Smart barge-in: fade-out TTS, user audio resumes immediately")
 
-        // ✅ Stop immediato TTS locale
+        // ✅ Stop TTS con fade-out graduale (come Gemini Live desktop)
         geminiAudioManager.handleInterruption()
 
         // 🎬 Stop synchronized lip-sync immediately
         liveAudioSource.handleInterruption(InterruptionReason.USER_BARGE_IN)
 
-        // ✅ Reset stato AI speaking (permette invio audio utente)
+        // ✅ Reset stato AI speaking (permette invio audio utente IMMEDIATAMENTE)
         aiSpeaking = false
+        geminiAudioManager.setAiSpeaking(false)
 
         // ✅ UI feedback immediato
         _uiState.update {
