@@ -99,6 +99,9 @@ class LiveChatViewModel @Inject constructor(
     // Synchronized speech state for avatar integration
     val isSynchronizedSpeaking = synchronizedSpeechController.isSpeaking
 
+    // Callback for playing avatar gestures (injected at integration layer to avoid circular dependency)
+    private var onPlayGestureCallback: ((String) -> Unit)? = null
+
     init {
         Log.d(TAG, "🎙️ Initializing LiveChatViewModel...")
         observeGeminiStates()
@@ -127,11 +130,29 @@ class LiveChatViewModel @Inject constructor(
     }
 
     /**
+     * Attach gesture animation callback.
+     * This is called from the integration layer (app module) to avoid circular dependency.
+     * The callback receives animation names from Gemini AI and maps them to avatar gestures.
+     */
+    fun attachGestureCallback(callback: (String) -> Unit) {
+        Log.d(TAG, "🎭 Attaching gesture callback for avatar animations")
+        onPlayGestureCallback = callback
+
+        // Setup animation callback from Gemini AI
+        geminiWebSocketClient.onPlayAnimation = { animationName ->
+            Log.d(TAG, "🎭 AI requested animation: $animationName")
+            callback(animationName)
+        }
+    }
+
+    /**
      * Detach HumanoidController when no longer needed.
      */
     fun detachHumanoidController() {
         Log.d(TAG, "🤖 Detaching HumanoidController (Live mode)")
         synchronizedSpeechController.detachAnimationTarget()
+        onPlayGestureCallback = null
+        geminiWebSocketClient.onPlayAnimation = null
     }
 
     private fun setupIntelligentSystems() {

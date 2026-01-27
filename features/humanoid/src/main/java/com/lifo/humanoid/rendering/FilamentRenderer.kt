@@ -307,8 +307,20 @@ class FilamentRenderer(
 
     private fun setupCamera() {
         val cam = camera ?: return
-        val eye = floatArrayOf(0.0f, 1.0f, -2.5f)
-        val center = floatArrayOf(0.0f, 0.85f, 0.0f)
+
+        // ═══════════════════════════════════════════════════════════════════
+        // FIXED CAMERA - Does NOT follow the avatar
+        // The camera looks at a fixed point in world space.
+        // The avatar moves freely during animations, creating natural movement.
+        // ═══════════════════════════════════════════════════════════════════
+
+        // Camera position: positioned to see full body
+        val eye = floatArrayOf(0.0f, 0.85f, -2.8f)
+
+        // Look at a FIXED point in world space (not the avatar's center)
+        // This is an absolute position that never changes
+        val center = floatArrayOf(0.0f, 0.75f, 0.0f)
+
         val up = floatArrayOf(0.0f, 1.0f, 0.0f)
 
         cam.lookAt(
@@ -317,7 +329,7 @@ class FilamentRenderer(
             up[0].toDouble(), up[1].toDouble(), up[2].toDouble()
         )
 
-        Log.d(tag, "Camera positioned: eye=(${eye[0]}, ${eye[1]}, ${eye[2]})")
+        Log.d(tag, "Fixed camera positioned: eye=(${eye[0]}, ${eye[1]}, ${eye[2]}), lookAt=(${center[0]}, ${center[1]}, ${center[2]})")
     }
 
     private fun configureCameraProjection(width: Int, height: Int) {
@@ -561,12 +573,16 @@ class FilamentRenderer(
         val targetHeight = 1.7f
         val scale = targetHeight / heightExtent
 
+        // Offset to lower the avatar so it's better framed by the camera
+        // Negative value = avatar appears lower on screen
+        val verticalOffset = -1.25f
+
         val transform = FloatArray(16)
         transform[0] = scale
         transform[5] = scale
         transform[10] = scale
         transform[12] = -center[0] * scale
-        transform[13] = (-center[1] + halfExtent[1]) * scale
+        transform[13] = (-center[1] + halfExtent[1]) * scale + verticalOffset
         transform[14] = -center[2] * scale
         transform[15] = 1.0f
 

@@ -48,6 +48,8 @@ fun HumanoidScreen(
     val currentAnimation by viewModel.currentAnimation.collectAsStateWithLifecycle()
     val isBlinking by viewModel.isBlinking.collectAsStateWithLifecycle()
     val isSpeaking by viewModel.isSpeaking.collectAsStateWithLifecycle()
+    val isIdleRotationActive by viewModel.isIdleRotationActive.collectAsStateWithLifecycle()
+    val currentIdleAnimation by viewModel.currentIdleAnimation.collectAsStateWithLifecycle()
 
     // State for control panel visibility
     var showControlPanel by remember { mutableStateOf(true) }
@@ -120,6 +122,8 @@ fun HumanoidScreen(
                         currentAnimation = currentAnimation?.name,
                         isBlinking = isBlinking,
                         isSpeaking = isSpeaking,
+                        isIdleRotationActive = isIdleRotationActive,
+                        currentIdleAnimation = currentIdleAnimation?.displayName,
                         debugMode = uiState.debugMode,
                         showControlPanel = showControlPanel,
                         onEmotionChange = { viewModel.setEmotion(it) },
@@ -131,6 +135,7 @@ fun HumanoidScreen(
                         onTriggerBlink = { viewModel.triggerBlink() },
                         onSpeakText = { text, duration -> viewModel.speakText(text, duration) },
                         onStopSpeaking = { viewModel.stopSpeaking() },
+                        onToggleIdleRotation = { viewModel.toggleIdleRotation() },
                         onModelLoaded = { renderer, asset, nodeNames ->
                             viewModel.onModelLoaded(renderer, asset, nodeNames)
                         },
@@ -157,6 +162,8 @@ private fun AvatarContent(
     currentAnimation: String?,
     isBlinking: Boolean,
     isSpeaking: Boolean,
+    isIdleRotationActive: Boolean,
+    currentIdleAnimation: String?,
     debugMode: Boolean,
     showControlPanel: Boolean,
     onEmotionChange: (Emotion) -> Unit,
@@ -168,6 +175,7 @@ private fun AvatarContent(
     onTriggerBlink: () -> Unit,
     onSpeakText: (String, Long) -> Unit,
     onStopSpeaking: () -> Unit,
+    onToggleIdleRotation: () -> Unit,
     onModelLoaded: (com.lifo.humanoid.rendering.FilamentRenderer, com.google.android.filament.gltfio.FilamentAsset, List<String>) -> Unit,
     onBeforeCleanup: () -> Unit
 ) {
@@ -245,6 +253,13 @@ private fun AvatarContent(
                         text = currentAnimation,
                         icon = Icons.Default.PlayArrow,
                         color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                if (isIdleRotationActive) {
+                    StatusChip(
+                        text = "Idle: ${currentIdleAnimation ?: "rotating"}",
+                        icon = Icons.Default.Loop,
+                        color = MaterialTheme.colorScheme.tertiary
                     )
                 }
             }
@@ -416,6 +431,45 @@ private fun AvatarContent(
                             imageVector = if (avatarState.visionEnabled) Icons.Default.Videocam else Icons.Default.VideocamOff,
                             contentDescription = "Toggle vision"
                         )
+                    }
+                }
+
+                HorizontalDivider()
+
+                // Idle Rotation section
+                Text(
+                    text = "Idle Rotation",
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (isIdleRotationActive) {
+                        Button(
+                            onClick = onToggleIdleRotation,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.Stop, null)
+                            Spacer(Modifier.width(4.dp))
+                            Text("Stop Idle Rotation")
+                        }
+                        Text(
+                            text = currentIdleAnimation ?: "...",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    } else {
+                        OutlinedButton(
+                            onClick = onToggleIdleRotation,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.Loop, null)
+                            Spacer(Modifier.width(4.dp))
+                            Text("Start Idle Rotation")
+                        }
                     }
                 }
             }

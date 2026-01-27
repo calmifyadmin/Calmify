@@ -67,24 +67,46 @@ class HumanoidControllerImpl(
         Log.d(TAG, "Playing gesture: $gesture (loop=$loop)")
 
         val animationAsset = when (gesture) {
+            // Greetings
             GestureType.GREETING -> VrmaAnimationLoader.AnimationAsset.GREETING
+            GestureType.HELLO -> VrmaAnimationLoader.AnimationAsset.HELLO
+
+            // Agreement/Disagreement
+            GestureType.YES -> VrmaAnimationLoader.AnimationAsset.YES_WITH_HEAD
+            GestureType.NO -> VrmaAnimationLoader.AnimationAsset.NO_WITH_HEAD
+            GestureType.I_AGREE -> VrmaAnimationLoader.AnimationAsset.I_AGREE
+            GestureType.I_DONT_THINK_SO -> VrmaAnimationLoader.AnimationAsset.I_DONT_THINK_SO
+            GestureType.I_DONT_KNOW -> VrmaAnimationLoader.AnimationAsset.I_DONT_KNOW
+
+            // Emotions
+            GestureType.ANGRY -> VrmaAnimationLoader.AnimationAsset.ANGRY
+            GestureType.SAD -> VrmaAnimationLoader.AnimationAsset.SAD
+            GestureType.HAPPY -> VrmaAnimationLoader.AnimationAsset.DANCING_HAPPY
+            GestureType.YOU_ARE_CRAZY -> VrmaAnimationLoader.AnimationAsset.YOU_ARE_CRAZY
+
+            // Actions
             GestureType.DANCE -> VrmaAnimationLoader.AnimationAsset.DANCE
-            GestureType.VICTORY -> VrmaAnimationLoader.AnimationAsset.PEACE_SIGN
-            GestureType.THINKING -> VrmaAnimationLoader.AnimationAsset.MODEL_POSE
             GestureType.PEACE_SIGN -> VrmaAnimationLoader.AnimationAsset.PEACE_SIGN
             GestureType.SHOOT -> VrmaAnimationLoader.AnimationAsset.SHOOT
-            GestureType.SQUAT -> VrmaAnimationLoader.AnimationAsset.SQUAT
-            GestureType.SPIN -> VrmaAnimationLoader.AnimationAsset.SPIN
+            GestureType.POINTING -> VrmaAnimationLoader.AnimationAsset.POINTING_THING
             GestureType.SHOW_FULL_BODY -> VrmaAnimationLoader.AnimationAsset.SHOW_FULL_BODY
-
-            // TODO: Implement NOD and SHAKE_HEAD animations
-            GestureType.NOD, GestureType.SHAKE_HEAD -> {
-                Log.w(TAG, "Gesture $gesture not yet implemented")
-                return
-            }
         }
 
         viewModel.playAnimation(animationAsset)
+    }
+
+    override fun playAnimationByName(animationName: String): Boolean {
+        Log.d(TAG, "🎭 Playing animation by name: $animationName")
+
+        val gesture = GestureType.fromAnimationName(animationName)
+        return if (gesture != null) {
+            playGesture(gesture, loop = false)
+            Log.d(TAG, "🎭 Animation started: $gesture")
+            true
+        } else {
+            Log.w(TAG, "⚠️ Unknown animation name: $animationName")
+            false
+        }
     }
 
     override fun stopGesture() {

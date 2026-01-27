@@ -156,6 +156,7 @@ class VrmaAnimationPlayer(
     private var idleAnimationScope: CoroutineScope? = null
     private var idleAction: AnimationAction? = null
     private var isPlayingOneShot = false
+    private var onOneShotComplete: (() -> Unit)? = null
 
     // Node/bone mappings
     private val nodeEntityMap = mutableMapOf<String, Int>()
@@ -480,6 +481,13 @@ class VrmaAnimationPlayer(
         // If we have an idle animation, transition back to it
         if (idleAction != null && action !== idleAction) {
             Log.d(TAG, "Returning to idle animation")
+
+            // Invoke the onComplete callback before transitioning
+            if (isPlayingOneShot) {
+                onOneShotComplete?.invoke()
+                onOneShotComplete = null
+            }
+
             isPlayingOneShot = false
             fadeToAction(idleAction!!)
         }
@@ -497,8 +505,9 @@ class VrmaAnimationPlayer(
         try {
             val tm = engine.transformManager
 
-            // Collect all bone rotations from all active actions, weighted
+            // Collect all bone rotations and translations from all active actions, weighted
             val blendedRotations = mutableMapOf<Int, BlendedRotation>()
+            val blendedTranslations = mutableMapOf<Int, BlendedTranslation>()
 
             activeActions.forEach { action ->
                 if (!action.isActive) return@forEach
@@ -510,26 +519,41 @@ class VrmaAnimationPlayer(
                     val instance = tm.getInstance(entity)
                     if (instance == 0) return@forEach
 
-                    if (track.path == AnimationPath.ROTATION) {
-                        val interpolatedValues = interpolateTrack(track, action.time)
-                        if (interpolatedValues.isEmpty()) return@forEach
+                    val interpolatedValues = interpolateTrack(track, action.time)
+                    if (interpolatedValues.isEmpty()) return@forEach
 
-                        val humanoidBone = resolveHumanoidBone(track.nodeName, action)
+                    when (track.path) {
+                        AnimationPath.ROTATION -> {
+                            val humanoidBone = resolveHumanoidBone(track.nodeName, action)
 
-                        // Get or create blended rotation entry
-                        val blended = blendedRotations.getOrPut(entity) {
-                            BlendedRotation(entity, instance, humanoidBone)
+                            // Get or create blended rotation entry
+                            val blended = blendedRotations.getOrPut(entity) {
+                                BlendedRotation(entity, instance, humanoidBone)
+                            }
+
+                            // Add this action's contribution
+                            blended.addContribution(interpolatedValues, action.weight)
                         }
+                        AnimationPath.TRANSLATION -> {
+                            // Get or create blended translation entry
+                            val blended = blendedTranslations.getOrPut(entity) {
+                                BlendedTranslation(entity, instance)
+                            }
 
-                        // Add this action's contribution
-                        blended.addContribution(interpolatedValues, action.weight)
+                            // Add this action's contribution
+                            blended.addContribution(interpolatedValues, action.weight)
+                        }
+                        else -> { /* Ignore scale for now */ }
                     }
                 }
             }
 
-            // Apply all blended rotations
-            blendedRotations.values.forEach { blended ->
-                applyBlendedRotation(tm, blended)
+            // Apply all blended transforms (rotation + translation)
+            val allEntities = (blendedRotations.keys + blendedTranslations.keys).toSet()
+            allEntities.forEach { entity ->
+                val rotation = blendedRotations[entity]
+                val translation = blendedTranslations[entity]
+                applyBlendedTransform(tm, entity, rotation, translation)
             }
 
             // Update bone matrices for skinning
@@ -581,47 +605,132 @@ class VrmaAnimationPlayer(
     }
 
     /**
-     * Apply a blended rotation to a transform.
+     * Helper class to accumulate weighted translation contributions.
      */
-    private fun applyBlendedRotation(tm: TransformManager, blended: BlendedRotation) {
-        val rotation = blended.getBlendedQuaternion() ?: return
-        val original = originalTransforms[blended.entity] ?: return
+    private inner class BlendedTranslation(
+        val entity: Int,
+        val instance: Int
+    ) {
+        private val contributions = mutableListOf<Pair<FloatArray, Float>>() // (translation xyz, weight)
+        private var totalWeight = 0f
+
+        fun addContribution(translation: FloatArray, weight: Float) {
+            if (weight > 0.0001f && translation.size >= 3) {
+                contributions.add(translation to weight)
+                totalWeight += weight
+            }
+        }
+
+        fun getBlendedTranslation(): FloatArray? {
+            if (contributions.isEmpty()) return null
+            if (contributions.size == 1) return contributions[0].first
+
+            // Linear interpolation for translations
+            val result = FloatArray(3) { 0f }
+            contributions.forEach { (trans, weight) ->
+                val normalizedWeight = weight / totalWeight
+                result[0] += trans[0] * normalizedWeight
+                result[1] += trans[1] * normalizedWeight
+                result[2] += trans[2] * normalizedWeight
+            }
+
+            return result
+        }
+    }
+
+    /**
+     * Apply blended rotation and translation to a transform.
+     * Translations from animation are ADDED to the original position,
+     * allowing the avatar to move freely in world space.
+     */
+    private fun applyBlendedTransform(
+        tm: TransformManager,
+        entity: Int,
+        rotation: BlendedRotation?,
+        translation: BlendedTranslation?
+    ) {
+        val original = originalTransforms[entity] ?: return
+        val instance = tm.getInstance(entity)
+        if (instance == 0) return
 
         val sx = kotlin.math.sqrt(original[0] * original[0] + original[1] * original[1] + original[2] * original[2])
         val sy = kotlin.math.sqrt(original[4] * original[4] + original[5] * original[5] + original[6] * original[6])
         val sz = kotlin.math.sqrt(original[8] * original[8] + original[9] * original[9] + original[10] * original[10])
 
-        val animQuat = normalizeQuaternion(rotation.copyOf())
-
-        // Apply coordinate system adjustment
-        val retargetedQuat = floatArrayOf(
-            -animQuat[0],
-            animQuat[1],
-            -animQuat[2],
-            animQuat[3]
-        )
-
-        val rotMatrix = quaternionToMatrix(retargetedQuat)
-
         val newTransform = FloatArray(16)
-        newTransform[0] = rotMatrix[0] * sx
-        newTransform[1] = rotMatrix[1] * sx
-        newTransform[2] = rotMatrix[2] * sx
+
+        // Apply rotation if available
+        if (rotation != null) {
+            val rotQuat = rotation.getBlendedQuaternion()
+            if (rotQuat != null) {
+                val animQuat = normalizeQuaternion(rotQuat.copyOf())
+
+                // Apply coordinate system adjustment
+                val retargetedQuat = floatArrayOf(
+                    -animQuat[0],
+                    animQuat[1],
+                    -animQuat[2],
+                    animQuat[3]
+                )
+
+                val rotMatrix = quaternionToMatrix(retargetedQuat)
+
+                newTransform[0] = rotMatrix[0] * sx
+                newTransform[1] = rotMatrix[1] * sx
+                newTransform[2] = rotMatrix[2] * sx
+                newTransform[4] = rotMatrix[4] * sy
+                newTransform[5] = rotMatrix[5] * sy
+                newTransform[6] = rotMatrix[6] * sy
+                newTransform[8] = rotMatrix[8] * sz
+                newTransform[9] = rotMatrix[9] * sz
+                newTransform[10] = rotMatrix[10] * sz
+            } else {
+                // Keep original rotation
+                newTransform[0] = original[0]
+                newTransform[1] = original[1]
+                newTransform[2] = original[2]
+                newTransform[4] = original[4]
+                newTransform[5] = original[5]
+                newTransform[6] = original[6]
+                newTransform[8] = original[8]
+                newTransform[9] = original[9]
+                newTransform[10] = original[10]
+            }
+        } else {
+            // Keep original rotation
+            newTransform[0] = original[0]
+            newTransform[1] = original[1]
+            newTransform[2] = original[2]
+            newTransform[4] = original[4]
+            newTransform[5] = original[5]
+            newTransform[6] = original[6]
+            newTransform[8] = original[8]
+            newTransform[9] = original[9]
+            newTransform[10] = original[10]
+        }
+
         newTransform[3] = 0f
-        newTransform[4] = rotMatrix[4] * sy
-        newTransform[5] = rotMatrix[5] * sy
-        newTransform[6] = rotMatrix[6] * sy
         newTransform[7] = 0f
-        newTransform[8] = rotMatrix[8] * sz
-        newTransform[9] = rotMatrix[9] * sz
-        newTransform[10] = rotMatrix[10] * sz
         newTransform[11] = 0f
-        newTransform[12] = original[12]
-        newTransform[13] = original[13]
-        newTransform[14] = original[14]
         newTransform[15] = 1f
 
-        tm.setTransform(blended.instance, newTransform)
+        // Apply translation: ADD animation translation to original position
+        // This allows the avatar to move freely in world space
+        val animTranslation = translation?.getBlendedTranslation()
+        if (animTranslation != null) {
+            // Apply coordinate system adjustment for translation too
+            // X is negated, Y stays, Z is negated (same as rotation)
+            newTransform[12] = original[12] + (-animTranslation[0])
+            newTransform[13] = original[13] + animTranslation[1]
+            newTransform[14] = original[14] + (-animTranslation[2])
+        } else {
+            // Keep original translation
+            newTransform[12] = original[12]
+            newTransform[13] = original[13]
+            newTransform[14] = original[14]
+        }
+
+        tm.setTransform(instance, newTransform)
     }
 
     /**
@@ -752,17 +861,20 @@ class VrmaAnimationPlayer(
     fun playOneShot(
         animation: VrmaAnimation,
         scope: CoroutineScope,
-        fadeDuration: Float = 0.5f
+        fadeDuration: Float = 0.5f,
+        onComplete: (() -> Unit)? = null
     ): Float {
         if (idleAnimation == null) {
             Log.w(TAG, "No idle animation set, playing as regular animation")
             play(animation, scope, loop = false)
+            onComplete?.invoke()
             return animation.durationSeconds
         }
 
         Log.d(TAG, "Playing one-shot animation: ${animation.name}")
 
         isPlayingOneShot = true
+        onOneShotComplete = onComplete
         defaultFadeInDuration = fadeDuration
         defaultFadeOutDuration = fadeDuration
 

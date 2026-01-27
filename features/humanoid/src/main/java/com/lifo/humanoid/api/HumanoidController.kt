@@ -58,6 +58,16 @@ interface HumanoidController : SpeechAnimationTarget {
     fun playGesture(gesture: GestureType, loop: Boolean = false)
 
     /**
+     * Play a gesture animation by name (used for AI-triggered animations).
+     * This method allows external modules to trigger animations without
+     * knowing the GestureType enum, using string names from Gemini AI.
+     *
+     * @param animationName The animation name (e.g., "hello", "angry", "dance")
+     * @return true if animation was found and started, false otherwise
+     */
+    fun playAnimationByName(animationName: String): Boolean
+
+    /**
      * Stop current gesture animation and return to idle state.
      */
     fun stopGesture()
@@ -132,59 +142,41 @@ interface HumanoidController : SpeechAnimationTarget {
  * Available gesture animations that can be triggered.
  * Corresponds to VRMA animations loaded in the Humanoid module.
  */
-enum class GestureType {
-    /**
-     * Greeting gesture (wave, bow, etc.)
-     */
-    GREETING,
+enum class GestureType(val animationName: String) {
+    // Greetings
+    GREETING("greeting"),
+    HELLO("hello"),
 
-    /**
-     * Dance animation
-     */
-    DANCE,
+    // Agreement/Disagreement
+    YES("yes_with_head"),
+    NO("no_with_head"),
+    I_AGREE("i_agree"),
+    I_DONT_THINK_SO("i_dont_think_so"),
+    I_DONT_KNOW("i_dont_know"),
 
-    /**
-     * Victory pose
-     */
-    VICTORY,
+    // Emotions
+    ANGRY("angry"),
+    SAD("sad"),
+    HAPPY("dancing_happy"),
+    YOU_ARE_CRAZY("you_are_crazy"),
 
-    /**
-     * Thinking pose (hand on chin, etc.)
-     */
-    THINKING,
+    // Actions
+    DANCE("dance"),
+    PEACE_SIGN("peaceSign"),
+    SHOOT("shoot"),
+    POINTING("pointing_thing"),
+    SHOW_FULL_BODY("showFullBody");
 
-    /**
-     * Nod (affirmative)
-     */
-    NOD,
+    companion object {
+        /**
+         * Find GestureType by animation name (case-insensitive).
+         */
+        fun fromAnimationName(name: String): GestureType? =
+            entries.find { it.animationName.equals(name, ignoreCase = true) }
 
-    /**
-     * Shake head (negative)
-     */
-    SHAKE_HEAD,
-
-    /**
-     * Peace sign
-     */
-    PEACE_SIGN,
-
-    /**
-     * Shooting gesture
-     */
-    SHOOT,
-
-    /**
-     * Squat animation
-     */
-    SQUAT,
-
-    /**
-     * Spin animation
-     */
-    SPIN,
-
-    /**
-     * Show full body
-     */
-    SHOW_FULL_BODY
+        /**
+         * Get all gesture names for function calling documentation.
+         */
+        fun getAllNames(): List<String> = entries.map { it.animationName }
+    }
 }

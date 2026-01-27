@@ -17,6 +17,49 @@ import java.nio.ByteOrder
  */
 class VrmaAnimationLoader(private val context: Context) {
 
+    private val gson = Gson()
+
+    /**
+     * Available animation assets
+     */
+    enum class AnimationAsset(val fileName: String, val displayName: String) {
+        // Idle animations (per rotazione automatica)
+        IDLE_LOOP("idle_loop.vrma", "Idle Loop"),
+        IDLE_BASIC("idle_basic.vrma", "Idle Basic"),
+        IDLE_LOOK_FINGERS("idle_look_fingers.vrma", "Idle Look Fingers"),
+        IDLE_LOOKING_AROUND("idle_looking_around.vrma", "Idle Looking Around"),
+        IDLE_VARIANT("idle_variant.vrma", "Idle Variant"),
+
+        // Emotion animations
+        ANGRY("angry.vrma", "Angry"),
+        SAD("sad.vrma", "Sad"),
+        DANCING_HAPPY("dancing_happy.vrma", "Dancing Happy"),
+
+        // Gesture animations
+        HELLO("hello.vrma", "Hello"),
+        GREETING("greeting.vrma", "Greeting"),
+        I_AGREE("i_agree.vrma", "I Agree"),
+        I_DONT_KNOW("i_dont_know.vrma", "I Don't Know"),
+        I_DONT_THINK_SO("i_dont_think_so.vrma", "I Don't Think So"),
+        YES_WITH_HEAD("yes_with_head.vrma", "Yes"),
+        NO_WITH_HEAD("no_with_head.vrma", "No"),
+        POINTING_THING("pointing_thing.vrma", "Pointing"),
+        YOU_ARE_CRAZY("you_are_crazy.vrma", "You Are Crazy"),
+
+        // Action animations
+        DANCE("dance.vrma", "Dance"),
+        PEACE_SIGN("peaceSign.vrma", "Peace Sign"),
+        SHOOT("shoot.vrma", "Shoot"),
+        SHOW_FULL_BODY("showFullBody.vrma", "Show Full Body");
+
+        // RIMOSSI (buggati): modelPose.vrma, spin.vrma, squat.vrma
+
+        /**
+         * Check if this animation is an idle animation (for automatic rotation)
+         */
+        fun isIdle(): Boolean = fileName.startsWith("idle_")
+    }
+
     companion object {
         private const val TAG = "VrmaAnimationLoader"
 
@@ -28,23 +71,12 @@ class VrmaAnimationLoader(private val context: Context) {
 
         // Binary chunk type "BIN\0" in ASCII
         private const val BIN_CHUNK_TYPE = 0x004E4942
-    }
 
-    private val gson = Gson()
-
-    /**
-     * Available animation assets
-     */
-    enum class AnimationAsset(val fileName: String, val displayName: String) {
-        IDLE_LOOP("idle_loop.vrma", "Idle Loop"),
-        DANCE("dance.vrma", "Dance"),
-        GREETING("greeting.vrma", "Greeting"),
-        MODEL_POSE("modelPose.vrma", "Model Pose"),
-        PEACE_SIGN("peaceSign.vrma", "Peace Sign"),
-        SHOOT("shoot.vrma", "Shoot"),
-        SHOW_FULL_BODY("showFullBody.vrma", "Show Full Body"),
-        SPIN("spin.vrma", "Spin"),
-        SQUAT("squat.vrma", "Squat")
+        /**
+         * Get all idle animations for rotation
+         */
+        fun getIdleAnimations(): List<AnimationAsset> =
+            AnimationAsset.entries.filter { it.isIdle() }
     }
 
     /**

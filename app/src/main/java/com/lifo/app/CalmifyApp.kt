@@ -807,6 +807,13 @@ private fun CalmifyNavHost(
                 liveChatViewModel.attachHumanoidController(humanoidController)
             }
 
+            // Attach gesture callback for AI-triggered animations
+            LaunchedEffect(humanoidController) {
+                val gestureCallback = com.lifo.humanoid.api.HumanoidIntegrationHelper
+                    .createGestureCallback(humanoidController)
+                liveChatViewModel.attachGestureCallback(gestureCallback)
+            }
+
             com.lifo.chat.presentation.screen.LiveScreen(
                 onClose = {
                     liveChatViewModel.detachHumanoidController()

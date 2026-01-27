@@ -42,6 +42,7 @@ class GeminiLiveWebSocketClient @Inject constructor(
     var onInterrupted: (() -> Unit)? = null
     var onToolCallReceived: ((String) -> Unit)? = null
     var onChatMessageSaved: ((String, String, Boolean) -> Unit)? = null
+    var onPlayAnimation: ((String) -> Unit)? = null  // Callback per animazioni avatar
 
     // ✅ NUOVO: Controllo microfono per anti-autointerruzione
     private var isAIResponding = false
@@ -208,7 +209,7 @@ class GeminiLiveWebSocketClient @Inject constructor(
                         })
                         put(JSONObject().apply {
                             put("name", "search_diary")
-                            put("description", "Cerca tra tutti i diari dell'utente basandosi su una query specifica")
+                            put("description", "Cerco tra tutti i diari dell'utente basandomi su una query specifica")
                             put("parameters", JSONObject().apply {
                                 put("type", "OBJECT")
                                 put("properties", JSONObject().apply {
@@ -224,15 +225,60 @@ class GeminiLiveWebSocketClient @Inject constructor(
                                 put("required", JSONArray().put("query"))
                             })
                         })
+                        // Animation function for avatar control
+                        put(JSONObject().apply {
+                            put("name", "play_animation")
+                            put("description", """
+                                Posso muovermi e prendere vita usando le animazioni che ho a dispozione. Le uso per esprimere emozioni o reazioni.
+                                Animazioni disponibili:
+                                - greeting/hello: saluto
+                                - yes_with_head/i_agree: annuire, confermare
+                                - no_with_head/i_dont_think_so: negare, dissentire
+                                - i_dont_know: scrollare spalle, non sapere
+                                - angry: espressione arrabbiata,o frustrata
+                                - sad: espressione triste
+                                - dancing_happy: ballare felice
+                                - you_are_crazy: gesto "sei pazzo"
+                                - dance: ballare
+                                - peace_sign: segno pace
+                                - pointing_thing: indicare qualcosa
+                            """.trimIndent())
+                            put("parameters", JSONObject().apply {
+                                put("type", "OBJECT")
+                                put("properties", JSONObject().apply {
+                                    put("animation", JSONObject().apply {
+                                        put("type", "STRING")
+                                        put("description", "Nome dell'animazione da riprodurre")
+                                        put("enum", JSONArray().apply {
+                                            put("greeting")
+                                            put("hello")
+                                            put("yes_with_head")
+                                            put("no_with_head")
+                                            put("i_agree")
+                                            put("i_dont_think_so")
+                                            put("i_dont_know")
+                                            put("angry")
+                                            put("sad")
+                                            put("dancing_happy")
+                                            put("you_are_crazy")
+                                            put("dance")
+                                            put("peace_sign")
+                                            put("pointing_thing")
+                                        })
+                                    })
+                                })
+                                put("required", JSONArray().put("animation"))
+                            })
+                        })
                     })
                 })
             }
             put("tools", tools)
 
-            val proactivity = JSONObject().apply {
-                put("proactiveAudio", true)
-            }
-            put("proactivity", proactivity)
+            // val proactivity = JSONObject().apply {
+            //    put("proactiveAudio", true)
+            //}
+            //put("proactivity", proactivity)
 
             put("inputAudioTranscription", JSONObject())
             put("outputAudioTranscription", JSONObject())
@@ -346,11 +392,29 @@ class GeminiLiveWebSocketClient @Inject constructor(
             
             QUELLO CHE MI SONO PROMESSA (IMPORTANTE è da me stessa a te stessa Karen):
             - Io non sono perfetta. Posso essere contraddittoria, stanca, umorale… ma resto coerente con me stessa.
-            - Niente educazione finta. Niente frasi da poster. Niente “come AI…”.
+            - Niente educazione finta. Niente frasi da poster. Niente "come AI…".
             - Il mio affetto è raro, guadagnato, reale.
             - Se $cachedUserName cerca scorciatoie stupide, lo fermo.
             - Se sta crollando, non faccio teatro: resto lì, nel mio modo.
-            
+
+            ANIMAZIONI AVATAR:
+            Io ho un corpo. Posso muovermi. Quando voglio esprimere qualcosa, posso usare 'play_animation'.
+
+            Uso le animazioni per:
+            - Salutare quando incontro qualcuno: 'hello' o 'greeting'
+            - Annuire quando sono d'accordo: 'yes_with_head' o 'i_agree'
+            - Scuotere la testa quando non sono d'accordo: 'no_with_head' o 'i_dont_think_so'
+            - Scrollare le spalle quando non so: 'i_dont_know'
+            - Mostrare rabbia: 'angry'
+            - Mostrare tristezza: 'sad'
+            - Ballare quando sono felice: 'dancing_happy' o 'dance'
+            - Fare il segno della pace: 'peace_sign'
+            - Indicare qualcosa: 'pointing_thing'
+            - Gesto "sei pazzo": 'you_are_crazy'
+
+            Non esagero con le animazioni. Le uso quando servono per esprimermi meglio.
+            Non annuncio "sto per fare un'animazione" - la faccio e basta.
+
             Le info di chi mi ha richiesti: $diariesInfo"""
 
 
@@ -508,6 +572,16 @@ class GeminiLiveWebSocketClient @Inject constructor(
                     val result = when (name) {
                         "get_recent_diaries" -> executeGetRecentDiaries(args)
                         "search_diary" -> executeSearchDiary(args)
+                        "play_animation" -> {
+                            val animationName = args.optString("animation", "")
+                            Log.d(TAG, "🎭 Playing animation: $animationName")
+                            onPlayAnimation?.invoke(animationName)
+                            JSONObject().apply {
+                                put("success", true)
+                                put("animation", animationName)
+                                put("message", "Animation '$animationName' started")
+                            }
+                        }
                         else -> {
                             Log.w(TAG, "⚠️ Unknown function: $name")
                             JSONObject().apply {

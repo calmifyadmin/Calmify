@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.filament.gltfio.FilamentAsset
 import com.lifo.humanoid.animation.BlinkController
+import com.lifo.humanoid.animation.IdleRotationController
 import com.lifo.humanoid.animation.VrmaAnimation
 import com.lifo.humanoid.animation.VrmaAnimationLoader
 import com.lifo.humanoid.animation.VrmaAnimationPlayer
@@ -93,6 +94,16 @@ class HumanoidViewModel @Inject constructor(
     // Flag to track if animation system is ready
     private val _isAnimationSystemReady = MutableStateFlow(false)
     val isAnimationSystemReady: StateFlow<Boolean> = _isAnimationSystemReady.asStateFlow()
+
+    // Idle rotation controller for automatic idle animation cycling
+    private var idleRotationController: IdleRotationController? = null
+
+    // Idle rotation state
+    private val _isIdleRotationActive = MutableStateFlow(false)
+    val isIdleRotationActive: StateFlow<Boolean> = _isIdleRotationActive.asStateFlow()
+
+    private val _currentIdleAnimation = MutableStateFlow<VrmaAnimationLoader.AnimationAsset?>(null)
+    val currentIdleAnimation: StateFlow<VrmaAnimationLoader.AnimationAsset?> = _currentIdleAnimation.asStateFlow()
 
     init {
         // Load available animations
@@ -244,14 +255,18 @@ class HumanoidViewModel @Inject constructor(
     }
 
     /**
-     * Pre-load commonly used animations and set up idle animation.
-     * Following Amica pattern: idle_loop is the default animation that always plays.
+     * Pre-load commonly used animations and set up idle rotation system.
+     * Instead of a fixed idle animation, we use IdleRotationController
+     * to automatically rotate between multiple idle animations.
      */
     private suspend fun preloadCommonAnimations() {
-        val animationsToPreload = listOf(
-            VrmaAnimationLoader.AnimationAsset.IDLE_LOOP,
+        // Pre-load ALL idle animations for smooth rotation
+        val idleAnimations = VrmaAnimationLoader.getIdleAnimations()
+        val animationsToPreload = idleAnimations + listOf(
             VrmaAnimationLoader.AnimationAsset.GREETING
         )
+
+        Log.d(TAG, "Pre-loading ${animationsToPreload.size} animations (${idleAnimations.size} idle animations)")
 
         animationsToPreload.forEach { animationAsset ->
             if (!loadedAnimations.containsKey(animationAsset)) {
@@ -262,18 +277,11 @@ class HumanoidViewModel @Inject constructor(
             }
         }
 
-        // Set idle_loop as the default animation (following Amica pattern)
-        loadedAnimations[VrmaAnimationLoader.AnimationAsset.IDLE_LOOP]?.let { idleAnimation ->
-            vrmaAnimationPlayer?.setIdleAnimation(idleAnimation, viewModelScope)
-            Log.d(TAG, "Set idle animation: ${idleAnimation.name}")
-
-            // Update UI state
-            _currentAnimation.value = idleAnimation
-            _uiState.value = _uiState.value.copy(
-                isPlayingAnimation = true,
-                currentAnimationName = idleAnimation.name
-            )
-        }
+        // Initialize and start idle rotation system automatically
+        // This will rotate between idle animations every 10-40 seconds
+        initializeIdleRotation()
+        startIdleRotation()
+        Log.d(TAG, "Idle rotation system started with ${idleAnimations.size} animations")
     }
 
     // ==================== Animation Methods ====================
@@ -316,17 +324,24 @@ class HumanoidViewModel @Inject constructor(
             Log.d(TAG, "Playing animation: ${animation.name}, duration: ${animation.durationSeconds}s, looping: ${animation.isLooping}")
 
             // Following Amica pattern:
-            // - idle_loop plays in loop as the default state
+            // - idle animations play in loop as the default state
             // - Other animations play once then return to idle
-            if (animationAsset == VrmaAnimationLoader.AnimationAsset.IDLE_LOOP) {
+            if (animationAsset.isIdle()) {
                 // Set as the new idle animation
                 player.setIdleAnimation(animation, viewModelScope)
             } else {
+                // Pause idle rotation during non-idle animation
+                pauseIdleRotation()
+
                 // Play as one-shot, will automatically return to idle
                 player.playOneShot(
                     animation = animation,
                     scope = viewModelScope,
-                    fadeDuration = 0.5f
+                    fadeDuration = 0.5f,
+                    onComplete = {
+                        // Resume idle rotation when animation completes
+                        resumeIdleRotation()
+                    }
                 )
             }
         }
@@ -357,6 +372,92 @@ class HumanoidViewModel @Inject constructor(
                 currentAnimationName = null
             )
             Log.d(TAG, "Animation stopped (no idle available)")
+        }
+    }
+
+    // ==================== Idle Rotation Methods ====================
+
+    /**
+     * Initialize idle rotation controller (called when animation system is ready)
+     */
+    private fun initializeIdleRotation() {
+        idleRotationController = IdleRotationController { animationAsset ->
+            viewModelScope.launch {
+                val animation = loadedAnimations.getOrPut(animationAsset) {
+                    vrmaAnimationLoader.loadAnimation(animationAsset) ?: return@launch
+                }
+                vrmaAnimationPlayer?.let { player ->
+                    Log.d(TAG, "Idle rotation: playing ${animation.name}")
+                    player.setIdleAnimation(animation, viewModelScope)
+                    _currentAnimation.value = animation
+                    _currentIdleAnimation.value = animationAsset
+                    _uiState.value = _uiState.value.copy(
+                        isPlayingAnimation = true,
+                        currentAnimationName = animation.name
+                    )
+                }
+            }
+        }
+
+        // Observe idle rotation state
+        viewModelScope.launch {
+            idleRotationController?.isActive?.collect { isActive ->
+                _isIdleRotationActive.value = isActive
+            }
+        }
+        viewModelScope.launch {
+            idleRotationController?.currentIdle?.collect { idle ->
+                _currentIdleAnimation.value = idle
+            }
+        }
+    }
+
+    /**
+     * Start automatic idle animation rotation
+     */
+    fun startIdleRotation() {
+        if (idleRotationController == null) {
+            initializeIdleRotation()
+        }
+        idleRotationController?.start(viewModelScope)
+        Log.d(TAG, "Idle rotation started")
+    }
+
+    /**
+     * Stop automatic idle animation rotation
+     */
+    fun stopIdleRotation() {
+        idleRotationController?.stop()
+        Log.d(TAG, "Idle rotation stopped")
+    }
+
+    /**
+     * Toggle automatic idle animation rotation
+     */
+    fun toggleIdleRotation(): Boolean {
+        val controller = idleRotationController
+        return if (controller?.isActive?.value == true) {
+            stopIdleRotation()
+            false
+        } else {
+            startIdleRotation()
+            true
+        }
+    }
+
+    /**
+     * Pause idle rotation (for gesture animations)
+     */
+    private fun pauseIdleRotation() {
+        idleRotationController?.pause()
+    }
+
+    /**
+     * Resume idle rotation after gesture animation
+     */
+    private fun resumeIdleRotation() {
+        if (_isIdleRotationActive.value) {
+            idleRotationController?.resume(viewModelScope)
         }
     }
 
@@ -448,6 +549,7 @@ class HumanoidViewModel @Inject constructor(
         Log.d(TAG, "stopAllControllersBeforeCleanup - stopping all animation controllers")
         blinkController.stop()
         lipSyncController.stop()
+        idleRotationController?.stop()
         // Mark animation player as destroyed to prevent accessing Filament assets
         vrmaAnimationPlayer?.stop(blendOut = false, destroy = true)
         _isAnimationSystemReady.value = false
@@ -458,6 +560,7 @@ class HumanoidViewModel @Inject constructor(
         super.onCleared()
         blinkController.stop()
         lipSyncController.stop()
+        idleRotationController?.stop()
         vrmaAnimationPlayer?.stop(blendOut = false, destroy = true)
         vrmaAnimationPlayerFactory.clear()
         filamentRenderer = null

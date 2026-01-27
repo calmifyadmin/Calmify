@@ -26,7 +26,8 @@ class AnimationCoordinator(
     private val blinkController: BlinkController,
     private val lipSyncController: LipSyncController,
     private val idleAnimationController: IdleAnimationController,
-    private val vrmaAnimationPlayer: VrmaAnimationPlayer
+    private val vrmaAnimationPlayer: VrmaAnimationPlayer,
+    private val vrmaAnimationLoader: VrmaAnimationLoader
 ) {
 
     companion object {
@@ -36,6 +37,10 @@ class AnimationCoordinator(
     // State tracking
     private var isInitialized = false
     private var isRunning = false
+    private var animationScope: CoroutineScope? = null
+
+    // Idle rotation controller for automatic VRMA idle animation cycling
+    private var idleRotationController: IdleRotationController? = null
 
     // Current animation state
     data class AnimationState(
@@ -43,7 +48,9 @@ class AnimationCoordinator(
         val isSpeaking: Boolean = false,
         val isPlayingAnimation: Boolean = false,
         val idleActive: Boolean = false,
-        val currentAnimationName: String? = null
+        val idleRotationActive: Boolean = false,
+        val currentAnimationName: String? = null,
+        val currentIdleAnimation: String? = null
     )
 
     /**
@@ -59,6 +66,7 @@ class AnimationCoordinator(
 
         isRunning = true
         isInitialized = true
+        animationScope = scope
         Log.d(TAG, "Starting AnimationCoordinator")
 
         // Start idle animation (lowest priority, always running in background)
@@ -66,6 +74,9 @@ class AnimationCoordinator(
 
         // Start blink controller (always active, overlays everything)
         blinkController.start(scope)
+
+        // Initialize idle rotation controller for automatic idle VRMA cycling
+        initializeIdleRotation(scope)
 
         // Set up blink integration with blend shapes
         scope.launch {
@@ -93,19 +104,77 @@ class AnimationCoordinator(
             }
         }
 
-        // Monitor VRMA animation state
+        // Monitor VRMA animation state for gesture/action animations
         scope.launch {
             vrmaAnimationPlayer.isPlaying.collect { isPlaying ->
-                if (isPlaying) {
-                    // Reduce/pause idle during gesture animations
+                val currentAnim = vrmaAnimationPlayer.currentAnimation.value
+                val isIdleAnim = currentAnim?.name?.contains("idle", ignoreCase = true) == true
+
+                if (isPlaying && !isIdleAnim) {
+                    // Reduce idle during non-idle gesture animations
                     idleAnimationController.setIntensity(0.2f)
+                    // Pause idle rotation during non-idle animations
+                    idleRotationController?.pause()
                 } else {
                     idleAnimationController.setIntensity(1.0f)
+                    // Resume idle rotation when gesture animation ends
+                    if (!isPlaying) {
+                        idleRotationController?.resume(scope)
+                    }
                 }
             }
         }
 
         Log.d(TAG, "All animation systems started")
+    }
+
+    /**
+     * Initialize idle rotation controller
+     */
+    private fun initializeIdleRotation(scope: CoroutineScope) {
+        idleRotationController = IdleRotationController { animationAsset ->
+            scope.launch {
+                val animation = vrmaAnimationLoader.loadAnimation(animationAsset)
+                if (animation != null) {
+                    Log.d(TAG, "Playing idle rotation animation: ${animation.name}")
+                    vrmaAnimationPlayer.play(animation, scope, loop = true)
+                } else {
+                    Log.w(TAG, "Failed to load idle animation: ${animationAsset.fileName}")
+                }
+            }
+        }
+    }
+
+    /**
+     * Start idle rotation (automatic cycling of idle animations)
+     */
+    fun startIdleRotation() {
+        animationScope?.let { scope ->
+            idleRotationController?.start(scope)
+            Log.d(TAG, "Idle rotation started")
+        } ?: Log.w(TAG, "Cannot start idle rotation - no animation scope")
+    }
+
+    /**
+     * Stop idle rotation
+     */
+    fun stopIdleRotation() {
+        idleRotationController?.stop()
+        Log.d(TAG, "Idle rotation stopped")
+    }
+
+    /**
+     * Toggle idle rotation
+     */
+    fun toggleIdleRotation(): Boolean {
+        val controller = idleRotationController ?: return false
+        return if (controller.isActive.value) {
+            stopIdleRotation()
+            false
+        } else {
+            startIdleRotation()
+            true
+        }
     }
 
     /**
@@ -115,10 +184,12 @@ class AnimationCoordinator(
         Log.d(TAG, "Stopping AnimationCoordinator")
 
         isRunning = false
+        animationScope = null
 
         blinkController.stop()
         lipSyncController.stop()
         idleAnimationController.stop()
+        idleRotationController?.stop()
         vrmaAnimationPlayer.stop()
 
         // Clear all blend shape categories
@@ -133,6 +204,7 @@ class AnimationCoordinator(
     fun pause() {
         blinkController.pause()
         vrmaAnimationPlayer.pause()
+        idleRotationController?.pause()
         // Idle and lip-sync can continue as they don't have explicit pause
     }
 
@@ -140,8 +212,10 @@ class AnimationCoordinator(
      * Resume animations after pause
      */
     fun resume(scope: CoroutineScope) {
+        animationScope = scope
         blinkController.resume(scope)
         vrmaAnimationPlayer.resume(scope)
+        idleRotationController?.resume(scope)
     }
 
     /**
@@ -217,7 +291,9 @@ class AnimationCoordinator(
             isSpeaking = lipSyncController.isSpeaking.value,
             isPlayingAnimation = vrmaAnimationPlayer.isPlaying.value,
             idleActive = idleAnimationController.isActive.value,
-            currentAnimationName = vrmaAnimationPlayer.currentAnimation.value?.name
+            idleRotationActive = idleRotationController?.isActive?.value ?: false,
+            currentAnimationName = vrmaAnimationPlayer.currentAnimation.value?.name,
+            currentIdleAnimation = idleRotationController?.currentIdle?.value?.displayName
         )
     }
 
@@ -238,4 +314,11 @@ class AnimationCoordinator(
     val currentAnimation: StateFlow<VrmaAnimation?> = vrmaAnimationPlayer.currentAnimation
     val animationProgress: StateFlow<Float> = vrmaAnimationPlayer.playbackProgress
     val lipSyncProgress: StateFlow<Float> = lipSyncController.progress
+
+    // Idle rotation state (will be initialized in start())
+    val isIdleRotationActive: StateFlow<Boolean>
+        get() = idleRotationController?.isActive ?: kotlinx.coroutines.flow.MutableStateFlow(false)
+
+    val currentIdleAnimation: StateFlow<VrmaAnimationLoader.AnimationAsset?>
+        get() = idleRotationController?.currentIdle ?: kotlinx.coroutines.flow.MutableStateFlow(null)
 }
