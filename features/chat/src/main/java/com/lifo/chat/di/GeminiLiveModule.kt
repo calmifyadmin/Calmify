@@ -10,6 +10,7 @@ import com.lifo.chat.data.camera.GeminiLiveCameraManager
 import com.lifo.chat.domain.audio.AdaptiveBargeinDetector
 import com.lifo.chat.domain.audio.AudioQualityAnalyzer
 import com.lifo.chat.domain.audio.ConversationContextManager
+import com.lifo.chat.domain.audio.FullDuplexAudioSession
 import com.lifo.chat.domain.audio.ReferenceSignalBargeInDetector
 import com.google.firebase.auth.FirebaseAuth
 import dagger.Module
@@ -113,12 +114,28 @@ object GeminiLiveModule {
     }
 
     /**
-     * Provides GeminiLiveAudioManager for audio recording/playback with intelligent systems
+     * Provides FullDuplexAudioSession for hardware AEC synchronization.
+     *
+     * Manages the shared audioSessionId between AudioRecord (VOICE_COMMUNICATION)
+     * and AudioTrack (USAGE_ASSISTANT), and stores AEC/NS/AGC effect instances
+     * to prevent garbage collection.
+     */
+    @Provides
+    @Singleton
+    fun provideFullDuplexAudioSession(
+        @ApplicationContext context: Context
+    ): FullDuplexAudioSession {
+        return FullDuplexAudioSession(context)
+    }
+
+    /**
+     * Provides GeminiLiveAudioManager for audio recording/playback with full-duplex.
      *
      * Includes:
+     * - FullDuplexAudioSession: Hardware AEC session management
      * - AdaptiveBargeinDetector: Voice profile learning
-     * - SileroVadEngine: Neural network VAD
-     * - ReferenceSignalBargeInDetector: Echo-aware barge-in detection
+     * - SileroVadEngine: Neural network VAD (local barge-in during AI speech)
+     * - ReferenceSignalBargeInDetector: Software echo-aware detection (diagnostics)
      */
     @Provides
     @Singleton
@@ -126,9 +143,10 @@ object GeminiLiveModule {
         @ApplicationContext context: Context,
         adaptiveBargeinDetector: AdaptiveBargeinDetector,
         sileroVadEngine: SileroVadEngine,
-        referenceSignalDetector: ReferenceSignalBargeInDetector
+        referenceSignalDetector: ReferenceSignalBargeInDetector,
+        fullDuplexSession: FullDuplexAudioSession
     ): GeminiLiveAudioManager {
-        return GeminiLiveAudioManager(context, adaptiveBargeinDetector, sileroVadEngine, referenceSignalDetector)
+        return GeminiLiveAudioManager(context, adaptiveBargeinDetector, sileroVadEngine, referenceSignalDetector, fullDuplexSession)
     }
 
     /**

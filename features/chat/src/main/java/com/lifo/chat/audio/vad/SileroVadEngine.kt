@@ -58,19 +58,27 @@ class SileroVadEngine @Inject constructor(
         // VAD Thresholds - LOWERED for better detection in normal mode
         const val DEFAULT_SPEECH_THRESHOLD = 0.35f  // Lowered from 0.5f
         const val DEFAULT_SILENCE_THRESHOLD = 0.25f  // Lowered from 0.35f
-        // Barge-in threshold: balanced at 0.70 to detect user voice while filtering echo
-        // With AEC enabled, echo residue is typically < 0.60, user voice is > 0.65
-        const val BARGE_IN_THRESHOLD = 0.70f
 
-        // Minimum audio energy required for barge-in (filters residual echo)
-        // Real user speech has energy > 0.08, echo residue is typically < 0.05
-        const val BARGE_IN_MIN_ENERGY = 0.08f
+        // Barge-in threshold: requires confirmed Silero speech (prob >= 0.60 when sileroResult=true)
+        // 0.60 = "Silero confirmed speech with any energy"
+        // Combined with adaptive echo baseline check below for robust filtering
+        const val BARGE_IN_THRESHOLD = 0.60f
+
+        // Minimum absolute audio energy for barge-in (safety floor)
+        // Even with adaptive echo baseline, enforce a minimum energy
+        // Typical echo residue: 0.01-0.04, soft speech: 0.06-0.15, normal speech: 0.10-0.30
+        const val BARGE_IN_MIN_ENERGY = 0.06f
+
+        // Adaptive echo baseline: barge-in energy must exceed echo baseline by this multiplier
+        // e.g., if echo averages 0.03 energy, barge-in needs >= 0.03 * 3.0 = 0.09
+        const val BARGE_IN_ECHO_ENERGY_MULTIPLIER = 3.0f
 
         // Timing Configuration
         const val MIN_SPEECH_DURATION_MS = 100   // Min speech to confirm voice
         const val MIN_SILENCE_DURATION_MS = 300  // Min silence to end utterance
-        // Barge-in confirmation at 100ms (~3 frames) - quick but stable detection
-        const val BARGE_IN_CONFIRMATION_MS = 100
+        // Barge-in confirmation: 128ms (4 frames) for robust full-duplex detection
+        // Lower values (64ms/2 frames) caused false positives from brief echo spikes
+        const val BARGE_IN_CONFIRMATION_MS = 128
 
         // Frame counts for timing (at 32ms per frame)
         private const val MIN_SPEECH_FRAMES = MIN_SPEECH_DURATION_MS / FRAME_SIZE_MS  // ~3 frames
@@ -114,6 +122,12 @@ class SileroVadEngine @Inject constructor(
 
     // Last frame energy for barge-in filtering
     private var lastFrameEnergy = 0f
+
+    // Adaptive echo baseline: rolling average of energy during AI playback
+    // Used to distinguish residual echo (consistent low energy) from real speech (energy spike)
+    private var echoBaselineEnergy = 0f
+    private var echoBaselineSamples = 0
+    private val echoBaselineAlpha = 0.05f // Slow-moving average (smoothing factor)
 
     // Initialization state
     private val isInitialized = AtomicBoolean(false)
@@ -313,7 +327,10 @@ class SileroVadEngine @Inject constructor(
     fun enableBargeInMode() {
         isBargeInMode.set(true)
         bargeInFrameCount.set(0)
-        Log.d(TAG, "Barge-in mode ENABLED")
+        // Reset echo baseline for fresh calibration on this AI turn
+        echoBaselineEnergy = 0f
+        echoBaselineSamples = 0
+        Log.d(TAG, "Barge-in mode ENABLED (echo baseline reset)")
     }
 
     /**
@@ -323,23 +340,47 @@ class SileroVadEngine @Inject constructor(
         isBargeInMode.set(false)
         bargeInFrameCount.set(0)
         _bargeInEvent.value = null
+        echoBaselineEnergy = 0f
+        echoBaselineSamples = 0
         Log.d(TAG, "Barge-in mode DISABLED")
     }
 
     /**
      * Check if user is attempting to interrupt AI (barge-in).
      *
-     * Uses multiple criteria to avoid false positives from residual echo:
-     * 1. Speech probability must exceed BARGE_IN_THRESHOLD (0.80)
-     * 2. Audio energy must exceed BARGE_IN_MIN_ENERGY (0.15)
-     * 3. Must maintain for BARGE_IN_CONFIRMATION_MS (150ms)
+     * Uses adaptive multi-criteria filtering to avoid false positives from AEC residual echo:
+     * 1. Speech probability must exceed BARGE_IN_THRESHOLD (0.60 = confirmed Silero speech)
+     * 2. Audio energy must exceed BARGE_IN_MIN_ENERGY (0.06 = absolute floor)
+     * 3. Audio energy must exceed echo baseline * BARGE_IN_ECHO_ENERGY_MULTIPLIER (adaptive)
+     * 4. Must maintain for BARGE_IN_CONFIRMATION_MS (128ms = 4 consecutive frames)
+     *
+     * The adaptive echo baseline tracks the rolling average energy during AI playback.
+     * Residual echo has consistent low energy; real user speech creates a clear spike above baseline.
      */
     private fun checkBargeIn(probability: Float) {
         if (!isBargeInMode.get()) return
 
-        // IMPORTANT: Check both probability AND energy to filter residual echo
-        // AEC doesn't perfectly cancel all echo, residual audio has low energy
-        val meetsThreshold = probability >= BARGE_IN_THRESHOLD && lastFrameEnergy >= BARGE_IN_MIN_ENERGY
+        // Update adaptive echo baseline with exponential moving average
+        // This tracks the "normal" energy level during AI playback (residual echo)
+        echoBaselineSamples++
+        if (echoBaselineSamples <= 10) {
+            // Bootstrap: simple average for first 10 frames (~320ms)
+            echoBaselineEnergy = echoBaselineEnergy + (lastFrameEnergy - echoBaselineEnergy) / echoBaselineSamples
+        } else {
+            // Steady state: exponential moving average (slow-moving, resists spikes)
+            echoBaselineEnergy = echoBaselineEnergy * (1f - echoBaselineAlpha) + lastFrameEnergy * echoBaselineAlpha
+        }
+
+        // Adaptive energy threshold: must be clearly above echo residue
+        val adaptiveEnergyThreshold = maxOf(
+            BARGE_IN_MIN_ENERGY,  // Absolute floor (0.06)
+            echoBaselineEnergy * BARGE_IN_ECHO_ENERGY_MULTIPLIER  // 3x echo baseline
+        )
+
+        // Multi-criteria check:
+        // 1. Silero probability confirms speech (not just noise)
+        // 2. Energy clearly above echo residue baseline (not just AEC leakage)
+        val meetsThreshold = probability >= BARGE_IN_THRESHOLD && lastFrameEnergy >= adaptiveEnergyThreshold
 
         if (meetsThreshold) {
             val count = bargeInFrameCount.incrementAndGet()
@@ -350,12 +391,16 @@ class SileroVadEngine @Inject constructor(
                     durationMs = count * FRAME_SIZE_MS
                 )
                 _bargeInEvent.value = event
-                Log.d(TAG, "🎤 BARGE-IN DETECTED! Confidence: $probability, Energy: $lastFrameEnergy, Duration: ${event.durationMs}ms")
+                Log.d(TAG, "🎤 BARGE-IN DETECTED! prob=$probability, energy=$lastFrameEnergy, " +
+                    "echoBaseline=${"%.4f".format(echoBaselineEnergy)}, adaptiveThreshold=${"%.4f".format(adaptiveEnergyThreshold)}, " +
+                    "duration=${event.durationMs}ms")
             }
         } else {
-            // Reset counter if either threshold not met
+            // Reset counter if criteria not met
             if (bargeInFrameCount.get() > 0) {
-                Log.v(TAG, "Barge-in reset: prob=$probability (need>=$BARGE_IN_THRESHOLD), energy=$lastFrameEnergy (need>=$BARGE_IN_MIN_ENERGY)")
+                Log.v(TAG, "Barge-in reset: prob=$probability (need>=$BARGE_IN_THRESHOLD), " +
+                    "energy=$lastFrameEnergy (need>=${"%.4f".format(adaptiveEnergyThreshold)}), " +
+                    "echoBaseline=${"%.4f".format(echoBaselineEnergy)}")
             }
             bargeInFrameCount.set(0)
         }
@@ -437,6 +482,8 @@ class SileroVadEngine @Inject constructor(
         isBargeInMode.set(false)
         lastSileroProbability = 0f
         lastFrameEnergy = 0f
+        echoBaselineEnergy = 0f
+        echoBaselineSamples = 0
 
         Log.d(TAG, "VAD state reset")
     }

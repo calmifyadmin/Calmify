@@ -44,7 +44,8 @@ class GeminiLiveWebSocketClient @Inject constructor(
     var onChatMessageSaved: ((String, String, Boolean) -> Unit)? = null
     var onPlayAnimation: ((String) -> Unit)? = null  // Callback per animazioni avatar
 
-    // ✅ NUOVO: Controllo microfono per anti-autointerruzione
+    // Tracks whether AI is currently generating a response (for state management)
+    // NOTE: This no longer blocks audio sending - AEC handles echo cancellation
     private var isAIResponding = false
 
     // Cache per i diari dell'utente (delegato al ViewModel)
@@ -116,7 +117,7 @@ class GeminiLiveWebSocketClient @Inject constructor(
                 Log.d(TAG, "🔌 Connection Closed: $reason")
                 _connectionState.value = ConnectionState.DISCONNECTED
                 currentLiveSessionId = null
-                isAIResponding = false  // ✅ Reset anti-interruzione
+                isAIResponding = false
             }
 
             override fun onError(ex: Exception?) {
@@ -152,7 +153,7 @@ class GeminiLiveWebSocketClient @Inject constructor(
     }
 
     private fun sendInitialSetupMessage() {
-        Log.d(TAG, "📤 Sending ANTI-INTERRUPT setup")
+        Log.d(TAG, "📤 Sending setup with full-duplex AEC-aware VAD")
 
         val setup = JSONObject().apply {
             put("model", MODEL)
@@ -180,11 +181,12 @@ class GeminiLiveWebSocketClient @Inject constructor(
             val realtimeInputConfig = JSONObject().apply {
                 val aad = JSONObject().apply {
                     put("disabled", false)
-                    put("prefixPaddingMs", 500)           // Più padding
-                    put("silenceDurationMs", 1500)        // 🔑 1.5s silenzio vero
-                    put("startOfSpeechSensitivity", 75)   // 🔑 Ignora eco speaker
-                    put("endOfSpeechSensitivity", 80)     // 🔑 Non si ferma facile
+                    put("prefixPaddingMs", 300)        // Ridotto, basta 300ms
+                    put("silenceDurationMs", 800)      // ✅ 0.8s = cattura pause naturali
+                    put("startOfSpeechSensitivity", 85) // ✅ Alto = ignora eco/respiro
+                    put("endOfSpeechSensitivity", 75)   // ✅ Basso = si ferma solo su silenzio vero
                 }
+
                 put("automaticActivityDetection", aad)
                 // ✅ CAMBIO 2: AI finisce PRIMA di interrompere
                 put("activityHandling", "START_OF_ACTIVITY_INTERRUPTS")
@@ -286,7 +288,7 @@ class GeminiLiveWebSocketClient @Inject constructor(
 
         val setupMessage = JSONObject().put("setup", setup)
         webSocket?.send(setupMessage.toString())
-        Log.d(TAG, "📤 Setup sent - ANTI-INTERRUPT VAD 75/80 + 1500ms")
+        Log.d(TAG, "📤 Setup sent - full-duplex AEC + server VAD MEDIUM sensitivity")
     }
 
     private fun buildSystemInstruction(): String {
@@ -429,11 +431,13 @@ class GeminiLiveWebSocketClient @Inject constructor(
             Log.e(TAG, "❌ WebSocket is NULL!")
             return
         }
-        // ✅ CAMBIO 3: Blocca audio quando AI risponde
-        if (isAIResponding) {
-            Log.v(TAG, "⏸️ Audio blocked - AI is responding")
-            return
-        }
+
+        // FULL-DUPLEX: Always send audio to the server, even during AI response.
+        // Hardware AEC (VOICE_COMMUNICATION + USAGE_ASSISTANT + shared sessionId)
+        // cleans echo from mic input. Server receives clean user voice and can
+        // detect barge-in via its own VAD → sends "interrupted" message.
+        // Previously audio was blocked here (isAIResponding check), which
+        // completely prevented server-side barge-in detection.
 
         try {
             val audioBlob = JSONObject().apply {
@@ -457,7 +461,7 @@ class GeminiLiveWebSocketClient @Inject constructor(
             Log.d(TAG, "📨 Message keys: ${messageData.keys().asSequence().joinToString()}")
 
             if (messageData.has("setupComplete")) {
-                Log.d(TAG, "✅ Setup complete - ANTI-INTERRUPT VAD active")
+                Log.d(TAG, "✅ Setup complete - full-duplex VAD active")
                 onTurnCompleted?.invoke()
             }
 
@@ -478,19 +482,19 @@ class GeminiLiveWebSocketClient @Inject constructor(
             if (messageData.has("serverContent")) {
                 val serverContent = messageData.getJSONObject("serverContent")
 
-                // ✅ CAMBIO 4: Gestione interrupted PRIORITARIA
+                // Handle interrupted FIRST (priority over turnComplete)
                 val interrupted = serverContent.optBoolean("interrupted", false)
                 if (interrupted) {
-                    Log.d(TAG, "⚠️ Response interrupted - unmute microphone")
-                    isAIResponding = false  // 🔑 Riattiva microfono
+                    Log.d(TAG, "⚠️ Server-side barge-in detected! AI response interrupted")
+                    isAIResponding = false
                     onInterrupted?.invoke()
                     return
                 }
 
                 val turnComplete = serverContent.optBoolean("turnComplete", false)
                 if (turnComplete) {
-                    Log.d(TAG, "✅ Turn complete - unmute microphone")
-                    isAIResponding = false  // 🔑 Riattiva microfono
+                    Log.d(TAG, "✅ Turn complete")
+                    isAIResponding = false
                     onTurnCompleted?.invoke()
                     return
                 }
@@ -511,20 +515,19 @@ class GeminiLiveWebSocketClient @Inject constructor(
                                 saveMessageToChat(text, false)
                             }
 
-                            // ✅ CAMBIO 5: MUTE quando riceve audio AI
                             if (part.has("inlineData")) {
                                 val inlineData = part.getJSONObject("inlineData")
                                 val mimeType = inlineData.optString("mimeType", "")
                                 if (mimeType.startsWith("audio/pcm")) {
                                     val audioData = inlineData.getString("data")
 
-                                    // 🔑 STOP MICROFONO IMMEDIATAMENTE quando AI parla
+                                    // Track AI response state (no longer blocks mic)
                                     if (!isAIResponding) {
                                         isAIResponding = true
-                                        Log.d(TAG, "🔇 AI audio detected - blocking user mic")
+                                        Log.d(TAG, "🔊 AI audio started (mic stays active for barge-in)")
                                     }
 
-                                    Log.d(TAG, "🔊 Audio received: ${audioData.length} chars ($mimeType)")
+                                    Log.v(TAG, "🔊 Audio received: ${audioData.length} chars ($mimeType)")
                                     onAudioReceived?.invoke(audioData)
                                 }
                             }
@@ -752,7 +755,7 @@ class GeminiLiveWebSocketClient @Inject constructor(
         webSocket = null
         _connectionState.value = ConnectionState.DISCONNECTED
         currentLiveSessionId = null
-        isAIResponding = false  // 🔑 Reset
+        isAIResponding = false
     }
 
     fun isConnected(): Boolean = _connectionState.value == ConnectionState.CONNECTED

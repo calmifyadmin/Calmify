@@ -233,10 +233,10 @@ class AAAudioEngine @Inject constructor(
         // Buffer size: 4x minimo per sicurezza
         val bufferSize = minBufferSize * 4
 
-        // USAGE_MEDIA with CONTENT_TYPE_SPEECH for speaker output
-        // Note: USAGE_ASSISTANT routes to earpiece on many devices
+        // USAGE_MEDIA for high-quality audio output (full bandwidth, no telephonic DSP).
+        // AEC works via HAL ECHO_REFERENCE (hardware level, usage-independent).
         val audioAttributes = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_ASSISTANT)
+            .setUsage(AudioAttributes.USAGE_MEDIA)
             .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
             .build()
 

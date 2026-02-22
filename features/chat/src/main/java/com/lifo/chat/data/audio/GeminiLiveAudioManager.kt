@@ -9,6 +9,7 @@ import android.util.Base64
 import android.util.Log
 import com.lifo.chat.audio.vad.SileroVadEngine
 import com.lifo.chat.domain.audio.AdaptiveBargeinDetector
+import com.lifo.chat.domain.audio.FullDuplexAudioSession
 import com.lifo.chat.domain.audio.ReferenceSignalBargeInDetector
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
@@ -26,7 +27,8 @@ class GeminiLiveAudioManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val adaptiveBargeinDetector: AdaptiveBargeinDetector,
     private val sileroVadEngine: SileroVadEngine,
-    private val referenceSignalDetector: ReferenceSignalBargeInDetector
+    private val referenceSignalDetector: ReferenceSignalBargeInDetector,
+    private val fullDuplexSession: FullDuplexAudioSession
 ) {
     companion object {
         private const val TAG = "GeminiAudioManager"
@@ -60,11 +62,6 @@ class GeminiLiveAudioManager @Inject constructor(
     // IMPORTANTE: Sincronizzazione thread-safe per AudioTrack
     private val audioTrackLock = Any()
     private var audioTrack: AudioTrack? = null
-
-    // Shared audio session ID for AEC synchronization
-    // When both AudioRecord and AudioTrack use the same session ID,
-    // Android's AcousticEchoCanceler can work more effectively
-    private var sharedAudioSessionId: Int = AudioManager.AUDIO_SESSION_ID_GENERATE
 
     private var recordingJob: Job? = null
     private var playbackJob: Job? = null
@@ -167,8 +164,17 @@ class GeminiLiveAudioManager @Inject constructor(
             return
         }
 
-        // NUOVO: Configura audio per comunicazione full-duplex
-        configureAudioForCommunication()
+        // Configure audio mode for full-duplex (speaker output, not earpiece)
+        fullDuplexSession.configureAudioMode()
+
+        // Initialize Silero VAD if not already initialized
+        // Required BEFORE any processFrame() calls in the recording loop
+        if (USE_SILERO_VAD && sileroVadEngine.initialize()) {
+            Log.d(TAG, "✅ Silero VAD initialized for full-duplex barge-in")
+        }
+
+        // Initialize adaptive voice learning
+        adaptiveBargeinDetector.startVoiceLearning()
 
         val minBufferSize = AudioRecord.getMinBufferSize(
             INPUT_SAMPLE_RATE,
@@ -184,9 +190,9 @@ class GeminiLiveAudioManager @Inject constructor(
         val bufferSize = minBufferSize * BUFFER_SIZE_MULTIPLIER
 
         try {
-            // Use MIC instead of VOICE_COMMUNICATION to avoid phone call mode
-            // VOICE_COMMUNICATION activates telephony routing (earpiece + AEC)
-            // MIC provides standard microphone input with speaker output
+            // VOICE_COMMUNICATION activates HAL preprocessing pipeline:
+            // AEC (echo cancellation), AGC (gain control), NS (noise suppression)
+            // Combined with MODE_NORMAL → speaker output + AEC (not earpiece)
             val audioRecord = AudioRecord.Builder()
                 .setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)
                 .setAudioFormat(
@@ -206,13 +212,11 @@ class GeminiLiveAudioManager @Inject constructor(
                 return
             }
 
-            // CRITICAL: Save AudioRecord session ID for AEC synchronization
-            // This allows AudioTrack to use the same session for better echo cancellation
-            sharedAudioSessionId = audioRecord.audioSessionId
-            Log.d(TAG, "🔗 Captured AudioRecord session ID: $sharedAudioSessionId for AEC sync")
-
-            // NUOVO: Abilita effetti audio se disponibili
-            enableAudioEffects(audioRecord)
+            // CRITICAL: Register with FullDuplexSession for AEC synchronization
+            // Captures session ID + attaches AEC/NS/AGC effects (stored to prevent GC)
+            // The shared session ID lets AudioTrack's output serve as AEC reference
+            fullDuplexSession.onInputCreated(audioRecord)
+            Log.d(TAG, "🔗 Full-duplex session: id=${fullDuplexSession.getOutputSessionId()}, AEC=${fullDuplexSession.aecEnabled.value}")
 
             audioRecord?.startRecording()
             isRecording = true
@@ -236,22 +240,36 @@ class GeminiLiveAudioManager @Inject constructor(
 
                         when {
                             readSize > 0 -> {
-                                // Barge-in detection strategy:
-                                // - During AI speech: Let SERVER handle barge-in detection!
-                                //   The server receives our mic audio and will send "interrupted" when user speaks.
-                                //   This is the CORRECT approach used by Gemini Live desktop.
-                                // - When AI not speaking: Use local VAD for voice activity feedback only.
+                                // Full-duplex barge-in strategy:
+                                // - During AI speech: LOCAL VAD on AEC-cleaned audio for fast barge-in (~100ms)
+                                //   Server also detects independently and sends "interrupted" (~300-500ms)
+                                // - When AI not speaking: Local VAD for voice activity + profile learning
                                 if (aiCurrentlySpeaking) {
-                                    // SERVER-SIDE BARGE-IN: Don't detect locally, let server handle it
-                                    // The server's VAD doesn't have echo problems because it only
-                                    // receives mic audio, not the AI audio playing locally.
-                                    // We still feed reference signal for potential future local detection
-                                    // but DON'T trigger barge-in locally.
+                                    // FULL-DUPLEX with hardware AEC:
+                                    // VOICE_COMMUNICATION + USAGE_ASSISTANT + shared sessionId
+                                    // → HAL subtracts AI audio from mic in real-time (< 10ms)
+                                    // → We receive AEC-cleaned audio = pure user voice
+                                    //
+                                    // Process cleaned audio through local VAD for fast barge-in
+                                    // (~100ms local vs ~300-500ms server-side)
+                                    if (USE_SILERO_VAD) {
+                                        sileroVadEngine.processFrame(buffer, readSize)
 
-                                    // Just log for debugging (every ~500ms)
-                                    if (System.currentTimeMillis() % 500 < 50) {
-                                        Log.v(TAG, "🎤 Streaming audio to server during AI speech (server handles barge-in)")
+                                        // Check if local VAD detected user speech over AI
+                                        val bargeInEvent = sileroVadEngine.bargeInEvent.value
+                                        if (bargeInEvent != null) {
+                                            Log.d(TAG, "🗣️ LOCAL full-duplex barge-in! " +
+                                                "confidence=${bargeInEvent.confidence}, " +
+                                                "duration=${bargeInEvent.durationMs}ms")
+                                            // Fire callback (ViewModel will handle fade-out + state reset)
+                                            onBargeInDetected?.invoke()
+                                            // Prevent re-triggering until next AI turn
+                                            sileroVadEngine.disableBargeInMode()
+                                        }
                                     }
+
+                                    // Feed reference signal detector for diagnostics
+                                    referenceSignalDetector.processMicInput(buffer, readSize)
                                 } else {
                                     // When AI not speaking: process VAD for user voice detection
                                     if (USE_SILERO_VAD) {
@@ -369,8 +387,8 @@ class GeminiLiveAudioManager @Inject constructor(
             Log.e(TAG, "Error stopping AudioRecord", e)
         } finally {
             audioRecord = null
-            // Reset shared session ID
-            sharedAudioSessionId = AudioManager.AUDIO_SESSION_ID_GENERATE
+            // Release full-duplex session (releases AEC/NS/AGC effects)
+            fullDuplexSession.release()
         }
 
         synchronized(pcmData) {
@@ -559,10 +577,10 @@ class GeminiLiveAudioManager @Inject constructor(
                     OUTPUT_SAMPLE_RATE * 2 // Almeno 1 secondo di buffer
                 )
 
-                // USAGE_ASSISTANT with CONTENT_TYPE_SPEECH for voice assistant
-                // Con MODE_NORMAL (non MODE_IN_COMMUNICATION) l'audio esce dagli speaker
+                // USAGE_MEDIA for high-quality audio output (full bandwidth, no telephonic DSP).
+                // AEC works via HAL ECHO_REFERENCE (hardware level, usage-independent).
                 val audioAttributes = AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ASSISTANT)
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                     .build()
 
@@ -578,10 +596,12 @@ class GeminiLiveAudioManager @Inject constructor(
                     .setBufferSizeInBytes(bufferSize)
                     .setTransferMode(AudioTrack.MODE_STREAM)
 
-                // Use shared session ID for AEC synchronization with AudioRecord
-                if (sharedAudioSessionId != AudioManager.AUDIO_SESSION_ID_GENERATE) {
-                    trackBuilder.setSessionId(sharedAudioSessionId)
-                    Log.d(TAG, "🔗 AudioTrack using shared session ID: $sharedAudioSessionId for AEC sync")
+                // Link AudioTrack to same session as AudioRecord for AEC reference
+                // HAL uses AudioTrack's output as reference to subtract from mic input
+                val sessionId = fullDuplexSession.getOutputSessionId()
+                if (sessionId != AudioManager.AUDIO_SESSION_ID_GENERATE) {
+                    trackBuilder.setSessionId(sessionId)
+                    Log.d(TAG, "🔗 AudioTrack linked to full-duplex session: $sessionId")
                 }
 
                 audioTrack = trackBuilder.build()
@@ -624,7 +644,7 @@ class GeminiLiveAudioManager @Inject constructor(
 
         // Rilascia AudioTrack
         releaseAudioTrack()
-        resetAudioConfiguration()
+        fullDuplexSession.resetAudioMode()
     }
 
     // Fade-out parameters for smooth barge-in (matches Gemini Live desktop behavior)
@@ -715,20 +735,7 @@ class GeminiLiveAudioManager @Inject constructor(
         _aiAudioLevel.value = 0f
     }
 
-    // Configurazione audio per assistant voice con output speaker (NON telefonica)
-    // MODE_NORMAL + USAGE_MEDIA = audio dagli speaker principali
-    // AEC/NS sono abilitati separatamente sull'AudioRecord
-    private fun configureAudioForCommunication() {
-        try {
-            // IMPORTANTE: MODE_NORMAL per evitare routing telefonico (earpiece)
-            // MODE_IN_COMMUNICATION forza l'audio verso l'auricolare!
-            audioManager.mode = AudioManager.MODE_NORMAL
-
-            Log.d(TAG, "🔊 Audio configured for speaker output (MODE_NORMAL)")
-        } catch (e: Exception) {
-            Log.w(TAG, "Could not configure audio", e)
-        }
-    }
+    // Audio mode configuration delegated to FullDuplexAudioSession
 
     @Suppress("NewApi")
     private fun configureBluetooth() {
@@ -746,32 +753,8 @@ class GeminiLiveAudioManager @Inject constructor(
         }
     }
 
-    // NUOVO: Abilita effetti audio se disponibili
-    private fun enableAudioEffects(audioRecord: AudioRecord) {
-        try {
-            val sessionId = audioRecord.audioSessionId
-
-            if (AcousticEchoCanceler.isAvailable()) {
-                val aec = AcousticEchoCanceler.create(sessionId)
-                aec?.enabled = true
-                Log.d(TAG, "✅ AEC enabled")
-            }
-
-            if (NoiseSuppressor.isAvailable()) {
-                val ns = NoiseSuppressor.create(sessionId)
-                ns?.enabled = true
-                Log.d(TAG, "✅ Noise suppressor enabled")
-            }
-
-            if (AutomaticGainControl.isAvailable()) {
-                val agc = AutomaticGainControl.create(sessionId)
-                agc?.enabled = true
-                Log.d(TAG, "✅ AGC enabled")
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Could not enable audio effects", e)
-        }
-    }
+    // Audio effects (AEC/NS/AGC) lifecycle managed by FullDuplexAudioSession
+    // Effects are stored as class fields there to prevent garbage collection
 
     // NUOVO: Calcola livello audio per barge-in
     private fun calculatePcmLevel(buffer: ShortArray, length: Int): Float {
@@ -832,15 +815,7 @@ class GeminiLiveAudioManager @Inject constructor(
         return calculateAudioLevel(buffer, buffer.size)
     }
 
-    private fun resetAudioConfiguration() {
-        try {
-            // Ensure we're back to normal mode (should already be, but just in case)
-            audioManager.mode = AudioManager.MODE_NORMAL
-            Log.d(TAG, "🔊 Audio configuration reset to MODE_NORMAL")
-        } catch (e: Exception) {
-            Log.w(TAG, "Could not reset audio", e)
-        }
-    }
+    // Audio mode reset delegated to FullDuplexAudioSession
 
     fun release() {
         Log.i(TAG, "Releasing audio manager...")

@@ -57,7 +57,12 @@
       "WebFetch(domain:docs.cloud.google.com)",
       "WebFetch(domain:vocal.com)",
       "WebFetch(domain:sparkco.ai)",
-      "WebFetch(domain:docs.livekit.io)"
+      "WebFetch(domain:docs.livekit.io)",
+      "WebFetch(domain:discuss.ai.google.dev)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:source.android.com)",
+      "WebFetch(domain:www.100ms.live)",
+      "WebFetch(domain:developers.deepgram.com)"
     ],
     "deny": [],
     "ask": []
