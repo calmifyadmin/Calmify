@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,8 +49,10 @@ import com.lifo.chat.navigation.liveRoute
 import com.lifo.chat.navigation.navigateToChat
 import com.lifo.history.navigation.historyRoute
 import com.lifo.home.navigation.homeRoute
+import com.lifo.humanoid.api.ArHumanoidAvatarView
 import com.lifo.humanoid.api.HumanoidAvatarView
 import com.lifo.humanoid.api.asHumanoidController
+import com.lifo.humanoid.domain.ar.ArSessionManager
 import com.lifo.humanoid.presentation.navigation.humanoidRoute
 import com.lifo.settings.navigation.settingsRoute
 import com.lifo.insight.InsightScreen
@@ -793,12 +796,22 @@ private fun CalmifyNavHost(
 
             val context = LocalContext.current
 
-            // Setup avatar integration for lip-sync
-            val humanoidController = remember(humanoidViewModel) {
-                val lipSyncController = EntryPointAccessors.fromApplication(
+            // Access Hilt entry point for cross-module dependencies
+            val avatarEntryPoint = remember {
+                EntryPointAccessors.fromApplication(
                     context.applicationContext,
                     com.lifo.app.integration.avatar.AvatarIntegrationEntryPoint::class.java
-                ).lipSyncController()
+                )
+            }
+
+            // AR availability check (SceneView manages its own ARCore session internally)
+            val arSessionManager = remember { avatarEntryPoint.arSessionManager() }
+            val isArAvailable by arSessionManager.isArAvailable.collectAsState()
+            var isArMode by rememberSaveable { mutableStateOf(false) }
+
+            // Setup avatar integration for lip-sync
+            val humanoidController = remember(humanoidViewModel) {
+                val lipSyncController = avatarEntryPoint.lipSyncController()
                 humanoidViewModel.asHumanoidController(lipSyncController)
             }
 
@@ -814,9 +827,36 @@ private fun CalmifyNavHost(
                 liveChatViewModel.attachGestureCallback(gestureCallback)
             }
 
+            // Camera permission launcher for AR mode
+            val activity = context as? android.app.Activity
+            var arPermissionGranted by remember { mutableStateOf(
+                activity != null && androidx.core.content.ContextCompat.checkSelfPermission(
+                    activity, android.Manifest.permission.CAMERA
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            ) }
+            val arCameraPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+            ) { granted ->
+                arPermissionGranted = granted
+                if (!granted) {
+                    isArMode = false // Revert if denied
+                }
+            }
+
+            // Request camera permission when entering AR mode
+            // (SceneView manages its own ARCore session internally)
+            LaunchedEffect(isArMode, arPermissionGranted) {
+                if (isArMode && !arPermissionGranted) {
+                    arCameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+                }
+            }
+
             com.lifo.chat.presentation.screen.LiveScreen(
                 onClose = {
                     liveChatViewModel.detachHumanoidController()
+                    if (isArMode) {
+                        isArMode = false
+                    }
                     if (navController.currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
                         navController.popBackStack()
                     }
@@ -828,6 +868,18 @@ private fun CalmifyNavHost(
                         viewModel = humanoidViewModel,
                         blurAmount = 0f
                     )
+                },
+                arContent = if (isArAvailable) {
+                    {
+                        ArHumanoidAvatarView(
+                            modifier = Modifier.fillMaxSize(),
+                            viewModel = humanoidViewModel
+                        )
+                    }
+                } else null,
+                isArMode = isArMode,
+                onToggleArMode = {
+                    isArMode = !isArMode
                 },
                 viewModel = liveChatViewModel
             )

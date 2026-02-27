@@ -64,6 +64,12 @@ fun HumanoidAvatarView(
             },
             onModelLoaded = { renderer, asset, nodeNames ->
                 viewModel.onModelLoaded(renderer, asset, nodeNames)
+            },
+            onBeforeCleanup = {
+                // CRITICAL: Stop animation player BEFORE Filament engine is destroyed.
+                // Without this, the VrmaAnimationPlayer idle loop coroutine would call
+                // updateBoneMatrices() on freed native memory → SIGSEGV.
+                viewModel.stopAllControllersBeforeCleanup()
             }
         )
     }

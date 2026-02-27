@@ -186,6 +186,11 @@ class HumanoidControllerImpl(
                     totalDurationMs = event.totalDurationMs
                 )
                 lipSyncController.updateAudioIntensity(event.audioLevel)
+
+                // FFT-derived viseme weights for proper lip-sync
+                if (event.visemeWeights.isNotEmpty()) {
+                    lipSyncController.updateVisemeWeights(event.visemeWeights)
+                }
             }
 
             is SpeechPlaybackEvent.Finishing -> {

@@ -56,7 +56,8 @@ sealed class SpeechPlaybackEvent {
         val messageId: String,
         val progressMs: Long,
         val totalDurationMs: Long,
-        val audioLevel: Float = 0f
+        val audioLevel: Float = 0f,
+        val visemeWeights: Map<String, Float> = emptyMap()
     ) : SpeechPlaybackEvent()
 
     /**

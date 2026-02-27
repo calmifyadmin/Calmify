@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "com.lifo.humanoid"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 26 // Filament requires API 26+
@@ -54,6 +54,9 @@ dependencies {
     implementation(libs.filament.utils)
     implementation(libs.gltfio.android)
     implementation(libs.filamat.android)
+
+    // AR SceneView - High-level AR (Compose + Filament + ARCore)
+    implementation(libs.arsceneview)
 
     // Compose UI
     implementation(platform(libs.compose.bom))

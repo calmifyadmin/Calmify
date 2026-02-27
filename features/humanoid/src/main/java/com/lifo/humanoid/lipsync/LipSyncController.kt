@@ -61,6 +61,7 @@ class LipSyncController(
     private val syncState = AtomicReference(SyncState())
     private var syncJob: Job? = null
     private var audioIntensityMultiplier = 1.0f
+    private val externalVisemeWeights = AtomicReference<Map<String, Float>>(emptyMap())
 
     /**
      * Lip-sync configuration
@@ -231,6 +232,16 @@ class LipSyncController(
     }
 
     /**
+     * Update viseme weights from external FFT-based audio analysis.
+     * When non-empty, these weights drive the lip-sync instead of amplitude-only mode.
+     *
+     * @param weights Map of VRM viseme blend shape names ("a","e","i","o","u") to weights (0.0-1.0)
+     */
+    fun updateVisemeWeights(weights: Map<String, Float>) {
+        externalVisemeWeights.set(weights)
+    }
+
+    /**
      * Stop synchronized lip-sync immediately.
      * Call this when audio is interrupted or stopped.
      */
@@ -241,6 +252,7 @@ class LipSyncController(
         _isSpeaking.value = false
         _progress.value = 0f
         audioIntensityMultiplier = 1.0f
+        externalVisemeWeights.set(emptyMap())
 
         // Clear lip-sync blend shapes with quick fade
         blendShapeController.clearCategory(VrmBlendShapeController.CATEGORY_LIPSYNC)
@@ -250,44 +262,67 @@ class LipSyncController(
 
     /**
      * Play audio-reactive lip-sync loop.
-     * Maps real-time audio amplitude directly to mouth blend shapes.
+     * Uses FFT-derived viseme weights when available, falls back to amplitude-only.
      * Used when text is not available (streaming audio mode).
      */
     private suspend fun playAudioReactiveLoop(startTime: Long) {
-        Log.d(TAG, "🎤 Audio-reactive loop started")
+        Log.d(TAG, "🎤 Audio-reactive loop started (FFT-enhanced)")
 
-        // Define mouth blend shapes for audio-reactive mode
-        // We'll cycle through AA (open mouth) based on audio intensity
-        val baseViseme = Viseme.AA // Open mouth for speaking
-
-        var lastIntensity = 0f
-        val smoothingFactor = 0.3f // Smooth transitions between intensity levels
+        var lastWeights = mapOf<String, Float>()
+        val coarticulationFactor = 0.2f // 20% blend from previous frame
 
         while (syncState.get().isPlaying) {
-            // Get current audio intensity (updated externally via updateAudioIntensity)
-            val targetIntensity = audioIntensityMultiplier.coerceIn(0f, 1.5f)
+            val fftWeights = externalVisemeWeights.get()
+            val intensityMultiplier = audioIntensityMultiplier.coerceIn(0f, 1.5f)
 
-            // Smooth the intensity change for natural movement
-            lastIntensity = lastIntensity + (targetIntensity - lastIntensity) * smoothingFactor
+            if (fftWeights.isNotEmpty() && intensityMultiplier > 0.08f) {
+                // FFT-DRIVEN MODE: Use spectrally-derived viseme weights
+                val volumeModulation = intensityMultiplier * config.intensity
+                val modulatedWeights = mutableMapOf<String, Float>()
 
-            // Map intensity to viseme blend shapes
-            val effectiveIntensity = lastIntensity * config.intensity
+                fftWeights.forEach { (name, weight) ->
+                    val prevWeight = lastWeights[name] ?: 0f
+                    // Coarticulation: blend with previous frame for natural transitions
+                    val blended = weight * (1f - coarticulationFactor) + prevWeight * coarticulationFactor
+                    // Volume envelope modulation
+                    modulatedWeights[name] = (blended * volumeModulation).coerceIn(0f, 1f)
+                }
 
-            if (effectiveIntensity > 0.1f) {
-                // Apply mouth opening based on audio level
+                blendShapeController.setCategoryWeights(
+                    VrmBlendShapeController.CATEGORY_LIPSYNC,
+                    modulatedWeights
+                )
+
+                // Track dominant viseme for state reporting
+                val dominant = modulatedWeights.maxByOrNull { it.value }
+                _currentViseme.value = when (dominant?.key) {
+                    "a" -> Viseme.AA
+                    "e" -> Viseme.E
+                    "i" -> Viseme.I
+                    "o" -> Viseme.O
+                    "u" -> Viseme.U
+                    else -> Viseme.SILENCE
+                }
+
+                lastWeights = modulatedWeights
+
+            } else if (intensityMultiplier > 0.1f) {
+                // FALLBACK: No FFT data, use amplitude-only (legacy behavior)
+                val effectiveIntensity = intensityMultiplier * config.intensity
                 val blendShapes = getAudioReactiveBlendShapes(effectiveIntensity)
                 blendShapeController.setCategoryWeights(
                     VrmBlendShapeController.CATEGORY_LIPSYNC,
                     blendShapes
                 )
-                _currentViseme.value = baseViseme
+                _currentViseme.value = Viseme.AA
             } else {
                 // Low audio - nearly closed mouth
                 blendShapeController.setCategoryWeights(
                     VrmBlendShapeController.CATEGORY_LIPSYNC,
-                    mapOf("A" to 0.05f) // Minimal mouth opening
+                    mapOf("a" to 0.05f)
                 )
                 _currentViseme.value = Viseme.SILENCE
+                lastWeights = emptyMap()
             }
 
             // Update at ~60fps for smooth animation
@@ -304,28 +339,25 @@ class LipSyncController(
      * Creates natural-looking mouth movements by combining multiple visemes.
      */
     private fun getAudioReactiveBlendShapes(intensity: Float): Map<String, Float> {
-        // For natural speech, we blend between different mouth shapes based on intensity
-        // Low intensity: slight mouth opening (like "eh")
-        // Medium intensity: open mouth (like "ah")
-        // High intensity: wide open (like "AA")
-
+        // Fallback amplitude-only mode: blend different mouth shapes based on intensity
+        // Uses lowercase keys matching VRM standard preset names
         return when {
             intensity < 0.3f -> mapOf(
-                "A" to intensity * 0.5f,           // Slight opening
-                "I" to intensity * 0.2f            // Slight smile
+                "a" to intensity * 0.5f,
+                "i" to intensity * 0.2f
             )
             intensity < 0.6f -> mapOf(
-                "A" to intensity * 0.7f,           // Medium opening
-                "O" to intensity * 0.2f,           // Slight rounding
-                "I" to 0.1f                        // Natural expression
+                "a" to intensity * 0.7f,
+                "o" to intensity * 0.2f,
+                "i" to 0.1f
             )
             intensity < 0.9f -> mapOf(
-                "A" to intensity * 0.85f,          // Wide opening
-                "O" to intensity * 0.15f           // Some rounding
+                "a" to intensity * 0.85f,
+                "o" to intensity * 0.15f
             )
             else -> mapOf(
-                "A" to 1.0f,                       // Full open
-                "O" to 0.2f                        // Rounding for expressiveness
+                "a" to 1.0f,
+                "o" to 0.2f
             )
         }
     }

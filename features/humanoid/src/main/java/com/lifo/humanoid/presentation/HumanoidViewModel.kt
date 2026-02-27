@@ -18,6 +18,7 @@ import com.lifo.humanoid.data.vrm.VrmLoader
 import com.lifo.humanoid.domain.model.AvatarState
 import com.lifo.humanoid.domain.model.Emotion
 import com.lifo.humanoid.lipsync.LipSyncController
+// ArFilamentRenderer replaced by SceneView — see onSceneViewArModelLoaded()
 import com.lifo.humanoid.rendering.FilamentRenderer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -241,6 +242,14 @@ class HumanoidViewModel @Inject constructor(
         boneMapper.initialize(engine, asset, nodeNames)
         Log.d(TAG, "BoneMapper initialized with ${boneMapper.getBoneEntityMap().size} bones")
 
+        // Pass eye bone entities to renderer for LookAt (backup path)
+        val leftEyeEntity = boneMapper.getBoneEntity(VrmHumanoidBoneMapper.HumanoidBone.LEFT_EYE)
+        val rightEyeEntity = boneMapper.getBoneEntity(VrmHumanoidBoneMapper.HumanoidBone.RIGHT_EYE)
+        if (leftEyeEntity != null || rightEyeEntity != null) {
+            renderer.setEyeBoneEntities(leftEyeEntity ?: 0, rightEyeEntity ?: 0)
+            Log.d(TAG, "Eye bones from boneMapper: L=$leftEyeEntity R=$rightEyeEntity")
+        }
+
         // Initialize animation player
         vrmaAnimationPlayer = vrmaAnimationPlayerFactory.initializeWithAsset(engine, asset, nodeNames)
         Log.d(TAG, "VrmaAnimationPlayer initialized")
@@ -249,6 +258,29 @@ class HumanoidViewModel @Inject constructor(
         Log.d(TAG, "Animation system is ready")
 
         // Pre-load idle animation for immediate use
+        viewModelScope.launch {
+            preloadCommonAnimations()
+        }
+    }
+
+    /**
+     * Called when the VRM model is loaded in AR mode (SceneView).
+     * Takes Engine directly (SceneView provides its own Engine).
+     * Eye bone setup is handled by the composable, not the ViewModel.
+     */
+    fun onSceneViewArModelLoaded(
+        engine: com.google.android.filament.Engine,
+        asset: FilamentAsset,
+        nodeNames: List<String>
+    ) {
+        Log.d(TAG, "onSceneViewArModelLoaded called - initializing AR animation system")
+
+        boneMapper.initialize(engine, asset, nodeNames)
+        Log.d(TAG, "BoneMapper initialized (AR/SceneView) with ${boneMapper.getBoneEntityMap().size} bones")
+
+        vrmaAnimationPlayer = vrmaAnimationPlayerFactory.initializeWithAsset(engine, asset, nodeNames)
+        _isAnimationSystemReady.value = true
+
         viewModelScope.launch {
             preloadCommonAnimations()
         }
@@ -552,6 +584,9 @@ class HumanoidViewModel @Inject constructor(
         idleRotationController?.stop()
         // Mark animation player as destroyed to prevent accessing Filament assets
         vrmaAnimationPlayer?.stop(blendOut = false, destroy = true)
+        // Null out the reference so any late viewModelScope.launch callbacks
+        // (e.g., from IdleRotationController's onPlayAnimation) see null and skip.
+        vrmaAnimationPlayer = null
         _isAnimationSystemReady.value = false
         Log.d(TAG, "All controllers stopped and marked as destroyed")
     }

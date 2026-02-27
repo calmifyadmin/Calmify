@@ -27,12 +27,22 @@ class VrmaAnimationPlayerFactory @Inject constructor(
     /**
      * Create or get the animation player for the given engine.
      * If the engine has changed, a new player will be created.
+     * CRITICAL: The old player is destroyed before creating a new one to prevent
+     * leaked idle-loop coroutines from accessing a destroyed Filament engine.
      *
      * @param engine The Filament Engine instance
      * @return VrmaAnimationPlayer instance
      */
     fun getOrCreate(engine: Engine): VrmaAnimationPlayer {
         if (currentEngine !== engine || currentPlayer == null) {
+            // CRITICAL: Destroy the old player BEFORE creating a new one.
+            // Without this, the old player's idle-loop coroutine (running on viewModelScope)
+            // keeps executing applyBlendedAnimation() with a reference to the destroyed engine,
+            // causing SIGSEGV in TransformManager.getInstance() or Animator.updateBoneMatrices().
+            currentPlayer?.let { oldPlayer ->
+                Log.d(TAG, "Destroying previous player before creating new one")
+                oldPlayer.stop(blendOut = false, destroy = true)
+            }
             Log.d(TAG, "Creating new VrmaAnimationPlayer for engine")
             currentPlayer = VrmaAnimationPlayer(engine, boneMapper)
             currentEngine = engine
@@ -68,7 +78,7 @@ class VrmaAnimationPlayerFactory @Inject constructor(
      * Clear the current player (call on cleanup).
      */
     fun clear() {
-        currentPlayer?.stop(blendOut = false)
+        currentPlayer?.stop(blendOut = false, destroy = true)
         currentPlayer = null
         currentEngine = null
         Log.d(TAG, "VrmaAnimationPlayer cleared")

@@ -11,6 +11,7 @@ import com.lifo.chat.audio.vad.SileroVadEngine
 import com.lifo.chat.domain.audio.AdaptiveBargeinDetector
 import com.lifo.chat.domain.audio.FullDuplexAudioSession
 import com.lifo.chat.domain.audio.ReferenceSignalBargeInDetector
+import com.lifo.util.audio.AudioVisemeAnalyzer
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -83,6 +84,11 @@ class GeminiLiveAudioManager @Inject constructor(
     private val _aiAudioLevel = MutableStateFlow(0f)
     val aiAudioLevel: StateFlow<Float> = _aiAudioLevel
 
+    // FFT-based viseme analysis for lip-sync
+    private val visemeAnalyzer = AudioVisemeAnalyzer(defaultSampleRate = OUTPUT_SAMPLE_RATE)
+    private val _aiVisemeWeights = MutableStateFlow<Map<String, Float>>(emptyMap())
+    val aiVisemeWeights: StateFlow<Map<String, Float>> = _aiVisemeWeights
+
     // SMOOTHING: Audio level smoothing for fluid transitions
     private var userLevelSmoothing = 0f
     private var aiLevelSmoothing = 0f
@@ -138,6 +144,35 @@ class GeminiLiveAudioManager @Inject constructor(
                 pcmData.clear()
                 Log.d(TAG, "🧹 Cleared $clearedSamples stale audio samples - ready for fresh input")
             }
+        }
+    }
+
+    /**
+     * Mute reale: svuota buffer audio accumulato e resetta VAD.
+     * Quando mutato, l'audio viene comunque registrato (per AEC) ma NON inviato al server.
+     */
+    fun setMuted(muted: Boolean) {
+        if (muted) {
+            // Svuota buffer pcmData per evitare invio audio stantio all'unmute
+            synchronized(pcmData) {
+                val clearedSamples = pcmData.size
+                pcmData.clear()
+                Log.d(TAG, "🔇 MUTED: cleared $clearedSamples buffered samples")
+            }
+            // Reset VAD state (non serve tracciare speech durante mute)
+            if (USE_SILERO_VAD) {
+                sileroVadEngine.reset()
+            }
+        } else {
+            // Unmute: svuota buffer per partire freschi
+            synchronized(pcmData) {
+                pcmData.clear()
+            }
+            // Re-inizializza VAD per ripresa pulita
+            if (USE_SILERO_VAD) {
+                sileroVadEngine.initialize()
+            }
+            Log.d(TAG, "🎤 UNMUTED: VAD re-initialized, ready for fresh audio")
         }
     }
 
@@ -448,6 +483,10 @@ class GeminiLiveAudioManager @Inject constructor(
                     aiLevelSmoothing = aiLevelSmoothing * (1f - smoothingFactor) + rawAiLevel * smoothingFactor
                     _aiAudioLevel.value = aiLevelSmoothing
 
+                    // FFT viseme analysis for lip-sync
+                    val visemeWeights = visemeAnalyzer.analyze(chunk, OUTPUT_SAMPLE_RATE)
+                    _aiVisemeWeights.value = visemeWeights
+
                 } catch (e: Exception) {
                     Log.e(TAG, "Error playing audio chunk", e)
                 }
@@ -465,6 +504,8 @@ class GeminiLiveAudioManager @Inject constructor(
                 }
                 aiLevelSmoothing = 0f
                 _aiAudioLevel.value = 0f
+                visemeAnalyzer.reset()
+                _aiVisemeWeights.value = emptyMap()
             }
         }
     }
@@ -700,9 +741,11 @@ class GeminiLiveAudioManager @Inject constructor(
                 isPlaying.set(false)
                 _playbackState.value = false
 
-                // Reset AI audio level
+                // Reset AI audio level and visemes
                 aiLevelSmoothing = 0f
                 _aiAudioLevel.value = 0f
+                visemeAnalyzer.reset()
+                _aiVisemeWeights.value = emptyMap()
 
                 Log.d(TAG, "✅ Fade-out complete - ready for user speech")
 
@@ -733,6 +776,8 @@ class GeminiLiveAudioManager @Inject constructor(
 
         aiLevelSmoothing = 0f
         _aiAudioLevel.value = 0f
+        visemeAnalyzer.reset()
+        _aiVisemeWeights.value = emptyMap()
     }
 
     // Audio mode configuration delegated to FullDuplexAudioSession

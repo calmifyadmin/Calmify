@@ -258,6 +258,10 @@ class VrmHumanoidBoneMapper {
             lowerName.contains("neck") -> HumanoidBone.NECK
             lowerName.contains("head") && !lowerName.contains("eye") -> HumanoidBone.HEAD
 
+            // Eyes (VRoid: J_Adj_L_FaceEye / J_Adj_R_FaceEye)
+            (lowerName.contains("left") || lowerName.contains("_l_")) && lowerName.contains("eye") && !lowerName.contains("brow") && !lowerName.contains("lid") -> HumanoidBone.LEFT_EYE
+            (lowerName.contains("right") || lowerName.contains("_r_")) && lowerName.contains("eye") && !lowerName.contains("brow") && !lowerName.contains("lid") -> HumanoidBone.RIGHT_EYE
+
             // Left arm
             (lowerName.contains("left") || lowerName.contains("_l_")) && lowerName.contains("shoulder") -> HumanoidBone.LEFT_SHOULDER
             (lowerName.contains("left") || lowerName.contains("_l_")) && lowerName.contains("upperarm") -> HumanoidBone.LEFT_UPPER_ARM

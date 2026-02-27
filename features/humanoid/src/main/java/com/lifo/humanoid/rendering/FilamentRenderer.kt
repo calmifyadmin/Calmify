@@ -22,11 +22,13 @@ import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.sin
 
 /**
  * Load Filament native libraries
  */
-private object FilamentNativeLoader {
+internal object FilamentNativeLoader {
     init {
         try {
             System.loadLibrary("filament-jni")
@@ -150,6 +152,28 @@ class FilamentRenderer(
 
     // Lighting components
     private var sunEntity: Int = 0
+
+    // Camera manipulator for interactive orbit/pan/zoom
+    private var manipulator: Manipulator? = null
+
+    // LookAt — avatar eyes follow camera (Amica-style smoothing + saccades)
+    private val lookAtController = com.lifo.humanoid.animation.LookAtController()
+    private val cameraEyeBuffer = FloatArray(3)
+    private val cameraTargetBuffer = FloatArray(3)
+    private val cameraUpBuffer = FloatArray(3)
+    private var lastFrameTimeNanos = 0L
+
+    // Eye bone entities for bone-based lookAt
+    private var leftEyeEntity: Int = 0
+    private var rightEyeEntity: Int = 0
+    private var hasLookAtBlendShapes = false
+    private var lookAtDiagLogged = false
+    // Original (rest-pose) eye bone transforms — prevents rotation accumulation
+    private var originalLeftEyeTransform: FloatArray? = null
+    private var originalRightEyeTransform: FloatArray? = null
+    // Reusable buffers for bone rotation math
+    private val boneTransformBuffer = FloatArray(16)
+    private val boneResultBuffer = FloatArray(16)
 
     // ==================== Resize State Management ====================
 
@@ -308,28 +332,28 @@ class FilamentRenderer(
     private fun setupCamera() {
         val cam = camera ?: return
 
-        // ═══════════════════════════════════════════════════════════════════
-        // FIXED CAMERA - Does NOT follow the avatar
-        // The camera looks at a fixed point in world space.
-        // The avatar moves freely during animations, creating natural movement.
-        // ═══════════════════════════════════════════════════════════════════
-
         // Camera position: positioned to see full body
-        val eye = floatArrayOf(0.0f, 0.85f, -2.8f)
-
-        // Look at a FIXED point in world space (not the avatar's center)
-        // This is an absolute position that never changes
-        val center = floatArrayOf(0.0f, 0.75f, 0.0f)
-
-        val up = floatArrayOf(0.0f, 1.0f, 0.0f)
+        val eyeX = 0.0f; val eyeY = 0.85f; val eyeZ = -2.4f
+        val targetX = 0.0f; val targetY = 0.75f; val targetZ = 0.0f
 
         cam.lookAt(
-            eye[0].toDouble(), eye[1].toDouble(), eye[2].toDouble(),
-            center[0].toDouble(), center[1].toDouble(), center[2].toDouble(),
-            up[0].toDouble(), up[1].toDouble(), up[2].toDouble()
+            eyeX.toDouble(), eyeY.toDouble(), eyeZ.toDouble(),
+            targetX.toDouble(), targetY.toDouble(), targetZ.toDouble(),
+            0.0, 1.0, 0.0
         )
 
-        Log.d(tag, "Fixed camera positioned: eye=(${eye[0]}, ${eye[1]}, ${eye[2]}), lookAt=(${center[0]}, ${center[1]}, ${center[2]})")
+        // Initialize Manipulator for interactive orbit/pan/zoom
+        val w = textureView.width.coerceAtLeast(1)
+        val h = textureView.height.coerceAtLeast(1)
+        manipulator = Manipulator.Builder()
+            .targetPosition(targetX, targetY, targetZ)
+            .orbitHomePosition(eyeX, eyeY, eyeZ)
+            .viewport(w, h)
+            .zoomSpeed(0.01f)
+            .orbitSpeed(0.005f, 0.005f)
+            .build(Manipulator.Mode.ORBIT)
+
+        Log.d(tag, "Camera + Manipulator initialized: eye=($eyeX, $eyeY, $eyeZ), target=($targetX, $targetY, $targetZ)")
     }
 
     private fun configureCameraProjection(width: Int, height: Int) {
@@ -409,6 +433,255 @@ class FilamentRenderer(
         Log.d(tag, "Transparency configured: blendMode=TRANSLUCENT, skybox=null, clear=true")
     }
 
+    // ==================== Touch / Camera Manipulator ====================
+
+    fun grabBegin(x: Int, y: Int, strafe: Boolean) {
+        manipulator?.grabBegin(x, y, strafe)
+    }
+
+    fun grabUpdate(x: Int, y: Int) {
+        manipulator?.grabUpdate(x, y)
+    }
+
+    fun grabEnd() {
+        manipulator?.grabEnd()
+    }
+
+    fun scroll(x: Int, y: Int, scrollDelta: Float) {
+        manipulator?.scroll(x, y, scrollDelta)
+    }
+
+    /** Enable/disable the LookAt system (avatar eyes follow camera). Enabled by default. */
+    fun setLookAtEnabled(enabled: Boolean) {
+        lookAtController.enabled = enabled
+    }
+
+    /**
+     * Override eye bone entities (e.g., from VrmHumanoidBoneMapper after initialization).
+     * Also stores original transforms for rotation accumulation prevention.
+     */
+    fun setEyeBoneEntities(leftEye: Int, rightEye: Int) {
+        if (leftEye != 0) leftEyeEntity = leftEye
+        if (rightEye != 0) rightEyeEntity = rightEye
+        storeOriginalEyeTransforms()
+        Log.d(tag, "setEyeBoneEntities: L=$leftEyeEntity R=$rightEyeEntity " +
+                "(origTransforms: L=${originalLeftEyeTransform != null} R=${originalRightEyeTransform != null})")
+    }
+
+    /** Apply manipulator state to the Filament camera. Called each frame. */
+    private fun updateCameraFromManipulator() {
+        val manip = manipulator ?: return
+        val cam = camera ?: return
+        manip.getLookAt(cameraEyeBuffer, cameraTargetBuffer, cameraUpBuffer)
+        cam.lookAt(
+            cameraEyeBuffer[0].toDouble(), cameraEyeBuffer[1].toDouble(), cameraEyeBuffer[2].toDouble(),
+            cameraTargetBuffer[0].toDouble(), cameraTargetBuffer[1].toDouble(), cameraTargetBuffer[2].toDouble(),
+            cameraUpBuffer[0].toDouble(), cameraUpBuffer[1].toDouble(), cameraUpBuffer[2].toDouble()
+        )
+    }
+
+    /**
+     * Find eye bone entities using multiple strategies:
+     * 1. VRM humanoid data — exact node names resolved from glTF nodes array (definitive)
+     * 2. Name pattern matching — fallback for common VRoid/UniVRM naming conventions
+     *
+     * IMPORTANT: Filament entity array indices ≠ glTF node indices!
+     * We always search by NAME, never by index.
+     *
+     * Also stores original transforms for rotation accumulation prevention.
+     */
+    private fun findEyeBones(
+        asset: FilamentAsset,
+        vrmLeftEyeNodeName: String? = null,
+        vrmRightEyeNodeName: String? = null
+    ) {
+        leftEyeEntity = 0
+        rightEyeEntity = 0
+        originalLeftEyeTransform = null
+        originalRightEyeTransform = null
+        lookAtDiagLogged = false
+
+        val entities = asset.entities
+
+        // Scan all entities once, matching against VRM names and fallback patterns
+        entities.forEach { entity ->
+            val name = try { asset.getName(entity) } catch (e: Exception) { null } ?: return@forEach
+
+            // Strategy 1: Exact match with VRM humanoid node name (definitive)
+            if (leftEyeEntity == 0 && vrmLeftEyeNodeName != null && name == vrmLeftEyeNodeName) {
+                leftEyeEntity = entity
+                Log.d(tag, "Eye bone (VRM exact): leftEye '$name' → entity=$entity")
+                return@forEach
+            }
+            if (rightEyeEntity == 0 && vrmRightEyeNodeName != null && name == vrmRightEyeNodeName) {
+                rightEyeEntity = entity
+                Log.d(tag, "Eye bone (VRM exact): rightEye '$name' → entity=$entity")
+                return@forEach
+            }
+
+            // Strategy 2: Pattern matching (fallback for missing/incomplete VRM data)
+            val lower = name.lowercase()
+            when {
+                leftEyeEntity == 0 && (
+                    lower == "lefteye" ||
+                    lower.contains("j_adj_l_faceeye") ||  // VRoid Studio
+                    lower.contains("j_bip_l_eye") ||
+                    lower.contains("left_eye") ||
+                    lower.contains("eye_l") ||
+                    lower == "eye.l"
+                ) -> {
+                    leftEyeEntity = entity
+                    Log.d(tag, "Eye bone (pattern): leftEye '$name' → entity=$entity")
+                }
+
+                rightEyeEntity == 0 && (
+                    lower == "righteye" ||
+                    lower.contains("j_adj_r_faceeye") ||  // VRoid Studio
+                    lower.contains("j_bip_r_eye") ||
+                    lower.contains("right_eye") ||
+                    lower.contains("eye_r") ||
+                    lower == "eye.r"
+                ) -> {
+                    rightEyeEntity = entity
+                    Log.d(tag, "Eye bone (pattern): rightEye '$name' → entity=$entity")
+                }
+            }
+        }
+
+        // Store original (rest-pose) transforms — CRITICAL for preventing rotation accumulation
+        storeOriginalEyeTransforms()
+
+        Log.i(tag, "Eye bones result: L=$leftEyeEntity R=$rightEyeEntity, " +
+                "origTransform: L=${originalLeftEyeTransform != null} R=${originalRightEyeTransform != null}, " +
+                "vrmNames: L='$vrmLeftEyeNodeName' R='$vrmRightEyeNodeName'")
+    }
+
+    /** Store rest-pose transforms for eye bones. */
+    private fun storeOriginalEyeTransforms() {
+        val tm = engine?.transformManager ?: return
+        if (leftEyeEntity != 0 && originalLeftEyeTransform == null) {
+            val inst = tm.getInstance(leftEyeEntity)
+            if (inst != 0) {
+                val orig = FloatArray(16)
+                tm.getTransform(inst, orig)
+                originalLeftEyeTransform = orig.copyOf()
+            }
+        }
+        if (rightEyeEntity != 0 && originalRightEyeTransform == null) {
+            val inst = tm.getInstance(rightEyeEntity)
+            if (inst != 0) {
+                val orig = FloatArray(16)
+                tm.getTransform(inst, orig)
+                originalRightEyeTransform = orig.copyOf()
+            }
+        }
+    }
+
+    /**
+     * Rotate an eye bone by yaw/pitch (in degrees), starting from the ORIGINAL rest-pose transform.
+     *
+     * CRITICAL: Uses M_original * R_lookAt (not M_current * R_lookAt)
+     * to prevent rotation accumulation frame after frame.
+     *
+     * Column-major layout (Filament convention):
+     * R = Ry(yaw) * Rx(pitch)
+     */
+    private fun rotateEyeBone(entity: Int, yawDeg: Float, pitchDeg: Float, originalTransform: FloatArray?) {
+        if (entity == 0 || originalTransform == null) return
+        val eng = engine ?: return
+        val tm = eng.transformManager
+        val instance = tm.getInstance(entity)
+        if (instance == 0) return
+
+        // Use ORIGINAL rest-pose transform as base (prevents accumulation!)
+        val m = originalTransform
+
+        // Compute lookAt rotation: Ry(yaw) * Rx(pitch)
+        val yawRad = Math.toRadians(-yawDeg.toDouble()).toFloat()
+        val pitchRad = Math.toRadians(pitchDeg.toDouble()).toFloat()
+        val cy = cos(yawRad); val sy = sin(yawRad)
+        val cp = cos(pitchRad); val sp = sin(pitchRad)
+
+        // R = Ry * Rx (column-major):
+        // col0: (cy,      0, -sy)
+        // col1: (sy*sp,  cp,  cy*sp)
+        // col2: (sy*cp, -sp,  cy*cp)
+        val r00 = cy;     val r01 = sy * sp; val r02 = sy * cp
+        val r10 = 0f;     val r11 = cp;      val r12 = -sp
+        val r20 = -sy;    val r21 = cy * sp; val r22 = cy * cp
+
+        // M_new = M_original * R  (right-multiply = local space rotation)
+        val r = boneResultBuffer
+
+        // Column 0
+        r[0]  = m[0] * r00 + m[4] * r10 + m[8]  * r20
+        r[1]  = m[1] * r00 + m[5] * r10 + m[9]  * r20
+        r[2]  = m[2] * r00 + m[6] * r10 + m[10] * r20
+        r[3]  = 0f
+        // Column 1
+        r[4]  = m[0] * r01 + m[4] * r11 + m[8]  * r21
+        r[5]  = m[1] * r01 + m[5] * r11 + m[9]  * r21
+        r[6]  = m[2] * r01 + m[6] * r11 + m[10] * r21
+        r[7]  = 0f
+        // Column 2
+        r[8]  = m[0] * r02 + m[4] * r12 + m[8]  * r22
+        r[9]  = m[1] * r02 + m[5] * r12 + m[9]  * r22
+        r[10] = m[2] * r02 + m[6] * r12 + m[10] * r22
+        r[11] = 0f
+        // Column 3 (translation unchanged from original)
+        r[12] = m[12]
+        r[13] = m[13]
+        r[14] = m[14]
+        r[15] = m[15]
+
+        tm.setTransform(instance, r)
+    }
+
+    /** Compute LookAt and apply via blend shapes AND/OR bone rotation. */
+    private fun applyLookAt(frameTimeNanos: Long) {
+        if (!lookAtController.enabled) return
+
+        // Compute delta time in seconds (frame-rate independent smoothing)
+        val deltaNanos = if (lastFrameTimeNanos > 0) frameTimeNanos - lastFrameTimeNanos else 16_000_000L
+        lastFrameTimeNanos = frameTimeNanos
+        val deltaSeconds = (deltaNanos / 1_000_000_000f).coerceIn(0.001f, 0.1f)
+
+        val weights = lookAtController.update(cameraEyeBuffer, deltaSeconds)
+
+        // One-time diagnostics log (after blend shapes are built)
+        if (!lookAtDiagLogged && blendShapesInitialized.get()) {
+            lookAtDiagLogged = true
+            hasLookAtBlendShapes = blendShapeMapping.containsKey("lookup") ||
+                    blendShapeMapping.containsKey("lookleft") ||
+                    blendShapeMapping.containsKey("look_up") ||
+                    blendShapeMapping.containsKey("look_left")
+            Log.i(tag, "LookAt DIAG: hasBlendShapes=$hasLookAtBlendShapes, " +
+                    "eyeBones=(L=$leftEyeEntity, R=$rightEyeEntity), " +
+                    "origTransforms=(L=${originalLeftEyeTransform != null}, R=${originalRightEyeTransform != null}), " +
+                    "blendShapeKeys=${blendShapeMapping.keys.take(20)}, " +
+                    "cameraEye=(${cameraEyeBuffer[0]}, ${cameraEyeBuffer[1]}, ${cameraEyeBuffer[2]}), " +
+                    "yaw=${lookAtController.lastYawDeg}, pitch=${lookAtController.lastPitchDeg}")
+        }
+
+        // Apply blend shapes (works if model has lookAt morph targets)
+        if (hasLookAtBlendShapes && weights.isNotEmpty()) {
+            updateBlendShapes(weights)
+        }
+
+        // Apply bone rotation (works if model has eye bones — most VRM models)
+        if (leftEyeEntity != 0 || rightEyeEntity != 0) {
+            val yaw = lookAtController.lastYawDeg
+            val pitch = lookAtController.lastPitchDeg
+            rotateEyeBone(leftEyeEntity, yaw, pitch, originalLeftEyeTransform)
+            rotateEyeBone(rightEyeEntity, yaw, pitch, originalRightEyeTransform)
+
+            // Re-compute bone matrices so skinning picks up our eye rotation
+            try {
+                currentAsset?.getInstance()?.animator?.updateBoneMatrices()
+            } catch (_: Exception) { }
+        }
+    }
+
     // ==================== Resize Handling ====================
 
     private fun handleResizeWithDebounce(width: Int, height: Int) {
@@ -453,6 +726,7 @@ class FilamentRenderer(
 
             view?.viewport = Viewport(0, 0, width, height)
             configureCameraProjection(width, height)
+            manipulator?.setViewport(width, height)
 
             currentWidth.set(width)
             currentHeight.set(height)
@@ -488,7 +762,11 @@ class FilamentRenderer(
      */
     fun loadModel(
         buffer: ByteBuffer,
-        vrmBlendShapes: List<com.lifo.humanoid.data.vrm.VrmBlendShape> = emptyList()
+        vrmBlendShapes: List<com.lifo.humanoid.data.vrm.VrmBlendShape> = emptyList(),
+        humanoidBoneNodeIndices: Map<String, Int> = emptyMap(),
+        lookAtTypeName: String = "Bone",
+        leftEyeNodeName: String? = null,
+        rightEyeNodeName: String? = null
     ): FilamentAsset? {
         if (isDestroyed.get() || !isInitialized) {
             Log.d(tag, "loadModel skipped - not safe to use")
@@ -510,6 +788,12 @@ class FilamentRenderer(
             }
 
             blendShapeMapping.clear()
+            hasLookAtBlendShapes = false
+            lookAtDiagLogged = false
+            leftEyeEntity = 0
+            rightEyeEntity = 0
+            originalLeftEyeTransform = null
+            originalRightEyeTransform = null
             buffer.position(0)
 
             val asset = loader.createAsset(buffer)
@@ -540,6 +824,7 @@ class FilamentRenderer(
                 blendShapeMapping.clear()
 
                 centerAndScaleAsset(asset)
+                findEyeBones(asset, leftEyeNodeName, rightEyeNodeName)
 
                 val nodeNames = extractNodeNames(asset)
 
@@ -547,7 +832,7 @@ class FilamentRenderer(
                     modelLoadedListener?.onModelLoaded(asset, nodeNames)
                 }
 
-                Log.d(tag, "Model loaded successfully!")
+                Log.d(tag, "Model loaded successfully! eyeBones: L=$leftEyeEntity R=$rightEyeEntity")
             } else {
                 Log.e(tag, "AssetLoader.createAsset() returned null")
             }
@@ -575,7 +860,7 @@ class FilamentRenderer(
 
         // Offset to lower the avatar so it's better framed by the camera
         // Negative value = avatar appears lower on screen
-        val verticalOffset = -1.25f
+        val verticalOffset = -0.95f
 
         val transform = FloatArray(16)
         transform[0] = scale
@@ -612,6 +897,9 @@ class FilamentRenderer(
             if (_rendererState.value == RendererState.IDLE) {
                 _rendererState.value = RendererState.RENDERING
             }
+
+            updateCameraFromManipulator()
+            applyLookAt(frameTimeNanos)
 
             if (!rend.beginFrame(currentSwapChain, frameTimeNanos)) {
                 return false
@@ -778,6 +1066,8 @@ class FilamentRenderer(
             currentAsset = null
             blendShapeMapping.clear()
             pendingBlendShapes = null
+
+            manipulator = null
 
             val eng = engine
             val rend = renderer

@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.VolumeOff
@@ -30,6 +31,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import android.media.AudioManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -57,6 +60,9 @@ import com.lifo.chat.presentation.viewmodel.LiveChatViewModel
  * @param onClose Callback when user closes the screen
  * @param showAvatar If true, shows avatar content slot instead of visualizer
  * @param avatarContent Optional Composable content for avatar (required if showAvatar=true)
+ * @param arContent Optional Composable content for AR avatar mode
+ * @param isArMode Whether AR mode is currently active
+ * @param onToggleArMode Callback to toggle AR mode on/off
  * @param onAvatarSetup Optional callback for avatar integration setup
  */
 @RequiresApi(Build.VERSION_CODES.O)
@@ -66,6 +72,9 @@ fun LiveScreen(
     modifier: Modifier = Modifier,
     showAvatar: Boolean = false,
     avatarContent: (@Composable () -> Unit)? = null,
+    arContent: (@Composable () -> Unit)? = null,
+    isArMode: Boolean = false,
+    onToggleArMode: (() -> Unit)? = null,
     onAvatarSetup: ((com.lifo.util.speech.SpeechAnimationTarget) -> Unit)? = null,
     viewModel: LiveChatViewModel = hiltViewModel()
 ) {
@@ -120,6 +129,22 @@ fun LiveScreen(
         }
     }
 
+    // MODE_IN_COMMUNICATION forces hardware volume buttons to STREAM_VOICE_CALL.
+    // Our AI audio uses USAGE_MEDIA (STREAM_MUSIC) for quality.
+    // Workaround: max out STREAM_VOICE_CALL so hardware buttons don't reduce AI volume.
+    val ctx = LocalContext.current
+    val audioMgr = remember(ctx) { ctx.getSystemService(android.content.Context.AUDIO_SERVICE) as? AudioManager }
+    DisposableEffect(Unit) {
+        val prevCallVol = audioMgr?.getStreamVolume(AudioManager.STREAM_VOICE_CALL)
+        val maxCallVol = audioMgr?.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL) ?: 0
+        audioMgr?.setStreamVolume(AudioManager.STREAM_VOICE_CALL, maxCallVol, 0)
+        onDispose {
+            if (prevCallVol != null) {
+                audioMgr?.setStreamVolume(AudioManager.STREAM_VOICE_CALL, prevCallVol, 0)
+            }
+        }
+    }
+
     // Disconnect when leaving
     DisposableEffect(Unit) {
         onDispose {
@@ -130,8 +155,11 @@ fun LiveScreen(
     Box(
         modifier = modifier.fillMaxSize()
     ) {
-        // LAYER 1: Background - Either Avatar or Waveform Visualizer
-        if (showAvatar && displayAvatar && avatarContent != null) {
+        // LAYER 1: Background - AR Avatar, Avatar, or Waveform Visualizer
+        if (isArMode && arContent != null) {
+            // AR Avatar Content (camera passthrough + avatar in real world)
+            arContent()
+        } else if (showAvatar && displayAvatar && avatarContent != null) {
             // Avatar Content (provided from outside)
             avatarContent()
         } else {
@@ -170,13 +198,20 @@ fun LiveScreen(
 
 
 
-        // LAYER 3: Top bar with close button, display toggle, and status
+        // LAYER 3: Top bar with close button, display toggle, AR toggle, and status
         LiveTopBar(
             connectionStatus = liveChatState.connectionStatus,
             turnState = liveChatState.turnState,
             isMuted = liveChatState.isMuted,
             showAvatar = showAvatar,
             displayAvatar = displayAvatar,
+            isArMode = isArMode,
+            onToggleArMode = if (arContent != null) {
+                {
+                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onToggleArMode?.invoke()
+                }
+            } else null,
             onToggleDisplayMode = if (showAvatar) {
                 {
                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -404,6 +439,8 @@ private fun LiveTopBar(
     isMuted: Boolean,
     showAvatar: Boolean,
     displayAvatar: Boolean,
+    isArMode: Boolean = false,
+    onToggleArMode: (() -> Unit)? = null,
     onToggleDisplayMode: (() -> Unit)?,
     onClose: () -> Unit,
     modifier: Modifier = Modifier
@@ -427,6 +464,28 @@ private fun LiveTopBar(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // AR toggle button (only if AR is available)
+            if (showAvatar && displayAvatar && onToggleArMode != null) {
+                IconButton(
+                    onClick = onToggleArMode,
+                    colors = IconButtonDefaults.iconButtonColors(
+                        containerColor = if (isArMode)
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
+                        else
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
+                        contentColor = if (isArMode)
+                            MaterialTheme.colorScheme.onPrimary
+                        else
+                            MaterialTheme.colorScheme.onSurface
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.ViewInAr,
+                        contentDescription = if (isArMode) "Disattiva AR" else "Attiva AR"
+                    )
+                }
+            }
+
             // Display mode toggle button (only if avatar mode enabled)
             if (showAvatar && onToggleDisplayMode != null) {
                 IconButton(

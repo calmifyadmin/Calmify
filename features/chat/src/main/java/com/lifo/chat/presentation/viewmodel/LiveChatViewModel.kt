@@ -578,7 +578,10 @@ class LiveChatViewModel @Inject constructor(
             try {
                 // Setup audio callback to send chunks to WebSocket
                 geminiAudioManager.onAudioChunkReady = { audioBase64 ->
-                    geminiWebSocketClient.sendAudioData(audioBase64)
+                    // REAL MUTE: non inviare audio al server se mutato
+                    if (!_uiState.value.isMuted) {
+                        geminiWebSocketClient.sendAudioData(audioBase64)
+                    }
                 }
 
                 // Setup barge-in callback
@@ -647,21 +650,24 @@ class LiveChatViewModel @Inject constructor(
     }
 
 
-    /** Toggle mute/unmute con gestione VAD (flush su mute) */
+    /** Toggle mute/unmute REALE: blocca invio audio al server + svuota buffer */
     fun toggleMute() {
         val newMuteState = !_uiState.value.isMuted
-        Log.d(TAG, if (newMuteState) "🔇 Muting microphone - flushing VAD buffer" else "🎤 Unmuting microphone - resuming VAD")
+        Log.d(TAG, if (newMuteState) "🔇 REAL MUTE - stopping audio to server" else "🎤 UNMUTE - resuming audio to server")
 
         _uiState.update { it.copy(isMuted = newMuteState) }
 
+        // Mute reale: svuota buffer audio + resetta VAD nell'AudioManager
+        geminiAudioManager.setMuted(newMuteState)
+
         if (newMuteState) {
-            // Quando si muta, invia audioStreamEnd per svuotare buffer VAD
+            // Invia audioStreamEnd per notificare il server che l'utente ha smesso
             geminiWebSocketClient.sendEndOfStream()
             _uiState.update { it.copy(turnState = TurnState.WaitingForUser) }
         } else {
             _uiState.update { it.copy(turnState = TurnState.WaitingForUser) }
         }
-        // Il canale resta sempre aperto: non fermiamo la registrazione
+        // Il canale di registrazione resta aperto (serve per AEC), ma l'audio NON viene inviato
     }
 
     fun isMuted(): Boolean = _uiState.value.isMuted

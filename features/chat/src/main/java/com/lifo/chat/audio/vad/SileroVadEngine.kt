@@ -75,7 +75,7 @@ class SileroVadEngine @Inject constructor(
 
         // Timing Configuration
         const val MIN_SPEECH_DURATION_MS = 100   // Min speech to confirm voice
-        const val MIN_SILENCE_DURATION_MS = 300  // Min silence to end utterance
+        const val MIN_SILENCE_DURATION_MS = 128  // Min silence to end utterance — 4 frame @ 32ms (era 200/300ms)
         // Barge-in confirmation: 128ms (4 frames) for robust full-duplex detection
         // Lower values (64ms/2 frames) caused false positives from brief echo spikes
         const val BARGE_IN_CONFIRMATION_MS = 128

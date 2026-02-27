@@ -68,8 +68,14 @@ turbine = "1.0.0"
 junit4 = "1.4.1"
 material3 = "1.4.0"
 
-# 3D Rendering - Filament
-filament = "1.67.0"
+# 3D Rendering - Filament (aligned with SceneView 2.3.3)
+filament = "1.68.2"
+
+# AR - ARCore (aligned with SceneView 2.3.3)
+arcore = "1.52.0"
+
+# AR SceneView - High-level AR library on Filament + ARCore
+sceneview = "2.3.3"
 
 # Camera - CameraX
 camerax = "1.4.1"
@@ -194,6 +200,12 @@ filament-android = { module = "com.google.android.filament:filament-android", ve
 filament-utils = { module = "com.google.android.filament:filament-utils-android", version.ref = "filament" }
 gltfio-android = { module = "com.google.android.filament:gltfio-android", version.ref = "filament" }
 filamat-android = { module = "com.google.android.filament:filamat-android", version.ref = "filament" }
+
+# ARCore
+arcore = { module = "com.google.ar:core", version.ref = "arcore" }
+
+# AR SceneView (Compose + Filament + ARCore)
+arsceneview = { module = "io.github.sceneview:arsceneview", version.ref = "sceneview" }
 
 # CameraX
 camerax-core = { module = "androidx.camera:camera-core", version.ref = "camerax" }

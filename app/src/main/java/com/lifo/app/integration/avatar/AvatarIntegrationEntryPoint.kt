@@ -1,5 +1,6 @@
 package com.lifo.app.integration.avatar
 
+import com.lifo.humanoid.domain.ar.ArSessionManager
 import com.lifo.humanoid.lipsync.LipSyncController
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -15,4 +16,5 @@ import dagger.hilt.components.SingletonComponent
 @InstallIn(SingletonComponent::class)
 interface AvatarIntegrationEntryPoint {
     fun lipSyncController(): LipSyncController
+    fun arSessionManager(): ArSessionManager
 }

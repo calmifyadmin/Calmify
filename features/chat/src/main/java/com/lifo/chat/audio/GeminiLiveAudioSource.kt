@@ -133,13 +133,15 @@ class GeminiLiveAudioSource @Inject constructor(
             while (audioManager.playbackState.value && currentSessionId == messageId) {
                 val elapsed = System.currentTimeMillis() - streamStartTime
                 val currentLevel = audioManager.aiAudioLevel.value
+                val currentVisemeWeights = audioManager.aiVisemeWeights.value
 
                 _playbackEvents.emit(
                     SpeechPlaybackEvent.Playing(
                         messageId = messageId,
                         progressMs = elapsed,
                         totalDurationMs = elapsed + 1000L, // Unknown total duration in streaming
-                        audioLevel = currentLevel
+                        audioLevel = currentLevel,
+                        visemeWeights = currentVisemeWeights
                     )
                 )
 

@@ -177,6 +177,7 @@ class VrmaAnimationPlayer(
 
     // State tracking
     private var isInitialized = false
+    @Volatile
     private var isDestroyed = false
     private var animator: Animator? = null
 
@@ -387,6 +388,10 @@ class VrmaAnimationPlayer(
         loop: Boolean = animation.isLooping,
         speed: Float = 1.0f
     ) {
+        if (isDestroyed) {
+            Log.w(TAG, "Cannot play animation - player is destroyed")
+            return
+        }
         if (!isInitialized) {
             Log.e(TAG, "Cannot play animation - player not initialized!")
             return
@@ -423,7 +428,7 @@ class VrmaAnimationPlayer(
         playbackJob = scope.launch {
             var lastFrameTime = System.nanoTime()
 
-            while (isActive && _isPlaying.value) {
+            while (isActive && _isPlaying.value && !isDestroyed) {
                 val currentTime = System.nanoTime()
                 val deltaTime = (currentTime - lastFrameTime) / 1_000_000_000f
                 lastFrameTime = currentTime
@@ -463,8 +468,11 @@ class VrmaAnimationPlayer(
                 }
 
                 // Apply blended animation from all active actions
-                withContext(Dispatchers.Main) {
-                    applyBlendedAnimation()
+                // Check isDestroyed before dispatching to Main to avoid accessing destroyed engine
+                if (!isDestroyed) {
+                    withContext(Dispatchers.Main) {
+                        applyBlendedAnimation()
+                    }
                 }
 
                 delay(16) // ~60fps
@@ -503,19 +511,29 @@ class VrmaAnimationPlayer(
         if (activeActions.isEmpty()) return
 
         try {
+            // Double-check after potential scheduling delay — engine may have been
+            // destroyed between the coroutine resuming and reaching this point.
+            // Also check animator — nulled in stop(destroy=true) BEFORE job cancel.
+            if (isDestroyed || animator == null) return
             val tm = engine.transformManager
 
             // Collect all bone rotations and translations from all active actions, weighted
             val blendedRotations = mutableMapOf<Int, BlendedRotation>()
             val blendedTranslations = mutableMapOf<Int, BlendedTranslation>()
 
-            activeActions.forEach { action ->
+            // Take a snapshot of active actions to avoid ConcurrentModificationException
+            val actionsSnapshot = activeActions.toList()
+
+            actionsSnapshot.forEach { action ->
+                if (isDestroyed) return  // Check before each action's native calls
                 if (!action.isActive) return@forEach
 
                 action.animation.tracks.forEach { track ->
+                    if (isDestroyed) return  // Check inside inner loop
                     val entity = resolveEntity(track.nodeName, action)
                     if (entity == null) return@forEach
 
+                    if (isDestroyed) return  // Check before native TransformManager call
                     val instance = tm.getInstance(entity)
                     if (instance == 0) return@forEach
 
@@ -548,21 +566,29 @@ class VrmaAnimationPlayer(
                 }
             }
 
+            // Final check before applying transforms to native engine
+            if (isDestroyed) return
+
             // Apply all blended transforms (rotation + translation)
             val allEntities = (blendedRotations.keys + blendedTranslations.keys).toSet()
             allEntities.forEach { entity ->
+                if (isDestroyed) return  // Check before each native setTransform
                 val rotation = blendedRotations[entity]
                 val translation = blendedTranslations[entity]
                 applyBlendedTransform(tm, entity, rotation, translation)
             }
 
             // Update bone matrices for skinning
-            animator?.updateBoneMatrices()
+            if (!isDestroyed) {
+                animator?.updateBoneMatrices()
+            }
 
             rotationDebugFrameCount++
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error in applyBlendedAnimation: ${e.message}")
+            if (!isDestroyed) {
+                Log.e(TAG, "Error in applyBlendedAnimation: ${e.message}")
+            }
         }
     }
 
@@ -649,8 +675,9 @@ class VrmaAnimationPlayer(
         rotation: BlendedRotation?,
         translation: BlendedTranslation?
     ) {
+        if (isDestroyed) return
         val original = originalTransforms[entity] ?: return
-        val instance = tm.getInstance(entity)
+        val instance = try { tm.getInstance(entity) } catch (e: Exception) { return }
         if (instance == 0) return
 
         val sx = kotlin.math.sqrt(original[0] * original[0] + original[1] * original[1] + original[2] * original[2])
@@ -730,13 +757,29 @@ class VrmaAnimationPlayer(
             newTransform[14] = original[14]
         }
 
-        tm.setTransform(instance, newTransform)
+        if (!isDestroyed) {
+            try {
+                tm.setTransform(instance, newTransform)
+            } catch (e: Exception) {
+                // Entity may have been destroyed during transition
+            }
+        }
     }
 
     /**
      * Stop the current animation.
      */
     fun stop(blendOut: Boolean = true, destroy: Boolean = false) {
+        // CRITICAL: Set isDestroyed FIRST so any in-flight applyBlendedAnimation() sees it
+        // before we destroy the engine/assets. This prevents SIGSEGV from native Filament calls.
+        if (destroy) {
+            Log.d(TAG, "VrmaAnimationPlayer destroying — setting flag + nulling animator before cancel")
+            isDestroyed = true
+            // Null animator BEFORE cancel: even if a queued withContext(Main) block
+            // executes after cancel, animator?.updateBoneMatrices() becomes a no-op.
+            animator = null
+        }
+
         playbackJob?.cancel()
         playbackJob = null
         _isPlaying.value = false
@@ -751,12 +794,6 @@ class VrmaAnimationPlayer(
         if (!destroy && !isDestroyed) {
             resetToOriginalPose()
         }
-
-        if (destroy) {
-            Log.d(TAG, "VrmaAnimationPlayer destroyed")
-            isDestroyed = true
-            animator = null
-        }
     }
 
     fun pause() {
@@ -765,6 +802,7 @@ class VrmaAnimationPlayer(
     }
 
     fun resume(scope: CoroutineScope) {
+        if (isDestroyed) return
         val animation = _currentAnimation.value ?: return
         if (!_isPlaying.value) return
         play(animation, scope, currentAction?.loop ?: false, playbackSpeed)
@@ -784,6 +822,10 @@ class VrmaAnimationPlayer(
     // ==================== Idle Animation System ====================
 
     fun setIdleAnimation(animation: VrmaAnimation, scope: CoroutineScope) {
+        if (isDestroyed) {
+            Log.w(TAG, "Cannot set idle animation - player is destroyed")
+            return
+        }
         Log.d(TAG, "Setting idle animation: ${animation.name}")
 
         idleAnimation = animation
@@ -803,6 +845,7 @@ class VrmaAnimationPlayer(
     }
 
     private fun startIdleLoop() {
+        if (isDestroyed) return
         val idle = idleAction ?: return
         val scope = idleAnimationScope ?: return
 
@@ -821,7 +864,7 @@ class VrmaAnimationPlayer(
             playbackJob = scope.launch {
                 var lastFrameTime = System.nanoTime()
 
-                while (isActive && _isPlaying.value) {
+                while (isActive && _isPlaying.value && !isDestroyed) {
                     val currentTime = System.nanoTime()
                     val deltaTime = (currentTime - lastFrameTime) / 1_000_000_000f
                     lastFrameTime = currentTime
@@ -848,8 +891,11 @@ class VrmaAnimationPlayer(
                         _playbackProgress.value = action.time / action.animation.durationSeconds
                     }
 
-                    withContext(Dispatchers.Main) {
-                        applyBlendedAnimation()
+                    // Check isDestroyed before dispatching to Main to avoid accessing destroyed engine
+                    if (!isDestroyed) {
+                        withContext(Dispatchers.Main) {
+                            applyBlendedAnimation()
+                        }
                     }
 
                     delay(16)
@@ -864,6 +910,10 @@ class VrmaAnimationPlayer(
         fadeDuration: Float = 0.5f,
         onComplete: (() -> Unit)? = null
     ): Float {
+        if (isDestroyed) {
+            Log.w(TAG, "Cannot playOneShot - player is destroyed")
+            return 0f
+        }
         if (idleAnimation == null) {
             Log.w(TAG, "No idle animation set, playing as regular animation")
             play(animation, scope, loop = false)
@@ -1151,15 +1201,28 @@ class VrmaAnimationPlayer(
     }
 
     private fun resetToOriginalPose() {
-        val tm = engine.transformManager
+        if (isDestroyed) return
 
-        originalTransforms.forEach { (entity, transform) ->
-            val instance = tm.getInstance(entity)
-            if (instance != 0) {
-                tm.setTransform(instance, transform)
+        try {
+            val tm = engine.transformManager
+
+            originalTransforms.forEach { (entity, transform) ->
+                if (isDestroyed) return
+                try {
+                    val instance = tm.getInstance(entity)
+                    if (instance != 0) {
+                        tm.setTransform(instance, transform)
+                    }
+                } catch (e: Exception) {
+                    // Entity may have been destroyed — silently skip
+                }
             }
-        }
 
-        animator?.updateBoneMatrices()
+            if (!isDestroyed) {
+                animator?.updateBoneMatrices()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in resetToOriginalPose: ${e.message}")
+        }
     }
 }

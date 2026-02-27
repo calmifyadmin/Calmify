@@ -143,7 +143,7 @@ class VrmLoader(private val context: Context) {
 
             if (vrmObject != null) {
                 Log.d(tag, "Found VRM extension in glTF file")
-                parseVrmObject(vrmObject)
+                parseVrmObject(vrmObject, rootObject)
             } else {
                 Log.w(tag, "No VRM extension found - this is a standard glTF file")
                 // Not a VRM file, return empty extensions
@@ -159,7 +159,7 @@ class VrmLoader(private val context: Context) {
     /**
      * Parse VRM extension object into structured data
      */
-    private fun parseVrmObject(vrmObject: JsonObject): VrmExtensions {
+    private fun parseVrmObject(vrmObject: JsonObject, rootObject: JsonObject? = null): VrmExtensions {
         // Parse metadata
         val metadata = vrmObject.getAsJsonObject("meta")?.let { parseMetadata(it) }
             ?: VrmMetadata()
@@ -177,10 +177,53 @@ class VrmLoader(private val context: Context) {
             ?.flatten()
             ?: emptyList()
 
+        // Parse humanoid bone mapping (bone name → glTF node index)
+        val humanoidBoneNodeIndices = mutableMapOf<String, Int>()
+        vrmObject.getAsJsonObject("humanoid")
+            ?.getAsJsonArray("humanBones")
+            ?.forEach { boneElement ->
+                try {
+                    val boneObj = boneElement.asJsonObject
+                    val boneName = boneObj.get("bone")?.asString
+                    val nodeIndex = boneObj.get("node")?.asInt
+                    if (boneName != null && nodeIndex != null) {
+                        humanoidBoneNodeIndices[boneName] = nodeIndex
+                    }
+                } catch (e: Exception) {
+                    Log.w(tag, "Failed to parse humanoid bone element: ${e.message}")
+                }
+            }
+        // Resolve eye bone node indices to actual glTF node NAMES
+        // CRITICAL: Filament entity array indices ≠ glTF node indices!
+        // We must search by name, not by index.
+        val nodesArray = rootObject?.getAsJsonArray("nodes")
+        var leftEyeNodeName: String? = null
+        var rightEyeNodeName: String? = null
+
+        humanoidBoneNodeIndices["leftEye"]?.let { nodeIdx ->
+            leftEyeNodeName = nodesArray?.get(nodeIdx)?.asJsonObject?.get("name")?.asString
+        }
+        humanoidBoneNodeIndices["rightEye"]?.let { nodeIdx ->
+            rightEyeNodeName = nodesArray?.get(nodeIdx)?.asJsonObject?.get("name")?.asString
+        }
+
+        Log.d(tag, "Parsed ${humanoidBoneNodeIndices.size} humanoid bones. " +
+                "leftEye: idx=${humanoidBoneNodeIndices["leftEye"]} name='$leftEyeNodeName', " +
+                "rightEye: idx=${humanoidBoneNodeIndices["rightEye"]} name='$rightEyeNodeName'")
+
+        // Parse firstPerson lookAt type
+        val lookAtTypeName = vrmObject.getAsJsonObject("firstPerson")
+            ?.get("lookAtTypeName")?.asString ?: "Bone"
+        Log.d(tag, "VRM lookAt type: $lookAtTypeName")
+
         return VrmExtensions(
             metadata = metadata,
             blendShapes = blendShapes,
-            springBones = springBones
+            springBones = springBones,
+            humanoidBoneNodeIndices = humanoidBoneNodeIndices,
+            leftEyeNodeName = leftEyeNodeName,
+            rightEyeNodeName = rightEyeNodeName,
+            lookAtTypeName = lookAtTypeName
         )
     }
 
@@ -291,5 +334,25 @@ class VrmLoader(private val context: Context) {
 data class VrmExtensions(
     val metadata: VrmMetadata = VrmMetadata(),
     val blendShapes: List<VrmBlendShape> = emptyList(),
-    val springBones: List<SpringBoneData> = emptyList()
+    val springBones: List<SpringBoneData> = emptyList(),
+    /**
+     * VRM humanoid bone mapping: bone name (e.g. "leftEye") → glTF node index.
+     * Parsed from VRM.humanoid.humanBones.
+     */
+    val humanoidBoneNodeIndices: Map<String, Int> = emptyMap(),
+    /**
+     * Actual glTF node name for left eye bone (resolved from humanoid data + nodes array).
+     * e.g., "J_Adj_L_FaceEye" for VRoid models.
+     */
+    val leftEyeNodeName: String? = null,
+    /**
+     * Actual glTF node name for right eye bone.
+     * e.g., "J_Adj_R_FaceEye" for VRoid models.
+     */
+    val rightEyeNodeName: String? = null,
+    /**
+     * VRM lookAt type: "Bone" or "BlendShape".
+     * Parsed from VRM.firstPerson.lookAtTypeName.
+     */
+    val lookAtTypeName: String = "Bone"
 )

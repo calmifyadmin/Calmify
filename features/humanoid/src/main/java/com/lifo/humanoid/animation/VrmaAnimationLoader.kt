@@ -36,7 +36,7 @@ class VrmaAnimationLoader(private val context: Context) {
         DANCING_HAPPY("dancing_happy.vrma", "Dancing Happy"),
 
         // Gesture animations
-        HELLO("hello.vrma", "Hello"),
+        HELLO("models/hello.vrma", "Hello"),
         GREETING("greeting.vrma", "Greeting"),
         I_AGREE("i_agree.vrma", "I Agree"),
         I_DONT_KNOW("i_dont_know.vrma", "I Don't Know"),
