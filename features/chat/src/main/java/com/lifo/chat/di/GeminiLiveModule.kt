@@ -2,15 +2,18 @@ package com.lifo.chat.di
 
 import android.content.Context
 import com.lifo.chat.audio.engine.AAAudioEngine
+import com.lifo.chat.audio.oboe.NativeAudioEngine
 import com.lifo.chat.audio.vad.SileroVadEngine
 import com.lifo.chat.config.ApiConfigManager
 import com.lifo.chat.data.websocket.GeminiLiveWebSocketClient
 import com.lifo.chat.data.audio.GeminiLiveAudioManager
 import com.lifo.chat.data.camera.GeminiLiveCameraManager
 import com.lifo.chat.domain.audio.AdaptiveBargeinDetector
+import com.lifo.chat.domain.audio.AecReliabilityDetector
 import com.lifo.chat.domain.audio.AudioQualityAnalyzer
 import com.lifo.chat.domain.audio.ConversationContextManager
 import com.lifo.chat.domain.audio.FullDuplexAudioSession
+import com.lifo.chat.domain.audio.HeadphoneDetector
 import com.lifo.chat.domain.audio.ReferenceSignalBargeInDetector
 import com.google.firebase.auth.FirebaseAuth
 import dagger.Module
@@ -129,6 +132,46 @@ object GeminiLiveModule {
     }
 
     /**
+     * Provides HeadphoneDetector for real-time audio routing detection.
+     *
+     * When headphones are connected, AEC is bypassed (no acoustic echo path).
+     * Enables diagnostic confirmation: if echo disappears with headphones,
+     * it's 100% a hardware AEC failure.
+     */
+    @Provides
+    @Singleton
+    fun provideHeadphoneDetector(
+        @ApplicationContext context: Context
+    ): HeadphoneDetector {
+        return HeadphoneDetector(context)
+    }
+
+    /**
+     * Provides AecReliabilityDetector for runtime hardware AEC quality monitoring.
+     *
+     * Measures cross-correlation between reference signal and mic input to detect
+     * if hardware AEC is actually cancelling echo. If HARDWARE_FAILING, triggers
+     * software AEC fallback (Phase 3).
+     */
+    @Provides
+    @Singleton
+    fun provideAecReliabilityDetector(): AecReliabilityDetector {
+        return AecReliabilityDetector()
+    }
+
+    /**
+     * Provides NativeAudioEngine (Oboe C++ via JNI) for low-latency audio.
+     *
+     * Falls back gracefully if native library is not available — the caller
+     * checks [NativeAudioEngine.isAvailable] and uses Java AudioTrack/AudioRecord instead.
+     */
+    @Provides
+    @Singleton
+    fun provideNativeAudioEngine(): NativeAudioEngine {
+        return NativeAudioEngine()
+    }
+
+    /**
      * Provides GeminiLiveAudioManager for audio recording/playback with full-duplex.
      *
      * Includes:
@@ -146,7 +189,10 @@ object GeminiLiveModule {
         referenceSignalDetector: ReferenceSignalBargeInDetector,
         fullDuplexSession: FullDuplexAudioSession
     ): GeminiLiveAudioManager {
-        return GeminiLiveAudioManager(context, adaptiveBargeinDetector, sileroVadEngine, referenceSignalDetector, fullDuplexSession)
+        return GeminiLiveAudioManager(
+            context, adaptiveBargeinDetector, sileroVadEngine, referenceSignalDetector,
+            fullDuplexSession
+        )
     }
 
     /**

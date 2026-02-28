@@ -1,6 +1,6 @@
 package com.lifo.chat.audio
 
-import android.util.Log
+
 import com.lifo.util.speech.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -25,10 +25,6 @@ import javax.inject.Singleton
 @Singleton
 class SynchronizedSpeechControllerImpl @Inject constructor() : SynchronizedSpeechController {
 
-    companion object {
-        private const val TAG = "SyncSpeechController"
-    }
-
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     private var audioSource: SpeechAudioSource? = null
@@ -41,7 +37,7 @@ class SynchronizedSpeechControllerImpl @Inject constructor() : SynchronizedSpeec
     override val isSpeaking: StateFlow<Boolean> = _isSpeaking.asStateFlow()
 
     override fun attachAudioSource(source: SpeechAudioSource) {
-        Log.d(TAG, "📡 Attaching audio source: ${source::class.simpleName}")
+        println("[SyncSpeechController] Attaching audio source: ${source::class.simpleName}")
 
         // Detach existing source
         detachAudioSource()
@@ -54,7 +50,7 @@ class SynchronizedSpeechControllerImpl @Inject constructor() : SynchronizedSpeec
     }
 
     override fun attachAnimationTarget(target: SpeechAnimationTarget) {
-        Log.d(TAG, "🎭 Attaching animation target: ${target::class.simpleName}")
+        println("[SyncSpeechController] Attaching animation target: ${target::class.simpleName}")
         animationTarget = target
     }
 
@@ -64,12 +60,12 @@ class SynchronizedSpeechControllerImpl @Inject constructor() : SynchronizedSpeec
         audioLevelJob?.cancel()
         audioLevelJob = null
         audioSource = null
-        Log.d(TAG, "📡 Audio source detached")
+        println("[SyncSpeechController] Audio source detached")
     }
 
     override fun detachAnimationTarget() {
         animationTarget = null
-        Log.d(TAG, "🎭 Animation target detached")
+        println("[SyncSpeechController] Animation target detached")
     }
 
     private fun startEventCollection() {
@@ -96,11 +92,11 @@ class SynchronizedSpeechControllerImpl @Inject constructor() : SynchronizedSpeec
         val target = animationTarget
 
         if (target == null) {
-            Log.w(TAG, "⚠️ No animation target attached, ignoring event: ${event::class.simpleName}")
+            println("[SyncSpeechController] WARNING: No animation target attached, ignoring event: ${event::class.simpleName}")
             return
         }
 
-        Log.d(TAG, "🎬 Forwarding event to animation target: ${event::class.simpleName}")
+        println("[SyncSpeechController] Forwarding event to animation target: ${event::class.simpleName}")
 
         // Update speaking state
         _isSpeaking.value = when (event) {
@@ -122,15 +118,15 @@ class SynchronizedSpeechControllerImpl @Inject constructor() : SynchronizedSpeec
         val target = animationTarget
 
         if (source == null) {
-            Log.e(TAG, "❌ Cannot speak: No audio source attached")
+            println("[SyncSpeechController] ERROR: Cannot speak: No audio source attached")
             return
         }
 
         if (target == null) {
-            Log.w(TAG, "⚠️ No animation target attached, speaking without lip-sync")
+            println("[SyncSpeechController] WARNING: No animation target attached, speaking without lip-sync")
         }
 
-        Log.d(TAG, "🎤 Starting synchronized speech: '${request.text.take(30)}...'")
+        println("[SyncSpeechController] Starting synchronized speech: '${request.text.take(30)}...'")
 
         // Set emotion on animation target
         target?.setEmotion(request.emotion)
@@ -142,14 +138,14 @@ class SynchronizedSpeechControllerImpl @Inject constructor() : SynchronizedSpeec
     }
 
     override fun stopSynchronized() {
-        Log.d(TAG, "⏹️ Stopping synchronized speech")
+        println("[SyncSpeechController] Stopping synchronized speech")
 
         audioSource?.stop()
         _isSpeaking.value = false
     }
 
     override fun release() {
-        Log.d(TAG, "🧹 Releasing SynchronizedSpeechController")
+        println("[SyncSpeechController] Releasing SynchronizedSpeechController")
 
         stopSynchronized()
         detachAudioSource()

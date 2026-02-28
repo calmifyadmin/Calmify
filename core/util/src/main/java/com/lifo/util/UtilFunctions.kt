@@ -1,40 +1,8 @@
 package com.lifo.util
 
-import android.net.Uri
-import android.util.Log
-import androidx.core.net.toUri
 import com.google.firebase.Timestamp
-import com.google.firebase.storage.FirebaseStorage
 import java.time.Instant
 import java.util.Date
-
-/**
- * Download images from Firebase asynchronously.
- * This function returns imageUri after each successful download.
- */
-fun fetchImagesFromFirebase(
-    remoteImagePaths: List<String>,
-    onImageDownload: (Uri) -> Unit,
-    onImageDownloadFailed: (Exception) -> Unit = {},
-    onReadyToDisplay: () -> Unit = {}
-) {
-    if (remoteImagePaths.isNotEmpty()) {
-        remoteImagePaths.forEachIndexed { index, remoteImagePath ->
-            if (remoteImagePath.trim().isNotEmpty()) {
-                FirebaseStorage.getInstance().reference.child(remoteImagePath.trim()).downloadUrl
-                    .addOnSuccessListener {
-                        Log.d("DownloadURL", "$it")
-                        onImageDownload(it)
-                        if (remoteImagePaths.lastIndexOf(remoteImagePaths.last()) == index) {
-                            onReadyToDisplay()
-                        }
-                    }.addOnFailureListener {
-                        onImageDownloadFailed(it)
-                    }
-            }
-        }
-    }
-}
 
 // FIRESTORE UTILITIES (2025 Stack)
 

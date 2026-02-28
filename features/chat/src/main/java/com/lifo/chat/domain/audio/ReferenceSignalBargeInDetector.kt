@@ -1,6 +1,6 @@
 package com.lifo.chat.domain.audio
 
-import android.util.Log
+
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
@@ -28,8 +28,6 @@ import kotlin.math.sqrt
 class ReferenceSignalBargeInDetector @Inject constructor() {
 
     companion object {
-        private const val TAG = "RefSignalBargeIn"
-
         // Reference buffer: ~500ms of audio at 16kHz
         private const val REFERENCE_BUFFER_SIZE = 8000
 
@@ -104,7 +102,7 @@ class ReferenceSignalBargeInDetector @Inject constructor() {
 
             // Log every 10 feeds to confirm reference signal is being received
             if (feedCounter++ % 10 == 0) {
-                Log.d(TAG, "📥 Fed ${audioData.size} samples -> refAvail=$referenceAvailable")
+                println("[RefSignalBargeIn] Fed ${audioData.size} samples -> refAvail=$referenceAvailable")
             }
         }
     }
@@ -123,13 +121,13 @@ class ReferenceSignalBargeInDetector @Inject constructor() {
     fun processMicInput(micInput: ShortArray, frameSize: Int): BargeInResult {
         // ALWAYS log every 50 calls to confirm method is being invoked
         if (processCallCounter++ % 50 == 0) {
-            Log.d(TAG, "🔍 processMicInput called #$processCallCounter: frameSize=$frameSize, refAvail=$referenceAvailable")
+            println("[RefSignalBargeIn] processMicInput called #$processCallCounter: frameSize=$frameSize, refAvail=$referenceAvailable")
         }
 
         if (frameSize < FRAME_SIZE || referenceAvailable < FRAME_SIZE) {
             // Log more frequently during insufficient data
             if (debugLogCounter++ % 30 == 0) {
-                Log.d(TAG, "⚠️ Insufficient data: frameSize=$frameSize, refAvail=$referenceAvailable (need $FRAME_SIZE)")
+                println("[RefSignalBargeIn] Insufficient data: frameSize=$frameSize, refAvail=$referenceAvailable (need $FRAME_SIZE)")
             }
             return BargeInResult(false, 0f, "Insufficient data")
         }
@@ -169,7 +167,7 @@ class ReferenceSignalBargeInDetector @Inject constructor() {
 
             // DEBUG: Log every ~500ms to understand what's happening
             if (debugLogCounter++ % 15 == 0) {
-                Log.d(TAG, "📊 res=${"%.3f".format(residual)} thresh=${"%.3f".format(adaptiveThreshold)} " +
+                println("[RefSignalBargeIn] res=${"%.3f".format(residual)} thresh=${"%.3f".format(adaptiveThreshold)} " +
                         "corr=${"%.2f".format(correlation)} highE=$isHighEnergy notEcho=$isNotEcho")
             }
 
@@ -177,20 +175,20 @@ class ReferenceSignalBargeInDetector @Inject constructor() {
                 consecutiveBargeInFrames++
                 consecutiveSilenceFrames = 0  // Reset silence counter when speech detected
                 // Log every detection
-                Log.d(TAG, "🎤 SPEECH frames=$consecutiveBargeInFrames/$BARGE_IN_FRAMES_REQUIRED res=${"%.3f".format(residual)}")
+                println("[RefSignalBargeIn] SPEECH frames=$consecutiveBargeInFrames/$BARGE_IN_FRAMES_REQUIRED res=${"%.3f".format(residual)}")
             } else {
                 // Only reset after SUSTAINED silence (not just one frame)
                 consecutiveSilenceFrames++
 
                 // Log silence progress occasionally
                 if (consecutiveSilenceFrames % 5 == 0 && consecutiveBargeInFrames > 0) {
-                    Log.d(TAG, "🔇 Silence frames=$consecutiveSilenceFrames/$FRAMES_TO_RESET (speech was $consecutiveBargeInFrames)")
+                    println("[RefSignalBargeIn] Silence frames=$consecutiveSilenceFrames/$FRAMES_TO_RESET (speech was $consecutiveBargeInFrames)")
                 }
 
                 if (consecutiveSilenceFrames >= FRAMES_TO_RESET) {
                     // Only now reset the speech counter
                     if (consecutiveBargeInFrames > 0) {
-                        Log.d(TAG, "❌ Reset: ${consecutiveSilenceFrames * 32}ms silence, lost $consecutiveBargeInFrames frames")
+                        println("[RefSignalBargeIn] Reset: ${consecutiveSilenceFrames * 32}ms silence, lost $consecutiveBargeInFrames frames")
                     }
                     consecutiveBargeInFrames = 0
                 }
@@ -200,7 +198,7 @@ class ReferenceSignalBargeInDetector @Inject constructor() {
             val shouldBargeIn = consecutiveBargeInFrames >= BARGE_IN_FRAMES_REQUIRED
 
             if (shouldBargeIn && !_bargeInDetected.value) {
-                Log.d(TAG, "🗣️ BARGE-IN CONFIRMED after ${consecutiveBargeInFrames * 32}ms! User is speaking over AI")
+                println("[RefSignalBargeIn] BARGE-IN CONFIRMED after ${consecutiveBargeInFrames * 32}ms! User is speaking over AI")
                 _bargeInDetected.value = true
             }
 
@@ -354,7 +352,7 @@ class ReferenceSignalBargeInDetector @Inject constructor() {
         consecutiveSilenceFrames = 0
         _bargeInDetected.value = false
         _residualEnergy.value = 0f
-        Log.d(TAG, "🔄 Detector reset")
+        println("[RefSignalBargeIn] Detector reset")
     }
 
     /**
@@ -366,7 +364,7 @@ class ReferenceSignalBargeInDetector @Inject constructor() {
             referenceWritePos = 0
             referenceAvailable = 0
         }
-        Log.d(TAG, "🧹 Reference buffer cleared")
+        println("[RefSignalBargeIn] Reference buffer cleared")
     }
 
     /**

@@ -4,7 +4,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -23,8 +22,6 @@ import com.lifo.calmifyapp.MainActivity.Companion.CHANNEL_WELLNESS
 class CalmifyFirebaseMessagingService : FirebaseMessagingService() {
 
     companion object {
-        private const val TAG = "CalmifyFCM"
-
         // Notification types
         private const val TYPE_INSIGHT_READY = "INSIGHT_READY"
         private const val TYPE_WEEKLY_SNAPSHOT = "WEEKLY_SNAPSHOT_REMINDER"
@@ -42,7 +39,7 @@ class CalmifyFirebaseMessagingService : FirebaseMessagingService() {
      */
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        Log.d(TAG, "New FCM token: $token")
+        println("[CalmifyFCM] New FCM token: $token")
 
         // Save token to Firestore
         saveFCMTokenToFirestore(token)
@@ -54,7 +51,7 @@ class CalmifyFirebaseMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
 
-        Log.d(TAG, "Message received from: ${message.from}")
+        println("[CalmifyFCM] Message received from: ${message.from}")
 
         // Extract notification type from data payload
         val notificationType = message.data["type"] ?: TYPE_WELLNESS
@@ -65,7 +62,7 @@ class CalmifyFirebaseMessagingService : FirebaseMessagingService() {
         val diaryId = message.data["diaryId"] // For INSIGHT_READY notifications
         val insightId = message.data["insightId"]
 
-        Log.d(TAG, "Notification type: $notificationType, title: $title, diaryId: $diaryId")
+        println("[CalmifyFCM] Notification type: $notificationType, title: $title, diaryId: $diaryId")
 
         // Show notification based on type
         showNotification(
@@ -131,7 +128,7 @@ class CalmifyFirebaseMessagingService : FirebaseMessagingService() {
         val notificationId = System.currentTimeMillis().toInt()
         notificationManager.notify(notificationId, notificationBuilder.build())
 
-        Log.d(TAG, "Notification displayed: ID=$notificationId, channel=$channelId")
+        println("[CalmifyFCM] Notification displayed: ID=$notificationId, channel=$channelId")
     }
 
     /**
@@ -157,9 +154,9 @@ class CalmifyFirebaseMessagingService : FirebaseMessagingService() {
                     intent.putExtra("navigate_to", "insight_screen?diaryId=$diaryId")
                     intent.putExtra("diaryId", diaryId)
                     insightId?.let { intent.putExtra("insightId", it) }
-                    Log.d(TAG, "Creating intent for insight screen with diaryId: $diaryId")
+                    println("[CalmifyFCM] Creating intent for insight screen with diaryId: $diaryId")
                 } else {
-                    Log.w(TAG, "OPEN_INSIGHTS action received but diaryId is null, opening home instead")
+                    println("[CalmifyFCM] WARNING: OPEN_INSIGHTS action received but diaryId is null, opening home instead")
                     intent.putExtra("navigate_to", "home_screen")
                 }
             }
@@ -194,7 +191,7 @@ class CalmifyFirebaseMessagingService : FirebaseMessagingService() {
         val userId = FirebaseAuth.getInstance().currentUser?.uid
 
         if (userId == null) {
-            Log.w(TAG, "User not authenticated, cannot save FCM token")
+            println("[CalmifyFCM] WARNING: User not authenticated, cannot save FCM token")
             return
         }
 
@@ -206,20 +203,20 @@ class CalmifyFirebaseMessagingService : FirebaseMessagingService() {
             .document(userId)
             .update("fcmToken", token)
             .addOnSuccessListener {
-                Log.d(TAG, "FCM token saved to Firestore successfully")
+                println("[CalmifyFCM] FCM token saved to Firestore successfully")
             }
             .addOnFailureListener { e ->
-                Log.e(TAG, "Failed to save FCM token to Firestore", e)
+                println("[CalmifyFCM] ERROR: Failed to save FCM token to Firestore: ${e.message}")
 
                 // If update fails (document doesn't exist), try set with merge
                 db.collection("users")
                     .document(userId)
                     .set(mapOf("fcmToken" to token), com.google.firebase.firestore.SetOptions.merge())
                     .addOnSuccessListener {
-                        Log.d(TAG, "FCM token created in Firestore successfully")
+                        println("[CalmifyFCM] FCM token created in Firestore successfully")
                     }
                     .addOnFailureListener { e2 ->
-                        Log.e(TAG, "Failed to create FCM token in Firestore", e2)
+                        println("[CalmifyFCM] ERROR: Failed to create FCM token in Firestore: ${e2.message}")
                     }
             }
     }

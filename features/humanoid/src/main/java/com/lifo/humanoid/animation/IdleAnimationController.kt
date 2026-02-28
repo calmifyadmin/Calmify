@@ -1,6 +1,5 @@
 package com.lifo.humanoid.animation
 
-import android.util.Log
 import com.google.android.filament.Engine
 import com.google.android.filament.TransformManager
 import com.lifo.humanoid.data.vrm.VrmHumanoidBoneMapper
@@ -25,7 +24,6 @@ class IdleAnimationController(
 ) {
 
     companion object {
-        private const val TAG = "IdleAnimationController"
         private const val TWO_PI = 2f * PI.toFloat()
     }
 
@@ -70,12 +68,12 @@ class IdleAnimationController(
      */
     fun start(scope: CoroutineScope) {
         if (isRunning) {
-            Log.d(TAG, "IdleAnimationController already running")
+            println("[IdleAnimationController] IdleAnimationController already running")
             return
         }
 
         if (!boneMapper.hasEssentialBones()) {
-            Log.w(TAG, "Missing essential bones for idle animation")
+            println("[IdleAnimationController] WARNING: Missing essential bones for idle animation")
             return
         }
 
@@ -83,7 +81,7 @@ class IdleAnimationController(
         _isActive.value = true
         elapsedTime = 0f
 
-        Log.d(TAG, "Starting IdleAnimationController")
+        println("[IdleAnimationController] Starting IdleAnimationController")
 
         // Store original transforms
         storeOriginalTransforms()
@@ -116,7 +114,7 @@ class IdleAnimationController(
      * Stop idle animations and reset to original pose
      */
     fun stop() {
-        Log.d(TAG, "Stopping IdleAnimationController")
+        println("[IdleAnimationController] Stopping IdleAnimationController")
         isRunning = false
         _isActive.value = false
         animationJob?.cancel()
@@ -325,7 +323,7 @@ class IdleAnimationController(
                 boneMapper.storeOriginalTransform(entity, transform)
             }
         }
-        Log.d(TAG, "Stored original transforms for ${boneMapper.getBoneEntityMap().size} bones")
+        println("[IdleAnimationController] Stored original transforms for ${boneMapper.getBoneEntityMap().size} bones")
     }
 
     /**
@@ -343,6 +341,6 @@ class IdleAnimationController(
                 }
             }
         }
-        Log.d(TAG, "Reset to default pose")
+        println("[IdleAnimationController] Reset to default pose")
     }
 }

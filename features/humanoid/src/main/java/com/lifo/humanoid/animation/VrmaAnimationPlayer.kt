@@ -1,6 +1,5 @@
 package com.lifo.humanoid.animation
 
-import android.util.Log
 import com.google.android.filament.Engine
 import com.google.android.filament.TransformManager
 import com.google.android.filament.gltfio.Animator
@@ -27,8 +26,6 @@ class VrmaAnimationPlayer(
 ) {
 
     companion object {
-        private const val TAG = "VrmaAnimationPlayer"
-
         private val ANIMATION_TO_VRM_BONE_MAP = mapOf(
             "root" to "hips",
             "torso_1" to "spine",
@@ -190,7 +187,7 @@ class VrmaAnimationPlayer(
      */
     fun initialize(asset: FilamentAsset, nodeNames: List<String>) {
         if (isDestroyed) {
-            Log.w(TAG, "Cannot initialize - player is destroyed")
+            println("[VrmaAnimationPlayer] WARNING: Cannot initialize - player is destroyed")
             return
         }
 
@@ -203,9 +200,9 @@ class VrmaAnimationPlayer(
 
         try {
             animator = asset.getInstance()?.animator
-            Log.d(TAG, "Animator obtained from asset instance: ${animator != null}")
+            println("[VrmaAnimationPlayer] Animator obtained from asset instance: ${animator != null}")
         } catch (e: Exception) {
-            Log.e(TAG, "Error obtaining animator: ${e.message}")
+            println("[VrmaAnimationPlayer] ERROR: Error obtaining animator: ${e.message}")
             return
         }
 
@@ -216,7 +213,7 @@ class VrmaAnimationPlayer(
                     nodeEntityMap[name] = asset.entities[index]
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error mapping node '$name': ${e.message}")
+                println("[VrmaAnimationPlayer] ERROR: Error mapping node '$name': ${e.message}")
             }
         }
 
@@ -229,7 +226,7 @@ class VrmaAnimationPlayer(
         storeOriginalTransforms()
 
         isInitialized = true
-        Log.d(TAG, "Initialized with ${nodeEntityMap.size} node mappings")
+        println("[VrmaAnimationPlayer] Initialized with ${nodeEntityMap.size} node mappings")
     }
 
     private fun calculateBoneWorldMatrices() {
@@ -257,11 +254,11 @@ class VrmaAnimationPlayer(
                         boneWorldQuaternionInverses[bone] = invertQuaternion(worldQuat)
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error calculating world matrix for bone $bone: ${e.message}")
+                    println("[VrmaAnimationPlayer] ERROR: Error calculating world matrix for bone $bone: ${e.message}")
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error in calculateBoneWorldMatrices: ${e.message}")
+            println("[VrmaAnimationPlayer] ERROR: Error in calculateBoneWorldMatrices: ${e.message}")
         }
     }
 
@@ -314,7 +311,7 @@ class VrmaAnimationPlayer(
             prevAction.fadeDuration = fadeOutDuration
             prevAction.fadeStartTime = 0f  // Will be updated in the playback loop
 
-            Log.d(TAG, "Fading out previous action: ${prevAction.animation.name}, weight=${prevAction.weight} -> 0")
+            println("[VrmaAnimationPlayer] Fading out previous action: ${prevAction.animation.name}, weight=${prevAction.weight} -> 0")
         }
 
         // Setup the new action
@@ -332,7 +329,7 @@ class VrmaAnimationPlayer(
             activeActions.add(destAction)
         }
 
-        Log.d(TAG, "Fading in new action: ${destAction.animation.name}, weight=0 -> 1")
+        println("[VrmaAnimationPlayer] Fading in new action: ${destAction.animation.name}, weight=0 -> 1")
     }
 
     /**
@@ -360,7 +357,7 @@ class VrmaAnimationPlayer(
                     if (action.targetWeight <= 0f) {
                         action.isPlaying = false
                         actionsToRemove.add(action)
-                        Log.d(TAG, "Action ${action.animation.name} faded out completely, removing")
+                        println("[VrmaAnimationPlayer] Action ${action.animation.name} faded out completely, removing")
                     }
                 }
             }
@@ -389,11 +386,11 @@ class VrmaAnimationPlayer(
         speed: Float = 1.0f
     ) {
         if (isDestroyed) {
-            Log.w(TAG, "Cannot play animation - player is destroyed")
+            println("[VrmaAnimationPlayer] WARNING: Cannot play animation - player is destroyed")
             return
         }
         if (!isInitialized) {
-            Log.e(TAG, "Cannot play animation - player not initialized!")
+            println("[VrmaAnimationPlayer] ERROR: Cannot play animation - player not initialized!")
             return
         }
 
@@ -418,9 +415,9 @@ class VrmaAnimationPlayer(
         // Set animation rest pose data
         setAnimationRestPoseData(animation)
 
-        Log.d(TAG, "=== Playing Animation with Blending ===")
-        Log.d(TAG, "Name: ${animation.name}, Duration: ${animation.durationSeconds}s, Loop: $loop")
-        Log.d(TAG, "Previous action: ${currentAction?.animation?.name ?: "none"}")
+        println("[VrmaAnimationPlayer] === Playing Animation with Blending ===")
+        println("[VrmaAnimationPlayer] Name: ${animation.name}, Duration: ${animation.durationSeconds}s, Loop: $loop")
+        println("[VrmaAnimationPlayer] Previous action: ${currentAction?.animation?.name ?: "none"}")
 
         // Transition to new action with crossfade
         fadeToAction(newAction)
@@ -484,11 +481,11 @@ class VrmaAnimationPlayer(
      * Called when a non-looping animation finishes.
      */
     private fun onAnimationFinished(action: AnimationAction) {
-        Log.d(TAG, "Animation finished: ${action.animation.name}")
+        println("[VrmaAnimationPlayer] Animation finished: ${action.animation.name}")
 
         // If we have an idle animation, transition back to it
         if (idleAction != null && action !== idleAction) {
-            Log.d(TAG, "Returning to idle animation")
+            println("[VrmaAnimationPlayer] Returning to idle animation")
 
             // Invoke the onComplete callback before transitioning
             if (isPlayingOneShot) {
@@ -587,7 +584,7 @@ class VrmaAnimationPlayer(
 
         } catch (e: Exception) {
             if (!isDestroyed) {
-                Log.e(TAG, "Error in applyBlendedAnimation: ${e.message}")
+                println("[VrmaAnimationPlayer] ERROR: Error in applyBlendedAnimation: ${e.message}")
             }
         }
     }
@@ -773,7 +770,7 @@ class VrmaAnimationPlayer(
         // CRITICAL: Set isDestroyed FIRST so any in-flight applyBlendedAnimation() sees it
         // before we destroy the engine/assets. This prevents SIGSEGV from native Filament calls.
         if (destroy) {
-            Log.d(TAG, "VrmaAnimationPlayer destroying — setting flag + nulling animator before cancel")
+            println("[VrmaAnimationPlayer] VrmaAnimationPlayer destroying — setting flag + nulling animator before cancel")
             isDestroyed = true
             // Null animator BEFORE cancel: even if a queued withContext(Main) block
             // executes after cancel, animator?.updateBoneMatrices() becomes a no-op.
@@ -823,10 +820,10 @@ class VrmaAnimationPlayer(
 
     fun setIdleAnimation(animation: VrmaAnimation, scope: CoroutineScope) {
         if (isDestroyed) {
-            Log.w(TAG, "Cannot set idle animation - player is destroyed")
+            println("[VrmaAnimationPlayer] WARNING: Cannot set idle animation - player is destroyed")
             return
         }
-        Log.d(TAG, "Setting idle animation: ${animation.name}")
+        println("[VrmaAnimationPlayer] Setting idle animation: ${animation.name}")
 
         idleAnimation = animation
         idleAnimationScope = scope
@@ -849,7 +846,7 @@ class VrmaAnimationPlayer(
         val idle = idleAction ?: return
         val scope = idleAnimationScope ?: return
 
-        Log.d(TAG, "Starting idle loop: ${idle.animation.name}")
+        println("[VrmaAnimationPlayer] Starting idle loop: ${idle.animation.name}")
 
         setAnimationRestPoseData(idle.animation)
 
@@ -911,17 +908,17 @@ class VrmaAnimationPlayer(
         onComplete: (() -> Unit)? = null
     ): Float {
         if (isDestroyed) {
-            Log.w(TAG, "Cannot playOneShot - player is destroyed")
+            println("[VrmaAnimationPlayer] WARNING: Cannot playOneShot - player is destroyed")
             return 0f
         }
         if (idleAnimation == null) {
-            Log.w(TAG, "No idle animation set, playing as regular animation")
+            println("[VrmaAnimationPlayer] WARNING: No idle animation set, playing as regular animation")
             play(animation, scope, loop = false)
             onComplete?.invoke()
             return animation.durationSeconds
         }
 
-        Log.d(TAG, "Playing one-shot animation: ${animation.name}")
+        println("[VrmaAnimationPlayer] Playing one-shot animation: ${animation.name}")
 
         isPlayingOneShot = true
         onOneShotComplete = onComplete
@@ -1222,7 +1219,7 @@ class VrmaAnimationPlayer(
                 animator?.updateBoneMatrices()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error in resetToOriginalPose: ${e.message}")
+            println("[VrmaAnimationPlayer] ERROR: Error in resetToOriginalPose: ${e.message}")
         }
     }
 }

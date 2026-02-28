@@ -1,6 +1,5 @@
 package com.lifo.home.components
 
-import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
@@ -33,8 +32,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lifo.ui.theme.Elevation
-import com.lifo.util.Gallery
-import com.lifo.util.fetchImagesFromFirebase
+import com.lifo.ui.components.Gallery
+import com.lifo.ui.util.fetchImagesFromFirebase
+import com.lifo.ui.providers.MoodUiProvider
 import com.lifo.util.model.HomeContentItem
 import com.lifo.util.model.Mood
 import java.time.Instant
@@ -102,7 +102,7 @@ private fun UnifiedClassicHeader(
     modifier: Modifier = Modifier
 ) {
     val headerColor = when (item) {
-        is HomeContentItem.DiaryItem -> item.mood.containerColor
+        is HomeContentItem.DiaryItem -> MoodUiProvider.getContainerColor(item.mood)
         is HomeContentItem.ChatItem -> {
             if (item.isLiveMode) {
                 MaterialTheme.colorScheme.errorContainer
@@ -113,7 +113,7 @@ private fun UnifiedClassicHeader(
     }
     
     val contentColor = when (item) {
-        is HomeContentItem.DiaryItem -> item.mood.contentColor
+        is HomeContentItem.DiaryItem -> MoodUiProvider.getContentColor(item.mood)
         is HomeContentItem.ChatItem -> {
             if (item.isLiveMode) {
                 MaterialTheme.colorScheme.onErrorContainer
@@ -142,7 +142,7 @@ private fun UnifiedClassicHeader(
                 is HomeContentItem.DiaryItem -> {
                     Image(
                         modifier = Modifier.size(18.dp),
-                        painter = painterResource(id = item.mood.icon),
+                        painter = painterResource(id = MoodUiProvider.getIcon(item.mood)),
                         contentDescription = "Mood Icon"
                     )
                     Spacer(modifier = Modifier.width(7.dp))
@@ -201,7 +201,7 @@ private fun DiaryContentPreview(
     val context = LocalContext.current
     var galleryOpened by remember { mutableStateOf(false) }
     var galleryLoading by remember { mutableStateOf(false) }
-    val downloadedImages = remember { mutableStateListOf<Uri>() }
+    val downloadedImages = remember { mutableStateListOf<String>() }
     
     LaunchedEffect(key1 = galleryOpened) {
         if (galleryOpened && downloadedImages.isEmpty()) {

@@ -1,6 +1,6 @@
 package com.lifo.chat.audio.engine
 
-import android.util.Log
+
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
@@ -26,8 +26,6 @@ class LockFreeAudioRingBuffer(
     private val capacityBytes: Int = DEFAULT_CAPACITY_BYTES
 ) {
     companion object {
-        private const val TAG = "LockFreeRingBuffer"
-
         // Default: 2 secondi di audio @ 24kHz, 16-bit mono
         // 24000 samples/sec * 2 bytes/sample * 2 seconds = 96000 bytes
         const val DEFAULT_CAPACITY_BYTES = 96000
@@ -78,7 +76,7 @@ class LockFreeAudioRingBuffer(
 
         if (available == 0) {
             overrunCount.incrementAndGet()
-            Log.w(TAG, "⚠️ Buffer OVERRUN - buffer pieno, dropping data")
+            println("[LockFreeRingBuffer] WARNING: Buffer OVERRUN - buffer pieno, dropping data")
             return 0
         }
 
@@ -230,7 +228,7 @@ class LockFreeAudioRingBuffer(
         writeIndex.set(0)
         readIndex.set(0)
         // Non azzeriamo il buffer per performance - sarà sovrascritto
-        Log.d(TAG, "🔄 Buffer reset")
+        println("[LockFreeRingBuffer] Buffer reset")
     }
 
     /**
@@ -240,7 +238,7 @@ class LockFreeAudioRingBuffer(
     fun flush() {
         val currentWrite = writeIndex.get()
         readIndex.set(currentWrite)
-        Log.d(TAG, "🚿 Buffer flushed")
+        println("[LockFreeRingBuffer] Buffer flushed")
     }
 
     /**

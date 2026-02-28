@@ -1,6 +1,5 @@
 package com.lifo.home.navigation
 
-import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
@@ -17,7 +16,6 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import com.lifo.home.HomeScreen
-import com.google.firebase.auth.FirebaseAuth
 import com.lifo.home.HomeViewModel
 import com.lifo.ui.components.DisplayAlertDialog
 import com.lifo.util.Screen
@@ -91,7 +89,7 @@ fun NavGraphBuilder.homeRoute(
         LaunchedEffect(Unit) {
             // Only reload if we don't have data
             if (diaries is RequestState.Idle) {
-                Log.d("HomeRoute", "Initial load - fetching diaries")
+                println("[HomeRoute] Initial load - fetching diaries")
                 viewModel.loadDiaries()
             }
         }
@@ -102,7 +100,7 @@ fun NavGraphBuilder.homeRoute(
                 diaries !is RequestState.Loading &&
                 diaries !is RequestState.Idle) {
                 hasCalledOnDataLoaded.value = true
-                Log.d("HomeRoute", "Data ready - calling onDataLoaded")
+                println("[HomeRoute] Data ready - calling onDataLoaded")
                 onDataLoaded()
             }
         }
@@ -123,7 +121,7 @@ fun NavGraphBuilder.homeRoute(
                             }
                         }
                     } catch (e: Exception) {
-                        Log.e("HomeRoute", "Error toggling drawer", e)
+                        println("[HomeRoute] ERROR: Error toggling drawer: ${e.message}")
                     }
                 }
             },
@@ -168,7 +166,7 @@ fun NavGraphBuilder.homeRoute(
 
                             // Sign out from Firebase
                             withContext(Dispatchers.IO) {
-                                FirebaseAuth.getInstance().signOut()
+                                viewModel.signOut()
                             }
 
                             // Navigate to auth on main thread
@@ -176,7 +174,7 @@ fun NavGraphBuilder.homeRoute(
                                 navigateToAuth()
                             }
                         } catch (e: Exception) {
-                            Log.e("HomeRoute", "Error signing out", e)
+                            println("[HomeRoute] ERROR: Error signing out: ${e.message}")
                             withContext(Dispatchers.Main) {
                                 Toast.makeText(
                                     context,
@@ -216,7 +214,7 @@ fun NavGraphBuilder.homeRoute(
                                         drawerState.close()
                                     }
                                 } catch (e: Exception) {
-                                    Log.e("HomeRoute", "Error closing drawer", e)
+                                    println("[HomeRoute] ERROR: Error closing drawer: ${e.message}")
                                 }
                             }
                         },
@@ -239,7 +237,7 @@ fun NavGraphBuilder.homeRoute(
                                         drawerState.close()
                                     }
                                 } catch (e: Exception) {
-                                    Log.e("HomeRoute", "Error closing drawer", e)
+                                    println("[HomeRoute] ERROR: Error closing drawer: ${e.message}")
                                 }
                             }
                         }

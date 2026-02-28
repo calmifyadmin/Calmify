@@ -49,14 +49,13 @@ import com.lifo.chat.navigation.liveRoute
 import com.lifo.chat.navigation.navigateToChat
 import com.lifo.history.navigation.historyRoute
 import com.lifo.home.navigation.homeRoute
-import com.lifo.humanoid.api.ArHumanoidAvatarView
 import com.lifo.humanoid.api.HumanoidAvatarView
 import com.lifo.humanoid.api.asHumanoidController
-import com.lifo.humanoid.domain.ar.ArSessionManager
+import com.lifo.humanoid.presentation.HumanoidViewModel
 import com.lifo.humanoid.presentation.navigation.humanoidRoute
 import com.lifo.settings.navigation.settingsRoute
 import com.lifo.insight.InsightScreen
-import com.lifo.mongo.repository.MongoRepository
+import com.lifo.util.repository.MongoRepository
 import com.lifo.onboarding.navigation.onboardingRoute
 import com.lifo.profile.ProfileDashboard
 import com.lifo.ui.components.DisplayAlertDialog
@@ -118,6 +117,7 @@ import kotlin.math.ln
 fun CalmifyApp(
     startDestination: String,
     repository: MongoRepository,
+    auth: FirebaseAuth,
     deepLinkRoute: String? = null,
     onDeepLinkHandled: () -> Unit = {},
     onDataLoaded: () -> Unit = {}
@@ -129,7 +129,7 @@ fun CalmifyApp(
     // Handle deep linking from FCM notifications
     LaunchedEffect(deepLinkRoute) {
         deepLinkRoute?.let { route ->
-            android.util.Log.d("CalmifyApp", "Navigating to deep link: $route")
+            println("[CalmifyApp] Navigating to deep link: $route")
             navigationState.navController.navigate(route) {
                 // Pop up to home to avoid building a large back stack
                 popUpTo(Screen.Home.route) {
@@ -155,7 +155,7 @@ fun CalmifyApp(
     val isHomeScreen = currentRoute == Screen.Home.route
 
     // User info
-    val user = FirebaseAuth.getInstance().currentUser
+    val user = auth.currentUser
     val userProfileImageUrl = user?.photoUrl?.toString()
 
     // Dialog states
@@ -307,7 +307,7 @@ fun CalmifyApp(
 
                         withContext(Dispatchers.IO) {
                             // Sign out from Firebase
-                            FirebaseAuth.getInstance().signOut()
+                            auth.signOut()
                         }
 
                         withContext(Dispatchers.Main) {
@@ -738,20 +738,22 @@ private fun CalmifyNavHost(
                 navController.navigate(Screen.LiveChat.route) {
                     launchSingleTop = true
                 }
-            },
-            navigateToAvatarLiveChat = {
-                navController.navigate(Screen.AvatarLiveChat.route) {
-                    launchSingleTop = true
-                }
             }
         )
 
-        // Live Chat - dedicated screen
+        // Live Chat - dedicated screen with Humanoid Avatar
         liveRoute(
             navigateBack = {
                 if (navController.currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
                     navController.popBackStack()
                 }
+            },
+            avatarContent = {
+                val humanoidViewModel: HumanoidViewModel = hiltViewModel()
+                HumanoidAvatarView(
+                    modifier = androidx.compose.ui.Modifier.fillMaxSize(),
+                    viewModel = humanoidViewModel
+                )
             }
         )
 
@@ -769,120 +771,5 @@ private fun CalmifyNavHost(
             }
         )
 
-        // Avatar Live Chat - Gemini Live Bidirectional Streaming with Avatar
-        // Uses GeminiLiveAudioManager which already has:
-        // - AcousticEchoCanceler for echo cancellation (prevents AI self-listening)
-        // - NoiseSuppressor for cleaner audio input
-        // - AutomaticGainControl for level normalization
-        // - USAGE_ASSISTANT with CONTENT_TYPE_SPEECH for proper audio routing
-        // - Silero VAD for intelligent barge-in detection during AI speech
-        composable(
-            route = Screen.AvatarLiveChat.route,
-            enterTransition = {
-                fadeIn(tween(400)) + scaleIn(
-                    initialScale = 0.95f,
-                    animationSpec = tween(400)
-                )
-            },
-            exitTransition = {
-                fadeOut(tween(300)) + scaleOut(
-                    targetScale = 0.95f,
-                    animationSpec = tween(300)
-                )
-            }
-        ) {
-            val humanoidViewModel: com.lifo.humanoid.presentation.HumanoidViewModel = hiltViewModel()
-            val liveChatViewModel: com.lifo.chat.presentation.viewmodel.LiveChatViewModel = hiltViewModel()
-
-            val context = LocalContext.current
-
-            // Access Hilt entry point for cross-module dependencies
-            val avatarEntryPoint = remember {
-                EntryPointAccessors.fromApplication(
-                    context.applicationContext,
-                    com.lifo.app.integration.avatar.AvatarIntegrationEntryPoint::class.java
-                )
-            }
-
-            // AR availability check (SceneView manages its own ARCore session internally)
-            val arSessionManager = remember { avatarEntryPoint.arSessionManager() }
-            val isArAvailable by arSessionManager.isArAvailable.collectAsState()
-            var isArMode by rememberSaveable { mutableStateOf(false) }
-
-            // Setup avatar integration for lip-sync
-            val humanoidController = remember(humanoidViewModel) {
-                val lipSyncController = avatarEntryPoint.lipSyncController()
-                humanoidViewModel.asHumanoidController(lipSyncController)
-            }
-
-            // Attach avatar as animation target for lip-sync
-            LaunchedEffect(humanoidController) {
-                liveChatViewModel.attachHumanoidController(humanoidController)
-            }
-
-            // Attach gesture callback for AI-triggered animations
-            LaunchedEffect(humanoidController) {
-                val gestureCallback = com.lifo.humanoid.api.HumanoidIntegrationHelper
-                    .createGestureCallback(humanoidController)
-                liveChatViewModel.attachGestureCallback(gestureCallback)
-            }
-
-            // Camera permission launcher for AR mode
-            val activity = context as? android.app.Activity
-            var arPermissionGranted by remember { mutableStateOf(
-                activity != null && androidx.core.content.ContextCompat.checkSelfPermission(
-                    activity, android.Manifest.permission.CAMERA
-                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-            ) }
-            val arCameraPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-                contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
-            ) { granted ->
-                arPermissionGranted = granted
-                if (!granted) {
-                    isArMode = false // Revert if denied
-                }
-            }
-
-            // Request camera permission when entering AR mode
-            // (SceneView manages its own ARCore session internally)
-            LaunchedEffect(isArMode, arPermissionGranted) {
-                if (isArMode && !arPermissionGranted) {
-                    arCameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
-                }
-            }
-
-            com.lifo.chat.presentation.screen.LiveScreen(
-                onClose = {
-                    liveChatViewModel.detachHumanoidController()
-                    if (isArMode) {
-                        isArMode = false
-                    }
-                    if (navController.currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
-                        navController.popBackStack()
-                    }
-                },
-                showAvatar = true,
-                avatarContent = {
-                    HumanoidAvatarView(
-                        modifier = Modifier.fillMaxSize(),
-                        viewModel = humanoidViewModel,
-                        blurAmount = 0f
-                    )
-                },
-                arContent = if (isArAvailable) {
-                    {
-                        ArHumanoidAvatarView(
-                            modifier = Modifier.fillMaxSize(),
-                            viewModel = humanoidViewModel
-                        )
-                    }
-                } else null,
-                isArMode = isArMode,
-                onToggleArMode = {
-                    isArMode = !isArMode
-                },
-                viewModel = liveChatViewModel
-            )
-        }
     }
 }

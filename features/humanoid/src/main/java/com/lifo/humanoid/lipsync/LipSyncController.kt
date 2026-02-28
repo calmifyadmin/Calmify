@@ -1,6 +1,5 @@
 package com.lifo.humanoid.lipsync
 
-import android.util.Log
 import com.lifo.humanoid.data.vrm.VrmBlendShapeController
 import com.lifo.humanoid.domain.model.Viseme
 import kotlinx.coroutines.*
@@ -24,10 +23,6 @@ class LipSyncController(
     private val phonemeConverter: PhonemeConverter,
     private val blendShapeController: VrmBlendShapeController
 ) {
-
-    companion object {
-        private const val TAG = "LipSyncController"
-    }
 
     private val _isSpeaking = MutableStateFlow(false)
     val isSpeaking: StateFlow<Boolean> = _isSpeaking.asStateFlow()
@@ -97,7 +92,7 @@ class LipSyncController(
 
         // If text is empty, prepare for AUDIO-REACTIVE mode (pure amplitude-based lip-sync)
         if (text.isBlank()) {
-            Log.d(TAG, "🎬 Preparing AUDIO-REACTIVE lip-sync (no text): $messageId")
+            println("[LipSyncController] Preparing AUDIO-REACTIVE lip-sync (no text): $messageId")
 
             syncState.set(SyncState(
                 text = "",
@@ -110,13 +105,13 @@ class LipSyncController(
             return
         }
 
-        Log.d(TAG, "🎬 Preparing TEXT-BASED lip-sync: '${text.take(50)}...' (${durationToUse}ms)")
+        println("[LipSyncController] Preparing TEXT-BASED lip-sync: '${text.take(50)}...' (${durationToUse}ms)")
 
         // Generate phonemes and visemes from text
         val phonemeTimings = phonemeConverter.textToPhonemes(text, durationToUse)
         val visemeTimings = VisemeMapper.phonemesToVisemes(phonemeTimings)
 
-        Log.d(TAG, "📝 Generated ${visemeTimings.size} visemes for synchronized playback")
+        println("[LipSyncController] Generated ${visemeTimings.size} visemes for synchronized playback")
 
         syncState.set(SyncState(
             text = text,
@@ -139,12 +134,12 @@ class LipSyncController(
         val state = syncState.get()
 
         if (!state.isPrepared) {
-            Log.w(TAG, "startSynchronized: Not prepared, call prepareSynchronized first")
+            println("[LipSyncController] WARNING: startSynchronized: Not prepared, call prepareSynchronized first")
             return
         }
 
         if (state.isPlaying) {
-            Log.w(TAG, "startSynchronized: Already playing")
+            println("[LipSyncController] WARNING: startSynchronized: Already playing")
             return
         }
 
@@ -154,7 +149,7 @@ class LipSyncController(
         // Re-calculate timings if duration changed significantly
         val visemeTimings = if (actualDurationMs > 0 &&
             kotlin.math.abs(actualDurationMs - state.totalDurationMs) > 500) {
-            Log.d(TAG, "⏱️ Recalculating visemes for actual duration: ${actualDurationMs}ms (was ${state.totalDurationMs}ms)")
+            println("[LipSyncController] Recalculating visemes for actual duration: ${actualDurationMs}ms (was ${state.totalDurationMs}ms)")
             val phonemeTimings = phonemeConverter.textToPhonemes(state.text, actualDurationMs)
             VisemeMapper.phonemesToVisemes(phonemeTimings)
         } else {
@@ -176,9 +171,9 @@ class LipSyncController(
         val isAudioReactiveMode = visemeTimings.isEmpty()
 
         if (isAudioReactiveMode) {
-            Log.d(TAG, "▶️ Starting AUDIO-REACTIVE lip-sync (amplitude-driven)")
+            println("[LipSyncController] Starting AUDIO-REACTIVE lip-sync (amplitude-driven)")
         } else {
-            Log.d(TAG, "▶️ Starting TEXT-BASED lip-sync (${visemeTimings.size} visemes, ${durationToUse}ms)")
+            println("[LipSyncController] Starting TEXT-BASED lip-sync (${visemeTimings.size} visemes, ${durationToUse}ms)")
         }
 
         syncJob = scope.launch {
@@ -189,7 +184,7 @@ class LipSyncController(
                     playSynchronizedSequence(visemeTimings, durationToUse, startTime)
                 }
             } catch (e: CancellationException) {
-                Log.d(TAG, "⏹️ Synchronized lip-sync cancelled")
+                println("[LipSyncController] Synchronized lip-sync cancelled")
             } finally {
                 _isSpeaking.value = false
                 _progress.value = 0f
@@ -216,7 +211,7 @@ class LipSyncController(
         // If duration changed significantly, we may need to adjust timing
         if (totalDurationMs > 0 && kotlin.math.abs(totalDurationMs - state.totalDurationMs) > 1000) {
             syncState.set(state.copy(totalDurationMs = totalDurationMs))
-            Log.d(TAG, "📊 Updated total duration: ${totalDurationMs}ms")
+            println("[LipSyncController] Updated total duration: ${totalDurationMs}ms")
         }
     }
 
@@ -257,7 +252,7 @@ class LipSyncController(
         // Clear lip-sync blend shapes with quick fade
         blendShapeController.clearCategory(VrmBlendShapeController.CATEGORY_LIPSYNC)
 
-        Log.d(TAG, "⏹️ Synchronized lip-sync stopped")
+        println("[LipSyncController] Synchronized lip-sync stopped")
     }
 
     /**
@@ -266,7 +261,7 @@ class LipSyncController(
      * Used when text is not available (streaming audio mode).
      */
     private suspend fun playAudioReactiveLoop(startTime: Long) {
-        Log.d(TAG, "🎤 Audio-reactive loop started (FFT-enhanced)")
+        println("[LipSyncController] Audio-reactive loop started (FFT-enhanced)")
 
         var lastWeights = mapOf<String, Float>()
         val coarticulationFactor = 0.2f // 20% blend from previous frame
@@ -331,7 +326,7 @@ class LipSyncController(
 
         // Fade out when done
         fadeToNeutral()
-        Log.d(TAG, "🎤 Audio-reactive loop ended")
+        println("[LipSyncController] Audio-reactive loop ended")
     }
 
     /**
@@ -461,16 +456,16 @@ class LipSyncController(
         stop()
 
         if (text.isBlank() || durationMs <= 0) {
-            Log.w(TAG, "Invalid input: text='$text', duration=$durationMs")
+            println("[LipSyncController] WARNING: Invalid input: text='$text', duration=$durationMs")
             return
         }
 
         _isSpeaking.value = true
-        Log.d(TAG, "Starting lip-sync for: '$text', duration: ${durationMs}ms")
+        println("[LipSyncController] Starting lip-sync for: '$text', duration: ${durationMs}ms")
 
         // Convert text to phonemes
         val phonemeTimings = phonemeConverter.textToPhonemes(text, durationMs)
-        Log.d(TAG, "Generated ${phonemeTimings.size} phonemes")
+        println("[LipSyncController] Generated ${phonemeTimings.size} phonemes")
 
         if (phonemeTimings.isEmpty()) {
             _isSpeaking.value = false

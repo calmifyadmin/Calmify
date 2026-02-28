@@ -7,7 +7,7 @@ import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
-import android.util.Log
+
 import androidx.annotation.RequiresPermission
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,8 +43,6 @@ class SpeechToTextManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     companion object {
-        private const val TAG = "SpeechToTextManager"
-
         // Audio level normalization
         private const val MAX_RMS_DB = 10f  // Maximum expected RMS dB
         private const val MIN_RMS_DB = -2f  // Minimum (silence)
@@ -95,12 +93,12 @@ class SpeechToTextManager @Inject constructor(
      */
     fun initialize() {
         if (!SpeechRecognizer.isRecognitionAvailable(context)) {
-            Log.e(TAG, "❌ Speech recognition not available on this device")
+            println("[SpeechToTextManager] ERROR: Speech recognition not available on this device")
             _sttState.value = STTState(isAvailable = false, error = "Speech recognition not available")
             return
         }
 
-        Log.d(TAG, "🎙️ Initializing SpeechToTextManager...")
+        println("[SpeechToTextManager] Initializing SpeechToTextManager...")
 
         try {
             speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
@@ -119,11 +117,11 @@ class SpeechToTextManager @Inject constructor(
                 putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 500L)
             }
 
-            Log.d(TAG, "✅ SpeechRecognizer initialized successfully")
+            println("[SpeechToTextManager] SpeechRecognizer initialized successfully")
             _sttState.value = STTState(isAvailable = true)
 
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to initialize SpeechRecognizer", e)
+            println("[SpeechToTextManager] ERROR: Failed to initialize SpeechRecognizer: ${e.message}")
             _sttState.value = STTState(isAvailable = false, error = e.message)
         }
     }
@@ -135,17 +133,17 @@ class SpeechToTextManager @Inject constructor(
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun startListening() {
         if (!_sttState.value.isAvailable) {
-            Log.w(TAG, "⚠️ Speech recognition not available")
+            println("[SpeechToTextManager] WARNING: Speech recognition not available")
             onError?.invoke(STTError.NotAvailable)
             return
         }
 
         if (_sttState.value.isListening) {
-            Log.w(TAG, "⚠️ Already listening")
+            println("[SpeechToTextManager] WARNING: Already listening")
             return
         }
 
-        Log.d(TAG, "🎤 Starting speech recognition...")
+        println("[SpeechToTextManager] Starting speech recognition...")
 
         try {
             _partialTranscript.value = ""
@@ -156,7 +154,7 @@ class SpeechToTextManager @Inject constructor(
             speechRecognizer?.startListening(recognizerIntent)
 
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to start listening", e)
+            println("[SpeechToTextManager] ERROR: Failed to start listening: ${e.message}")
             _sttState.value = _sttState.value.copy(isListening = false, error = e.message)
         }
     }
@@ -166,16 +164,16 @@ class SpeechToTextManager @Inject constructor(
      * Uses partial transcript as fallback if onResults doesn't fire.
      */
     fun stopListening() {
-        Log.d(TAG, "🛑 stopListening() called - isListening=${_sttState.value.isListening}")
+        println("[SpeechToTextManager] stopListening() called - isListening=${_sttState.value.isListening}")
 
         if (!_sttState.value.isListening) {
-            Log.w(TAG, "⚠️ stopListening called but not listening!")
+            println("[SpeechToTextManager] WARNING: stopListening called but not listening!")
             return
         }
 
         // Capture partial transcript before stopping (fallback)
         val currentPartial = _partialTranscript.value
-        Log.d(TAG, "🛑 Stopping speech recognition... partialTranscript='$currentPartial', resultAlreadySent=$resultAlreadySent")
+        println("[SpeechToTextManager] Stopping speech recognition... partialTranscript='$currentPartial', resultAlreadySent=$resultAlreadySent")
 
         try {
             speechRecognizer?.stopListening()
@@ -185,16 +183,16 @@ class SpeechToTextManager @Inject constructor(
             // Use partial transcript as fallback if we have one
             // onResults may not fire when manually stopped
             if (currentPartial.isNotBlank() && !resultAlreadySent) {
-                Log.d(TAG, "📤 Using partial transcript as result: '$currentPartial'")
+                println("[SpeechToTextManager] Using partial transcript as result: '$currentPartial'")
                 resultAlreadySent = true
                 _partialTranscript.value = ""
                 onResultReady?.invoke(currentPartial)
             } else {
-                Log.w(TAG, "⚠️ No partial transcript to send or already sent")
+                println("[SpeechToTextManager] WARNING: No partial transcript to send or already sent")
             }
 
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Error stopping recognition", e)
+            println("[SpeechToTextManager] ERROR: Error stopping recognition: ${e.message}")
         }
     }
 
@@ -202,7 +200,7 @@ class SpeechToTextManager @Inject constructor(
      * Cancel recognition without processing results.
      */
     fun cancel() {
-        Log.d(TAG, "❌ Cancelling speech recognition...")
+        println("[SpeechToTextManager] Cancelling speech recognition...")
 
         try {
             speechRecognizer?.cancel()
@@ -211,18 +209,18 @@ class SpeechToTextManager @Inject constructor(
             _audioLevel.value = 0f
 
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Error cancelling recognition", e)
+            println("[SpeechToTextManager] ERROR: Error cancelling recognition: ${e.message}")
         }
     }
 
     private fun createRecognitionListener(): RecognitionListener {
         return object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) {
-                Log.d(TAG, "🎙️ Ready for speech")
+                println("[SpeechToTextManager] Ready for speech")
             }
 
             override fun onBeginningOfSpeech() {
-                Log.d(TAG, "🗣️ Speech started")
+                println("[SpeechToTextManager] Speech started")
             }
 
             override fun onRmsChanged(rmsdB: Float) {
@@ -237,20 +235,20 @@ class SpeechToTextManager @Inject constructor(
             }
 
             override fun onEndOfSpeech() {
-                Log.d(TAG, "🤐 Speech ended (waiting for results or user confirmation)")
+                println("[SpeechToTextManager] Speech ended (waiting for results or user confirmation)")
                 // Don't set isListening = false here!
                 // Let the user confirm with button press, or wait for onResults/onError
             }
 
             override fun onError(error: Int) {
                 val sttError = mapError(error)
-                Log.e(TAG, "❌ Recognition error: $error -> $sttError, partial='${_partialTranscript.value}'")
+                println("[SpeechToTextManager] ERROR: Recognition error: $error -> $sttError, partial='${_partialTranscript.value}'")
 
                 _audioLevel.value = 0f
 
                 // If we have partial transcript, keep listening state so user can still send
                 if (_partialTranscript.value.isNotBlank()) {
-                    Log.d(TAG, "⚠️ Error but have partial text - keeping UI active for user to send")
+                    println("[SpeechToTextManager] Error but have partial text - keeping UI active for user to send")
                     // Don't change isListening, let user press Check to send what we have
                 } else {
                     _sttState.value = _sttState.value.copy(
@@ -268,13 +266,13 @@ class SpeechToTextManager @Inject constructor(
                 val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 val finalText = matches?.firstOrNull() ?: ""
 
-                Log.d(TAG, "✅ Final result from recognizer: '$finalText'")
+                println("[SpeechToTextManager] Final result from recognizer: '$finalText'")
 
                 // Update partial transcript with final result (don't clear it!)
                 // User will press Check button to confirm and send
                 if (finalText.isNotBlank()) {
                     _partialTranscript.value = finalText
-                    Log.d(TAG, "📝 Updated partial transcript with final: '$finalText'")
+                    println("[SpeechToTextManager] Updated partial transcript with final: '$finalText'")
                 }
 
                 // Keep isListening = true so user can still press Check button
@@ -283,7 +281,7 @@ class SpeechToTextManager @Inject constructor(
 
                 // If user already pressed Check (resultAlreadySent), just clean up
                 if (resultAlreadySent) {
-                    Log.d(TAG, "✅ Result already sent via button press")
+                    println("[SpeechToTextManager] Result already sent via button press")
                     _sttState.value = _sttState.value.copy(isListening = false)
                     _partialTranscript.value = ""
                 }
@@ -294,13 +292,13 @@ class SpeechToTextManager @Inject constructor(
                 val partialText = matches?.firstOrNull() ?: ""
 
                 if (partialText.isNotBlank()) {
-                    Log.d(TAG, "📝 Partial: '$partialText'")
+                    println("[SpeechToTextManager] Partial: '$partialText'")
                     _partialTranscript.value = partialText
                 }
             }
 
             override fun onEvent(eventType: Int, params: Bundle?) {
-                Log.d(TAG, "📣 Event: $eventType")
+                println("[SpeechToTextManager] Event: $eventType")
             }
         }
     }
@@ -333,7 +331,7 @@ class SpeechToTextManager @Inject constructor(
      * Call this when the component is destroyed.
      */
     fun release() {
-        Log.d(TAG, "🧹 Releasing SpeechToTextManager...")
+        println("[SpeechToTextManager] Releasing SpeechToTextManager...")
 
         try {
             speechRecognizer?.destroy()
@@ -345,7 +343,7 @@ class SpeechToTextManager @Inject constructor(
             _partialTranscript.value = ""
 
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Error releasing resources", e)
+            println("[SpeechToTextManager] ERROR: Error releasing resources: ${e.message}")
         }
     }
 }

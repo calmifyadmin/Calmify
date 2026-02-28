@@ -1,6 +1,7 @@
 package com.lifo.mongo.di
 
-import com.lifo.mongo.repository.*
+import com.lifo.mongo.repository.FirestoreProfileSettingsRepository
+import com.lifo.util.repository.ProfileSettingsRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn

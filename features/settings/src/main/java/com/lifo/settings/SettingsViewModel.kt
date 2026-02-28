@@ -3,7 +3,7 @@ package com.lifo.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
-import com.lifo.mongo.repository.ProfileSettingsRepository
+import com.lifo.util.repository.ProfileSettingsRepository
 import com.lifo.util.model.ProfileSettings
 import com.lifo.util.model.RequestState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -41,7 +41,13 @@ class SettingsViewModel @Inject constructor(
      */
     private fun loadProfileSettings() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+            _uiState.update {
+                it.copy(
+                    isLoading = true,
+                    error = null,
+                    userProfileImageUrl = auth.currentUser?.photoUrl?.toString()
+                )
+            }
 
             val userId = auth.currentUser?.uid
             if (userId == null) {
@@ -267,6 +273,7 @@ data class SettingsUiState(
     val profileSettings: ProfileSettings = ProfileSettings(),
     val notificationSettings: NotificationSettings = NotificationSettings(),
     val appPreferences: AppPreferences = AppPreferences(),
+    val userProfileImageUrl: String? = null,
     val showDeleteAccountDialog: Boolean = false,
     val error: String? = null
 )

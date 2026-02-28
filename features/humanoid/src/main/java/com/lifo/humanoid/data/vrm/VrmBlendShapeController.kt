@@ -1,6 +1,5 @@
 package com.lifo.humanoid.data.vrm
 
-import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,8 +16,6 @@ import kotlinx.coroutines.flow.asStateFlow
 class VrmBlendShapeController {
 
     companion object {
-        private const val TAG = "BlendShapeController"
-
         // Weight categories for priority management
         const val CATEGORY_LIPSYNC = "lipsync"
         const val CATEGORY_EMOTION = "emotion"
@@ -140,7 +137,7 @@ class VrmBlendShapeController {
      */
     fun setAvailablePresets(presets: Set<String>) {
         _availablePresets = presets.map { it.lowercase() }.toSet()
-        Log.d(TAG, "Available presets: $_availablePresets")
+        println("[BlendShapeController] Available presets: $_availablePresets")
     }
 
     /**

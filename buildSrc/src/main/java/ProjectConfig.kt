@@ -14,4 +14,7 @@ object ProjectConfig {
     // Build config
     const val applicationId = "com.lifo.calmifyapp"
     const val testRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+    // KMP Migration — Set to true after full conversion to Kotlin Multiplatform
+    const val KMP_READY = false
 }

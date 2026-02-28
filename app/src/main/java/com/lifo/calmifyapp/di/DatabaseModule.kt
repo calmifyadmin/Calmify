@@ -3,7 +3,8 @@ package com.lifo.calmifyapp.di
 import android.content.Context
 import com.lifo.mongo.database.AppDatabase
 import com.lifo.mongo.di.MongoDatabaseProvider
-import com.lifo.util.connectivity.NetworkConnectivityObserver
+import com.lifo.calmifyapp.connectivity.NetworkConnectivityObserver
+import com.lifo.util.connectivity.ConnectivityObserver
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -35,5 +36,5 @@ object DatabaseModule {
     @Provides
     fun provideNetworkConnectivityObserver(
         @ApplicationContext context: Context
-    ) = NetworkConnectivityObserver(context = context)
+    ): ConnectivityObserver = NetworkConnectivityObserver(context = context)
 }

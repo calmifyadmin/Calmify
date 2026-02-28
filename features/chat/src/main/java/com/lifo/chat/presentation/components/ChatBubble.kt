@@ -28,7 +28,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.lifo.mongo.repository.ChatMessage
+import com.lifo.util.model.ChatMessage
 
 /**
  * Simplified chat bubble with integrated natural voice indicators

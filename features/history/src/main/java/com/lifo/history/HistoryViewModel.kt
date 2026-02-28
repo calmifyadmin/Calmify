@@ -1,13 +1,10 @@
 package com.lifo.history
 
-import android.os.Build
-import android.util.Log
-import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
-import com.lifo.mongo.repository.MongoRepository
-import com.lifo.mongo.repository.UnifiedContentRepository
+import com.lifo.util.repository.MongoRepository
+import com.lifo.util.repository.UnifiedContentRepository
 import com.lifo.util.model.ContentFilter
 import com.lifo.util.model.HomeContentItem
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,15 +25,14 @@ data class HistoryUiState(
     val isDiariesEmpty: Boolean = true
 )
 
-@RequiresApi(Build.VERSION_CODES.N)
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
     private val unifiedContentRepository: UnifiedContentRepository,
-    private val diaryRepository: MongoRepository
+    private val diaryRepository: MongoRepository,
+    private val auth: FirebaseAuth
 ) : ViewModel() {
 
     companion object {
-        private const val TAG = "HistoryViewModel"
         private const val RECENT_ITEMS_LIMIT = 4 // Show last 4 items in each section
     }
 
@@ -48,7 +44,7 @@ class HistoryViewModel @Inject constructor(
     }
 
     private fun getCurrentUserId(): String {
-        return FirebaseAuth.getInstance().currentUser?.uid
+        return auth.currentUser?.uid
             ?: throw IllegalStateException("User not authenticated")
     }
 
@@ -65,7 +61,7 @@ class HistoryViewModel @Inject constructor(
                 // Observe unified content and separate into chat/diary sections
                 unifiedContentRepository.getUnifiedContent(userId)
                     .catch { e ->
-                        Log.e(TAG, "Error loading history", e)
+                        println("[HistoryViewModel] ERROR: Error loading history: ${e.message}")
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
@@ -95,7 +91,7 @@ class HistoryViewModel @Inject constructor(
                         }
                     }
             } catch (e: Exception) {
-                Log.e(TAG, "Error loading history", e)
+                println("[HistoryViewModel] ERROR: Error loading history: ${e.message}")
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -127,7 +123,7 @@ class HistoryViewModel @Inject constructor(
                 items.filterIsInstance<HomeContentItem.ChatItem>()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error loading full chat history", e)
+            println("[HistoryViewModel] ERROR: Error loading full chat history: ${e.message}")
             flowOf(emptyList())
         }
     }
@@ -146,7 +142,7 @@ class HistoryViewModel @Inject constructor(
                 items.filterIsInstance<HomeContentItem.DiaryItem>()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error loading full diary history", e)
+            println("[HistoryViewModel] ERROR: Error loading full diary history: ${e.message}")
             flowOf(emptyList())
         }
     }

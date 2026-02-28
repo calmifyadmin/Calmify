@@ -1,8 +1,5 @@
 package com.lifo.calmifyapp.navigation
 
-import android.os.Build
-import android.util.Log
-import androidx.annotation.RequiresApi
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -31,18 +28,19 @@ import com.lifo.write.navigation.writeRoute
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-@RequiresApi(Build.VERSION_CODES.N)
 @Composable
 fun SetupNavGraph(
     startDestination: String,
     navController: NavHostController,
-    repository: com.lifo.mongo.repository.MongoRepository,
+    repository: com.lifo.util.repository.MongoRepository,
+    auth: com.google.firebase.auth.FirebaseAuth,
     onDataLoaded: () -> Unit
 ) {
     // Delega tutto a CalmifyApp
     CalmifyApp(
         startDestination = startDestination,
         repository = repository,
+        auth = auth,
         onDataLoaded = onDataLoaded
     )
 }

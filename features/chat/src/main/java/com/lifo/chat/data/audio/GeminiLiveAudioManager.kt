@@ -84,8 +84,8 @@ class GeminiLiveAudioManager @Inject constructor(
     private val _aiAudioLevel = MutableStateFlow(0f)
     val aiAudioLevel: StateFlow<Float> = _aiAudioLevel
 
-    // FFT-based viseme analysis for lip-sync
-    private val visemeAnalyzer = AudioVisemeAnalyzer(defaultSampleRate = OUTPUT_SAMPLE_RATE)
+    // Viseme weights for lip-sync (FFT-based spectral analysis)
+    private val visemeAnalyzer = AudioVisemeAnalyzer()
     private val _aiVisemeWeights = MutableStateFlow<Map<String, Float>>(emptyMap())
     val aiVisemeWeights: StateFlow<Map<String, Float>> = _aiVisemeWeights
 
@@ -105,8 +105,19 @@ class GeminiLiveAudioManager @Inject constructor(
     private var isPlaying = AtomicBoolean(false)
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
+    private var isMuted = false
+
     var onAudioChunkReady: ((String) -> Unit)? = null
     var onBargeInDetected: (() -> Unit)? = null
+
+    /** Mute/unmute: when muted, audio is still recorded (for AEC) but not sent to server */
+    fun setMuted(muted: Boolean) {
+        isMuted = muted
+        if (muted) {
+            synchronized(pcmData) { pcmData.clear() }
+        }
+        Log.d(TAG, if (muted) "🔇 Muted - audio not sent to server" else "🔊 Unmuted - resuming audio")
+    }
 
     // NUOVO: Funzione per notificare quando l'AI sta parlando
     // Abilita/disabilita dinamicamente la modalità barge-in del VAD
@@ -144,35 +155,6 @@ class GeminiLiveAudioManager @Inject constructor(
                 pcmData.clear()
                 Log.d(TAG, "🧹 Cleared $clearedSamples stale audio samples - ready for fresh input")
             }
-        }
-    }
-
-    /**
-     * Mute reale: svuota buffer audio accumulato e resetta VAD.
-     * Quando mutato, l'audio viene comunque registrato (per AEC) ma NON inviato al server.
-     */
-    fun setMuted(muted: Boolean) {
-        if (muted) {
-            // Svuota buffer pcmData per evitare invio audio stantio all'unmute
-            synchronized(pcmData) {
-                val clearedSamples = pcmData.size
-                pcmData.clear()
-                Log.d(TAG, "🔇 MUTED: cleared $clearedSamples buffered samples")
-            }
-            // Reset VAD state (non serve tracciare speech durante mute)
-            if (USE_SILERO_VAD) {
-                sileroVadEngine.reset()
-            }
-        } else {
-            // Unmute: svuota buffer per partire freschi
-            synchronized(pcmData) {
-                pcmData.clear()
-            }
-            // Re-inizializza VAD per ripresa pulita
-            if (USE_SILERO_VAD) {
-                sileroVadEngine.initialize()
-            }
-            Log.d(TAG, "🎤 UNMUTED: VAD re-initialized, ready for fresh audio")
         }
     }
 
@@ -370,6 +352,12 @@ class GeminiLiveAudioManager @Inject constructor(
         // not the AI audio being played locally.
         // This is how Gemini Live desktop works - continuous audio streaming.
 
+        // When muted, drain buffer but don't send
+        if (isMuted) {
+            synchronized(pcmData) { pcmData.clear() }
+            return
+        }
+
         val dataCopy = synchronized(pcmData) {
             if (pcmData.size >= INPUT_CHUNK_SIZE_SAMPLES) {
                 val copy = pcmData.take(INPUT_CHUNK_SIZE_SAMPLES).toList()
@@ -478,14 +466,13 @@ class GeminiLiveAudioManager @Inject constructor(
 
                     playAudio(chunk)
 
-                    // NUOVO: Calculate real-time AI audio level for visualizer with smoothing
+                    // Calculate real-time AI audio level for visualizer with smoothing
                     val rawAiLevel = calculateAudioLevelFromBytes(chunk)
                     aiLevelSmoothing = aiLevelSmoothing * (1f - smoothingFactor) + rawAiLevel * smoothingFactor
                     _aiAudioLevel.value = aiLevelSmoothing
 
-                    // FFT viseme analysis for lip-sync
-                    val visemeWeights = visemeAnalyzer.analyze(chunk, OUTPUT_SAMPLE_RATE)
-                    _aiVisemeWeights.value = visemeWeights
+                    // FFT-based viseme analysis for lip-sync
+                    _aiVisemeWeights.value = visemeAnalyzer.analyze(chunk, OUTPUT_SAMPLE_RATE)
 
                 } catch (e: Exception) {
                     Log.e(TAG, "Error playing audio chunk", e)
@@ -504,8 +491,6 @@ class GeminiLiveAudioManager @Inject constructor(
                 }
                 aiLevelSmoothing = 0f
                 _aiAudioLevel.value = 0f
-                visemeAnalyzer.reset()
-                _aiVisemeWeights.value = emptyMap()
             }
         }
     }
@@ -741,11 +726,9 @@ class GeminiLiveAudioManager @Inject constructor(
                 isPlaying.set(false)
                 _playbackState.value = false
 
-                // Reset AI audio level and visemes
+                // Reset AI audio level
                 aiLevelSmoothing = 0f
                 _aiAudioLevel.value = 0f
-                visemeAnalyzer.reset()
-                _aiVisemeWeights.value = emptyMap()
 
                 Log.d(TAG, "✅ Fade-out complete - ready for user speech")
 
@@ -776,8 +759,6 @@ class GeminiLiveAudioManager @Inject constructor(
 
         aiLevelSmoothing = 0f
         _aiAudioLevel.value = 0f
-        visemeAnalyzer.reset()
-        _aiVisemeWeights.value = emptyMap()
     }
 
     // Audio mode configuration delegated to FullDuplexAudioSession

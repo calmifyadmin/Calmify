@@ -1,6 +1,5 @@
 package com.lifo.humanoid.animation
 
-import android.util.Log
 import com.lifo.humanoid.data.vrm.VrmBlendShapeController
 import com.lifo.humanoid.lipsync.LipSyncController
 import kotlinx.coroutines.CoroutineScope
@@ -30,10 +29,6 @@ class AnimationCoordinator(
     private val vrmaAnimationLoader: VrmaAnimationLoader
 ) {
 
-    companion object {
-        private const val TAG = "AnimationCoordinator"
-    }
-
     // State tracking
     private var isInitialized = false
     private var isRunning = false
@@ -60,14 +55,14 @@ class AnimationCoordinator(
      */
     fun start(scope: CoroutineScope) {
         if (isRunning) {
-            Log.d(TAG, "AnimationCoordinator already running")
+            println("[AnimationCoordinator] AnimationCoordinator already running")
             return
         }
 
         isRunning = true
         isInitialized = true
         animationScope = scope
-        Log.d(TAG, "Starting AnimationCoordinator")
+        println("[AnimationCoordinator] Starting AnimationCoordinator")
 
         // Start idle animation (lowest priority, always running in background)
         idleAnimationController.start(scope)
@@ -125,7 +120,7 @@ class AnimationCoordinator(
             }
         }
 
-        Log.d(TAG, "All animation systems started")
+        println("[AnimationCoordinator] All animation systems started")
     }
 
     /**
@@ -136,10 +131,10 @@ class AnimationCoordinator(
             scope.launch {
                 val animation = vrmaAnimationLoader.loadAnimation(animationAsset)
                 if (animation != null) {
-                    Log.d(TAG, "Playing idle rotation animation: ${animation.name}")
+                    println("[AnimationCoordinator] Playing idle rotation animation: ${animation.name}")
                     vrmaAnimationPlayer.play(animation, scope, loop = true)
                 } else {
-                    Log.w(TAG, "Failed to load idle animation: ${animationAsset.fileName}")
+                    println("[AnimationCoordinator] WARNING: Failed to load idle animation: ${animationAsset.fileName}")
                 }
             }
         }
@@ -151,8 +146,8 @@ class AnimationCoordinator(
     fun startIdleRotation() {
         animationScope?.let { scope ->
             idleRotationController?.start(scope)
-            Log.d(TAG, "Idle rotation started")
-        } ?: Log.w(TAG, "Cannot start idle rotation - no animation scope")
+            println("[AnimationCoordinator] Idle rotation started")
+        } ?: println("[AnimationCoordinator] WARNING: Cannot start idle rotation - no animation scope")
     }
 
     /**
@@ -160,7 +155,7 @@ class AnimationCoordinator(
      */
     fun stopIdleRotation() {
         idleRotationController?.stop()
-        Log.d(TAG, "Idle rotation stopped")
+        println("[AnimationCoordinator] Idle rotation stopped")
     }
 
     /**
@@ -181,7 +176,7 @@ class AnimationCoordinator(
      * Stop all animation systems
      */
     fun stop() {
-        Log.d(TAG, "Stopping AnimationCoordinator")
+        println("[AnimationCoordinator] Stopping AnimationCoordinator")
 
         isRunning = false
         animationScope = null
@@ -195,7 +190,7 @@ class AnimationCoordinator(
         // Clear all blend shape categories
         blendShapeController.reset()
 
-        Log.d(TAG, "All animation systems stopped")
+        println("[AnimationCoordinator] All animation systems stopped")
     }
 
     /**
@@ -226,7 +221,7 @@ class AnimationCoordinator(
         scope: CoroutineScope,
         loop: Boolean = animation.isLooping
     ) {
-        Log.d(TAG, "Playing animation: ${animation.name}")
+        println("[AnimationCoordinator] Playing animation: ${animation.name}")
         vrmaAnimationPlayer.play(animation, scope, loop)
     }
 

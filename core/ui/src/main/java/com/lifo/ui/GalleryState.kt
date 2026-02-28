@@ -1,6 +1,5 @@
 package com.lifo.ui
 
-import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
@@ -30,22 +29,12 @@ class GalleryState {
 
 /**
  * A class that represents a single Image within a Gallery.
- * @param image The image URI inside a gallery.
+ * @param image Image URL stored as String (Uri.toString()) for KMP compatibility.
  * @param remoteImagePath The path of the [image] where you plan to upload it.
- * */
-// In GalleryImage.kt
+ */
 data class GalleryImage(
-    val image: Uri,
+    val image: String,
     val remoteImagePath: String,
     var isLoading: Boolean = false,
-    val localFilePath: String? = null // Add this field
-) {
-    fun copy(): GalleryImage {
-        return GalleryImage(
-            image = this.image,
-            remoteImagePath = this.remoteImagePath,
-            isLoading = this.isLoading,
-            localFilePath = this.localFilePath
-        )
-    }
-}
+    val localFilePath: String? = null
+)

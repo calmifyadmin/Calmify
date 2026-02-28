@@ -1,7 +1,5 @@
 package com.lifo.home.presentation.components.hero
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -48,7 +46,6 @@ import java.time.LocalTime
  * └────────────────────────────────────────────────┘
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun HeroGreetingCard(
     userName: String,
@@ -303,7 +300,6 @@ private fun EmptyPulseState() {
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 private fun getTimeIcon(): ImageVector {
     val hour = LocalTime.now().hour

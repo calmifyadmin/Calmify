@@ -1,6 +1,6 @@
 package com.lifo.chat.domain.audio
 
-import android.util.Log
+
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
@@ -25,8 +25,6 @@ import kotlin.math.*
 class AdaptiveBargeinDetector @Inject constructor() {
     
     companion object {
-        private const val TAG = "AdaptiveBargeinDetector"
-        
         // Learning parameters
         private const val VOICE_PROFILE_SAMPLES = 50 // Samples needed for initial profile
         private const val ADAPTATION_RATE = 0.1f // How quickly we adapt to new patterns
@@ -131,7 +129,7 @@ class AdaptiveBargeinDetector @Inject constructor() {
      * Force learning mode for initial voice calibration
      */
     fun startVoiceLearning() {
-        Log.d(TAG, "🎓 Starting voice learning mode")
+        println("[AdaptiveBargeinDetector] Starting voice learning mode")
         currentVoiceProfile = VoiceProfile()
         recentAmplitudes.clear()
         recentSpectrums.clear()
@@ -210,7 +208,7 @@ class AdaptiveBargeinDetector @Inject constructor() {
             
             _profileConfidence.value = currentVoiceProfile.confidence
             
-            Log.v(TAG, "🎭 Voice profile updated - confidence: ${currentVoiceProfile.confidence}")
+            println("[AdaptiveBargeinDetector] Voice profile updated - confidence: ${currentVoiceProfile.confidence}")
         }
     }
     
@@ -325,7 +323,7 @@ class AdaptiveBargeinDetector @Inject constructor() {
             else -> "Below confidence threshold"
         }
         
-        Log.v(TAG, "🎯 Detection: trigger=$shouldTrigger, confidence=$finalConfidence, reason=$reason")
+        println("[AdaptiveBargeinDetector] Detection: trigger=$shouldTrigger, confidence=$finalConfidence, reason=$reason")
         
         return BargeinResult(
             shouldTrigger = shouldTrigger,

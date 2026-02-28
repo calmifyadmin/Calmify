@@ -1,6 +1,6 @@
 package com.lifo.chat.domain.audio
 
-import android.util.Log
+
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
@@ -26,8 +26,6 @@ import kotlin.math.*
 class AudioQualityAnalyzer @Inject constructor() {
     
     companion object {
-        private const val TAG = "AudioQualityAnalyzer"
-        
         // Measurement windows
         private const val LATENCY_MEASUREMENT_SAMPLES = 50
         private const val QUALITY_ANALYSIS_WINDOW = 100 // frames
@@ -118,7 +116,7 @@ class AudioQualityAnalyzer @Inject constructor() {
      * Start quality measurement session
      */
     fun startMeasurement() {
-        Log.d(TAG, "📊 Starting audio quality measurement")
+        println("[AudioQualityAnalyzer] Starting audio quality measurement")
         measurementStartTime = System.currentTimeMillis()
         isCapturing = true
         frameCount = 0L
@@ -129,7 +127,7 @@ class AudioQualityAnalyzer @Inject constructor() {
      * Stop quality measurement
      */
     fun stopMeasurement() {
-        Log.d(TAG, "📊 Stopping audio quality measurement")
+        println("[AudioQualityAnalyzer] Stopping audio quality measurement")
         isCapturing = false
         generateFinalReport()
     }
@@ -227,7 +225,7 @@ class AudioQualityAnalyzer @Inject constructor() {
             playbackLatency = average * 0.1f
         )
         
-        Log.v(TAG, "📏 Latency updated: avg=${average}ms, jitter=${jitter}ms, quality=$quality")
+        println("[AudioQualityAnalyzer] Latency updated: avg=${average}ms, jitter=${jitter}ms, quality=$quality")
     }
     
     /**
@@ -255,7 +253,7 @@ class AudioQualityAnalyzer @Inject constructor() {
             recommendation = recommendation
         )
         
-        Log.v(TAG, "🔇 Noise metrics updated: SNR=${snr}dB, clarity=$speechClarity")
+        println("[AudioQualityAnalyzer] Noise metrics updated: SNR=${snr}dB, clarity=$speechClarity")
     }
     
     /**
@@ -278,7 +276,7 @@ class AudioQualityAnalyzer @Inject constructor() {
             recommendation = recommendation
         )
         
-        Log.v(TAG, "🔄 Echo metrics updated: ERL=${echoEstimate}dB, AEC effectiveness=$aecEffectiveness")
+        println("[AudioQualityAnalyzer] Echo metrics updated: ERL=${echoEstimate}dB, AEC effectiveness=$aecEffectiveness")
     }
     
     /**
@@ -306,7 +304,7 @@ class AudioQualityAnalyzer @Inject constructor() {
             recommendations = recommendations
         )
         
-        Log.d(TAG, "🎯 Overall quality: ${totalScore} ($grade) - Issue: $primaryIssue")
+        println("[AudioQualityAnalyzer] Overall quality: ${totalScore} ($grade) - Issue: $primaryIssue")
     }
     
     // Utility calculation methods
@@ -513,7 +511,7 @@ class AudioQualityAnalyzer @Inject constructor() {
             appendLine("Recommendations: ${_overallQuality.value.recommendations.joinToString()}")
         }
         
-        Log.i(TAG, report)
+        println("[AudioQualityAnalyzer] $report")
     }
     
     private fun clearHistories() {

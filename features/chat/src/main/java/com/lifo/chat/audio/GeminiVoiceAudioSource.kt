@@ -1,6 +1,6 @@
 package com.lifo.chat.audio
 
-import android.util.Log
+
 import com.lifo.util.speech.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,10 +27,6 @@ import javax.inject.Singleton
 class GeminiVoiceAudioSource @Inject constructor(
     private val voiceSystem: GeminiNativeVoiceSystem
 ) : SpeechAudioSource {
-
-    companion object {
-        private const val TAG = "GeminiVoiceAudioSource"
-    }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -74,7 +70,7 @@ class GeminiVoiceAudioSource @Inject constructor(
                     GeminiNativeVoiceSystem.PlaybackState.STARTED -> {
                         if (lastPlaybackState != GeminiNativeVoiceSystem.PlaybackState.STARTED) {
                             playbackStartTime = System.currentTimeMillis()
-                            Log.d(TAG, "▶️ Playback started for message: ${request.messageId}")
+                            println("[GeminiVoiceAudioSource] Playback started for message: ${request.messageId}")
 
                             _playbackEvents.emit(
                                 SpeechPlaybackEvent.Started(
@@ -112,7 +108,7 @@ class GeminiVoiceAudioSource @Inject constructor(
                             val remaining = state.estimatedDurationMs -
                                 (System.currentTimeMillis() - playbackStartTime)
 
-                            Log.d(TAG, "⏳ Playback finishing, remaining: ${remaining}ms")
+                            println("[GeminiVoiceAudioSource] Playback finishing, remaining: ${remaining}ms")
 
                             _playbackEvents.emit(
                                 SpeechPlaybackEvent.Finishing(
@@ -129,7 +125,7 @@ class GeminiVoiceAudioSource @Inject constructor(
 
                             val actualDuration = System.currentTimeMillis() - playbackStartTime
 
-                            Log.d(TAG, "✅ Playback ended, actual duration: ${actualDuration}ms")
+                            println("[GeminiVoiceAudioSource] Playback ended, actual duration: ${actualDuration}ms")
 
                             _playbackEvents.emit(
                                 SpeechPlaybackEvent.Ended(
@@ -179,7 +175,7 @@ class GeminiVoiceAudioSource @Inject constructor(
     override fun speak(request: SpeechRequest) {
         currentRequest = request
 
-        Log.d(TAG, "🎤 Speaking request: '${request.text.take(30)}...' [${request.emotion}]")
+        println("[GeminiVoiceAudioSource] Speaking request: '${request.text.take(30)}...' [${request.emotion}]")
 
         // Emit preparing event immediately
         scope.launch {
@@ -212,7 +208,7 @@ class GeminiVoiceAudioSource @Inject constructor(
     }
 
     override fun stop() {
-        Log.d(TAG, "⏹️ Stopping speech")
+        println("[GeminiVoiceAudioSource] Stopping speech")
 
         currentRequest?.let { request ->
             scope.launch {

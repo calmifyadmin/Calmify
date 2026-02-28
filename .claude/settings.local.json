@@ -80,7 +80,9 @@
       "WebFetch(domain:mvnrepository.com)",
       "Bash(python3 -c \"import json,sys; data=json.load\\(sys.stdin\\); [print\\(f[''name''], f[''download_url'']\\) for f in data]\")",
       "Bash(python3 -c \" import json, sys data = json.load\\(sys.stdin\\) for item in data.get\\(''tree'', []\\): path = item[''path''] if ''ar-model-viewer'' in path and path.endswith\\(\\(''.kt'', ''.java''\\)\\): print\\(path\\) \")",
-      "Bash(python3 -c \" import json, sys data = json.load\\(sys.stdin\\) for item in data.get\\(''tree'', []\\): path = item[''path''] if ''samples/'' in path and path.endswith\\(\\(''.kt'', ''.java''\\)\\): print\\(path\\) \")"
+      "Bash(python3 -c \" import json, sys data = json.load\\(sys.stdin\\) for item in data.get\\(''tree'', []\\): path = item[''path''] if ''samples/'' in path and path.endswith\\(\\(''.kt'', ''.java''\\)\\): print\\(path\\) \")",
+      "Bash(done)",
+      "WebFetch(domain:picovoice.ai)"
     ],
     "deny": [],
     "ask": []

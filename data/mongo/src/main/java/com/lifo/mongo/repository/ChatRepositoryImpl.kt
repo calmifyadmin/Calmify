@@ -1,6 +1,5 @@
 package com.lifo.mongo.repository
 
-import android.util.Log
 import com.google.firebase.Firebase
 import com.google.firebase.ai.ai
 import com.google.firebase.ai.type.generationConfig
@@ -10,8 +9,13 @@ import com.lifo.mongo.database.dao.ChatSessionDao
 import com.lifo.mongo.database.entity.ChatMessageEntity
 import com.lifo.mongo.database.entity.ChatSessionEntity
 import com.lifo.util.Constants.GEMINI_API_KEY
+import com.lifo.util.model.ChatMessage
+import com.lifo.util.model.ChatSession
 import com.lifo.util.model.Diary
+import com.lifo.util.model.MessageStatus
 import com.lifo.util.model.RequestState
+import com.lifo.util.repository.ChatRepository
+import com.lifo.util.repository.MongoRepository
 import com.lifo.util.toInstant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -79,7 +83,7 @@ class ChatRepositoryImpl @Inject constructor(
                     RequestState.Error(Exception("Session not found"))
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error getting session", e)
+                println("[" + TAG + "] ERROR: " + "Error getting session")
                 RequestState.Error(e)
             }
         }
@@ -100,7 +104,7 @@ class ChatRepositoryImpl @Inject constructor(
                 chatSessionDao.insertSession(session.toEntity())
                 RequestState.Success(session)
             } catch (e: Exception) {
-                Log.e(TAG, "Error creating session", e)
+                println("[" + TAG + "] ERROR: " + "Error creating session")
                 RequestState.Error(e)
             }
         }
@@ -112,7 +116,7 @@ class ChatRepositoryImpl @Inject constructor(
                 chatSessionDao.updateSession(session.toEntity())
                 RequestState.Success(Unit)
             } catch (e: Exception) {
-                Log.e(TAG, "Error updating session", e)
+                println("[" + TAG + "] ERROR: " + "Error updating session")
                 RequestState.Error(e)
             }
         }
@@ -125,7 +129,7 @@ class ChatRepositoryImpl @Inject constructor(
                 chatSessionDao.deleteSession(sessionId, currentUserId)
                 RequestState.Success(true)
             } catch (e: Exception) {
-                Log.e(TAG, "Error deleting session", e)
+                println("[" + TAG + "] ERROR: " + "Error deleting session")
                 RequestState.Error(e)
             }
         }
@@ -155,7 +159,7 @@ class ChatRepositoryImpl @Inject constructor(
                 chatSessionDao.incrementMessageCount(sessionId, Instant.now().toEpochMilli())
                 RequestState.Success(message)
             } catch (e: Exception) {
-                Log.e(TAG, "Error sending message", e)
+                println("[" + TAG + "] ERROR: " + "Error sending message")
                 RequestState.Error(e)
             }
         }
@@ -172,7 +176,7 @@ class ChatRepositoryImpl @Inject constructor(
     ): RequestState<ChatMessage> {
         return withContext(Dispatchers.IO) {
             try {
-                Log.d(TAG, "💬 Saving Live message: ${content.take(50)}... (user: $isUser)")
+                println("[" + TAG + "] " + "💬 Saving Live message: ${content.take(50)}... (user: $isUser)")
 
                 // Crea o aggiorna la sessione se necessario
                 ensureLiveSession(sessionId)
@@ -188,10 +192,10 @@ class ChatRepositoryImpl @Inject constructor(
                 chatMessageDao.insertMessage(message.toEntity())
                 chatSessionDao.incrementMessageCount(sessionId, Instant.now().toEpochMilli())
 
-                Log.d(TAG, "✅ Live message saved successfully")
+                println("[" + TAG + "] " + "✅ Live message saved successfully")
                 RequestState.Success(message)
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Error saving Live message", e)
+                println("[" + TAG + "] ERROR: " + "❌ Error saving Live message")
                 RequestState.Error(e)
             }
         }
@@ -205,7 +209,7 @@ class ChatRepositoryImpl @Inject constructor(
             val existingSession = chatSessionDao.getSession(sessionId, currentUserId)
 
             if (existingSession == null) {
-                Log.d(TAG, "📱 Creating new Live session: $sessionId")
+                println("[" + TAG + "] " + "📱 Creating new Live session: $sessionId")
 
                 val liveSession = ChatSession(
                     id = sessionId,
@@ -218,13 +222,13 @@ class ChatRepositoryImpl @Inject constructor(
                 )
 
                 chatSessionDao.insertSession(liveSession.toEntity())
-                Log.d(TAG, "✅ Live session created: ${liveSession.title}")
+                println("[" + TAG + "] " + "✅ Live session created: ${liveSession.title}")
             } else {
                 // Aggiorna solo il timestamp dell'ultima attività
                 chatSessionDao.updateLastMessage(sessionId, Instant.now().toEpochMilli())
             }
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Error ensuring Live session", e)
+            println("[" + TAG + "] ERROR: " + "❌ Error ensuring Live session")
         }
     }
 
@@ -234,7 +238,7 @@ class ChatRepositoryImpl @Inject constructor(
                 chatMessageDao.deleteMessage(messageId)
                 RequestState.Success(true)
             } catch (e: Exception) {
-                Log.e(TAG, "Error deleting message", e)
+                println("[" + TAG + "] ERROR: " + "Error deleting message")
                 RequestState.Error(e)
             }
         }
@@ -255,7 +259,7 @@ class ChatRepositoryImpl @Inject constructor(
 
                 RequestState.Success(message.copy(status = MessageStatus.SENT))
             } catch (e: Exception) {
-                Log.e(TAG, "Error retrying message", e)
+                println("[" + TAG + "] ERROR: " + "Error retrying message")
                 RequestState.Error(e)
             }
         }
@@ -267,19 +271,19 @@ class ChatRepositoryImpl @Inject constructor(
         context: List<ChatMessage>
     ): Flow<RequestState<String>> = flow {
         try {
-            Log.d(TAG, "Starting AI response generation with diary context")
+            println("[" + TAG + "] " + "Starting AI response generation with diary context")
 
             // Recupera il contesto del diario
             val diaryContext = getDiaryContext()
-            Log.d(TAG, "Retrieved ${diaryContext.size} diary entries for context")
+            println("[" + TAG + "] " + "Retrieved ${diaryContext.size} diary entries for context")
 
             val userProfile = analyzeUserProfile(diaryContext)
             val currentMood = detectCurrentMood(diaryContext)
             val recurringThemes = extractRecurringThemes(diaryContext)
 
-            Log.d(TAG, "User profile: $userProfile")
-            Log.d(TAG, "Current mood: $currentMood")
-            Log.d(TAG, "Themes: $recurringThemes")
+            println("[" + TAG + "] " + "User profile: $userProfile")
+            println("[" + TAG + "] " + "Current mood: $currentMood")
+            println("[" + TAG + "] " + "Themes: $recurringThemes")
 
             val prompt = buildPersonalizedPrompt(
                 userMessage = userMessage,
@@ -307,12 +311,12 @@ class ChatRepositoryImpl @Inject constructor(
                 }
 
             } catch (e: Exception) {
-                Log.e(TAG, "Error during AI generation", e)
+                println("[" + TAG + "] ERROR: " + "Error during AI generation")
                 emit(RequestState.Error(e))
             }
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error generating AI response", e)
+            println("[" + TAG + "] ERROR: " + "Error generating AI response")
             emit(RequestState.Error(e))
         }
     }.flowOn(Dispatchers.IO)
@@ -328,10 +332,10 @@ class ChatRepositoryImpl @Inject constructor(
                 )
                 chatMessageDao.insertMessage(message.toEntity())
                 chatSessionDao.incrementMessageCount(sessionId, Instant.now().toEpochMilli())
-                Log.d(TAG, "AI message saved")
+                println("[" + TAG + "] " + "AI message saved")
                 RequestState.Success(message)
             } catch (e: Exception) {
-                Log.e(TAG, "Error saving AI message", e)
+                println("[" + TAG + "] ERROR: " + "Error saving AI message")
                 RequestState.Error(e)
             }
         }
@@ -350,7 +354,7 @@ class ChatRepositoryImpl @Inject constructor(
                 val diaryContent = buildEnhancedDiaryContent(session, messages)
                 RequestState.Success(diaryContent)
             } catch (e: Exception) {
-                Log.e(TAG, "Error exporting session", e)
+                println("[" + TAG + "] ERROR: " + "Error exporting session")
                 RequestState.Error(e)
             }
         }
@@ -373,22 +377,22 @@ class ChatRepositoryImpl @Inject constructor(
                             .sortedByDescending { it.date.toInstant() }
                             .take(MAX_DIARY_ENTRIES)
 
-                        Log.d(TAG, "Found ${diaries.size} diary entries in the last $DIARY_CONTEXT_DAYS days")
+                        println("[" + TAG + "] " + "Found ${diaries.size} diary entries in the last $DIARY_CONTEXT_DAYS days")
 
                         diaries.firstOrNull()?.let { diary ->
-                            Log.d(TAG, "Latest diary: ${diary.title} - ${diary.description.take(100)}...")
+                            println("[" + TAG + "] " + "Latest diary: ${diary.title} - ${diary.description.take(100)}...")
                         }
 
                         diaries
                     }
                     is RequestState.Error -> {
-                        Log.e(TAG, "Error getting diaries: ${diariesResult.error.message}")
+                        println("[" + TAG + "] ERROR: " + "Error getting diaries: ${diariesResult.error.message}")
                         emptyList()
                     }
                     else -> emptyList()
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error getting diary context", e)
+                println("[" + TAG + "] ERROR: " + "Error getting diary context")
                 emptyList()
             }
         }

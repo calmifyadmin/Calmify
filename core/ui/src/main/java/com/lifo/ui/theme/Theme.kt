@@ -110,29 +110,21 @@ fun CalmifyAppTheme(
         darkTheme -> DarkColors
         else -> LightColors
     }
+    // ANDROID-ONLY: Configure system bars (status bar + navigation bar)
+    // This block must remain in androidMain when migrating to KMP.
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
+            window.statusBarColor = Color.Transparent.toArgb()
+            window.navigationBarColor = Color.Transparent.toArgb()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                window.isNavigationBarContrastEnforced = false
+            }
+            val insetsController = WindowCompat.getInsetsController(window, view)
+            insetsController.isAppearanceLightStatusBars = !darkTheme
+            insetsController.isAppearanceLightNavigationBars = !darkTheme
         }
-    }
-
-    SideEffect {
-        val window = (view.context as Activity).window
-
-        window.statusBarColor = Color.Transparent.toArgb()
-        window.navigationBarColor = Color.Transparent.toArgb()
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            window.isNavigationBarContrastEnforced = false
-        }
-
-        val windowsInsetsController = WindowCompat.getInsetsController(window, view)
-
-        windowsInsetsController.isAppearanceLightStatusBars = !darkTheme
-        windowsInsetsController.isAppearanceLightNavigationBars = !darkTheme
     }
 
     MaterialTheme(

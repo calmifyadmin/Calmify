@@ -20,6 +20,24 @@ android {
         // Add API key from local.properties
         buildConfigField("String", "GEMINI_API_KEY", "\"${getGeminiApiKey()}\"")
         buildConfigField("String", "KEY_OPENAI_API", "\"${getOpenAIApiKey()}\"")
+
+        // NDK/CMake configuration for Oboe native audio engine
+        externalNativeBuild {
+            cmake {
+                cppFlags "-std=c++17 -O2"
+                arguments "-DANDROID_STL=c++_shared"
+            }
+        }
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64'
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+            version "3.22.1"
+        }
     }
 
     buildTypes {

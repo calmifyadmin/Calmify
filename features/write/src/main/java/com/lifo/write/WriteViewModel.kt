@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -19,11 +18,11 @@ import com.lifo.mongo.database.dao.ImageToDeleteDao
 import com.lifo.mongo.database.dao.ImageToUploadDao
 import com.lifo.mongo.database.entity.ImageToDelete
 import com.lifo.mongo.database.entity.ImageToUpload
-import com.lifo.mongo.repository.MongoRepository
+import com.lifo.util.repository.MongoRepository
 import com.lifo.ui.GalleryImage
 import com.lifo.ui.GalleryState
 import com.lifo.util.Constants.WRITE_SCREEN_ARGUMENT_KEY
-import com.lifo.util.fetchImagesFromFirebase
+import com.lifo.ui.util.fetchImagesFromFirebase
 import com.lifo.util.model.Diary
 import com.lifo.util.model.Mood
 import com.lifo.util.model.RequestState
@@ -42,6 +41,8 @@ import javax.inject.Inject
 @HiltViewModel
 internal class WriteViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
+    private val auth: FirebaseAuth,
+    private val storage: FirebaseStorage,
     private val imageToUploadDao: ImageToUploadDao,
     private val imageToDeleteDao: ImageToDeleteDao,
     private val diaryRepository: MongoRepository,
@@ -61,7 +62,7 @@ internal class WriteViewModel @Inject constructor(
         // Se non c'è un diaryId, pulisci tutto lo stato salvato
         // (nuovo diary da zero)
         if (uiState.selectedDiaryId == null) {
-            Log.d("WriteViewModel", "No diaryId - clearing saved state for new diary")
+            println("[WriteViewModel] No diaryId - clearing saved state for new diary")
             savedStateHandle.remove<String>("saved_title")
             savedStateHandle.remove<String>("saved_description")
             savedStateHandle.remove<String>("saved_mood")
@@ -103,7 +104,7 @@ internal class WriteViewModel @Inject constructor(
 
     private fun getDiaryIdArgument() {
         val diaryId = savedStateHandle.get<String>(key = WRITE_SCREEN_ARGUMENT_KEY)
-        Log.d("WriteViewModel", "getDiaryIdArgument: diaryId = $diaryId")
+        println("[WriteViewModel] getDiaryIdArgument: diaryId = $diaryId")
         uiState = uiState.copy(selectedDiaryId = diaryId)
     }
 
@@ -138,7 +139,7 @@ internal class WriteViewModel @Inject constructor(
                                         GalleryImage(
                                             image = downloadedImage,
                                             remoteImagePath = extractImagePath(
-                                                fullImageUrl = downloadedImage.toString()
+                                                fullImageUrl = downloadedImage
                                             ),
                                         )
                                     )
@@ -240,12 +241,12 @@ internal class WriteViewModel @Inject constructor(
         onError: (String) -> Unit
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            Log.d("WriteViewModel", "upsertDiary: selectedDiaryId = ${uiState.selectedDiaryId}, selectedDiary = ${uiState.selectedDiary?._id}")
+            println("[WriteViewModel] upsertDiary: selectedDiaryId = ${uiState.selectedDiaryId}, selectedDiary = ${uiState.selectedDiary?._id}")
             if (uiState.selectedDiaryId != null) {
-                Log.d("WriteViewModel", "Calling updateDiary")
+                println("[WriteViewModel] Calling updateDiary")
                 updateDiary(diary = diary, onSuccess = onSuccess, onError = onError)
             } else {
-                Log.d("WriteViewModel", "Calling insertDiary")
+                println("[WriteViewModel] Calling insertDiary")
                 insertDiary(diary = diary, onSuccess = onSuccess, onError = onError)
             }
         }
@@ -294,7 +295,7 @@ internal class WriteViewModel @Inject constructor(
         val result = diaryRepository.updateDiary(diary = diary.apply {
             _id = uiState.selectedDiaryId!!
             // IMPORTANTE: Mantieni l'ownerId del diary originale!
-            ownerId = uiState.selectedDiary?.ownerId ?: FirebaseAuth.getInstance().currentUser?.uid ?: ""
+            ownerId = uiState.selectedDiary?.ownerId ?: auth.currentUser?.uid ?: ""
             date = when {
                 uiState.updatedDateTime != null -> uiState.updatedDateTime!!
                 uiState.selectedDiary != null -> uiState.selectedDiary!!.date
@@ -350,7 +351,7 @@ internal class WriteViewModel @Inject constructor(
     }
 
     fun addImage(image: Uri, imageType: String) {
-        Log.d("WriteViewModel", "Adding image: $image")
+        println("[WriteViewModel] Adding image: $image")
 
         // Add permission persistence
         try {
@@ -361,16 +362,16 @@ internal class WriteViewModel @Inject constructor(
                 Intent.FLAG_GRANT_READ_URI_PERMISSION
             )
         } catch (e: SecurityException) {
-            Log.e("WriteViewModel", "Failed to take persistent permission", e)
+            println("[WriteViewModel] ERROR: Failed to take persistent permission: ${e.message}")
             // Continue anyway, as we might still be able to use the URI in some cases
         }
 
-        val remoteImagePath = "images/${FirebaseAuth.getInstance().currentUser?.uid}/" +
+        val remoteImagePath = "images/${auth.currentUser?.uid}/" +
                 "${image.lastPathSegment}-${System.currentTimeMillis()}.$imageType"
 
         // Create the gallery image
         val newImage = GalleryImage(
-            image = image,
+            image = image.toString(),
             remoteImagePath = remoteImagePath,
             isLoading = true
         )
@@ -393,10 +394,10 @@ internal class WriteViewModel @Inject constructor(
                 }
             }
 
-            Log.d("WriteViewModel", "Image copied to local storage: ${outputFile.absolutePath}")
+            println("[WriteViewModel] Image copied to local storage: ${outputFile.absolutePath}")
             outputFile.absolutePath
         } catch (e: Exception) {
-            Log.e("WriteViewModel", "Failed to copy image to local storage", e)
+            println("[WriteViewModel] ERROR: Failed to copy image to local storage: ${e.message}")
             null
         }
     }
@@ -408,12 +409,12 @@ internal class WriteViewModel @Inject constructor(
     // Main image upload function - handles all images that need uploading
     private fun uploadImageToFirebase() {
         _isUploadingImages.value = true
-        val storage = FirebaseStorage.getInstance().reference
+        val storageRef = storage.reference
 
         // Create a copy of the images list to avoid concurrent modification issues
         val imagesToUpload = galleryState.images.filter { it.isLoading }.toList()
 
-        Log.d("WriteViewModel", "Uploading ${imagesToUpload.size} images")
+        println("[WriteViewModel] Uploading ${imagesToUpload.size} images")
         if (imagesToUpload.isEmpty()) {
             _isUploadingImages.value = false
             return
@@ -423,7 +424,7 @@ internal class WriteViewModel @Inject constructor(
 
         // Process each image that is still in loading state
         imagesToUpload.forEach { galleryImage ->
-            val imagePath = storage.child(galleryImage.remoteImagePath)
+            val imagePath = storageRef.child(galleryImage.remoteImagePath)
 
             // Use local file if available
             val fileToUpload = galleryImage.localFilePath?.let { File(it) }
@@ -434,9 +435,9 @@ internal class WriteViewModel @Inject constructor(
             } else {
                 try {
                     // Try using the original URI but this might fail
-                    imagePath.putFile(galleryImage.image)
+                    imagePath.putFile(Uri.parse(galleryImage.image))
                 } catch (e: SecurityException) {
-                    Log.e("WriteViewModel", "Security exception while uploading, skipping", e)
+                    println("[WriteViewModel] ERROR: Security exception while uploading, skipping: ${e.message}")
                     // Mark as failed
                     viewModelScope.launch(Dispatchers.Main) {
                         val index = galleryState.images.indexOfFirst {
@@ -468,7 +469,7 @@ internal class WriteViewModel @Inject constructor(
                         if (index >= 0) {
                             val updatedImage = galleryState.images[index].copy(isLoading = false)
                             galleryState.images[index] = updatedImage
-                            Log.d("WriteViewModel", "Image upload successful: ${galleryImage.remoteImagePath}")
+                            println("[WriteViewModel] Image upload successful: ${galleryImage.remoteImagePath}")
                         }
 
                         // Update completion counter
@@ -479,7 +480,7 @@ internal class WriteViewModel @Inject constructor(
                     }
                 }
             }.addOnFailureListener { exception ->
-                Log.e("WriteViewModel", "Upload failed for ${galleryImage.remoteImagePath}", exception)
+                println("[WriteViewModel] ERROR: Upload failed for ${galleryImage.remoteImagePath}: ${exception.message}")
 
                 viewModelScope.launch(Dispatchers.Main) {
                     // Even if it fails, we need to update the UI to show the error state
@@ -505,7 +506,7 @@ internal class WriteViewModel @Inject constructor(
 
                 // Log progress but don't overload the logs
                 if (progress % 20 == 0) {  // Log only at 0%, 20%, 40%, 60%, 80%, 100%
-                    Log.d("WriteViewModel", "Upload progress for ${galleryImage.remoteImagePath}: $progress%")
+                    println("[WriteViewModel] Upload progress for ${galleryImage.remoteImagePath}: $progress%")
                 }
 
                 if (sessionUri != null) {
@@ -514,14 +515,14 @@ internal class WriteViewModel @Inject constructor(
                         imageToUploadDao.addImageToUpload(
                             ImageToUpload(
                                 remoteImagePath = galleryImage.remoteImagePath,
-                                imageUri = galleryImage.image.toString(),
+                                imageUri = galleryImage.image,
                                 sessionUri = sessionUri.toString()
                             )
                         )
                     }
                 }
             }.addOnCanceledListener {
-                Log.w("WriteViewModel", "Upload canceled for ${galleryImage.remoteImagePath}")
+                println("[WriteViewModel] WARN: Upload canceled for ${galleryImage.remoteImagePath}")
 
                 viewModelScope.launch(Dispatchers.Main) {
                     val index = galleryState.images.indexOfFirst {
@@ -543,12 +544,12 @@ internal class WriteViewModel @Inject constructor(
     }
 
     private fun deleteImagesFromFirebase(images: List<String>? = null) {
-        val storage = FirebaseStorage.getInstance().reference
+        val storageRef = storage.reference
 
         // Handle specified images
         if (images != null) {
             images.forEach { remotePath ->
-                val imageRef = storage.child(remotePath)
+                val imageRef = storageRef.child(remotePath)
                 imageRef.getDownloadUrl().addOnSuccessListener {
                     // File exists, proceed with deletion
                     imageRef.delete().addOnFailureListener {
@@ -561,13 +562,13 @@ internal class WriteViewModel @Inject constructor(
                     }
                 }.addOnFailureListener {
                     // File doesn't exist, handle absence
-                    Log.w("WriteViewModel", "File doesn't exist for deletion: $remotePath")
+                    println("[WriteViewModel] WARN: File doesn't exist for deletion: $remotePath")
                 }
             }
         } else {
             // Handle images marked for deletion in galleryState
             galleryState.imagesToBeDeleted.map { it.remoteImagePath }.forEach { remotePath ->
-                storage.child(remotePath).delete()
+                storageRef.child(remotePath).delete()
                     .addOnFailureListener {
                         viewModelScope.launch(Dispatchers.IO) {
                             imageToDeleteDao.addImageToDelete(
@@ -582,7 +583,7 @@ internal class WriteViewModel @Inject constructor(
     private fun extractImagePath(fullImageUrl: String): String {
         val chunks = fullImageUrl.split("%2F")
         val imageName = chunks[2].split("?").first()
-        return "images/${FirebaseAuth.getInstance().currentUser?.uid}/$imageName"
+        return "images/${auth.currentUser?.uid}/$imageName"
     }
 
     private fun updateImageLoadingState(galleryImage: GalleryImage, isLoading: Boolean) {
@@ -593,9 +594,9 @@ internal class WriteViewModel @Inject constructor(
             // Replace the old instance in the mutableStateList
             galleryState.images[index] = updatedImage
 
-            Log.d("WriteViewModel", "Updated image loading state: ${galleryImage.remoteImagePath}, isLoading: $isLoading")
+            println("[WriteViewModel] Updated image loading state: ${galleryImage.remoteImagePath}, isLoading: $isLoading")
         } else {
-            Log.w("WriteViewModel", "Image not found in galleryState.images: ${galleryImage.remoteImagePath}")
+            println("[WriteViewModel] WARN: Image not found in galleryState.images: ${galleryImage.remoteImagePath}")
         }
     }
 }

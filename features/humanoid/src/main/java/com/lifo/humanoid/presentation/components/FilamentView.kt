@@ -1,7 +1,6 @@
 package com.lifo.humanoid.presentation.components
 
 import android.annotation.SuppressLint
-import android.util.Log
 import android.view.MotionEvent
 import android.view.TextureView
 import androidx.compose.runtime.*
@@ -19,8 +18,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import java.nio.ByteBuffer
 import kotlin.math.sqrt
-
-private const val TAG = "FilamentView"
 
 /**
  * Composable that displays a Filament 3D rendering surface with TRUE TRANSPARENCY.
@@ -77,7 +74,7 @@ fun FilamentView(
     LaunchedEffect(isLayoutChanging) {
         renderer?.let { r ->
             if (isLayoutChanging) {
-                Log.d(TAG, "Layout change started - preparing renderer")
+                println("[FilamentView] Layout change started - preparing renderer")
                 r.prepareForLayoutChange()
             }
         }
@@ -89,12 +86,12 @@ fun FilamentView(
         modifier = modifier.onSizeChanged { size ->
             val newSize = Pair(size.width, size.height)
             if (lastSize != newSize && lastSize.first > 0 && lastSize.second > 0) {
-                Log.d(TAG, "Size changed: $lastSize -> $newSize")
+                println("[FilamentView] Size changed: $lastSize -> $newSize")
             }
             lastSize = newSize
         },
         factory = { ctx ->
-            Log.d(TAG, "Creating TextureView for transparent Filament rendering")
+            println("[FilamentView] Creating TextureView for transparent Filament rendering")
 
             TextureView(ctx).apply {
                 // ═══════════════════════════════════════════════════════════
@@ -116,7 +113,7 @@ fun FilamentView(
                             asset: FilamentAsset,
                             nodeNames: List<String>
                         ) {
-                            Log.d(TAG, "Model loaded callback - notifying parent")
+                            println("[FilamentView] Model loaded callback - notifying parent")
                             onModelLoaded(filamentRenderer, asset, nodeNames)
                         }
                     }
@@ -199,7 +196,7 @@ fun FilamentView(
                 isRendererReady = true
 
                 onRendererReady(filamentRenderer)
-                Log.d(TAG, "FilamentRenderer initialized with transparent TextureView + touch controls")
+                println("[FilamentView] FilamentRenderer initialized with transparent TextureView + touch controls")
             }
         },
         update = { _ ->
@@ -212,15 +209,15 @@ fun FilamentView(
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_PAUSE -> {
-                    Log.d(TAG, "Lifecycle ON_PAUSE - pausing renderer")
+                    println("[FilamentView] Lifecycle ON_PAUSE - pausing renderer")
                     renderer?.pauseRendering()
                 }
                 Lifecycle.Event.ON_RESUME -> {
-                    Log.d(TAG, "Lifecycle ON_RESUME - resuming renderer")
+                    println("[FilamentView] Lifecycle ON_RESUME - resuming renderer")
                     renderer?.resumeRendering()
                 }
                 Lifecycle.Event.ON_DESTROY -> {
-                    Log.d(TAG, "Lifecycle ON_DESTROY")
+                    println("[FilamentView] Lifecycle ON_DESTROY")
                 }
                 else -> {}
             }
@@ -235,7 +232,7 @@ fun FilamentView(
     // Load VRM model when data is available (only once per model)
     LaunchedEffect(vrmModelData, vrmExtensions, isRendererReady) {
         if (vrmModelData != null && isRendererReady && vrmModelData != loadedModelData) {
-            Log.d(TAG, "Loading VRM model (new model detected)")
+            println("[FilamentView] Loading VRM model (new model detected)")
             val blendShapes = vrmExtensions?.blendShapes ?: emptyList()
             val humanoidBoneNodeIndices = vrmExtensions?.humanoidBoneNodeIndices ?: emptyMap()
             val lookAtTypeName = vrmExtensions?.lookAtTypeName ?: "Bone"
@@ -262,7 +259,7 @@ fun FilamentView(
     LaunchedEffect(isRendererReady) {
         if (!isRendererReady) return@LaunchedEffect
 
-        Log.d(TAG, "Starting render loop")
+        println("[FilamentView] Starting render loop")
 
         while (isActive) {
             renderer?.let { r ->
@@ -279,7 +276,7 @@ fun FilamentView(
     // Cleanup on disposal
     DisposableEffect(Unit) {
         onDispose {
-            Log.d(TAG, "Disposing FilamentView - cleaning up renderer")
+            println("[FilamentView] Disposing FilamentView - cleaning up renderer")
             isRendererReady = false
             loadedModelData = null
 
@@ -296,7 +293,7 @@ fun FilamentView(
             // Without this, engine.destroy() blocks Main for ~200ms and the cancelled
             // coroutine's pending continuation may briefly access the destroyed engine.
             android.os.Handler(android.os.Looper.getMainLooper()).post {
-                Log.d(TAG, "Executing deferred cleanup")
+                println("[FilamentView] Executing deferred cleanup")
                 r?.cleanup()
             }
         }

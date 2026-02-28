@@ -61,6 +61,7 @@ internal fun AuthenticationContent(
                 verticalArrangement = Arrangement.Bottom
             ) {
                 GoogleButton(
+                    iconPainter = painterResource(id = com.lifo.ui.R.drawable.google_logo_ic),
                     loadingState = loadingState,
                     onClick = onButtonClicked
                 )

@@ -21,7 +21,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.rememberAsyncImagePainter
-import com.google.firebase.auth.FirebaseAuth
 import com.lifo.settings.components.SettingsNavigationItem
 import com.lifo.settings.components.SettingsSectionHeader
 import com.lifo.settings.components.SettingsActionButton
@@ -111,6 +110,7 @@ fun SettingsScreen(
                 // Profile Overview Card
                 ProfileOverviewCard(
                     profileSettings = uiState.profileSettings,
+                    userProfileImageUrl = uiState.userProfileImageUrl,
                     onEditProfile = onNavigateToPersonalInfo
                 )
 
@@ -190,6 +190,7 @@ private fun SettingsTopBar(
 @Composable
 private fun ProfileOverviewCard(
     profileSettings: com.lifo.util.model.ProfileSettings,
+    userProfileImageUrl: String?,
     onEditProfile: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -202,10 +203,6 @@ private fun ProfileOverviewCard(
         ),
         label = "scale"
     )
-
-    // Get user profile image from Firebase Auth
-    val user = FirebaseAuth.getInstance().currentUser
-    val userProfileImageUrl = user?.photoUrl?.toString()
 
     Card(
         modifier = modifier.fillMaxWidth(),

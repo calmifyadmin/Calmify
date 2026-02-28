@@ -2,6 +2,8 @@ package com.lifo.mongo.repository
 
 import com.lifo.mongo.database.dao.ChatSessionDao
 import com.lifo.util.model.*
+import com.lifo.util.repository.MongoRepository
+import com.lifo.util.repository.UnifiedContentRepository
 import kotlinx.coroutines.flow.*
 import java.time.*
 import javax.inject.Inject
@@ -14,7 +16,7 @@ class UnifiedContentRepositoryImpl @Inject constructor(
 ) : UnifiedContentRepository {
 
     override fun getUnifiedContent(ownerId: String): Flow<List<HomeContentItem>> {
-        android.util.Log.d("UnifiedContent", "Loading unified content for owner: $ownerId")
+        println("[UnifiedContent] " + "Loading unified content for owner: $ownerId")
 
         return combine(
             // Load chat sessions (uses ownerId for Room database filtering)
@@ -22,15 +24,15 @@ class UnifiedContentRepositoryImpl @Inject constructor(
             // Load diaries (Firestore uses current authenticated user)
             diaryRepository.getAllDiaries()
                 .onStart {
-                    android.util.Log.d("UnifiedContent", "Starting Firestore diary load")
+                    println("[UnifiedContent] " + "Starting Firestore diary load")
                 }
                 .catch { e ->
-                    android.util.Log.w("UnifiedContent", "Firestore diary load failed: ${e.message}", e)
+                    println("[UnifiedContent] WARN: " + "Firestore diary load failed: ${e.message}")
                     // Emit empty success as fallback - don't block the entire feed
                     emit(RequestState.Success(emptyMap<LocalDate, List<Diary>>()))
                 }
         ) { chatSessions, diariesResult ->
-            android.util.Log.d("UnifiedContent", "Combining content: diaries=${diariesResult::class.simpleName}, chats=${chatSessions.size}")
+            println("[UnifiedContent] " + "Combining content: diaries=${diariesResult::class.simpleName}, chats=${chatSessions.size}")
             
             // Process chat items (always available from Room)
             val chatItems: List<HomeContentItem.ChatItem> = chatSessions.map { session -> 
@@ -41,22 +43,22 @@ class UnifiedContentRepositoryImpl @Inject constructor(
             val diaryItems: List<HomeContentItem.DiaryItem> = when (diariesResult) {
                 is RequestState.Success -> {
                     val diaryMap = diariesResult.data
-                    android.util.Log.d("UnifiedContent", "Processing ${diaryMap.size} diary date groups")
+                    println("[UnifiedContent] " + "Processing ${diaryMap.size} diary date groups")
                     val diaries = diaryMap.values.flatten()
-                    android.util.Log.d("UnifiedContent", "Found ${diaries.size} total diary entries")
+                    println("[UnifiedContent] " + "Found ${diaries.size} total diary entries")
                     diaries.map { diary -> diary.toHomeContentItem() }
                 }
                 is RequestState.Error -> {
-                    android.util.Log.w("UnifiedContent", "Diary result error: ${diariesResult.error.message}")
+                    println("[UnifiedContent] WARN: " + "Diary result error: ${diariesResult.error.message}")
                     emptyList()
                 }
                 else -> {
-                    android.util.Log.d("UnifiedContent", "Diary result idle/loading")
+                    println("[UnifiedContent] " + "Diary result idle/loading")
                     emptyList()
                 }
             }
             
-            android.util.Log.d("UnifiedContent", "Final counts: ${diaryItems.size} diary items, ${chatItems.size} chat items")
+            println("[UnifiedContent] " + "Final counts: ${diaryItems.size} diary items, ${chatItems.size} chat items")
             
             // Combine and sort by creation date (most recent first)
             val allItems: List<HomeContentItem> = chatItems + diaryItems

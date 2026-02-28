@@ -1,6 +1,6 @@
 package com.lifo.chat.audio
 
-import android.util.Log
+
 import com.lifo.chat.data.audio.GeminiLiveAudioManager
 import com.lifo.util.speech.*
 import kotlinx.coroutines.CoroutineScope
@@ -28,10 +28,6 @@ import javax.inject.Singleton
 class GeminiLiveAudioSource @Inject constructor(
     private val audioManager: GeminiLiveAudioManager
 ) : SpeechAudioSource {
-
-    companion object {
-        private const val TAG = "GeminiLiveAudioSource"
-    }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -79,7 +75,7 @@ class GeminiLiveAudioSource @Inject constructor(
             val messageId = if (currentSessionId == null) {
                 val newId = "live-audio-${System.currentTimeMillis()}"
                 currentSessionId = newId
-                Log.d(TAG, "▶️ Live audio streaming started (AUDIO-REACTIVE mode): $newId")
+                println("[GeminiLiveAudioSource] Live audio streaming started (AUDIO-REACTIVE mode): $newId")
 
                 // Emit Preparing with empty text - LipSyncController will use audio-reactive mode
                 _playbackEvents.emit(
@@ -91,7 +87,7 @@ class GeminiLiveAudioSource @Inject constructor(
                 )
                 newId
             } else {
-                Log.d(TAG, "▶️ Live audio streaming started (TEXT-PREPARED): $currentSessionId")
+                println("[GeminiLiveAudioSource] Live audio streaming started (TEXT-PREPARED): $currentSessionId")
                 currentSessionId!!
             }
 
@@ -111,7 +107,7 @@ class GeminiLiveAudioSource @Inject constructor(
             val messageId = currentSessionId ?: "live-unknown"
             val actualDuration = System.currentTimeMillis() - streamStartTime
 
-            Log.d(TAG, "✅ Live audio streaming ended: $messageId (${actualDuration}ms)")
+            println("[GeminiLiveAudioSource] Live audio streaming ended: $messageId (${actualDuration}ms)")
 
             _playbackEvents.emit(
                 SpeechPlaybackEvent.Ended(
@@ -159,7 +155,7 @@ class GeminiLiveAudioSource @Inject constructor(
         val messageId = "live-${++messageIdCounter}-${System.currentTimeMillis()}"
         currentSessionId = messageId
 
-        Log.d(TAG, "📝 Preparing live speech: '${text.take(30)}...'")
+        println("[GeminiLiveAudioSource] Preparing live speech: '${text.take(30)}...'")
 
         // Estimate duration from text
         val estimatedDuration = estimateDuration(text)
@@ -180,7 +176,7 @@ class GeminiLiveAudioSource @Inject constructor(
      */
     fun handleInterruption(reason: InterruptionReason = InterruptionReason.USER_BARGE_IN) {
         currentSessionId?.let { messageId ->
-            Log.d(TAG, "⚠️ Live audio interrupted: $messageId ($reason)")
+            println("[GeminiLiveAudioSource] Live audio interrupted: $messageId ($reason)")
 
             scope.launch {
                 _playbackEvents.emit(

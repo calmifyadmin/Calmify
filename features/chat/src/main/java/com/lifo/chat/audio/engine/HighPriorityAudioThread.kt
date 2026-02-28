@@ -2,7 +2,7 @@ package com.lifo.chat.audio.engine
 
 import android.media.AudioTrack
 import android.os.Process
-import android.util.Log
+
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
@@ -41,8 +41,6 @@ class HighPriorityAudioThread(
 ) : Thread("AAAudioPlaybackThread") {
 
     companion object {
-        private const val TAG = "HighPriorityAudioThread"
-
         // Chunk size: 20ms @ 24kHz 16-bit mono = 960 bytes
         const val DEFAULT_CHUNK_SIZE = 960
 
@@ -121,7 +119,7 @@ class HighPriorityAudioThread(
      */
     override fun start() {
         if (isRunning.get()) {
-            Log.w(TAG, "⚠️ Thread già in esecuzione")
+            println("[HighPriorityAudioThread] WARNING: Thread già in esecuzione")
             return
         }
 
@@ -130,7 +128,7 @@ class HighPriorityAudioThread(
         playbackState = PlaybackState.BUFFERING
 
         super.start()
-        Log.d(TAG, "🚀 High priority audio thread avviato")
+        println("[HighPriorityAudioThread] High priority audio thread avviato")
     }
 
     /**
@@ -139,7 +137,7 @@ class HighPriorityAudioThread(
     override fun run() {
         // Imposta priorità URGENT_AUDIO
         Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO)
-        Log.d(TAG, "🎯 Thread priority impostata a URGENT_AUDIO")
+        println("[HighPriorityAudioThread] Thread priority impostata a URGENT_AUDIO")
 
         try {
             // Assicurati che AudioTrack sia in play
@@ -150,12 +148,12 @@ class HighPriorityAudioThread(
             playbackLoop()
 
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Errore nel playback loop", e)
+            println("[HighPriorityAudioThread] ERROR: Errore nel playback loop: ${e.message}")
             callback?.onError(e.message ?: "Unknown error")
         } finally {
             playbackState = PlaybackState.STOPPED
             callback?.onPlaybackStopped()
-            Log.d(TAG, "🛑 High priority audio thread terminato")
+            println("[HighPriorityAudioThread] High priority audio thread terminato")
         }
     }
 
@@ -216,7 +214,7 @@ class HighPriorityAudioThread(
     private fun handleNormalPlayback(bytesRead: Int, hasNotifiedStart: Boolean) {
         // Reset underrun counter
         if (consecutiveUnderruns > 0) {
-            Log.d(TAG, "✅ Recovery da underrun")
+            println("[HighPriorityAudioThread] Recovery da underrun")
             callback?.onRecovery()
             consecutiveUnderruns = 0
         }
@@ -270,7 +268,7 @@ class HighPriorityAudioThread(
         underrunCount.incrementAndGet()
 
         if (consecutiveUnderruns == 1) {
-            Log.w(TAG, "⚠️ Buffer underrun rilevato")
+            println("[HighPriorityAudioThread] WARNING: Buffer underrun rilevato")
         }
 
         callback?.onUnderrun(consecutiveUnderruns)
@@ -285,7 +283,7 @@ class HighPriorityAudioThread(
             val plcBytes = shortArrayToByteArray(plcResult.samples, plcResult.samples.size)
             writeToAudioTrack(plcBytes, plcBytes.size)
 
-            Log.d(TAG, "🔧 PLC frame generato (type: ${plcResult.type}, quality: ${plcResult.qualityEstimate})")
+            println("[HighPriorityAudioThread] PLC frame generato (type: ${plcResult.type}, quality: ${plcResult.qualityEstimate})")
         } else {
             // Troppi underrun consecutivi - aspetta dati
             playbackState = PlaybackState.BUFFERING
@@ -304,15 +302,15 @@ class HighPriorityAudioThread(
             when {
                 written > 0 -> offset += written
                 written == AudioTrack.ERROR_INVALID_OPERATION -> {
-                    Log.e(TAG, "❌ AudioTrack ERROR_INVALID_OPERATION")
+                    println("[HighPriorityAudioThread] ERROR: AudioTrack ERROR_INVALID_OPERATION")
                     break
                 }
                 written == AudioTrack.ERROR_BAD_VALUE -> {
-                    Log.e(TAG, "❌ AudioTrack ERROR_BAD_VALUE")
+                    println("[HighPriorityAudioThread] ERROR: AudioTrack ERROR_BAD_VALUE")
                     break
                 }
                 written == AudioTrack.ERROR_DEAD_OBJECT -> {
-                    Log.e(TAG, "❌ AudioTrack ERROR_DEAD_OBJECT")
+                    println("[HighPriorityAudioThread] ERROR: AudioTrack ERROR_DEAD_OBJECT")
                     callback?.onError("AudioTrack dead")
                     isRunning.set(false)
                     break
@@ -379,7 +377,7 @@ class HighPriorityAudioThread(
     fun pause() {
         isPaused.set(true)
         playbackState = PlaybackState.IDLE
-        Log.d(TAG, "⏸️ Playback in pausa")
+        println("[HighPriorityAudioThread] Playback in pausa")
     }
 
     /**
@@ -387,14 +385,14 @@ class HighPriorityAudioThread(
      */
     fun resumePlayback() {
         isPaused.set(false)
-        Log.d(TAG, "▶️ Playback ripreso")
+        println("[HighPriorityAudioThread] Playback ripreso")
     }
 
     /**
      * Ferma il thread
      */
     fun stopPlayback() {
-        Log.d(TAG, "🛑 Stopping playback thread...")
+        println("[HighPriorityAudioThread] Stopping playback thread...")
         playbackState = PlaybackState.STOPPING
         isRunning.set(false)
 
@@ -406,7 +404,7 @@ class HighPriorityAudioThread(
                 join(500)
             }
         } catch (e: InterruptedException) {
-            Log.w(TAG, "Interrupted while stopping")
+            println("[HighPriorityAudioThread] WARNING: Interrupted while stopping")
         }
     }
 

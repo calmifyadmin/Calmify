@@ -1,15 +1,19 @@
 package com.lifo.auth
 
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import javax.inject.Inject
 
 /**
  * AuthenticationViewModel - Migrated to Firebase Auth 2025
@@ -17,21 +21,19 @@ import kotlinx.coroutines.withContext
  * Previously used MongoDB Atlas Device Sync (EOL)
  * Now uses Firebase Authentication with Google Sign-In
  */
-internal class AuthenticationViewModel : ViewModel() {
-    private val auth = FirebaseAuth.getInstance()
+@HiltViewModel
+internal class AuthenticationViewModel @Inject constructor(
+    private val auth: FirebaseAuth
+) : ViewModel() {
 
-    var authenticated = mutableStateOf(false)
-        private set
-    var loadingState = mutableStateOf(false)
-        private set
+    private val _authenticated = MutableStateFlow(auth.currentUser != null)
+    val authenticated: StateFlow<Boolean> = _authenticated.asStateFlow()
 
-    init {
-        // Check if user is already signed in
-        authenticated.value = auth.currentUser != null
-    }
+    private val _loadingState = MutableStateFlow(false)
+    val loadingState: StateFlow<Boolean> = _loadingState.asStateFlow()
 
     fun setLoading(loading: Boolean) {
-        loadingState.value = loading
+        _loadingState.value = loading
     }
 
     /**
@@ -56,7 +58,7 @@ internal class AuthenticationViewModel : ViewModel() {
                     if (result.user != null) {
                         onSuccess()
                         delay(600)
-                        authenticated.value = true
+                        _authenticated.value = true
                     } else {
                         onError(Exception("User is not logged in."))
                     }
@@ -74,7 +76,7 @@ internal class AuthenticationViewModel : ViewModel() {
      */
     fun signOut() {
         auth.signOut()
-        authenticated.value = false
+        _authenticated.value = false
     }
 
     /**

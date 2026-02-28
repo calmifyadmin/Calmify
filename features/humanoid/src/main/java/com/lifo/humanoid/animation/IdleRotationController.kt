@@ -1,6 +1,5 @@
 package com.lifo.humanoid.animation
 
-import android.util.Log
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,7 +13,6 @@ class IdleRotationController(
     private val onPlayAnimation: (VrmaAnimationLoader.AnimationAsset) -> Unit
 ) {
     companion object {
-        private const val TAG = "IdleRotationController"
         private const val MIN_INTERVAL_MS = 10_000L  // 10 secondi
         private const val MAX_INTERVAL_MS = 40_000L  // 40 secondi
     }
@@ -54,12 +52,12 @@ class IdleRotationController(
      */
     fun start(scope: CoroutineScope) {
         if (_isActive.value) {
-            Log.d(TAG, "Already active")
+            println("[IdleRotationController] Already active")
             return
         }
 
         _isActive.value = true
-        Log.d(TAG, "Starting idle rotation")
+        println("[IdleRotationController] Starting idle rotation")
 
         // Avvia subito con la prima animazione idle
         playRandomIdle()
@@ -68,7 +66,7 @@ class IdleRotationController(
             while (_isActive.value) {
                 // Attendi intervallo random tra 10-40 secondi
                 val intervalMs = Random.nextLong(MIN_INTERVAL_MS, MAX_INTERVAL_MS + 1)
-                Log.d(TAG, "Next idle change in ${intervalMs / 1000}s")
+                println("[IdleRotationController] Next idle change in ${intervalMs / 1000}s")
                 delay(intervalMs)
 
                 if (_isActive.value) {
@@ -82,7 +80,7 @@ class IdleRotationController(
      * Ferma la rotazione automatica.
      */
     fun stop() {
-        Log.d(TAG, "Stopping idle rotation")
+        println("[IdleRotationController] Stopping idle rotation")
         _isActive.value = false
         rotationJob?.cancel()
         rotationJob = null
@@ -94,7 +92,7 @@ class IdleRotationController(
      * Pausa temporaneamente (per altre animazioni).
      */
     fun pause() {
-        Log.d(TAG, "Pausing idle rotation")
+        println("[IdleRotationController] Pausing idle rotation")
         rotationJob?.cancel()
         rotationJob = null
     }
@@ -104,11 +102,11 @@ class IdleRotationController(
      */
     fun resume(scope: CoroutineScope) {
         if (_isActive.value && rotationJob == null) {
-            Log.d(TAG, "Resuming idle rotation")
+            println("[IdleRotationController] Resuming idle rotation")
             rotationJob = scope.launch {
                 while (_isActive.value) {
                     val intervalMs = Random.nextLong(MIN_INTERVAL_MS, MAX_INTERVAL_MS + 1)
-                    Log.d(TAG, "Next idle change in ${intervalMs / 1000}s")
+                    println("[IdleRotationController] Next idle change in ${intervalMs / 1000}s")
                     delay(intervalMs)
 
                     if (_isActive.value) {
@@ -127,7 +125,7 @@ class IdleRotationController(
         val selected = selectWeightedRandomExcluding(lastPlayedAnimation)
         lastPlayedAnimation = selected
         _currentIdle.value = selected
-        Log.d(TAG, "Playing idle: ${selected.displayName}")
+        println("[IdleRotationController] Playing idle: ${selected.displayName}")
         onPlayAnimation(selected)
     }
 

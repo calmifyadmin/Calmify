@@ -53,7 +53,7 @@ import com.lifo.home.presentation.components.common.HeroGreetingCardSkeleton
 import com.lifo.home.presentation.components.common.DailyInsightsChartSkeleton
 import com.lifo.home.presentation.components.common.MoodDistributionCardSkeleton
 import com.lifo.ui.components.loading.*
-import com.lifo.util.DiaryHolder
+import com.lifo.home.components.DiaryHolder
 import com.lifo.util.model.Diary
 import com.lifo.util.model.SentimentLabel
 import java.time.LocalDate
@@ -97,11 +97,11 @@ internal fun HomeContent(
 
     // Debug logging
     LaunchedEffect(dailyInsights) {
-        android.util.Log.d("HomeContent", "Daily insights updated: ${dailyInsights.size} days")
+        println("[HomeContent] Daily insights updated: ${dailyInsights.size} days")
         if (dailyInsights.isEmpty()) {
-            android.util.Log.d("HomeContent", "No daily insights to display - chart will be hidden")
+            println("[HomeContent] No daily insights to display - chart will be hidden")
         } else {
-            android.util.Log.d("HomeContent", "Daily insights available - chart will be shown")
+            println("[HomeContent] Daily insights available - chart will be shown")
         }
     }
 

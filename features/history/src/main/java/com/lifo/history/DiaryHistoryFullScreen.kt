@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.lifo.ui.providers.MoodUiProvider
 import com.lifo.util.model.HomeContentItem
 import java.time.Instant
 import java.time.ZoneId
@@ -154,7 +155,7 @@ private fun DiaryHistoryFullItem(
         ) {
             // Mood icon
             Image(
-                painter = painterResource(id = diary.mood.icon),
+                painter = painterResource(id = MoodUiProvider.getIcon(diary.mood)),
                 contentDescription = diary.mood.name,
                 modifier = Modifier.size(24.dp)
             )

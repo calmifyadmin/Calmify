@@ -1,6 +1,5 @@
 package com.lifo.humanoid.animation
 
-import android.util.Log
 import com.google.android.filament.Engine
 import com.google.android.filament.gltfio.FilamentAsset
 import com.lifo.humanoid.data.vrm.VrmHumanoidBoneMapper
@@ -17,10 +16,6 @@ import javax.inject.Singleton
 class VrmaAnimationPlayerFactory @Inject constructor(
     private val boneMapper: VrmHumanoidBoneMapper
 ) {
-    companion object {
-        private const val TAG = "VrmaAnimationPlayerFactory"
-    }
-
     private var currentPlayer: VrmaAnimationPlayer? = null
     private var currentEngine: Engine? = null
 
@@ -40,10 +35,10 @@ class VrmaAnimationPlayerFactory @Inject constructor(
             // keeps executing applyBlendedAnimation() with a reference to the destroyed engine,
             // causing SIGSEGV in TransformManager.getInstance() or Animator.updateBoneMatrices().
             currentPlayer?.let { oldPlayer ->
-                Log.d(TAG, "Destroying previous player before creating new one")
+                println("[VrmaAnimationPlayerFactory] Destroying previous player before creating new one")
                 oldPlayer.stop(blendOut = false, destroy = true)
             }
-            Log.d(TAG, "Creating new VrmaAnimationPlayer for engine")
+            println("[VrmaAnimationPlayerFactory] Creating new VrmaAnimationPlayer for engine")
             currentPlayer = VrmaAnimationPlayer(engine, boneMapper)
             currentEngine = engine
         }
@@ -65,7 +60,7 @@ class VrmaAnimationPlayerFactory @Inject constructor(
     ): VrmaAnimationPlayer {
         val player = getOrCreate(engine)
         player.initialize(asset, nodeNames)
-        Log.d(TAG, "VrmaAnimationPlayer initialized with ${nodeNames.size} nodes")
+        println("[VrmaAnimationPlayerFactory] VrmaAnimationPlayer initialized with ${nodeNames.size} nodes")
         return player
     }
 
@@ -81,6 +76,6 @@ class VrmaAnimationPlayerFactory @Inject constructor(
         currentPlayer?.stop(blendOut = false, destroy = true)
         currentPlayer = null
         currentEngine = null
-        Log.d(TAG, "VrmaAnimationPlayer cleared")
+        println("[VrmaAnimationPlayerFactory] VrmaAnimationPlayer cleared")
     }
 }

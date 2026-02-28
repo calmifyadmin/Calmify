@@ -1,6 +1,5 @@
 package com.lifo.humanoid.animation
 
-import android.util.Log
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,10 +17,6 @@ import kotlin.random.Random
  * - Variability: irregular intervals between 2-10 seconds
  */
 class BlinkController {
-
-    companion object {
-        private const val TAG = "BlinkController"
-    }
 
     private val _blinkWeight = MutableStateFlow(0f)
     val blinkWeight: StateFlow<Float> = _blinkWeight.asStateFlow()
@@ -54,12 +49,12 @@ class BlinkController {
      */
     fun start(scope: CoroutineScope) {
         if (isRunning) {
-            Log.d(TAG, "BlinkController already running")
+            println("[BlinkController] BlinkController already running")
             return
         }
 
         isRunning = true
-        Log.d(TAG, "Starting BlinkController")
+        println("[BlinkController] Starting BlinkController")
 
         blinkJob = scope.launch {
             while (isActive && isRunning) {
@@ -88,7 +83,7 @@ class BlinkController {
      * Stop the blinking loop
      */
     fun stop() {
-        Log.d(TAG, "Stopping BlinkController")
+        println("[BlinkController] Stopping BlinkController")
         isRunning = false
         blinkJob?.cancel()
         blinkJob = null

@@ -1,7 +1,5 @@
 package com.lifo.home.util
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import com.lifo.home.domain.model.TimePeriod
 import java.time.Duration
 import java.time.LocalDate
@@ -16,7 +14,6 @@ import java.util.Locale
  * Date Formatting Utilities for Home Screen
  * Italian-focused formatters with Material3 design patterns
  */
-@RequiresApi(Build.VERSION_CODES.O)
 object DateFormatters {
 
     // ==================== LOCALE ====================

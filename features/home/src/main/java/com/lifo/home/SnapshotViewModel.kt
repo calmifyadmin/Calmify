@@ -6,7 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lifo.mongo.repository.WellbeingRepository
+import com.lifo.util.repository.WellbeingRepository
 import com.lifo.util.model.RequestState
 import com.lifo.util.model.WellbeingMetrics
 import com.lifo.util.model.WellbeingSnapshot
@@ -26,8 +26,11 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class SnapshotViewModel @Inject constructor(
-    private val wellbeingRepository: WellbeingRepository
+    private val wellbeingRepository: WellbeingRepository,
+    private val auth: com.google.firebase.auth.FirebaseAuth
 ) : ViewModel() {
+
+    fun getCurrentUserId(): String = auth.currentUser?.uid ?: ""
 
     private val _uiState = MutableStateFlow(SnapshotUiState())
     val uiState: StateFlow<SnapshotUiState> = _uiState.asStateFlow()

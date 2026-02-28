@@ -1,7 +1,6 @@
 package com.lifo.humanoid.data.vrm
 
 import android.content.Context
-import android.util.Log
 import com.google.android.filament.gltfio.FilamentAsset
 import com.google.gson.Gson
 import com.google.gson.JsonObject
@@ -22,7 +21,6 @@ import java.nio.ByteOrder
 class VrmLoader(private val context: Context) {
 
     private val gson = Gson()
-    private val tag = "VrmLoader"
 
     /**
      * Load a VRM file from app assets and create a VrmModel.
@@ -37,12 +35,12 @@ class VrmLoader(private val context: Context) {
         optimizeBones: Boolean = true
     ): Pair<ByteBuffer, VrmExtensions>? {
         return try {
-            Log.d(tag, "Attempting to load VRM from assets: $assetPath")
+            println("[VrmLoader] Attempting to load VRM from assets: $assetPath")
 
             // Read VRM file from assets
             val originalBuffer = context.assets.open(assetPath).use { inputStream ->
                 val bytes = inputStream.readBytes()
-                Log.d(tag, "Successfully read ${bytes.size} bytes from $assetPath")
+                println("[VrmLoader] Successfully read ${bytes.size} bytes from $assetPath")
 
                 ByteBuffer.allocateDirect(bytes.size).apply {
                     order(ByteOrder.LITTLE_ENDIAN)
@@ -53,43 +51,43 @@ class VrmLoader(private val context: Context) {
 
             // Optimize bones if requested
             val buffer = if (optimizeBones) {
-                Log.i(tag, "╔═══════════════════════════════════════════════════════════╗")
-                Log.i(tag, "║      Optimizing VRM for Filament 256 Bone Limit         ║")
-                Log.i(tag, "╚═══════════════════════════════════════════════════════════╝")
+                println("[VrmLoader] ╔═══════════════════════════════════════════════════════════╗")
+                println("[VrmLoader] ║      Optimizing VRM for Filament 256 Bone Limit         ║")
+                println("[VrmLoader] ╚═══════════════════════════════════════════════════════════╝")
 
                 val optimizer = GltfBoneOptimizer(context)
                 val result = optimizer.optimize(originalBuffer, maxBonesPerSkin = 256)
 
                 if (result.bonesSaved > 0) {
-                    Log.i(tag, "✓ Bone optimization successful:")
-                    Log.i(tag, "  Original bones: ${result.originalBoneCount}")
-                    Log.i(tag, "  Optimized bones: ${result.optimizedBoneCount}")
-                    Log.i(tag, "  Bones saved: ${result.bonesSaved}")
-                    Log.i(tag, "  Skins optimized: ${result.skinsOptimized}")
+                    println("[VrmLoader] Bone optimization successful:")
+                    println("[VrmLoader]   Original bones: ${result.originalBoneCount}")
+                    println("[VrmLoader]   Optimized bones: ${result.optimizedBoneCount}")
+                    println("[VrmLoader]   Bones saved: ${result.bonesSaved}")
+                    println("[VrmLoader]   Skins optimized: ${result.skinsOptimized}")
                     result.optimizedBuffer
                 } else {
-                    Log.i(tag, "✓ Model already within bone limit (${result.originalBoneCount} bones)")
+                    println("[VrmLoader] Model already within bone limit (${result.originalBoneCount} bones)")
                     originalBuffer
                 }
             } else {
-                Log.d(tag, "Bone optimization disabled")
+                println("[VrmLoader] Bone optimization disabled")
                 originalBuffer
             }
 
-            Log.d(tag, "Created ByteBuffer with ${buffer.capacity()} bytes, position=${buffer.position()}, limit=${buffer.limit()}")
+            println("[VrmLoader] Created ByteBuffer with ${buffer.capacity()} bytes, position=${buffer.position()}, limit=${buffer.limit()}")
 
             // Parse VRM extensions (from original buffer to preserve original data)
-            Log.d(tag, "Parsing VRM extensions...")
+            println("[VrmLoader] Parsing VRM extensions...")
             originalBuffer.position(0) // Reset position for parsing
             val vrmExtensions = parseVrmExtensions(originalBuffer)
-            Log.d(tag, "VRM extensions parsed successfully: ${vrmExtensions.blendShapes.size} blend shapes, ${vrmExtensions.springBones.size} spring bones")
+            println("[VrmLoader] VRM extensions parsed successfully: ${vrmExtensions.blendShapes.size} blend shapes, ${vrmExtensions.springBones.size} spring bones")
 
             // Reset final buffer position
             buffer.position(0)
 
             Pair(buffer, vrmExtensions)
         } catch (e: Exception) {
-            Log.e(tag, "Failed to load VRM from assets: $assetPath", e)
+            println("[VrmLoader] ERROR: Failed to load VRM from assets: $assetPath: ${e.message}")
             null
         }
     }
@@ -110,19 +108,19 @@ class VrmLoader(private val context: Context) {
 
             // Read header
             val magic = buffer.int
-            Log.d(tag, "glTF magic: 0x${magic.toString(16)} (expected 0x46546c67)")
+            println("[VrmLoader] glTF magic: 0x${magic.toString(16)} (expected 0x46546c67)")
             if (magic != 0x46546C67) { // "glTF" in ASCII
                 throw IllegalArgumentException("Not a valid glTF file - magic is 0x${magic.toString(16)}")
             }
 
             val version = buffer.int
             val length = buffer.int
-            Log.d(tag, "glTF version: $version, length: $length")
+            println("[VrmLoader] glTF version: $version, length: $length")
 
             // Read JSON chunk header
             val jsonLength = buffer.int
             val jsonType = buffer.int
-            Log.d(tag, "JSON chunk: length=$jsonLength, type=0x${jsonType.toString(16)} (expected 0x4e4f534a)")
+            println("[VrmLoader] JSON chunk: length=$jsonLength, type=0x${jsonType.toString(16)} (expected 0x4e4f534a)")
 
             if (jsonType != 0x4E4F534A) { // "JSON" in ASCII
                 throw IllegalArgumentException("Expected JSON chunk, got 0x${jsonType.toString(16)}")
@@ -132,7 +130,7 @@ class VrmLoader(private val context: Context) {
             val jsonBytes = ByteArray(jsonLength)
             buffer.get(jsonBytes)
             val jsonString = String(jsonBytes, Charsets.UTF_8)
-            Log.d(tag, "JSON string length: ${jsonString.length}, first 100 chars: ${jsonString.take(100)}")
+            println("[VrmLoader] JSON string length: ${jsonString.length}, first 100 chars: ${jsonString.take(100)}")
 
             // Parse JSON
             val rootObject = gson.fromJson(jsonString, JsonObject::class.java)
@@ -142,16 +140,16 @@ class VrmLoader(private val context: Context) {
             val vrmObject = extensionsObject?.getAsJsonObject("VRM")
 
             if (vrmObject != null) {
-                Log.d(tag, "Found VRM extension in glTF file")
+                println("[VrmLoader] Found VRM extension in glTF file")
                 parseVrmObject(vrmObject, rootObject)
             } else {
-                Log.w(tag, "No VRM extension found - this is a standard glTF file")
+                println("[VrmLoader] WARNING: No VRM extension found - this is a standard glTF file")
                 // Not a VRM file, return empty extensions
                 VrmExtensions()
             }
 
         } catch (e: Exception) {
-            Log.e(tag, "Failed to parse VRM extensions", e)
+            println("[VrmLoader] ERROR: Failed to parse VRM extensions: ${e.message}")
             VrmExtensions() // Return empty extensions on error
         }
     }
@@ -190,7 +188,7 @@ class VrmLoader(private val context: Context) {
                         humanoidBoneNodeIndices[boneName] = nodeIndex
                     }
                 } catch (e: Exception) {
-                    Log.w(tag, "Failed to parse humanoid bone element: ${e.message}")
+                    println("[VrmLoader] WARNING: Failed to parse humanoid bone element: ${e.message}")
                 }
             }
         // Resolve eye bone node indices to actual glTF node NAMES
@@ -207,14 +205,14 @@ class VrmLoader(private val context: Context) {
             rightEyeNodeName = nodesArray?.get(nodeIdx)?.asJsonObject?.get("name")?.asString
         }
 
-        Log.d(tag, "Parsed ${humanoidBoneNodeIndices.size} humanoid bones. " +
+        println("[VrmLoader] Parsed ${humanoidBoneNodeIndices.size} humanoid bones. " +
                 "leftEye: idx=${humanoidBoneNodeIndices["leftEye"]} name='$leftEyeNodeName', " +
                 "rightEye: idx=${humanoidBoneNodeIndices["rightEye"]} name='$rightEyeNodeName'")
 
         // Parse firstPerson lookAt type
         val lookAtTypeName = vrmObject.getAsJsonObject("firstPerson")
             ?.get("lookAtTypeName")?.asString ?: "Bone"
-        Log.d(tag, "VRM lookAt type: $lookAtTypeName")
+        println("[VrmLoader] VRM lookAt type: $lookAtTypeName")
 
         return VrmExtensions(
             metadata = metadata,

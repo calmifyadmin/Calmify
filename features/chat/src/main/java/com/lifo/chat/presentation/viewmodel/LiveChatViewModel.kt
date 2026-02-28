@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.SurfaceTexture
-import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -17,8 +16,8 @@ import com.lifo.chat.data.camera.GeminiLiveCameraManager
 import com.lifo.chat.domain.audio.AudioQualityAnalyzer
 import com.lifo.chat.domain.audio.ConversationContextManager
 import com.lifo.chat.domain.model.*
-import com.lifo.mongo.repository.ChatRepository
-import com.lifo.mongo.repository.MongoRepository
+import com.lifo.util.repository.ChatRepository
+import com.lifo.util.repository.MongoRepository
 import com.lifo.util.speech.InterruptionReason
 import com.lifo.util.speech.SpeechAnimationTarget
 import com.lifo.util.speech.SynchronizedSpeechController
@@ -48,10 +47,6 @@ class LiveChatViewModel @Inject constructor(
     private val firebaseAuth: FirebaseAuth,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
-
-    companion object {
-        private const val TAG = "LiveChatViewModel"
-    }
 
     // Main UI State
     private val _uiState = MutableStateFlow(
@@ -103,7 +98,7 @@ class LiveChatViewModel @Inject constructor(
     private var onPlayGestureCallback: ((String) -> Unit)? = null
 
     init {
-        Log.d(TAG, "🎙️ Initializing LiveChatViewModel...")
+        println("[LiveChatViewModel] Initializing LiveChatViewModel...")
         observeGeminiStates()
         setupGeminiCallbacks()
         setupCameraIntegration()
@@ -116,7 +111,7 @@ class LiveChatViewModel @Inject constructor(
      * Initialize synchronized speech by attaching the live audio source
      */
     private fun initializeSynchronizedSpeech() {
-        Log.d(TAG, "🔗 Initializing synchronized speech for Live mode...")
+        println("[LiveChatViewModel] Initializing synchronized speech for Live mode...")
         synchronizedSpeechController.attachAudioSource(liveAudioSource)
     }
 
@@ -125,7 +120,7 @@ class LiveChatViewModel @Inject constructor(
      * Call this from the UI layer when humanoid is ready.
      */
     fun attachHumanoidController(controller: SpeechAnimationTarget) {
-        Log.d(TAG, "🤖 Attaching HumanoidController for synchronized lip-sync (Live mode)")
+        println("[LiveChatViewModel] Attaching HumanoidController for synchronized lip-sync (Live mode)")
         synchronizedSpeechController.attachAnimationTarget(controller)
     }
 
@@ -135,12 +130,12 @@ class LiveChatViewModel @Inject constructor(
      * The callback receives animation names from Gemini AI and maps them to avatar gestures.
      */
     fun attachGestureCallback(callback: (String) -> Unit) {
-        Log.d(TAG, "🎭 Attaching gesture callback for avatar animations")
+        println("[LiveChatViewModel] Attaching gesture callback for avatar animations")
         onPlayGestureCallback = callback
 
         // Setup animation callback from Gemini AI
         geminiWebSocketClient.onPlayAnimation = { animationName ->
-            Log.d(TAG, "🎭 AI requested animation: $animationName")
+            println("[LiveChatViewModel] AI requested animation: $animationName")
             callback(animationName)
         }
     }
@@ -149,19 +144,19 @@ class LiveChatViewModel @Inject constructor(
      * Detach HumanoidController when no longer needed.
      */
     fun detachHumanoidController() {
-        Log.d(TAG, "🤖 Detaching HumanoidController (Live mode)")
+        println("[LiveChatViewModel] Detaching HumanoidController (Live mode)")
         synchronizedSpeechController.detachAnimationTarget()
         onPlayGestureCallback = null
         geminiWebSocketClient.onPlayAnimation = null
     }
 
     private fun setupIntelligentSystems() {
-        Log.d(TAG, "🧠 Setting up intelligent audio systems...")
+        println("[LiveChatViewModel] Setting up intelligent audio systems...")
 
         // Observe conversation context for adaptive optimization
         viewModelScope.launch {
             conversationContextManager.optimizationSettings.collectLatest { settings ->
-                Log.d(TAG, "🎛️ Applying adaptive audio settings: ${settings.contextReason}")
+                println("[LiveChatViewModel] Applying adaptive audio settings: ${settings.contextReason}")
                 applyAudioOptimizationSettings(settings)
             }
         }
@@ -169,7 +164,7 @@ class LiveChatViewModel @Inject constructor(
         // Observe audio quality metrics for real-time optimization
         viewModelScope.launch {
             audioQualityAnalyzer.overallQuality.collectLatest { quality ->
-                Log.v(TAG, "📊 Audio quality: ${quality.grade} (${quality.totalScore})")
+                println("[LiveChatViewModel] Audio quality: ${quality.grade} (${quality.totalScore})")
 
                 if (quality.grade == AudioQualityAnalyzer.QualityGrade.POOR) {
                     handlePoorAudioQuality(quality)
@@ -182,10 +177,10 @@ class LiveChatViewModel @Inject constructor(
             geminiAudioManager.recordingState.collectLatest { isRecording ->
                 if (isRecording) {
                     audioQualityAnalyzer.startMeasurement()
-                    Log.d(TAG, "📊 Audio quality measurement started")
+                    println("[LiveChatViewModel] Audio quality measurement started")
                 } else {
                     audioQualityAnalyzer.stopMeasurement()
-                    Log.d(TAG, "📊 Audio quality measurement stopped")
+                    println("[LiveChatViewModel] Audio quality measurement stopped")
                 }
             }
         }
@@ -212,23 +207,23 @@ class LiveChatViewModel @Inject constructor(
         viewModelScope.launch {
             conversationContextManager.currentModeString.collectLatest { mode ->
                 _conversationMode.value = mode
-                Log.v(TAG, "🎭 Conversation mode updated: $mode")
+                println("[LiveChatViewModel] Conversation mode updated: $mode")
             }
         }
     }
 
     private fun applyAudioOptimizationSettings(settings: ConversationContextManager.AudioOptimizationSettings) {
-        Log.d(TAG, "🔧 Adaptive settings applied:")
-        Log.d(TAG, "   • Barge-in sensitivity: ${settings.bargeinSensitivity}")
-        Log.d(TAG, "   • Noise suppression: ${settings.noiseSuppressionLevel}")
-        Log.d(TAG, "   • Echo cancellation: ${settings.echoCancellationLevel}")
-        Log.d(TAG, "   • Reason: ${settings.contextReason}")
+        println("[LiveChatViewModel] Adaptive settings applied:")
+        println("[LiveChatViewModel]    Barge-in sensitivity: ${settings.bargeinSensitivity}")
+        println("[LiveChatViewModel]    Noise suppression: ${settings.noiseSuppressionLevel}")
+        println("[LiveChatViewModel]    Echo cancellation: ${settings.echoCancellationLevel}")
+        println("[LiveChatViewModel]    Reason: ${settings.contextReason}")
     }
 
     private fun handlePoorAudioQuality(quality: AudioQualityAnalyzer.OverallQualityScore) {
-        Log.w(TAG, "⚠️ Poor audio quality detected: ${quality.primaryIssue}")
+        println("[LiveChatViewModel] WARNING: Poor audio quality detected: ${quality.primaryIssue}")
         quality.recommendations.forEach { recommendation ->
-            Log.w(TAG, "💡 Recommendation: $recommendation")
+            println("[LiveChatViewModel] WARNING: Recommendation: $recommendation")
         }
 
         _uiState.update {
@@ -254,7 +249,7 @@ class LiveChatViewModel @Inject constructor(
         // Observe WebSocket connection state
         viewModelScope.launch {
             geminiWebSocketClient.connectionState.collectLatest { state ->
-                Log.d(TAG, "🎯 Connection state: $state")
+                println("[LiveChatViewModel] Connection state: $state")
 
                 val uiConnectionStatus = when (state) {
                     GeminiLiveWebSocketClient.ConnectionState.CONNECTED -> ConnectionStatus.Connected
@@ -267,7 +262,7 @@ class LiveChatViewModel @Inject constructor(
 
                 // Start audio channel when WebSocket connects
                 if (state == GeminiLiveWebSocketClient.ConnectionState.CONNECTED && !isAudioChannelOpen) {
-                    Log.d(TAG, "🎤 WebSocket connected - starting audio streaming")
+                    println("[LiveChatViewModel] WebSocket connected - starting audio streaming")
                     startAudioChannel()
                 }
             }
@@ -303,7 +298,7 @@ class LiveChatViewModel @Inject constructor(
                 }
 
                 if (!isPlaying) {
-                    Log.d(TAG, "🎤 AI finished speaking - user can now speak again")
+                    println("[LiveChatViewModel] AI finished speaking - user can now speak again")
                 }
             }
         }
@@ -320,13 +315,13 @@ class LiveChatViewModel @Inject constructor(
     private fun setupGeminiCallbacks() {
         // Partial transcript from Gemini (user's speech transcribed by server)
         geminiWebSocketClient.onPartialTranscript = { partial ->
-            Log.d(TAG, "🎤 Partial transcript: $partial")
+            println("[LiveChatViewModel] Partial transcript: $partial")
             _uiState.update { it.copy(partialTranscript = partial) }
         }
 
         // Final transcript from Gemini (user's speech transcribed by server)
         geminiWebSocketClient.onFinalTranscript = { final ->
-            Log.d(TAG, "✅ Final transcript: $final")
+            println("[LiveChatViewModel] Final transcript: $final")
             _uiState.update { it.copy(transcript = final, partialTranscript = "") }
 
             // Add to conversation context
@@ -340,25 +335,25 @@ class LiveChatViewModel @Inject constructor(
 
         // AI turn started
         geminiWebSocketClient.onTurnStarted = {
-            Log.d(TAG, "🤖 AI turn started")
+            println("[LiveChatViewModel] AI turn started")
             _uiState.update { it.copy(turnState = TurnState.AgentTurn, aiEmotion = AIEmotion.Speaking) }
         }
 
         // Turn completed
         geminiWebSocketClient.onTurnCompleted = {
-            Log.d(TAG, "✅ Turn completed")
+            println("[LiveChatViewModel] Turn completed")
             _uiState.update { it.copy(turnState = TurnState.WaitingForUser, aiEmotion = AIEmotion.Neutral) }
         }
 
         // Interruption (barge-in)
         geminiWebSocketClient.onInterrupted = {
-            Log.d(TAG, "⚠️ AI interrupted by user (barge-in detected)")
+            println("[LiveChatViewModel] AI interrupted by user (barge-in detected)")
             handleBargeIn()
         }
 
         // Text from Gemini
         geminiWebSocketClient.onTextReceived = { text ->
-            Log.d(TAG, "📝 Text from Gemini: $text")
+            println("[LiveChatViewModel] Text from Gemini: $text")
             _currentTranscript.value = text
             _uiState.update { it.copy(transcript = text) }
 
@@ -377,7 +372,7 @@ class LiveChatViewModel @Inject constructor(
 
         // Audio from Gemini
         geminiWebSocketClient.onAudioReceived = { audioBase64 ->
-            Log.d(TAG, "🔊 Audio from Gemini (${audioBase64.length} chars)")
+            println("[LiveChatViewModel] Audio from Gemini (${audioBase64.length} chars)")
             geminiAudioManager.queueAudioForPlayback(audioBase64)
 
             // Update audio level for visualization (simulated)
@@ -392,7 +387,7 @@ class LiveChatViewModel @Inject constructor(
 
         // Errors
         geminiWebSocketClient.onError = { error ->
-            Log.e(TAG, "❌ Error: $error")
+            println("[LiveChatViewModel] ERROR: $error")
             _uiState.update {
                 it.copy(
                     error = error,
@@ -410,9 +405,9 @@ class LiveChatViewModel @Inject constructor(
             viewModelScope.launch {
                 try {
                     chatRepository.saveLiveMessage(sessionId, content, isUser)
-                    Log.d(TAG, "💾 Live message integrated into Chat DB")
+                    println("[LiveChatViewModel] Live message integrated into Chat DB")
                 } catch (e: Exception) {
-                    Log.e(TAG, "❌ Failed to save Live message to Chat DB", e)
+                    println("[LiveChatViewModel] ERROR: Failed to save Live message to Chat DB: ${e.message}")
                 }
             }
         }
@@ -421,12 +416,12 @@ class LiveChatViewModel @Inject constructor(
     private fun setupCameraIntegration() {
         // Send images to Gemini
         geminiCameraManager.onImageCaptured = { imageBase64 ->
-            Log.d(TAG, "📸 Sending image to Gemini Live (${imageBase64.length} chars)")
+            println("[LiveChatViewModel] Sending image to Gemini Live (${imageBase64.length} chars)")
             viewModelScope.launch {
                 try {
                     geminiWebSocketClient.sendImageData(imageBase64)
                 } catch (e: Exception) {
-                    Log.e(TAG, "❌ Failed to send image to Gemini", e)
+                    println("[LiveChatViewModel] ERROR: Failed to send image to Gemini: ${e.message}")
                     _uiState.update { it.copy(error = "Failed to send image: ${e.message}") }
                 }
             }
@@ -434,13 +429,13 @@ class LiveChatViewModel @Inject constructor(
     }
 
     fun onAudioPermissionGranted() {
-        Log.d(TAG, "🎤 Audio permission granted")
+        println("[LiveChatViewModel] Audio permission granted")
         _uiState.update { it.copy(hasAudioPermission = true) }
         connectToRealtime()
     }
 
     fun onAudioPermissionDenied() {
-        Log.d(TAG, "❌ Audio permission denied")
+        println("[LiveChatViewModel] Audio permission denied")
         _uiState.update {
             it.copy(
                 hasAudioPermission = false,
@@ -450,13 +445,13 @@ class LiveChatViewModel @Inject constructor(
     }
 
     fun onCameraPermissionGranted() {
-        Log.d(TAG, "📸 Camera permission granted")
+        println("[LiveChatViewModel] Camera permission granted")
         _uiState.update { it.copy(hasCameraPermission = true) }
-        Log.d(TAG, "📸 Updated UI state - hasCameraPermission: true")
+        println("[LiveChatViewModel] Updated UI state - hasCameraPermission: true")
     }
 
     fun onCameraPermissionDenied() {
-        Log.d(TAG, "❌ Camera permission denied")
+        println("[LiveChatViewModel] Camera permission denied")
         _uiState.update {
             it.copy(
                 hasCameraPermission = false,
@@ -466,49 +461,49 @@ class LiveChatViewModel @Inject constructor(
     }
 
     fun startCameraPreview(surfaceTexture: SurfaceTexture) {
-        Log.d(TAG, "🔍 startCameraPreview() called in LiveChatViewModel")
-        Log.d(TAG, "🔍 hasCameraPermission: ${_uiState.value.hasCameraPermission}")
-        Log.d(TAG, "🔍 isCameraActive: ${_uiState.value.isCameraActive}")
-        Log.d(TAG, "🔍 surfaceTexture: $surfaceTexture")
+        println("[LiveChatViewModel] startCameraPreview() called in LiveChatViewModel")
+        println("[LiveChatViewModel] hasCameraPermission: ${_uiState.value.hasCameraPermission}")
+        println("[LiveChatViewModel] isCameraActive: ${_uiState.value.isCameraActive}")
+        println("[LiveChatViewModel] surfaceTexture: $surfaceTexture")
 
         if (!_uiState.value.hasCameraPermission) {
-            Log.w(TAG, "❌ Cannot start camera without permission")
+            println("[LiveChatViewModel] WARNING: Cannot start camera without permission")
             return
         }
 
-        Log.d(TAG, "📸 Starting camera preview - launching coroutine...")
+        println("[LiveChatViewModel] Starting camera preview - launching coroutine...")
         viewModelScope.launch {
             try {
-                Log.d(TAG, "📸 Calling geminiCameraManager.startCameraPreview()...")
+                println("[LiveChatViewModel] Calling geminiCameraManager.startCameraPreview()...")
                 geminiCameraManager.startCameraPreview(surfaceTexture)
-                Log.d(TAG, "📸 geminiCameraManager.startCameraPreview() completed")
+                println("[LiveChatViewModel] geminiCameraManager.startCameraPreview() completed")
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Failed to start camera preview", e)
+                println("[LiveChatViewModel] ERROR: Failed to start camera preview: ${e.message}")
                 _uiState.update { it.copy(error = "Failed to start camera: ${e.message}") }
             }
         }
     }
 
     fun stopCameraPreview() {
-        Log.d(TAG, "📸 Stopping camera preview")
+        println("[LiveChatViewModel] Stopping camera preview")
         viewModelScope.launch {
             try {
                 geminiCameraManager.stopCameraPreview()
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Failed to stop camera preview", e)
+                println("[LiveChatViewModel] ERROR: Failed to stop camera preview: ${e.message}")
             }
         }
     }
 
     fun connectToRealtime() {
         if (!_uiState.value.hasAudioPermission) {
-            Log.w(TAG, "Cannot connect without audio permission")
+            println("[LiveChatViewModel] WARNING: Cannot connect without audio permission")
             return
         }
 
         viewModelScope.launch {
             try {
-                Log.d(TAG, "🔌 Connecting to Gemini Live with VAD...")
+                println("[LiveChatViewModel] Connecting to Gemini Live with VAD...")
                 _uiState.update { it.copy(connectionStatus = ConnectionStatus.Connecting, error = null) }
 
                 val apiKey = apiConfigManager.getGeminiApiKey()
@@ -516,16 +511,16 @@ class LiveChatViewModel @Inject constructor(
                     throw IllegalStateException("Gemini API key not configured")
                 }
 
-                Log.d(TAG, "🔑 Using API key: ${apiKey.take(10)}...")
+                println("[LiveChatViewModel] Using API key: ${apiKey.take(10)}...")
                 geminiWebSocketClient.connect(apiKey)
 
                 // Session ID and context will be initialized when connection state changes to CONNECTED
                 // (handled in observeGeminiStates)
                 currentLiveSessionId = "live-${System.currentTimeMillis()}"
-                Log.d(TAG, "🆔 Generated Live session ID: $currentLiveSessionId")
+                println("[LiveChatViewModel] Generated Live session ID: $currentLiveSessionId")
                 conversationContextManager.resetContext()
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Connection failed", e)
+                println("[LiveChatViewModel] ERROR: Connection failed: ${e.message}")
                 _uiState.update {
                     it.copy(
                         connectionStatus = ConnectionStatus.Error,
@@ -538,7 +533,7 @@ class LiveChatViewModel @Inject constructor(
 
     fun disconnectFromRealtime() {
         viewModelScope.launch {
-            Log.d(TAG, "🔌 Disconnecting...")
+            println("[LiveChatViewModel] Disconnecting...")
 
             isAudioChannelOpen = false
             geminiAudioManager.stopRecording()  // Stop audio recording
@@ -574,7 +569,7 @@ class LiveChatViewModel @Inject constructor(
      */
     private fun startAudioChannel() {
         if (!isAudioChannelOpen && _uiState.value.connectionStatus == ConnectionStatus.Connected) {
-            Log.d(TAG, "🎤 Starting audio streaming to Gemini")
+            println("[LiveChatViewModel] Starting audio streaming to Gemini")
             try {
                 // Setup audio callback to send chunks to WebSocket
                 geminiAudioManager.onAudioChunkReady = { audioBase64 ->
@@ -586,7 +581,7 @@ class LiveChatViewModel @Inject constructor(
 
                 // Setup barge-in callback
                 geminiAudioManager.onBargeInDetected = {
-                    Log.d(TAG, "🗣️ Barge-in detected!")
+                    println("[LiveChatViewModel] Barge-in detected!")
                     handleSmartBargeIn()
                 }
 
@@ -595,9 +590,9 @@ class LiveChatViewModel @Inject constructor(
                 isAudioChannelOpen = true
                 _uiState.update { it.copy(isChannelOpen = true) }
 
-                Log.d(TAG, "✅ Audio streaming started successfully")
+                println("[LiveChatViewModel] Audio streaming started successfully")
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to start audio streaming", e)
+                println("[LiveChatViewModel] ERROR: Failed to start audio streaming: ${e.message}")
                 _uiState.update { it.copy(error = "Failed to start voice: ${e.message}") }
             }
         }
@@ -605,7 +600,7 @@ class LiveChatViewModel @Inject constructor(
 
     /** Gestisce barge-in (interruzione utente durante risposta AI) */
     private fun handleBargeIn() {
-        Log.d(TAG, "💯 Handling barge-in: stopping AI with fade-out, switching to user turn")
+        println("[LiveChatViewModel] Handling barge-in: stopping AI with fade-out, switching to user turn")
 
         // ✅ Ferma la riproduzione TTS con fade-out graduale (come Gemini Live desktop)
         geminiAudioManager.handleInterruption()
@@ -628,7 +623,7 @@ class LiveChatViewModel @Inject constructor(
 
     /** NUOVO: Gestisce smart barge-in (rilevato localmente con echo cancellation) */
     private fun handleSmartBargeIn() {
-        Log.d(TAG, "🎯 Smart barge-in: fade-out TTS, user audio resumes immediately")
+        println("[LiveChatViewModel] Smart barge-in: fade-out TTS, user audio resumes immediately")
 
         // ✅ Stop TTS con fade-out graduale (come Gemini Live desktop)
         geminiAudioManager.handleInterruption()
@@ -653,7 +648,7 @@ class LiveChatViewModel @Inject constructor(
     /** Toggle mute/unmute REALE: blocca invio audio al server + svuota buffer */
     fun toggleMute() {
         val newMuteState = !_uiState.value.isMuted
-        Log.d(TAG, if (newMuteState) "🔇 REAL MUTE - stopping audio to server" else "🎤 UNMUTE - resuming audio to server")
+        println("[LiveChatViewModel] ${if (newMuteState) "REAL MUTE - stopping audio to server" else "UNMUTE - resuming audio to server"}")
 
         _uiState.update { it.copy(isMuted = newMuteState) }
 
@@ -678,11 +673,11 @@ class LiveChatViewModel @Inject constructor(
      */
     fun sendTextMessage(text: String) {
         if (text.isBlank()) {
-            Log.w(TAG, "Cannot send empty text message")
+            println("[LiveChatViewModel] WARNING: Cannot send empty text message")
             return
         }
 
-        Log.d(TAG, "💬 Sending text message from ViewModel: ${text.take(50)}...")
+        println("[LiveChatViewModel] Sending text message from ViewModel: ${text.take(50)}...")
         geminiWebSocketClient.sendTextMessage(text)
 
         // Aggiorna lo stato UI per mostrare il messaggio inviato
@@ -722,7 +717,7 @@ class LiveChatViewModel @Inject constructor(
 
                 Pair(userName, diariesSummary)
             } catch (e: Exception) {
-                Log.e(TAG, "Error getting user data", e)
+                println("[LiveChatViewModel] ERROR: Error getting user data: ${e.message}")
                 Pair("Utente", "Nessun diario disponibile")
             }
         }
@@ -739,7 +734,7 @@ class LiveChatViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error executing function $functionName", e)
+                println("[LiveChatViewModel] ERROR: Error executing function $functionName: ${e.message}")
                 JSONObject().apply {
                     put("error", "Function execution failed")
                     put("message", e.message)
@@ -771,7 +766,7 @@ class LiveChatViewModel @Inject constructor(
                 else -> "Nessun diario disponibile"
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting diaries summary", e)
+            println("[LiveChatViewModel] ERROR: Error getting diaries summary: ${e.message}")
             "Errore nel recuperare i diari"
         }
     }
@@ -794,7 +789,7 @@ class LiveChatViewModel @Inject constructor(
                         }
                         .take(limit)
 
-                    Log.d(TAG, "📖 Retrieved ${recentDiaries.size} recent diaries for function call")
+                    println("[LiveChatViewModel] Retrieved ${recentDiaries.size} recent diaries for function call")
 
                     JSONObject().apply {
                         put("results", JSONArray().apply {
@@ -817,7 +812,7 @@ class LiveChatViewModel @Inject constructor(
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error executing get_recent_diaries", e)
+            println("[LiveChatViewModel] ERROR: Error executing get_recent_diaries: ${e.message}")
             JSONObject().apply {
                 put("error", "Function execution failed")
                 put("message", e.message)
@@ -848,7 +843,7 @@ class LiveChatViewModel @Inject constructor(
                         diary.date.toInstant()
                     }.take(k)
 
-                    Log.d(TAG, "🔍 Search for '$query' returned ${searchResults.size} results")
+                    println("[LiveChatViewModel] Search for '$query' returned ${searchResults.size} results")
 
                     JSONObject().apply {
                         put("results", JSONArray().apply {
@@ -873,7 +868,7 @@ class LiveChatViewModel @Inject constructor(
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error executing search_diary", e)
+            println("[LiveChatViewModel] ERROR: Error executing search_diary: ${e.message}")
             JSONObject().apply {
                 put("error", "Function execution failed")
                 put("message", e.message)

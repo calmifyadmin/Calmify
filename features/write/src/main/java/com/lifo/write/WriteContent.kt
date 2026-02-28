@@ -1,6 +1,5 @@
 package com.lifo.write
 
-import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
@@ -32,8 +31,9 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import com.lifo.ui.GalleryImage
 import com.lifo.ui.GalleryState
-import com.lifo.util.GalleryUploader
+import com.lifo.ui.components.GalleryUploader
 import com.lifo.util.model.Diary
+import com.lifo.ui.providers.MoodUiProvider
 import com.lifo.util.model.Mood
 import com.lifo.write.wizard.PsychologicalMetrics
 import com.lifo.write.wizard.PsychologicalMetricsWizardDialog
@@ -52,7 +52,7 @@ internal fun WriteContent(
     onDescriptionChanged: (String) -> Unit,
     paddingValues: PaddingValues,
     onSaveClicked: (Diary) -> Unit,
-    onImageSelect: (Uri) -> Unit,
+    onImageSelect: (String) -> Unit,
     onImageClicked: (GalleryImage) -> Unit,
     viewModel: WriteViewModel
 ) {
@@ -90,7 +90,7 @@ internal fun WriteContent(
                     AsyncImage(
                         modifier = Modifier.size(120.dp),
                         model = ImageRequest.Builder(LocalContext.current)
-                            .data(Mood.values()[page].icon)
+                            .data(MoodUiProvider.getIcon(Mood.values()[page]))
                             .build(),
 
                         contentDescription = "Mood Image"

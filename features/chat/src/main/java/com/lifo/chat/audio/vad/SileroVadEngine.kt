@@ -1,7 +1,7 @@
 package com.lifo.chat.audio.vad
 
 import android.content.Context
-import android.util.Log
+
 import com.konovalov.vad.silero.VadSilero
 import com.konovalov.vad.silero.config.FrameSize as SileroFrameSize
 import com.konovalov.vad.silero.config.Mode as SileroMode
@@ -48,8 +48,6 @@ class SileroVadEngine @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     companion object {
-        private const val TAG = "SileroVadEngine"
-
         // Audio Configuration (Gemini Live API compatible)
         const val SAMPLE_RATE = 16000
         const val FRAME_SIZE_SAMPLES = 512  // 32ms @ 16kHz
@@ -141,12 +139,12 @@ class SileroVadEngine @Inject constructor(
      */
     fun initialize(): Boolean {
         if (isInitialized.get()) {
-            Log.d(TAG, "Already initialized")
+            println("[SileroVadEngine] Already initialized")
             return true
         }
 
         return try {
-            Log.d(TAG, "Initializing dual-engine VAD...")
+            println("[SileroVadEngine] Initializing dual-engine VAD...")
 
             // Initialize WebRTC VAD (fast pre-filter)
             // WebRTC VAD does NOT require context
@@ -157,7 +155,7 @@ class SileroVadEngine @Inject constructor(
                 silenceDurationMs = MIN_SILENCE_DURATION_MS,
                 speechDurationMs = MIN_SPEECH_DURATION_MS
             )
-            Log.d(TAG, "✓ WebRTC VAD initialized (VERY_AGGRESSIVE mode)")
+            println("[SileroVadEngine] WebRTC VAD initialized (VERY_AGGRESSIVE mode)")
 
             // Initialize Silero VAD v6 (high-precision DNN)
             // Silero VAD requires context for ONNX model loading
@@ -169,16 +167,16 @@ class SileroVadEngine @Inject constructor(
                 silenceDurationMs = MIN_SILENCE_DURATION_MS,
                 speechDurationMs = MIN_SPEECH_DURATION_MS
             )
-            Log.d(TAG, "✓ Silero VAD v6 initialized (NORMAL mode)")
+            println("[SileroVadEngine] Silero VAD v6 initialized (NORMAL mode)")
 
             isInitialized.set(true)
             _vadState.value = VadState.CALIBRATING
 
-            Log.d(TAG, "✓ Dual-engine VAD system ready")
+            println("[SileroVadEngine] Dual-engine VAD system ready")
             true
 
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize VAD engines", e)
+            println("[SileroVadEngine] ERROR: Failed to initialize VAD engines: ${e.message}")
             false
         }
     }
@@ -192,7 +190,7 @@ class SileroVadEngine @Inject constructor(
      */
     fun processFrame(audioFrame: ShortArray, frameSize: Int = FRAME_SIZE_SAMPLES): VadResult {
         if (!isInitialized.get()) {
-            Log.w(TAG, "VAD not initialized")
+            println("[SileroVadEngine] WARNING: VAD not initialized")
             return VadResult(
                 isSpeech = false,
                 probability = 0f,
@@ -222,7 +220,7 @@ class SileroVadEngine @Inject constructor(
         val webRtcResult = try {
             webRtcVad?.isSpeech(webRtcFrame) ?: false
         } catch (e: Exception) {
-            Log.w(TAG, "WebRTC VAD error", e)
+            println("[SileroVadEngine] WARNING: WebRTC VAD error: ${e.message}")
             true // Fallback to Silero if WebRTC fails
         }
 
@@ -249,7 +247,7 @@ class SileroVadEngine @Inject constructor(
         val sileroResult = try {
             sileroVad?.isSpeech(processFrame) ?: false
         } catch (e: Exception) {
-            Log.w(TAG, "Silero VAD error", e)
+            println("[SileroVadEngine] WARNING: Silero VAD error: ${e.message}")
             false
         }
 
@@ -330,7 +328,7 @@ class SileroVadEngine @Inject constructor(
         // Reset echo baseline for fresh calibration on this AI turn
         echoBaselineEnergy = 0f
         echoBaselineSamples = 0
-        Log.d(TAG, "Barge-in mode ENABLED (echo baseline reset)")
+        println("[SileroVadEngine] Barge-in mode ENABLED (echo baseline reset)")
     }
 
     /**
@@ -342,7 +340,7 @@ class SileroVadEngine @Inject constructor(
         _bargeInEvent.value = null
         echoBaselineEnergy = 0f
         echoBaselineSamples = 0
-        Log.d(TAG, "Barge-in mode DISABLED")
+        println("[SileroVadEngine] Barge-in mode DISABLED")
     }
 
     /**
@@ -391,14 +389,14 @@ class SileroVadEngine @Inject constructor(
                     durationMs = count * FRAME_SIZE_MS
                 )
                 _bargeInEvent.value = event
-                Log.d(TAG, "🎤 BARGE-IN DETECTED! prob=$probability, energy=$lastFrameEnergy, " +
+                println("[SileroVadEngine] BARGE-IN DETECTED! prob=$probability, energy=$lastFrameEnergy, " +
                     "echoBaseline=${"%.4f".format(echoBaselineEnergy)}, adaptiveThreshold=${"%.4f".format(adaptiveEnergyThreshold)}, " +
                     "duration=${event.durationMs}ms")
             }
         } else {
             // Reset counter if criteria not met
             if (bargeInFrameCount.get() > 0) {
-                Log.v(TAG, "Barge-in reset: prob=$probability (need>=$BARGE_IN_THRESHOLD), " +
+                println("[SileroVadEngine] Barge-in reset: prob=$probability (need>=$BARGE_IN_THRESHOLD), " +
                     "energy=$lastFrameEnergy (need>=${"%.4f".format(adaptiveEnergyThreshold)}), " +
                     "echoBaseline=${"%.4f".format(echoBaselineEnergy)}")
             }
@@ -437,7 +435,7 @@ class SileroVadEngine @Inject constructor(
             val speechEndTimestamp = System.currentTimeMillis()
             val duration = speechEndTimestamp - speechStartTimestamp
 
-            Log.d(TAG, "Speech segment ended: ${duration}ms, peak probability: $currentSegmentPeakProbability")
+            println("[SileroVadEngine] Speech segment ended: ${duration}ms, peak probability: $currentSegmentPeakProbability")
 
             _vadState.value = VadState.SILENCE
             _isSpeechDetected.value = false
@@ -485,33 +483,33 @@ class SileroVadEngine @Inject constructor(
         echoBaselineEnergy = 0f
         echoBaselineSamples = 0
 
-        Log.d(TAG, "VAD state reset")
+        println("[SileroVadEngine] VAD state reset")
     }
 
     /**
      * Release all VAD resources.
      */
     fun release() {
-        Log.d(TAG, "Releasing VAD engines...")
+        println("[SileroVadEngine] Releasing VAD engines...")
 
         try {
             sileroVad?.close()
             sileroVad = null
         } catch (e: Exception) {
-            Log.w(TAG, "Error closing Silero VAD", e)
+            println("[SileroVadEngine] WARNING: Error closing Silero VAD: ${e.message}")
         }
 
         try {
             webRtcVad?.close()
             webRtcVad = null
         } catch (e: Exception) {
-            Log.w(TAG, "Error closing WebRTC VAD", e)
+            println("[SileroVadEngine] WARNING: Error closing WebRTC VAD: ${e.message}")
         }
 
         isInitialized.set(false)
         reset()
 
-        Log.d(TAG, "VAD engines released")
+        println("[SileroVadEngine] VAD engines released")
     }
 
     /**

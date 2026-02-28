@@ -1,6 +1,5 @@
 package com.lifo.chat.data.websocket
 
-import android.util.Log
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,7 +20,6 @@ class GeminiLiveWebSocketClient @Inject constructor(
 ) {
 
     companion object {
-        private const val TAG = "GeminiLiveWebSocket"
         private const val MODEL = "models/gemini-2.5-flash-native-audio-preview-12-2025"
         private const val HOST = "generativelanguage.googleapis.com"
     }
@@ -69,13 +67,13 @@ class GeminiLiveWebSocketClient @Inject constructor(
     fun connect(apiKey: String) {
         if (_connectionState.value == ConnectionState.CONNECTED ||
             _connectionState.value == ConnectionState.CONNECTING) {
-            Log.d(TAG, "Already connected or connecting")
+            println("[GeminiLiveWebSocket] Already connected or connecting")
             return
         }
 
         val url =
             "wss://$HOST/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=$apiKey"
-        Log.d(TAG, "🔌 Connecting to: $url")
+        println("[GeminiLiveWebSocket] Connecting to: $url")
 
         _connectionState.value = ConnectionState.CONNECTING
 
@@ -84,25 +82,25 @@ class GeminiLiveWebSocketClient @Inject constructor(
 
         webSocket = object : WebSocketClient(URI(url), Draft_6455(), headers) {
             override fun onOpen(handshakedata: ServerHandshake?) {
-                Log.d(TAG, "✅ Connected. Server handshake: ${handshakedata?.httpStatus}")
+                println("[GeminiLiveWebSocket] Connected. Server handshake: ${handshakedata?.httpStatus}")
                 _connectionState.value = ConnectionState.CONNECTED
 
                 currentLiveSessionId = "live-${System.currentTimeMillis()}"
-                Log.d(TAG, "📝 Created Live session ID: $currentLiveSessionId")
+                println("[GeminiLiveWebSocket] Created Live session ID: $currentLiveSessionId")
 
                 scope.launch {
                     try {
                         loadUserData()
                         sendInitialSetupMessage()
                     } catch (e: Exception) {
-                        Log.e(TAG, "Error during preload: ${e.message}", e)
+                        println("[GeminiLiveWebSocket] ERROR: Error during preload: ${e.message}")
                         sendInitialSetupMessage()
                     }
                 }
             }
 
             override fun onMessage(message: String?) {
-                Log.d(TAG, "📥 Message Received: ${message?.take(200)}")
+                println("[GeminiLiveWebSocket] Message Received: ${message?.take(200)}")
                 receiveMessage(message)
             }
 
@@ -114,14 +112,14 @@ class GeminiLiveWebSocketClient @Inject constructor(
             }
 
             override fun onClose(code: Int, reason: String?, remote: Boolean) {
-                Log.d(TAG, "🔌 Connection Closed: $reason")
+                println("[GeminiLiveWebSocket] Connection Closed: $reason")
                 _connectionState.value = ConnectionState.DISCONNECTED
                 currentLiveSessionId = null
                 isAIResponding = false
             }
 
             override fun onError(ex: Exception?) {
-                Log.e(TAG, "❌ Error: ${ex?.message}")
+                println("[GeminiLiveWebSocket] ERROR: ${ex?.message}")
                 _connectionState.value = ConnectionState.ERROR
                 onError?.invoke(ex?.message ?: "Unknown error")
             }
@@ -131,7 +129,7 @@ class GeminiLiveWebSocketClient @Inject constructor(
     }
 
     private suspend fun loadUserData() {
-        Log.d(TAG, "🔄 Loading user data...")
+        println("[GeminiLiveWebSocket] Loading user data...")
 
         try {
             cachedUserName = firebaseAuth.currentUser?.displayName ?:
@@ -142,18 +140,18 @@ class GeminiLiveWebSocketClient @Inject constructor(
             if (userData != null) {
                 cachedUserName = userData.first
                 cachedDiariesSummary = userData.second
-                Log.d(TAG, "✅ User data loaded: $cachedUserName")
+                println("[GeminiLiveWebSocket] User data loaded: $cachedUserName")
             } else {
-                Log.w(TAG, "⚠️ No user data callback provided")
+                println("[GeminiLiveWebSocket] WARNING: No user data callback provided")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Error loading user data", e)
+            println("[GeminiLiveWebSocket] ERROR: Error loading user data: ${e.message}")
             cachedDiariesSummary = "Nessun diario disponibile"
         }
     }
 
     private fun sendInitialSetupMessage() {
-        Log.d(TAG, "📤 Sending setup with full-duplex AEC-aware VAD")
+        println("[GeminiLiveWebSocket] Sending setup with full-duplex AEC-aware VAD")
 
         val setup = JSONObject().apply {
             put("model", MODEL)
@@ -288,7 +286,7 @@ class GeminiLiveWebSocketClient @Inject constructor(
 
         val setupMessage = JSONObject().put("setup", setup)
         webSocket?.send(setupMessage.toString())
-        Log.d(TAG, "📤 Setup sent - full-duplex AEC + server VAD (start=50, end=90, silence=350ms)")
+        println("[GeminiLiveWebSocket] Setup sent - full-duplex AEC + server VAD (start=50, end=90, silence=350ms)")
     }
 
     private fun buildSystemInstruction(): String {
@@ -388,11 +386,11 @@ class GeminiLiveWebSocketClient @Inject constructor(
 
     fun sendAudioData(audioBase64: String) {
         if (_connectionState.value != ConnectionState.CONNECTED) {
-            Log.w(TAG, "Cannot send audio - not connected (state=${_connectionState.value})")
+            println("[GeminiLiveWebSocket] WARNING: Cannot send audio - not connected (state=${_connectionState.value})")
             return
         }
         if (webSocket == null) {
-            Log.e(TAG, "❌ WebSocket is NULL!")
+            println("[GeminiLiveWebSocket] ERROR: WebSocket is NULL!")
             return
         }
 
@@ -411,7 +409,7 @@ class GeminiLiveWebSocketClient @Inject constructor(
             val msg = JSONObject().put("realtimeInput", JSONObject().put("audio", audioBlob))
             webSocket?.send(msg.toString())
         } catch (e: Exception) {
-            Log.e(TAG, "Error sending audio", e)
+            println("[GeminiLiveWebSocket] ERROR: Error sending audio: ${e.message}")
         }
     }
 
@@ -422,10 +420,10 @@ class GeminiLiveWebSocketClient @Inject constructor(
 
         try {
             val messageData = JSONObject(message)
-            Log.d(TAG, "📨 Message keys: ${messageData.keys().asSequence().joinToString()}")
+            println("[GeminiLiveWebSocket] Message keys: ${messageData.keys().asSequence().joinToString()}")
 
             if (messageData.has("setupComplete")) {
-                Log.d(TAG, "✅ Setup complete - full-duplex VAD active")
+                println("[GeminiLiveWebSocket] Setup complete - full-duplex VAD active")
                 onTurnCompleted?.invoke()
             }
 
@@ -449,7 +447,7 @@ class GeminiLiveWebSocketClient @Inject constructor(
                 // Handle interrupted FIRST (priority over turnComplete)
                 val interrupted = serverContent.optBoolean("interrupted", false)
                 if (interrupted) {
-                    Log.d(TAG, "⚠️ Server-side barge-in detected! AI response interrupted")
+                    println("[GeminiLiveWebSocket] Server-side barge-in detected! AI response interrupted")
                     isAIResponding = false
                     onInterrupted?.invoke()
                     return
@@ -457,7 +455,7 @@ class GeminiLiveWebSocketClient @Inject constructor(
 
                 val turnComplete = serverContent.optBoolean("turnComplete", false)
                 if (turnComplete) {
-                    Log.d(TAG, "✅ Turn complete")
+                    println("[GeminiLiveWebSocket] Turn complete")
                     isAIResponding = false
                     onTurnCompleted?.invoke()
                     return
@@ -474,7 +472,7 @@ class GeminiLiveWebSocketClient @Inject constructor(
 
                             if (part.has("text")) {
                                 val text = part.getString("text")
-                                Log.d(TAG, "📝 GEMINI: $text")
+                                println("[GeminiLiveWebSocket] GEMINI: $text")
                                 onTextReceived?.invoke(text)
                                 saveMessageToChat(text, false)
                             }
@@ -488,10 +486,10 @@ class GeminiLiveWebSocketClient @Inject constructor(
                                     // Track AI response state (no longer blocks mic)
                                     if (!isAIResponding) {
                                         isAIResponding = true
-                                        Log.d(TAG, "🔊 AI audio started (mic stays active for barge-in)")
+                                        println("[GeminiLiveWebSocket] AI audio started (mic stays active for barge-in)")
                                     }
 
-                                    Log.v(TAG, "🔊 Audio received: ${audioData.length} chars ($mimeType)")
+                                    println("[GeminiLiveWebSocket] Audio received: ${audioData.length} chars ($mimeType)")
                                     onAudioReceived?.invoke(audioData)
                                 }
                             }
@@ -505,12 +503,12 @@ class GeminiLiveWebSocketClient @Inject constructor(
             if (messageData.has("error")) {
                 val error = messageData.optJSONObject("error")
                 val errorMsg = error?.optString("message", "Unknown error") ?: "Unknown error"
-                Log.e(TAG, "❌ Server error: $errorMsg")
+                println("[GeminiLiveWebSocket] ERROR: Server error: $errorMsg")
                 onError?.invoke(errorMsg)
             }
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error parsing message: ${e.message}", e)
+            println("[GeminiLiveWebSocket] ERROR: Error parsing message: ${e.message}")
         }
     }
 
@@ -534,14 +532,14 @@ class GeminiLiveWebSocketClient @Inject constructor(
                     val name = functionCall.getString("name")
                     val args = functionCall.getJSONObject("args")
 
-                    Log.d(TAG, "🔧 Executing function: $name with args: $args")
+                    println("[GeminiLiveWebSocket] Executing function: $name with args: $args")
 
                     val result = when (name) {
                         "get_recent_diaries" -> executeGetRecentDiaries(args)
                         "search_diary" -> executeSearchDiary(args)
                         "play_animation" -> {
                             val animationName = args.optString("animation", "")
-                            Log.d(TAG, "🎭 Playing animation: $animationName")
+                            println("[GeminiLiveWebSocket] Playing animation: $animationName")
                             onPlayAnimation?.invoke(animationName)
                             JSONObject().apply {
                                 put("success", true)
@@ -550,7 +548,7 @@ class GeminiLiveWebSocketClient @Inject constructor(
                             }
                         }
                         else -> {
-                            Log.w(TAG, "⚠️ Unknown function: $name")
+                            println("[GeminiLiveWebSocket] WARNING: Unknown function: $name")
                             JSONObject().apply {
                                 put("error", "Unknown function: $name")
                                 put("message", "Function $name is not supported")
@@ -573,10 +571,10 @@ class GeminiLiveWebSocketClient @Inject constructor(
                 }
 
                 webSocket?.send(toolResponse.toString())
-                Log.d(TAG, "📤 Tool response sent")
+                println("[GeminiLiveWebSocket] Tool response sent")
 
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Error handling tool call", e)
+                println("[GeminiLiveWebSocket] ERROR: Error handling tool call: ${e.message}")
                 onError?.invoke("Tool execution failed: ${e.message}")
             }
         }
@@ -610,15 +608,15 @@ class GeminiLiveWebSocketClient @Inject constructor(
             try {
                 // Usa il session ID persistente della conversazione corrente
                 val actualSessionId = sessionId ?: currentLiveSessionId ?: run {
-                    Log.w(TAG, "⚠️ No Live session ID available, creating temporary one")
+                    println("[GeminiLiveWebSocket] WARNING: No Live session ID available, creating temporary one")
                     "live-${System.currentTimeMillis()}"
                 }
-                Log.d(TAG, "💬 Saving Live message to Chat DB (session: $actualSessionId): ${content.take(50)}...")
+                println("[GeminiLiveWebSocket] Saving Live message to Chat DB (session: $actualSessionId): ${content.take(50)}...")
 
                 // Callback per notificare il salvataggio
                 onChatMessageSaved?.invoke(actualSessionId, content, isUser)
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Error saving message to chat", e)
+                println("[GeminiLiveWebSocket] ERROR: Error saving message to chat: ${e.message}")
             }
         }
     }
@@ -626,11 +624,11 @@ class GeminiLiveWebSocketClient @Inject constructor(
     /** Invia immagine (jpeg) in tempo reale */
     fun sendImageData(imageBase64: String) {
         if (_connectionState.value != ConnectionState.CONNECTED) {
-            Log.w(TAG, "Cannot send image - not connected")
+            println("[GeminiLiveWebSocket] WARNING: Cannot send image - not connected")
             return
         }
         try {
-            Log.d(TAG, "📸 Sending image data (${imageBase64.length} chars)")
+            println("[GeminiLiveWebSocket] Sending image data (${imageBase64.length} chars)")
 
             // Costruzione del messaggio con il formato corretto per Gemini Live API
             val msg = JSONObject().apply {
@@ -645,9 +643,9 @@ class GeminiLiveWebSocketClient @Inject constructor(
             }
 
             webSocket?.send(msg.toString())
-            Log.d(TAG, "📤 Image sent successfully via mediaChunks")
+            println("[GeminiLiveWebSocket] Image sent successfully via mediaChunks")
         } catch (e: Exception) {
-            Log.e(TAG, "Error sending image", e)
+            println("[GeminiLiveWebSocket] ERROR: Error sending image: ${e.message}")
         }
     }
 
@@ -659,9 +657,9 @@ class GeminiLiveWebSocketClient @Inject constructor(
         try {
             val msg = JSONObject().put("realtimeInput", JSONObject().put("audioStreamEnd", true))
             webSocket?.send(msg.toString())
-            Log.d(TAG, "🔚 audioStreamEnd sent")
+            println("[GeminiLiveWebSocket] audioStreamEnd sent")
         } catch (e: Exception) {
-            Log.e(TAG, "Error sending audioStreamEnd", e)
+            println("[GeminiLiveWebSocket] ERROR: Error sending audioStreamEnd: ${e.message}")
         }
     }
 
@@ -671,16 +669,16 @@ class GeminiLiveWebSocketClient @Inject constructor(
      */
     fun sendTextMessage(text: String) {
         if (_connectionState.value != ConnectionState.CONNECTED) {
-            Log.w(TAG, "Cannot send text - not connected")
+            println("[GeminiLiveWebSocket] WARNING: Cannot send text - not connected")
             return
         }
         if (text.isBlank()) {
-            Log.w(TAG, "Cannot send empty text message")
+            println("[GeminiLiveWebSocket] WARNING: Cannot send empty text message")
             return
         }
 
         try {
-            Log.d(TAG, "💬 Sending text message: ${text.take(50)}...")
+            println("[GeminiLiveWebSocket] Sending text message: ${text.take(50)}...")
 
             // Costruisce il messaggio nel formato Gemini Live API
             val msg = JSONObject().apply {
@@ -700,7 +698,7 @@ class GeminiLiveWebSocketClient @Inject constructor(
             }
 
             webSocket?.send(msg.toString())
-            Log.d(TAG, "📤 Text message sent successfully")
+            println("[GeminiLiveWebSocket] Text message sent successfully")
 
             // Salva il messaggio nel database
             saveMessageToChat(text, true)
@@ -709,12 +707,12 @@ class GeminiLiveWebSocketClient @Inject constructor(
             onPartialTranscript?.invoke(text)
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error sending text message", e)
+            println("[GeminiLiveWebSocket] ERROR: Error sending text message: ${e.message}")
             onError?.invoke("Failed to send text message: ${e.message}")
         }
     }
     fun disconnect() {
-        Log.d(TAG, "Disconnecting...")
+        println("[GeminiLiveWebSocket] Disconnecting...")
         webSocket?.close()
         webSocket = null
         _connectionState.value = ConnectionState.DISCONNECTED

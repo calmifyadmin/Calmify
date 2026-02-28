@@ -1,7 +1,7 @@
 package com.lifo.chat.presentation.components
 
 import android.graphics.SurfaceTexture
-import android.util.Log
+
 import android.view.TextureView
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
@@ -63,9 +63,9 @@ fun LiveCameraPreview(
 
     // Handle surface texture lifecycle - removed isCameraActive dependency to fix circular logic
     LaunchedEffect(surfaceTexture) {
-        Log.d("LiveCameraPreview", "📸 LaunchedEffect: surfaceTexture=$surfaceTexture")
+        println("[LiveCameraPreview] LaunchedEffect: surfaceTexture=$surfaceTexture")
         if (surfaceTexture != null) {
-            Log.d("LiveCameraPreview", "📸 Calling onSurfaceTextureReady from LaunchedEffect...")
+            println("[LiveCameraPreview] Calling onSurfaceTextureReady from LaunchedEffect...")
             onSurfaceTextureReady(surfaceTexture!!)
         }
     }
@@ -229,19 +229,19 @@ private fun CameraPreviewContent(
                         TextureView(context).apply {
                             surfaceTextureListener = object : TextureView.SurfaceTextureListener {
                                 override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
-                                    Log.d("LiveCameraPreview", "📸 Surface texture available: ${width}x${height}")
-                                    Log.d("LiveCameraPreview", "📸 Setting surfaceTexture state...")
+                                    println("[LiveCameraPreview] Surface texture available: ${width}x${height}")
+                                    println("[LiveCameraPreview] Setting surfaceTexture state...")
                                     onSurfaceTextureCreated(surface)
-                                    Log.d("LiveCameraPreview", "📸 Calling onSurfaceTextureReady directly...")
+                                    println("[LiveCameraPreview] Calling onSurfaceTextureReady directly...")
                                     onSurfaceTextureReady(surface)
                                 }
                                 
                                 override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {
-                                    Log.d("LiveCameraPreview", "📸 Surface texture size changed: ${width}x${height}")
+                                    println("[LiveCameraPreview] Surface texture size changed: ${width}x${height}")
                                 }
                                 
                                 override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
-                                    Log.d("LiveCameraPreview", "📸 Surface texture destroyed")
+                                    println("[LiveCameraPreview] Surface texture destroyed")
                                     return true
                                 }
                                 

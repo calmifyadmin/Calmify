@@ -3,7 +3,6 @@ package com.lifo.chat.data.audio
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
-import android.util.Log
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,8 +32,6 @@ import kotlin.concurrent.withLock
 class GeminiAudioPlayer {
 
     companion object {
-        private const val TAG = "GeminiAudioPlayer"
-
         // Audio format constants (Gemini Live API output)
         private const val SAMPLE_RATE = 24000
         private const val CHANNEL_CONFIG = AudioFormat.CHANNEL_OUT_MONO
@@ -218,14 +215,14 @@ class GeminiAudioPlayer {
      */
     fun startPlayer() {
         if (isRunning.getAndSet(true)) {
-            Log.w(TAG, "Player already running")
+            println("[GeminiAudioPlayer] WARNING: Player already running")
             return
         }
 
-        Log.d(TAG, "🎵 Starting GeminiAudioPlayer")
-        Log.d(TAG, "   Jitter buffer: ${JITTER_BUFFER_MS}ms (${JITTER_BUFFER_BYTES} bytes)")
-        Log.d(TAG, "   Start threshold: ${START_THRESHOLD_MS}ms")
-        Log.d(TAG, "   Playback chunk: ${PLAYBACK_CHUNK_MS}ms")
+        println("[GeminiAudioPlayer] Starting GeminiAudioPlayer")
+        println("[GeminiAudioPlayer]    Jitter buffer: ${JITTER_BUFFER_MS}ms (${JITTER_BUFFER_BYTES} bytes)")
+        println("[GeminiAudioPlayer]    Start threshold: ${START_THRESHOLD_MS}ms")
+        println("[GeminiAudioPlayer]    Playback chunk: ${PLAYBACK_CHUNK_MS}ms")
 
         // Reset state
         circularBuffer.clear()
@@ -246,7 +243,7 @@ class GeminiAudioPlayer {
         }
 
         _isPlaying.value = true
-        Log.d(TAG, "✅ Player started successfully")
+        println("[GeminiAudioPlayer] Player started successfully")
     }
 
     /**
@@ -255,7 +252,7 @@ class GeminiAudioPlayer {
      */
     fun queueAudioChunk(audioData: ByteArray) {
         if (!isRunning.get()) {
-            Log.w(TAG, "Cannot queue audio - player not running")
+            println("[GeminiAudioPlayer] WARNING: Cannot queue audio - player not running")
             return
         }
 
@@ -267,7 +264,7 @@ class GeminiAudioPlayer {
             // Buffer overflow - drop oldest data to make room
             val overflow = audioData.size - freeSpace
             overflowCount.incrementAndGet()
-            Log.w(TAG, "⚠️ Buffer overflow: dropping ${overflow} bytes (free: $freeSpace, incoming: ${audioData.size})")
+            println("[GeminiAudioPlayer] WARNING: Buffer overflow: dropping ${overflow} bytes (free: $freeSpace, incoming: ${audioData.size})")
 
             // Read and discard oldest bytes
             val discard = ByteArray(overflow)
@@ -277,7 +274,7 @@ class GeminiAudioPlayer {
         // Write to circular buffer
         val written = circularBuffer.write(audioData)
         if (written < audioData.size) {
-            Log.w(TAG, "⚠️ Partial write: $written/${audioData.size} bytes")
+            println("[GeminiAudioPlayer] WARNING: Partial write: $written/${audioData.size} bytes")
         }
 
         // Update buffer level
@@ -285,11 +282,11 @@ class GeminiAudioPlayer {
 
         // Check if buffering is complete
         if (isBuffering.get() && circularBuffer.available() >= START_THRESHOLD_BYTES) {
-            Log.d(TAG, "🎯 Buffering complete - starting playback (${circularBuffer.available()} bytes ready)")
+            println("[GeminiAudioPlayer] Buffering complete - starting playback (${circularBuffer.available()} bytes ready)")
             isBuffering.set(false)
         }
 
-        Log.v(TAG, "📥 Queued ${audioData.size}B (buffer: ${(circularBuffer.fillLevel() * 100).toInt()}%)")
+        println("[GeminiAudioPlayer] Queued ${audioData.size}B (buffer: ${(circularBuffer.fillLevel() * 100).toInt()}%)")
     }
 
     /**
@@ -300,7 +297,7 @@ class GeminiAudioPlayer {
             return
         }
 
-        Log.d(TAG, "🛑 Stopping GeminiAudioPlayer")
+        println("[GeminiAudioPlayer] Stopping GeminiAudioPlayer")
 
         // Cancel playback job
         playbackJob?.cancel()
@@ -314,19 +311,19 @@ class GeminiAudioPlayer {
 
         // Log session statistics
         val sessionDuration = System.currentTimeMillis() - sessionStartTime
-        Log.d(TAG, "📊 Session ended:")
-        Log.d(TAG, "   Duration: ${sessionDuration}ms")
-        Log.d(TAG, "   Chunks received: ${chunksReceived.get()}")
-        Log.d(TAG, "   Chunks played: ${chunksPlayed.get()}")
-        Log.d(TAG, "   Underruns: ${underrunCount.get()}")
-        Log.d(TAG, "   Overflows: ${overflowCount.get()}")
+        println("[GeminiAudioPlayer] Session ended:")
+        println("[GeminiAudioPlayer]    Duration: ${sessionDuration}ms")
+        println("[GeminiAudioPlayer]    Chunks received: ${chunksReceived.get()}")
+        println("[GeminiAudioPlayer]    Chunks played: ${chunksPlayed.get()}")
+        println("[GeminiAudioPlayer]    Underruns: ${underrunCount.get()}")
+        println("[GeminiAudioPlayer]    Overflows: ${overflowCount.get()}")
 
         _isPlaying.value = false
         _bufferLevel.value = 0f
         _audioLevel.value = 0f
         smoothedAudioLevel = 0f
 
-        Log.d(TAG, "✅ Player stopped")
+        println("[GeminiAudioPlayer] Player stopped")
     }
 
     /**
@@ -334,10 +331,10 @@ class GeminiAudioPlayer {
      * Implementa fade-out graduale del volume come Gemini Live desktop.
      */
     fun handleInterruption() {
-        Log.d(TAG, "⚠️ Handling interruption - starting smooth fade-out")
+        println("[GeminiAudioPlayer] Handling interruption - starting smooth fade-out")
 
         if (isFadingOut.getAndSet(true)) {
-            Log.d(TAG, "Already fading out, skipping")
+            println("[GeminiAudioPlayer] Already fading out, skipping")
             return
         }
 
@@ -354,7 +351,7 @@ class GeminiAudioPlayer {
                     if (!isActive) break
 
                     currentVolume = (currentVolume - volumeStep).coerceAtLeast(0f)
-                    Log.v(TAG, "🔉 Fade-out step ${step + 1}/$fadeOutSteps: volume=${String.format("%.2f", currentVolume)}")
+                    println("[GeminiAudioPlayer] Fade-out step ${step + 1}/$fadeOutSteps: volume=${String.format("%.2f", currentVolume)}")
 
                     // Update audio level visualization
                     smoothedAudioLevel *= 0.85f
@@ -373,7 +370,7 @@ class GeminiAudioPlayer {
                 _audioLevel.value = 0f
                 smoothedAudioLevel = 0f
 
-                Log.d(TAG, "✅ Fade-out complete - ready for new audio")
+                println("[GeminiAudioPlayer] Fade-out complete - ready for new audio")
 
             } finally {
                 // Reset for next audio
@@ -387,7 +384,7 @@ class GeminiAudioPlayer {
      * Immediate stop without fade (for disconnect/cleanup)
      */
     fun handleImmediateStop() {
-        Log.d(TAG, "🛑 Immediate stop - no fade")
+        println("[GeminiAudioPlayer] Immediate stop - no fade")
 
         fadeOutJob?.cancel()
         isFadingOut.set(false)
@@ -428,7 +425,7 @@ class GeminiAudioPlayer {
      * Playback loop principale - gira in background thread dedicato.
      */
     private suspend fun playbackLoop() = withContext(Dispatchers.IO) {
-        Log.d(TAG, "🔄 Playback loop started")
+        println("[GeminiAudioPlayer] Playback loop started")
 
         val playbackBuffer = ByteArray(PLAYBACK_CHUNK_BYTES)
 
@@ -464,15 +461,15 @@ class GeminiAudioPlayer {
                 }
 
             } catch (e: CancellationException) {
-                Log.d(TAG, "Playback loop cancelled")
+                println("[GeminiAudioPlayer] Playback loop cancelled")
                 break
             } catch (e: Exception) {
-                Log.e(TAG, "Error in playback loop", e)
+                println("[GeminiAudioPlayer] ERROR: Error in playback loop: ${e.message}")
                 delay(10)
             }
         }
 
-        Log.d(TAG, "🔄 Playback loop ended")
+        println("[GeminiAudioPlayer] Playback loop ended")
     }
 
     /**
@@ -483,12 +480,12 @@ class GeminiAudioPlayer {
         underrunCount.incrementAndGet()
 
         if (consecutiveUnderruns == 1) {
-            Log.v(TAG, "🔇 Buffer underrun - waiting for data")
+            println("[GeminiAudioPlayer] Buffer underrun - waiting for data")
         }
 
         if (consecutiveUnderruns >= MAX_CONSECUTIVE_UNDERRUNS) {
             // Too many underruns - stream probably ended
-            Log.d(TAG, "🔇 Stream appears ended ($consecutiveUnderruns consecutive underruns)")
+            println("[GeminiAudioPlayer] Stream appears ended ($consecutiveUnderruns consecutive underruns)")
 
             // Fade out audio level
             while (smoothedAudioLevel > 0.01f) {
@@ -514,7 +511,7 @@ class GeminiAudioPlayer {
         synchronized(audioTrackLock) {
             val track = audioTrack
             if (track == null || track.state != AudioTrack.STATE_INITIALIZED) {
-                Log.w(TAG, "AudioTrack not ready")
+                println("[GeminiAudioPlayer] WARNING: AudioTrack not ready")
                 return
             }
 
@@ -540,20 +537,20 @@ class GeminiAudioPlayer {
                         remaining -= written
                     }
                     written == AudioTrack.ERROR_INVALID_OPERATION -> {
-                        Log.e(TAG, "AudioTrack ERROR_INVALID_OPERATION")
+                        println("[GeminiAudioPlayer] ERROR: AudioTrack ERROR_INVALID_OPERATION")
                         break
                     }
                     written == AudioTrack.ERROR_BAD_VALUE -> {
-                        Log.e(TAG, "AudioTrack ERROR_BAD_VALUE")
+                        println("[GeminiAudioPlayer] ERROR: AudioTrack ERROR_BAD_VALUE")
                         break
                     }
                     written == AudioTrack.ERROR_DEAD_OBJECT -> {
-                        Log.e(TAG, "AudioTrack ERROR_DEAD_OBJECT - reinitializing")
+                        println("[GeminiAudioPlayer] ERROR: AudioTrack ERROR_DEAD_OBJECT - reinitializing")
                         initializeAudioTrack()
                         break
                     }
                     else -> {
-                        Log.w(TAG, "AudioTrack write returned $written")
+                        println("[GeminiAudioPlayer] WARNING: AudioTrack write returned $written")
                         break
                     }
                 }
@@ -601,7 +598,7 @@ class GeminiAudioPlayer {
                 )
 
                 if (minBufferSize == AudioTrack.ERROR_BAD_VALUE) {
-                    Log.e(TAG, "Invalid AudioTrack parameters")
+                    println("[GeminiAudioPlayer] ERROR: Invalid AudioTrack parameters")
                     return
                 }
 
@@ -639,18 +636,18 @@ class GeminiAudioPlayer {
 
                 if (audioTrack?.state == AudioTrack.STATE_INITIALIZED) {
                     audioTrack?.play()
-                    Log.d(TAG, "🔊 AudioTrack initialized:")
-                    Log.d(TAG, "   Buffer: $bufferSize bytes (min: $minBufferSize)")
-                    Log.d(TAG, "   Sample rate: $SAMPLE_RATE Hz")
-                    Log.d(TAG, "   Mode: LOW_LATENCY")
+                    println("[GeminiAudioPlayer] AudioTrack initialized:")
+                    println("[GeminiAudioPlayer]    Buffer: $bufferSize bytes (min: $minBufferSize)")
+                    println("[GeminiAudioPlayer]    Sample rate: $SAMPLE_RATE Hz")
+                    println("[GeminiAudioPlayer]    Mode: LOW_LATENCY")
                 } else {
-                    Log.e(TAG, "AudioTrack failed to initialize")
+                    println("[GeminiAudioPlayer] ERROR: AudioTrack failed to initialize")
                     audioTrack?.release()
                     audioTrack = null
                 }
 
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to initialize AudioTrack", e)
+                println("[GeminiAudioPlayer] ERROR: Failed to initialize AudioTrack: ${e.message}")
                 audioTrack = null
             }
         }
@@ -665,7 +662,7 @@ class GeminiAudioPlayer {
                 audioTrack?.stop()
                 audioTrack?.release()
             } catch (e: Exception) {
-                Log.e(TAG, "Error releasing AudioTrack", e)
+                println("[GeminiAudioPlayer] ERROR: Error releasing AudioTrack: ${e.message}")
             } finally {
                 audioTrack = null
             }

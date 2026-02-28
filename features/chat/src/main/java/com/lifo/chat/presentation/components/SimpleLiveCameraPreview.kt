@@ -1,7 +1,7 @@
 package com.lifo.chat.presentation.components
 
 import android.graphics.SurfaceTexture
-import android.util.Log
+
 import android.view.TextureView
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -39,14 +39,14 @@ fun SimpleLiveCameraPreview(
     // Handle surface texture lifecycle
     LaunchedEffect(surfaceTexture) {
         if (surfaceTexture != null) {
-            Log.d("SimpleLiveCameraPreview", "📸 Surface texture ready")
+            println("[SimpleLiveCameraPreview] Surface texture ready")
             onSurfaceTextureReady(surfaceTexture!!)
         }
     }
 
     DisposableEffect(Unit) {
         onDispose {
-            Log.d("SimpleLiveCameraPreview", "📸 Surface texture destroyed")
+            println("[SimpleLiveCameraPreview] Surface texture destroyed")
             onSurfaceTextureDestroyed()
         }
     }
@@ -70,16 +70,16 @@ fun SimpleLiveCameraPreview(
                         TextureView(context).apply {
                             surfaceTextureListener = object : TextureView.SurfaceTextureListener {
                                 override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
-                                    Log.d("SimpleLiveCameraPreview", "📸 Surface available: ${width}x${height}")
+                                    println("[SimpleLiveCameraPreview] Surface available: ${width}x${height}")
                                     surfaceTexture = surface
                                 }
 
                                 override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {
-                                    Log.d("SimpleLiveCameraPreview", "📸 Surface size changed: ${width}x${height}")
+                                    println("[SimpleLiveCameraPreview] Surface size changed: ${width}x${height}")
                                 }
 
                                 override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
-                                    Log.d("SimpleLiveCameraPreview", "📸 Surface destroyed")
+                                    println("[SimpleLiveCameraPreview] Surface destroyed")
                                     return true
                                 }
 

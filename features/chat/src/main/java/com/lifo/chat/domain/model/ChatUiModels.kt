@@ -1,7 +1,7 @@
 package com.lifo.chat.domain.model
 
-import com.lifo.mongo.repository.ChatSession
-import com.lifo.mongo.repository.ChatMessage
+import com.lifo.util.model.ChatSession
+import com.lifo.util.model.ChatMessage
 
 data class ChatUiState(
     val sessions: List<ChatSession> = emptyList(),

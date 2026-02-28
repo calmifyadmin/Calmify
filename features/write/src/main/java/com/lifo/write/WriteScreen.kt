@@ -1,9 +1,7 @@
 package com.lifo.write
 
-import ErrorBoundary
+import com.lifo.ui.ErrorBoundary
 import android.annotation.SuppressLint
-import android.net.Uri
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
@@ -27,7 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.SubcomposeAsyncImage
 import coil3.request.ImageRequest
 import com.google.accompanist.pager.ExperimentalPagerApi
@@ -84,7 +82,7 @@ internal fun WriteScreen(
     onBackPressed: () -> Unit,
     onImageClicked: (Int) -> Unit,
     onSaveClicked: (Diary) -> Unit,
-    onImageSelect: (Uri) -> Unit,
+    onImageSelect: (String) -> Unit,
     onImageDeleteClicked: (GalleryImage) -> Unit,
     viewModel: WriteViewModel
 ) {
@@ -92,9 +90,9 @@ internal fun WriteScreen(
     ErrorBoundary {
         // Lifecycle management
         LifecycleAwareComposable(
-            onResume = { Log.d("WriteScreen", "Screen resumed") },
-            onPause = { Log.d("WriteScreen", "Screen paused") },
-            onDispose = { Log.d("WriteScreen", "Screen disposed, cleaning up resources") }
+            onResume = { println("[WriteScreen] Screen resumed") },
+            onPause = { println("[WriteScreen] Screen paused") },
+            onDispose = { println("[WriteScreen] Screen disposed, cleaning up resources") }
         ) {
             // UI state for image selection
             var selectionCount by remember { mutableStateOf(0) }
@@ -112,7 +110,7 @@ internal fun WriteScreen(
             }
 
             // Get WriteViewModel
-            val writeViewModel: WriteViewModel = viewModel()
+            val writeViewModel: WriteViewModel = hiltViewModel()
 
             // Update the Mood when selecting an existing Diary
             LaunchedEffect(key1 = uiState.mood) {
@@ -292,7 +290,7 @@ internal fun ZoomableImage(
                 Text("Failed to load image")
             },
             model = ImageRequest.Builder(LocalContext.current)
-                .data(selectedGalleryImage.image.toString())
+                .data(selectedGalleryImage.image)
                 .build(),
             contentScale = ContentScale.Fit,
             contentDescription = "Gallery Image"

@@ -4,7 +4,7 @@ import android.content.Context
 import android.media.*
 import android.os.Build
 import android.util.Base64
-import android.util.Log
+
 import androidx.annotation.RequiresApi
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -30,8 +30,6 @@ open class GeminiNativeVoiceSystem @Inject constructor(
     private val context: Context
 ) {
     companion object {
-        private const val TAG = "GeminiNativeVoice"
-
         private const val GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/"
         private const val MODEL_ID = "gemini-2.0-flash-exp"
         private const val GENERATE_CONTENT_API = "streamGenerateContent"
@@ -100,12 +98,12 @@ open class GeminiNativeVoiceSystem @Inject constructor(
     }
 
     open suspend fun initialize(apiKey: String = "") = withContext(Dispatchers.Main) {
-        Log.d(TAG, "🎙️ Initializing Gemini Native Voice System V6")
+        println("[GeminiNativeVoice] Initializing Gemini Native Voice System V6")
 
         this@GeminiNativeVoiceSystem.apiKey = apiKey
 
         if (apiKey.isEmpty()) {
-            Log.e(TAG, "❌ API key is empty!")
+            println("[GeminiNativeVoice] ERROR: API key is empty!")
             _voiceState.update { it.copy(error = "API key not configured") }
             return@withContext
         }
@@ -117,10 +115,10 @@ open class GeminiNativeVoiceSystem @Inject constructor(
             _voiceState.update {
                 it.copy(isInitialized = true, error = null)
             }
-            Log.d(TAG, "✅ Gemini Voice System V6 initialized")
+            println("[GeminiNativeVoice] Gemini Voice System V6 initialized")
 
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Initialization failed", e)
+            println("[GeminiNativeVoice] ERROR: Initialization failed: ${e.message}")
             _voiceState.update {
                 it.copy(error = "Initialization failed: ${e.message}")
             }
@@ -145,7 +143,7 @@ open class GeminiNativeVoiceSystem @Inject constructor(
             .build()
 
         val result = audioManager.requestAudioFocus(audioFocusRequest!!)
-        Log.d(TAG, "🔊 Audio focus: $result (1=GRANTED)")
+        println("[GeminiNativeVoice] Audio focus: $result (1=GRANTED)")
     }
 
     /**
@@ -161,7 +159,7 @@ open class GeminiNativeVoiceSystem @Inject constructor(
             AUDIO_FORMAT
         )
 
-        Log.d(TAG, "🔊 Creating fresh AudioTrack, minBuffer=$minBufferSize")
+        println("[GeminiNativeVoice] Creating fresh AudioTrack, minBuffer=$minBufferSize")
 
         val bufferSize = maxOf(minBufferSize * 4, SAMPLE_RATE * 2) // At least 1 sec buffer
 
@@ -196,7 +194,7 @@ open class GeminiNativeVoiceSystem @Inject constructor(
             )
         }
 
-        Log.d(TAG, "🔊 AudioTrack created, state=${track.state}")
+        println("[GeminiNativeVoice] AudioTrack created, state=${track.state}")
 
         audioTrack = track
         return track
@@ -207,10 +205,10 @@ open class GeminiNativeVoiceSystem @Inject constructor(
         val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
         val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
 
-        Log.d(TAG, "🔊 Device volume: $currentVolume/$maxVolume")
+        println("[GeminiNativeVoice] Device volume: $currentVolume/$maxVolume")
 
         if (currentVolume == 0) {
-            Log.w(TAG, "⚠️ VOLUME IS ZERO!")
+            println("[GeminiNativeVoice] WARNING: VOLUME IS ZERO!")
         }
     }
 
@@ -219,10 +217,10 @@ open class GeminiNativeVoiceSystem @Inject constructor(
         emotion: Emotion = Emotion.NEUTRAL,
         messageId: String
     ) {
-        Log.d(TAG, "🎤 Speaking: ${text.take(50)}... [Emotion: $emotion]")
+        println("[GeminiNativeVoice] Speaking: ${text.take(50)}... [Emotion: $emotion]")
 
         if (!_voiceState.value.isInitialized) {
-            Log.e(TAG, "❌ Not initialized!")
+            println("[GeminiNativeVoice] ERROR: Not initialized!")
             return
         }
 
@@ -249,7 +247,7 @@ open class GeminiNativeVoiceSystem @Inject constructor(
                 _voiceState.update { it.copy(latencyMs = latency, streamProgress = 1f) }
 
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Error", e)
+                println("[GeminiNativeVoice] ERROR: ${e.message}")
                 _voiceState.update { it.copy(error = e.message) }
             } finally {
                 _voiceState.update {
@@ -295,7 +293,7 @@ open class GeminiNativeVoiceSystem @Inject constructor(
         }
 
         val url = "$GEMINI_API_URL$MODEL_ID:$GENERATE_CONTENT_API?alt=sse&key=$apiKey"
-        Log.d(TAG, "🌐 Calling API...")
+        println("[GeminiNativeVoice] Calling API...")
 
         val request = Request.Builder()
             .url(url)
@@ -307,7 +305,7 @@ open class GeminiNativeVoiceSystem @Inject constructor(
 
         okHttpClient.newCall(request).execute().use { response ->
             val networkTime = System.currentTimeMillis() - startTime
-            Log.d(TAG, "📡 Response: ${response.code} (${networkTime}ms)")
+            println("[GeminiNativeVoice] Response: ${response.code} (${networkTime}ms)")
 
             if (!response.isSuccessful) {
                 val error = response.body?.string() ?: "Unknown"
@@ -354,14 +352,14 @@ open class GeminiNativeVoiceSystem @Inject constructor(
                                 val mimeType = inlineData.optString("mimeType", "")
                                 val data = inlineData.optString("data", "")
 
-                                Log.d(TAG, "🎵 Chunk #$chunkCount: ${data.length} base64 chars")
+                                println("[GeminiNativeVoice] Chunk #$chunkCount: ${data.length} base64 chars")
 
                                 if (data.isNotEmpty()) {
                                     // ✅ Create AudioTrack JUST before first audio chunk
                                     if (!audioTrackCreated) {
                                         val track = createFreshAudioTrack()
                                         track.play()
-                                        Log.d(TAG, "🔊 AudioTrack started, playState=${track.playState}")
+                                        println("[GeminiNativeVoice] AudioTrack started, playState=${track.playState}")
                                         audioTrackCreated = true
 
                                         // 🎬 PLAYBACK STARTED EVENT
@@ -389,7 +387,7 @@ open class GeminiNativeVoiceSystem @Inject constructor(
                     }
 
                 } catch (e: Exception) {
-                    Log.w(TAG, "⚠️ Parse error: ${e.message}")
+                    println("[GeminiNativeVoice] WARNING: Parse error: ${e.message}")
                 }
             }
         }
@@ -399,7 +397,7 @@ open class GeminiNativeVoiceSystem @Inject constructor(
         // Wait for AudioTrack to finish playing buffered data
         if (audioTrackCreated && totalBytesPlayed > 0) {
             val durationMs = (totalBytesPlayed / (SAMPLE_RATE * 2)) * 1000 // 2 bytes per sample
-            Log.d(TAG, "⏳ Waiting ${durationMs}ms for playback to complete...")
+            println("[GeminiNativeVoice] Waiting ${durationMs}ms for playback to complete...")
 
             // 🎬 PLAYBACK FINISHING EVENT (all data written, draining buffer)
             _voiceState.update {
@@ -419,7 +417,7 @@ open class GeminiNativeVoiceSystem @Inject constructor(
             }
         }
 
-        Log.d(TAG, "✅ Complete. Chunks: $chunkCount, Bytes: $totalBytesPlayed")
+        println("[GeminiNativeVoice] Complete. Chunks: $chunkCount, Bytes: $totalBytesPlayed")
     }
 
     /**
@@ -430,7 +428,7 @@ open class GeminiNativeVoiceSystem @Inject constructor(
         try {
             // Decode base64 - data is already Little Endian PCM
             val audioBytes = Base64.decode(base64Data, Base64.DEFAULT)
-            Log.d(TAG, "🎵 Decoded: ${audioBytes.size} bytes")
+            println("[GeminiNativeVoice] Decoded: ${audioBytes.size} bytes")
 
             // Debug: show first samples (Little Endian: low byte first)
             if (audioBytes.size >= 10) {
@@ -442,12 +440,12 @@ open class GeminiNativeVoiceSystem @Inject constructor(
                     val sample = (high shl 8) or low
                     samples.append("$sample ")
                 }
-                Log.d(TAG, "🔊 $samples")
+                println("[GeminiNativeVoice] $samples")
             }
 
             val track = audioTrack
             if (track == null || track.playState != AudioTrack.PLAYSTATE_PLAYING) {
-                Log.e(TAG, "❌ AudioTrack not ready!")
+                println("[GeminiNativeVoice] ERROR: AudioTrack not ready!")
                 return 0
             }
 
@@ -460,22 +458,22 @@ open class GeminiNativeVoiceSystem @Inject constructor(
                 if (written > 0) {
                     offset += written
                 } else if (written < 0) {
-                    Log.e(TAG, "❌ Write error: $written")
+                    println("[GeminiNativeVoice] ERROR: Write error: $written")
                     break
                 }
             }
 
-            Log.d(TAG, "🔊 Wrote $offset/${audioBytes.size} bytes")
+            println("[GeminiNativeVoice] Wrote $offset/${audioBytes.size} bytes")
             return offset
 
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Error", e)
+            println("[GeminiNativeVoice] ERROR: ${e.message}")
             return 0
         }
     }
 
     open fun stop() {
-        Log.d(TAG, "🛑 Stopping")
+        println("[GeminiNativeVoice] Stopping")
         currentStreamJob?.cancel()
         audioTrack?.pause()
         audioTrack?.flush()
@@ -494,7 +492,7 @@ open class GeminiNativeVoiceSystem @Inject constructor(
     }
 
     open fun cleanup() {
-        Log.d(TAG, "🧹 Cleanup")
+        println("[GeminiNativeVoice] Cleanup")
         stop()
         audioTrack?.release()
         audioTrack = null

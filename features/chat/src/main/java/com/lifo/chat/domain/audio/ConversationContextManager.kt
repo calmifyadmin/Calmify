@@ -1,6 +1,6 @@
 package com.lifo.chat.domain.audio
 
-import android.util.Log
+
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -35,8 +35,6 @@ class ConversationContextManager @Inject constructor() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     
     companion object {
-        private const val TAG = "ConversationContext"
-        
         // Analysis windows
         private const val CONTEXT_ANALYSIS_WINDOW = 20 // Recent messages to analyze
         private const val SPEAKING_PATTERN_WINDOW = 10 // Speaking events to track
@@ -165,7 +163,7 @@ class ConversationContextManager @Inject constructor() {
         // Analyze context after each message
         analyzeConversationContext()
         
-        Log.v(TAG, "💬 Message added: mode=$currentMode, intent=$currentIntent, emotion=$emotion")
+        println("[ConversationContext] Message added: mode=$currentMode, intent=$currentIntent, emotion=$emotion")
     }
     
     /**
@@ -209,13 +207,13 @@ class ConversationContextManager @Inject constructor() {
         if (detectedMode != currentMode) {
             currentMode = detectedMode
             _conversationMode.value = detectedMode
-            Log.d(TAG, "🎭 Conversation mode changed to: $detectedMode")
+            println("[ConversationContext] Conversation mode changed to: $detectedMode")
         }
         
         if (detectedIntent != currentIntent) {
             currentIntent = detectedIntent
             _userIntent.value = detectedIntent
-            Log.d(TAG, "🎯 User intent detected: $detectedIntent")
+            println("[ConversationContext] User intent detected: $detectedIntent")
         }
         
         // Update audio optimization settings based on new context
@@ -351,7 +349,7 @@ class ConversationContextManager @Inject constructor() {
         val settings = calculateOptimalSettings(mode, intent, metrics)
         _optimizationSettings.value = settings
         
-        Log.d(TAG, "🔧 Audio settings updated: ${settings.contextReason}")
+        println("[ConversationContext] Audio settings updated: ${settings.contextReason}")
     }
     
     /**
@@ -584,7 +582,7 @@ class ConversationContextManager @Inject constructor() {
         val settings = calculateOptimalSettings(mode, currentIntent, metrics)
         _optimizationSettings.value = settings.copy(contextReason = reason)
         
-        Log.d(TAG, "🎛️ Manual mode set: $mode - $reason")
+        println("[ConversationContext] Manual mode set: $mode - $reason")
     }
     
     /**
@@ -601,7 +599,7 @@ class ConversationContextManager @Inject constructor() {
         _optimizationSettings.value = AudioOptimizationSettings()
         _conversationMetrics.value = ConversationMetrics()
         
-        Log.d(TAG, "🔄 Conversation context reset")
+        println("[ConversationContext] Conversation context reset")
     }
     
     /**

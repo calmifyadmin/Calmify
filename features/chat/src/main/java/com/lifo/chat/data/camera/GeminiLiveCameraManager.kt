@@ -14,7 +14,6 @@ import android.media.ImageReader
 import android.os.Handler
 import android.os.HandlerThread
 import android.util.Base64
-import android.util.Log
 import android.util.Size
 import android.view.Surface
 import androidx.core.content.ContextCompat
@@ -29,147 +28,145 @@ import javax.inject.Singleton
 class GeminiLiveCameraManager @Inject constructor(
     private val context: Context
 ) {
-    
-    private val TAG = "GeminiLiveCamera"
-    
+
     // Camera configuration constants matching reference
     private val MAX_IMAGE_DIMENSION = 1024
     private val JPEG_QUALITY = 70
     private val IMAGE_SEND_INTERVAL = 3000L // 3 seconds
-    
+
     private var cameraDevice: CameraDevice? = null
     private var cameraCaptureSession: CameraCaptureSession? = null
     private var captureRequestBuilder: CaptureRequest.Builder? = null
     private var imageReader: ImageReader? = null
     private var surfaceTexture: SurfaceTexture? = null
-    
+
     private val cameraThread = HandlerThread("CameraThread").apply { start() }
     private val cameraHandler = Handler(cameraThread.looper)
-    
+
     private lateinit var cameraId: String
     private lateinit var previewSize: Size
-    
+
     private var lastImageSendTime: Long = 0
     private var isActive = false
-    
+
     private val _isCameraActive = MutableStateFlow(false)
     val isCameraActive: StateFlow<Boolean> = _isCameraActive
-    
+
     var onImageCaptured: ((String) -> Unit)? = null
-    
+
     fun hasCameraPermission(): Boolean {
         return ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.CAMERA
         ) == PackageManager.PERMISSION_GRANTED
     }
-    
+
     fun startCameraPreview(surfaceTexture: SurfaceTexture) {
-        Log.d(TAG, "📸 startCameraPreview() called")
-        Log.d(TAG, "📸 Current isActive: $isActive")
-        Log.d(TAG, "📸 SurfaceTexture: $surfaceTexture")
-        
+        println("[GeminiLiveCamera] startCameraPreview() called")
+        println("[GeminiLiveCamera] Current isActive: $isActive")
+        println("[GeminiLiveCamera] SurfaceTexture: $surfaceTexture")
+
         if (isActive) {
-            Log.d(TAG, "📸 Camera already active - skipping")
+            println("[GeminiLiveCamera] Camera already active - skipping")
             return
         }
-        
+
         if (!hasCameraPermission()) {
-            Log.w(TAG, "📸 Camera permission not granted - cannot start")
+            println("[GeminiLiveCamera] WARNING: Camera permission not granted - cannot start")
             return
         }
-        
-        Log.d(TAG, "📸 Setting surfaceTexture and calling openCamera()")
+
+        println("[GeminiLiveCamera] Setting surfaceTexture and calling openCamera()")
         this.surfaceTexture = surfaceTexture
         openCamera()
     }
-    
+
     fun stopCameraPreview() {
         if (!isActive) return
-        
-        Log.d(TAG, "Stopping camera preview")
+
+        println("[GeminiLiveCamera] Stopping camera preview")
         closeCamera()
         isActive = false
         _isCameraActive.value = false
     }
-    
+
     @SuppressLint("MissingPermission") // Permission checked in hasCameraPermission() before calling
     private fun openCamera() {
-        Log.d(TAG, "📸 openCamera() called")
+        println("[GeminiLiveCamera] openCamera() called")
         val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
-        
+
         try {
-            Log.d(TAG, "📸 Getting camera list...")
+            println("[GeminiLiveCamera] Getting camera list...")
             val cameraList = cameraManager.cameraIdList
-            Log.d(TAG, "📸 Available cameras: ${cameraList.contentToString()}")
-            
+            println("[GeminiLiveCamera] Available cameras: ${cameraList.contentToString()}")
+
             // Get back camera ID
             cameraId = cameraManager.cameraIdList.firstOrNull { id ->
                 val characteristics = cameraManager.getCameraCharacteristics(id)
                 val facing = characteristics.get(CameraCharacteristics.LENS_FACING)
-                Log.d(TAG, "📸 Camera $id facing: $facing")
+                println("[GeminiLiveCamera] Camera $id facing: $facing")
                 facing == CameraCharacteristics.LENS_FACING_BACK
             } ?: cameraManager.cameraIdList[0]
-            
-            Log.d(TAG, "📸 Selected camera ID: $cameraId")
-            
+
+            println("[GeminiLiveCamera] Selected camera ID: $cameraId")
+
             val characteristics = cameraManager.getCameraCharacteristics(cameraId)
             val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
             if (map == null) {
-                Log.e(TAG, "📸 SCALER_STREAM_CONFIGURATION_MAP is null - returning")
+                println("[GeminiLiveCamera] ERROR: SCALER_STREAM_CONFIGURATION_MAP is null - returning")
                 return
             }
-            
+
             // Smart size selection with fallback strategy
             val outputSizes = map.getOutputSizes(SurfaceTexture::class.java)
-            Log.d(TAG, "📸 Available output sizes: ${outputSizes.contentToString()}")
-            
+            println("[GeminiLiveCamera] Available output sizes: ${outputSizes.contentToString()}")
+
             previewSize = chooseOptimalSize(outputSizes, 1280, 960)
-            Log.d(TAG, "📸 Selected preview size: ${previewSize.width}x${previewSize.height}")
-            
+            println("[GeminiLiveCamera] Selected preview size: ${previewSize.width}x${previewSize.height}")
+
             // Smart ImageReader setup with compatible formats
-            Log.d(TAG, "📸 Creating ImageReader with compatibility check...")
+            println("[GeminiLiveCamera] Creating ImageReader with compatibility check...")
             val imageFormat = getCompatibleImageFormat(map)
             val imageSize = chooseOptimalSize(map.getOutputSizes(imageFormat), MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION)
-            
+
             imageReader = ImageReader.newInstance(
                 imageSize.width, imageSize.height,
                 imageFormat, 2
             ).apply {
                 setOnImageAvailableListener(imageAvailableListener, cameraHandler)
             }
-            Log.d(TAG, "📸 ImageReader created: ${imageSize.width}x${imageSize.height}, format=$imageFormat")
-            
-            Log.d(TAG, "📸 Opening camera device...")
+            println("[GeminiLiveCamera] ImageReader created: ${imageSize.width}x${imageSize.height}, format=$imageFormat")
+
+            println("[GeminiLiveCamera] Opening camera device...")
             cameraManager.openCamera(cameraId, cameraStateCallback, cameraHandler)
-            
+
         } catch (e: CameraAccessException) {
-            Log.e(TAG, "📸 Error opening camera", e)
+            println("[GeminiLiveCamera] ERROR: Error opening camera: ${e.message}")
         } catch (e: SecurityException) {
-            Log.e(TAG, "📸 Security exception - missing camera permission", e)
+            println("[GeminiLiveCamera] ERROR: Security exception - missing camera permission: ${e.message}")
         } catch (e: Exception) {
-            Log.e(TAG, "📸 Unexpected error opening camera", e)
+            println("[GeminiLiveCamera] ERROR: Unexpected error opening camera: ${e.message}")
         }
     }
-    
+
     private val cameraStateCallback = object : CameraDevice.StateCallback() {
         override fun onOpened(camera: CameraDevice) {
-            Log.d(TAG, "📸✅ Camera device opened successfully!")
+            println("[GeminiLiveCamera] Camera device opened successfully!")
             cameraDevice = camera
-            Log.d(TAG, "📸 Calling createCameraPreviewSession()...")
+            println("[GeminiLiveCamera] Calling createCameraPreviewSession()...")
             createCameraPreviewSession()
         }
-        
+
         override fun onDisconnected(camera: CameraDevice) {
-            Log.d(TAG, "📸❌ Camera disconnected")
+            println("[GeminiLiveCamera] Camera disconnected")
             cameraDevice?.close()
             cameraDevice = null
             isActive = false
             _isCameraActive.value = false
         }
-        
+
         override fun onError(camera: CameraDevice, error: Int) {
-            Log.e(TAG, "📸❌ Camera error: $error")
+            println("[GeminiLiveCamera] ERROR: Camera error: $error")
             val errorMsg = when (error) {
                 CameraDevice.StateCallback.ERROR_CAMERA_IN_USE -> "Camera in use"
                 CameraDevice.StateCallback.ERROR_MAX_CAMERAS_IN_USE -> "Max cameras in use"
@@ -178,36 +175,36 @@ class GeminiLiveCameraManager @Inject constructor(
                 CameraDevice.StateCallback.ERROR_CAMERA_SERVICE -> "Camera service error"
                 else -> "Unknown error: $error"
             }
-            Log.e(TAG, "📸❌ Error details: $errorMsg")
+            println("[GeminiLiveCamera] ERROR: Error details: $errorMsg")
             cameraDevice?.close()
             cameraDevice = null
             isActive = false
             _isCameraActive.value = false
         }
     }
-    
+
     private fun createCameraPreviewSession() {
-        Log.d(TAG, "📸 createCameraPreviewSession() called with robust fallback strategy")
+        println("[GeminiLiveCamera] createCameraPreviewSession() called with robust fallback strategy")
         createCameraPreviewSessionWithFallback()
     }
-    
+
     /**
      * Enhanced camera session creation with intelligent fallback
      */
     private fun createCameraPreviewSessionWithFallback() {
-        Log.d(TAG, "📸 createCameraPreviewSessionWithFallback() called")
+        println("[GeminiLiveCamera] createCameraPreviewSessionWithFallback() called")
         try {
             if (surfaceTexture == null) {
-                Log.e(TAG, "📸❌ SurfaceTexture is null - cannot create session")
+                println("[GeminiLiveCamera] ERROR: SurfaceTexture is null - cannot create session")
                 return
             }
-            
+
             // Try original configuration first
             if (tryCreateSession(previewSize)) {
-                Log.d(TAG, "📸✅ Session created with optimal configuration")
+                println("[GeminiLiveCamera] Session created with optimal configuration")
                 return
             }
-            
+
             // Fallback to smaller sizes
             val fallbackSizes = listOf(
                 Size(1280, 720),   // HD
@@ -216,108 +213,108 @@ class GeminiLiveCameraManager @Inject constructor(
                 Size(640, 480),    // VGA
                 Size(320, 240)     // QVGA - last resort
             )
-            
+
             for (fallbackSize in fallbackSizes) {
-                Log.d(TAG, "📸 Trying fallback size: ${fallbackSize.width}x${fallbackSize.height}")
+                println("[GeminiLiveCamera] Trying fallback size: ${fallbackSize.width}x${fallbackSize.height}")
                 if (tryCreateSession(fallbackSize)) {
                     previewSize = fallbackSize
-                    Log.d(TAG, "📸✅ Session created with fallback: ${fallbackSize.width}x${fallbackSize.height}")
+                    println("[GeminiLiveCamera] Session created with fallback: ${fallbackSize.width}x${fallbackSize.height}")
                     return
                 }
             }
-            
-            Log.e(TAG, "📸❌ All fallback attempts failed")
-            
+
+            println("[GeminiLiveCamera] ERROR: All fallback attempts failed")
+
         } catch (e: Exception) {
-            Log.e(TAG, "📸❌ Exception in createCameraPreviewSessionWithFallback", e)
+            println("[GeminiLiveCamera] ERROR: Exception in createCameraPreviewSessionWithFallback: ${e.message}")
         }
     }
-    
+
     /**
      * Try to create camera session with specific size
      */
     private fun tryCreateSession(size: Size): Boolean {
         return try {
-            Log.d(TAG, "📸 Attempting session with ${size.width}x${size.height}")
+            println("[GeminiLiveCamera] Attempting session with ${size.width}x${size.height}")
             surfaceTexture?.setDefaultBufferSize(size.width, size.height)
             val previewSurface = Surface(surfaceTexture)
-            
+
             captureRequestBuilder = cameraDevice?.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)?.apply {
                 addTarget(previewSurface)
                 imageReader?.surface?.let { addTarget(it) }
             }
-            
+
             if (captureRequestBuilder == null) {
-                Log.e(TAG, "📸❌ Failed to create capture request builder for ${size.width}x${size.height}")
+                println("[GeminiLiveCamera] ERROR: Failed to create capture request builder for ${size.width}x${size.height}")
                 return false
             }
-            
+
             val surfaces = listOfNotNull(previewSurface, imageReader?.surface)
-            Log.d(TAG, "📸 Creating session with ${surfaces.size} surfaces (${size.width}x${size.height})")
-            
+            println("[GeminiLiveCamera] Creating session with ${surfaces.size} surfaces (${size.width}x${size.height})")
+
             cameraDevice?.createCaptureSession(surfaces, cameraCaptureSessionCallback, cameraHandler)
             true
-            
+
         } catch (e: Exception) {
-            Log.w(TAG, "📸⚠️ Failed to create session with ${size.width}x${size.height}: ${e.message}")
+            println("[GeminiLiveCamera] WARNING: Failed to create session with ${size.width}x${size.height}: ${e.message}")
             false
         }
     }
-    
+
     private val cameraCaptureSessionCallback = object : CameraCaptureSession.StateCallback() {
         override fun onConfigured(session: CameraCaptureSession) {
-            Log.d(TAG, "📸✅ Camera session configured successfully!")
+            println("[GeminiLiveCamera] Camera session configured successfully!")
             // Verifica che la camera sia ancora disponibile
             if (cameraDevice == null) {
-                Log.w(TAG, "📸⚠️ Camera was disconnected during configuration, skipping preview update")
+                println("[GeminiLiveCamera] WARNING: Camera was disconnected during configuration, skipping preview update")
                 session.close()
                 return
             }
             cameraCaptureSession = session
-            Log.d(TAG, "📸 Calling updatePreview()...")
+            println("[GeminiLiveCamera] Calling updatePreview()...")
             updatePreview()
             isActive = true
             _isCameraActive.value = true
-            Log.d(TAG, "📸✅ Camera is now ACTIVE and preview should be visible!")
+            println("[GeminiLiveCamera] Camera is now ACTIVE and preview should be visible!")
         }
-        
+
         override fun onConfigureFailed(session: CameraCaptureSession) {
-            Log.e(TAG, "📸❌ Camera session configuration FAILED")
+            println("[GeminiLiveCamera] ERROR: Camera session configuration FAILED")
             isActive = false
             _isCameraActive.value = false
         }
     }
-    
+
     private fun updatePreview() {
-        Log.d(TAG, "📸 updatePreview() called")
+        println("[GeminiLiveCamera] updatePreview() called")
         if (cameraDevice == null) {
-            Log.e(TAG, "📸❌ cameraDevice is null - cannot update preview")
+            println("[GeminiLiveCamera] ERROR: cameraDevice is null - cannot update preview")
             return
         }
-        
+
         try {
-            Log.d(TAG, "📸 Setting capture request control mode...")
+            println("[GeminiLiveCamera] Setting capture request control mode...")
             captureRequestBuilder?.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
-            
+
             val request = captureRequestBuilder?.build()
             if (request == null) {
-                Log.e(TAG, "📸❌ Failed to build capture request")
+                println("[GeminiLiveCamera] ERROR: Failed to build capture request")
                 return
             }
-            
-            Log.d(TAG, "📸 Starting repeating request...")
+
+            println("[GeminiLiveCamera] Starting repeating request...")
             cameraCaptureSession?.setRepeatingRequest(
                 request,
                 null, cameraHandler
             )
-            Log.d(TAG, "📸✅ Preview repeating request started successfully!")
+            println("[GeminiLiveCamera] Preview repeating request started successfully!")
         } catch (e: CameraAccessException) {
-            Log.e(TAG, "📸❌ Error starting preview repeat request", e)
+            println("[GeminiLiveCamera] ERROR: Error starting preview repeat request: ${e.message}")
         } catch (e: Exception) {
-            Log.e(TAG, "📸❌ Unexpected error updating preview", e)
+            println("[GeminiLiveCamera] ERROR: Unexpected error updating preview: ${e.message}")
         }
     }
-    
+
     private val imageAvailableListener = ImageReader.OnImageAvailableListener { reader ->
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastImageSendTime >= IMAGE_SEND_INTERVAL) {
@@ -327,65 +324,65 @@ class GeminiLiveCameraManager @Inject constructor(
                 val bytes = ByteArray(buffer.remaining())
                 buffer.get(bytes)
                 image.close()
-                
+
                 // Process image in background
                 CoroutineScope(Dispatchers.IO).launch {
                     processAndSendImage(bytes)
                 }
-                
+
                 lastImageSendTime = currentTime
-                Log.d(TAG, "Image processed and sent based on time interval")
+                println("[GeminiLiveCamera] Image processed and sent based on time interval")
             }
         } else {
             // Just discard the image to avoid memory leaks
             reader.acquireLatestImage()?.close()
         }
     }
-    
+
     private suspend fun processAndSendImage(imageBytes: ByteArray) {
         withContext(Dispatchers.IO) {
             try {
                 val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-                
+
                 // Step 1: Resize if necessary
                 val scaledBitmap = scaleBitmap(bitmap, MAX_IMAGE_DIMENSION)
-                
+
                 // Step 2: Compress with reduced quality
                 val byteArrayOutputStream = ByteArrayOutputStream()
                 scaledBitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, byteArrayOutputStream)
-                
+
                 // Step 3: Create Base64 string
                 val b64Image = Base64.encodeToString(
-                    byteArrayOutputStream.toByteArray(), 
+                    byteArrayOutputStream.toByteArray(),
                     Base64.NO_WRAP
                 )
-                
+
                 // Step 4: Notify listener
                 onImageCaptured?.invoke(b64Image)
-                
+
                 // Clean up
                 scaledBitmap.recycle()
                 byteArrayOutputStream.close()
-                
-                Log.d(TAG, "Image captured and encoded: ${b64Image.take(50)}...")
-                
+
+                println("[GeminiLiveCamera] Image captured and encoded: ${b64Image.take(50)}...")
+
             } catch (e: Exception) {
-                Log.e(TAG, "Error processing image", e)
+                println("[GeminiLiveCamera] ERROR: Error processing image: ${e.message}")
             }
         }
     }
-    
+
     private fun scaleBitmap(bitmap: Bitmap, maxDimension: Int): Bitmap {
         val width = bitmap.width
         val height = bitmap.height
-        
+
         if (width <= maxDimension && height <= maxDimension) {
             return bitmap
         }
-        
+
         val newWidth: Int
         val newHeight: Int
-        
+
         if (width > height) {
             val ratio = width.toFloat() / maxDimension
             newWidth = maxDimension
@@ -395,67 +392,67 @@ class GeminiLiveCameraManager @Inject constructor(
             newHeight = maxDimension
             newWidth = (width / ratio).toInt()
         }
-        
+
         return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
     }
-    
+
     private fun closeCamera() {
         try {
             cameraCaptureSession?.close()
             cameraCaptureSession = null
-            
+
             cameraDevice?.close()
             cameraDevice = null
-            
+
             imageReader?.close()
             imageReader = null
-            
-            Log.d(TAG, "Camera closed")
+
+            println("[GeminiLiveCamera] Camera closed")
         } catch (e: Exception) {
-            Log.e(TAG, "Error closing camera", e)
+            println("[GeminiLiveCamera] ERROR: Error closing camera: ${e.message}")
         }
     }
-    
+
     /**
      * Choose optimal camera resolution with fallback strategy
      */
     private fun chooseOptimalSize(choices: Array<Size>, targetWidth: Int, targetHeight: Int): Size {
-        Log.d(TAG, "📸 Choosing optimal size from ${choices.size} options")
-        
+        println("[GeminiLiveCamera] Choosing optimal size from ${choices.size} options")
+
         // Find exact match first
         val exactMatch = choices.find { it.width == targetWidth && it.height == targetHeight }
         if (exactMatch != null) {
-            Log.d(TAG, "📸 Found exact match: ${exactMatch.width}x${exactMatch.height}")
+            println("[GeminiLiveCamera] Found exact match: ${exactMatch.width}x${exactMatch.height}")
             return exactMatch
         }
-        
+
         // Find closest aspect ratio with reasonable size
         val targetAspectRatio = targetWidth.toDouble() / targetHeight
         var bestSize = choices[0]
         var bestDifference = Double.MAX_VALUE
-        
+
         for (size in choices) {
             val aspectRatio = size.width.toDouble() / size.height
             val aspectDifference = kotlin.math.abs(aspectRatio - targetAspectRatio)
             val sizeDifference = kotlin.math.abs(size.width - targetWidth) + kotlin.math.abs(size.height - targetHeight)
             val totalDifference = aspectDifference * 1000 + sizeDifference
-            
+
             if (totalDifference < bestDifference && size.width <= targetWidth * 2 && size.height <= targetHeight * 2) {
                 bestDifference = totalDifference
                 bestSize = size
             }
         }
-        
-        Log.d(TAG, "📸 Selected optimal size: ${bestSize.width}x${bestSize.height}")
+
+        println("[GeminiLiveCamera] Selected optimal size: ${bestSize.width}x${bestSize.height}")
         return bestSize
     }
-    
+
     /**
      * Get compatible image format with fallback
      */
     private fun getCompatibleImageFormat(map: StreamConfigurationMap): Int {
-        Log.d(TAG, "📸 Finding compatible image format...")
-        
+        println("[GeminiLiveCamera] Finding compatible image format...")
+
         // Priority order: JPEG (most compatible) -> YUV_420_888 -> others
         val preferredFormats = listOf(
             ImageFormat.JPEG,
@@ -463,20 +460,20 @@ class GeminiLiveCameraManager @Inject constructor(
             ImageFormat.NV21,
             ImageFormat.YV12
         )
-        
+
         for (format in preferredFormats) {
             val sizes = map.getOutputSizes(format)
             if (sizes != null && sizes.isNotEmpty()) {
-                Log.d(TAG, "📸 Selected format: $format (${sizes.size} sizes available)")
+                println("[GeminiLiveCamera] Selected format: $format (${sizes.size} sizes available)")
                 return format
             }
         }
-        
+
         // Ultimate fallback
-        Log.w(TAG, "📸 No preferred format found, using JPEG")
+        println("[GeminiLiveCamera] WARNING: No preferred format found, using JPEG")
         return ImageFormat.JPEG
     }
-    
+
     fun release() {
         stopCameraPreview()
         cameraThread.quitSafely()

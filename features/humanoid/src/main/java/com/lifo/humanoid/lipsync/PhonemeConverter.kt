@@ -1,7 +1,6 @@
 package com.lifo.humanoid.lipsync
 
 import android.content.Context
-import android.util.Log
 
 /**
  * Converts English text to a sequence of phonemes.
@@ -12,10 +11,6 @@ import android.util.Log
  * suitable for synchronizing lip movements with TTS output.
  */
 class PhonemeConverter(context: Context) {
-
-    companion object {
-        private const val TAG = "PhonemeConverter"
-    }
 
     // Dictionary: word -> list of ARPAbet phonemes
     private val dictionary = mutableMapOf<String, List<String>>()
@@ -487,7 +482,7 @@ class PhonemeConverter(context: Context) {
         )
 
         dictionary.putAll(essentialWords)
-        Log.d(TAG, "Loaded ${dictionary.size} words in phoneme dictionary")
+        println("[PhonemeConverter] Loaded ${dictionary.size} words in phoneme dictionary")
     }
 }
 

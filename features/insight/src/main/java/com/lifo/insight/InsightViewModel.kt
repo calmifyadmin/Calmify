@@ -3,7 +3,7 @@ package com.lifo.insight
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lifo.mongo.repository.InsightRepository
+import com.lifo.util.repository.InsightRepository
 import com.lifo.util.model.DiaryInsight
 import com.lifo.util.model.RequestState
 import dagger.hilt.android.lifecycle.HiltViewModel

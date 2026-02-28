@@ -1,9 +1,6 @@
 package com.lifo.chat.presentation.viewmodel
 
 import android.content.Context
-import android.os.Build
-import android.util.Log
-import androidx.annotation.RequiresApi
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -12,8 +9,8 @@ import com.lifo.chat.audio.GeminiNativeVoiceSystem
 import com.lifo.chat.audio.GeminiVoiceAudioSource
 import com.lifo.chat.config.ApiConfigManager
 import com.lifo.chat.domain.model.*
-import com.lifo.mongo.repository.ChatMessage
-import com.lifo.mongo.repository.ChatRepository
+import com.lifo.util.model.ChatMessage
+import com.lifo.util.repository.ChatRepository
 import com.lifo.util.model.RequestState
 import com.lifo.util.speech.SpeechEmotion
 import com.lifo.util.speech.SpeechRequest
@@ -24,7 +21,6 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import javax.inject.Inject
 
-@RequiresApi(Build.VERSION_CODES.O)
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val repository: ChatRepository,
@@ -33,12 +29,9 @@ class ChatViewModel @Inject constructor(
     private val voiceAudioSource: GeminiVoiceAudioSource,
     private val synchronizedSpeechController: SynchronizedSpeechController,
     private val apiConfigManager: ApiConfigManager,
+    private val auth: FirebaseAuth,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
-
-    companion object {
-        private const val TAG = "ChatViewModel"
-    }
 
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
@@ -81,15 +74,15 @@ class ChatViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            Log.d(TAG, "🎙️ Initializing ChatViewModel...")
+            println("[ChatViewModel] Initializing ChatViewModel...")
             initializeVoiceSystem()
             initializeSynchronizedSpeech()
             // Only create new session if no existing session is loaded
             if (currentSessionId == null) {
-                Log.d(TAG, "📝 Creating new session (no existing session loaded)")
+                println("[ChatViewModel] Creating new session (no existing session loaded)")
                 createNewSession()
             } else {
-                Log.d(TAG, "♻️ Skipping new session creation - existing session loaded: $currentSessionId")
+                println("[ChatViewModel] Skipping new session creation - existing session loaded: $currentSessionId")
             }
         }
     }
@@ -98,7 +91,7 @@ class ChatViewModel @Inject constructor(
      * Initialize synchronized speech by attaching the audio source
      */
     private fun initializeSynchronizedSpeech() {
-        Log.d(TAG, "🔗 Initializing synchronized speech controller...")
+        println("[ChatViewModel] Initializing synchronized speech controller...")
         synchronizedSpeechController.attachAudioSource(voiceAudioSource)
     }
 
@@ -107,7 +100,7 @@ class ChatViewModel @Inject constructor(
      * Call this from the UI layer when humanoid is ready.
      */
     fun attachHumanoidController(controller: com.lifo.util.speech.SpeechAnimationTarget) {
-        Log.d(TAG, "🤖 Attaching HumanoidController for synchronized lip-sync")
+        println("[ChatViewModel] Attaching HumanoidController for synchronized lip-sync")
         synchronizedSpeechController.attachAnimationTarget(controller)
     }
 
@@ -115,41 +108,41 @@ class ChatViewModel @Inject constructor(
      * Detach HumanoidController when no longer needed.
      */
     fun detachHumanoidController() {
-        Log.d(TAG, "🤖 Detaching HumanoidController")
+        println("[ChatViewModel] Detaching HumanoidController")
         synchronizedSpeechController.detachAnimationTarget()
     }
 
     private suspend fun initializeVoiceSystem() {
         try {
-            Log.d(TAG, "🔧 Starting voice system initialization...")
+            println("[ChatViewModel] Starting voice system initialization...")
 
             val apiKey = apiConfigManager.getGeminiApiKey()
 
             if (apiKey.isEmpty()) {
-                Log.e(TAG, "❌ API key is empty")
+                println("[ChatViewModel] ERROR: API key is empty")
                 _uiState.update {
                     it.copy(error = "API key not configured")
                 }
                 return
             }
 
-            Log.d(TAG, "🔑 Initializing voice system with API key")
+            println("[ChatViewModel] Initializing voice system with API key")
             voiceSystem.initialize(apiKey)
 
             delay(500)
 
             val isInitialized = voiceSystem.voiceState.value.isInitialized
-            Log.d(TAG, "🎙️ Voice system initialized: $isInitialized")
+            println("[ChatViewModel] Voice system initialized: $isInitialized")
 
             if (!isInitialized) {
-                Log.e(TAG, "❌ Voice system failed to initialize")
+                println("[ChatViewModel] ERROR: Voice system failed to initialize")
                 _uiState.update {
                     it.copy(error = "Voice system initialization failed")
                 }
             }
 
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Exception during voice initialization", e)
+            println("[ChatViewModel] ERROR: Exception during voice initialization: ${e.message}")
             _uiState.update {
                 it.copy(error = "Voice error: ${e.message}")
             }
@@ -157,7 +150,7 @@ class ChatViewModel @Inject constructor(
     }
 
     fun loadExistingSession(sessionId: String) {
-        Log.d(TAG, "Loading existing session: $sessionId")
+        println("[ChatViewModel] Loading existing session: $sessionId")
         viewModelScope.launch {
             try {
                 // Load the session from database
@@ -181,9 +174,9 @@ class ChatViewModel @Inject constructor(
                     // Load messages for this session
                     loadMessages(sessionId)
                     
-                    Log.d(TAG, "Loaded session $sessionId with ${it.messageCount} messages")
+                    println("[ChatViewModel] Loaded session $sessionId with ${it.messageCount} messages")
                 } ?: run {
-                    Log.w(TAG, "Session $sessionId not found")
+                    println("[ChatViewModel] WARNING: Session $sessionId not found")
                     _uiState.update { state ->
                         state.copy(
                             error = "Session not found"
@@ -191,7 +184,7 @@ class ChatViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error loading session $sessionId", e)
+                println("[ChatViewModel] ERROR: Error loading session $sessionId: ${e.message}")
                 _uiState.update { state ->
                     state.copy(
                         error = e.message ?: "Failed to load session"
@@ -293,7 +286,7 @@ class ChatViewModel @Inject constructor(
                 // Map to SpeechEmotion for synchronized speech
                 val speechEmotion = mapToSpeechEmotion(emotion)
 
-                Log.d(TAG, "🎤 Speaking complete message (synchronized): ${cleanText.take(50)}...")
+                println("[ChatViewModel] Speaking complete message (synchronized): ${cleanText.take(50)}...")
 
                 // Estimate duration for lip-sync preparation
                 val estimatedDuration = voiceAudioSource.estimateDuration(cleanText)
@@ -308,7 +301,7 @@ class ChatViewModel @Inject constructor(
                     )
                 )
             } catch (e: Exception) {
-                Log.e(TAG, "Error speaking message", e)
+                println("[ChatViewModel] ERROR: Error speaking message: ${e.message}")
             }
         }
     }
@@ -404,18 +397,18 @@ class ChatViewModel @Inject constructor(
 
     fun getUserPhotoUrl(): String? {
         return try {
-            FirebaseAuth.getInstance().currentUser?.photoUrl?.toString()
+            auth.currentUser?.photoUrl?.toString()
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting user photo", e)
+            println("[ChatViewModel] ERROR: Error getting user photo: ${e.message}")
             null
         }
     }
 
     fun getUserDisplayName(): String? {
         return try {
-            FirebaseAuth.getInstance().currentUser?.displayName?.toString()?.split(" ")?.firstOrNull()
+            auth.currentUser?.displayName?.toString()?.split(" ")?.firstOrNull()
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting user name", e)
+            println("[ChatViewModel] ERROR: Error getting user name: ${e.message}")
             null
         }
     }

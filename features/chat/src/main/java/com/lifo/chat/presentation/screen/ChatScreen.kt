@@ -4,11 +4,9 @@ import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.RequiresApi
 import androidx.compose.animation.*
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -61,18 +59,15 @@ import com.lifo.chat.presentation.viewmodel.LiveChatViewModel
 import com.lifo.chat.domain.model.AIEmotion
 import com.lifo.chat.domain.model.ConnectionStatus
 import com.lifo.chat.domain.model.TurnState
-import com.lifo.util.model.ChatEmotion
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
     navigateBack: () -> Unit,
     navigateToWriteWithContent: (String) -> Unit,
     navigateToLiveScreen: () -> Unit = {},
-    navigateToAvatarLiveChat: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     sessionId: String? = null,
     viewModel: ChatViewModel = hiltViewModel(),
@@ -194,7 +189,10 @@ fun ChatScreen(
                         }
                         navigateBack()
                     },
-                    onNavigateToAvatarLiveChat = navigateToAvatarLiveChat
+                    onNavigateToLiveChat = {
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        navigateToLiveScreen()
+                    }
                 )
             },
             bottomBar = {
@@ -224,14 +222,14 @@ fun ChatScreen(
                                 cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                             },
                             onSurfaceTextureReady = { surfaceTexture ->
-                                android.util.Log.d("ChatScreen", "📸 onSurfaceTextureReady called")
-                                android.util.Log.d("ChatScreen", "📸 hasCameraPermission: ${liveChatState.hasCameraPermission}")
-                                android.util.Log.d("ChatScreen", "📸 isCameraActive: ${liveChatState.isCameraActive}")
+                                println("[ChatScreen] onSurfaceTextureReady called")
+                                println("[ChatScreen] hasCameraPermission: ${liveChatState.hasCameraPermission}")
+                                println("[ChatScreen] isCameraActive: ${liveChatState.isCameraActive}")
                                 if (liveChatState.hasCameraPermission && !liveChatState.isCameraActive) {
-                                    android.util.Log.d("ChatScreen", "📸 Calling startCameraPreview...")
+                                    println("[ChatScreen] Calling startCameraPreview...")
                                     liveChatViewModel.startCameraPreview(surfaceTexture)
                                 } else {
-                                    android.util.Log.w("ChatScreen", "📸 NOT starting camera: permission=${liveChatState.hasCameraPermission}, active=${liveChatState.isCameraActive}")
+                                    println("[ChatScreen] WARNING: NOT starting camera: permission=${liveChatState.hasCameraPermission}, active=${liveChatState.isCameraActive}")
                                 }
                             },
                             onSurfaceTextureDestroyed = {
@@ -414,7 +412,7 @@ fun ChatScreen(
 @Composable
 private fun MinimalTopBar(
     onNavigateBack: () -> Unit,
-    onNavigateToAvatarLiveChat: (() -> Unit)? = null
+    onNavigateToLiveChat: () -> Unit = {}
 ) {
     TopAppBar(
         title = {
@@ -429,15 +427,11 @@ private fun MinimalTopBar(
             }
         },
         actions = {
-            // Avatar Live Chat button - opens immersive 3D avatar with Gemini Live
-            onNavigateToAvatarLiveChat?.let { navigate ->
-                IconButton(onClick = navigate) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Avatar Live Chat",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
+            IconButton(onClick = onNavigateToLiveChat) {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = "Live Chat with Avatar"
+                )
             }
         }
     )

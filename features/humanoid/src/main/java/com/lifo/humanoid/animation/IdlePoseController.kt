@@ -1,6 +1,5 @@
 package com.lifo.humanoid.animation
 
-import android.util.Log
 import com.google.android.filament.Engine
 import com.google.android.filament.TransformManager
 import com.lifo.humanoid.data.vrm.VrmHumanoidBoneMapper
@@ -22,8 +21,6 @@ class IdlePoseController(
 ) {
 
     companion object {
-        private const val TAG = "IdlePoseController"
-
         // Convert degrees to radians
         private fun deg(degrees: Float) = degrees * (PI.toFloat() / 180f)
 
@@ -46,12 +43,12 @@ class IdlePoseController(
      */
     fun applyIdlePose() {
         if (!boneMapper.hasArmBones()) {
-            Log.w(TAG, "Missing arm bones for idle pose")
+            println("[IdlePoseController] WARNING: Missing arm bones for idle pose")
             return
         }
 
         val tm = engine.transformManager
-        Log.d(TAG, "Applying idle pose to avatar")
+        println("[IdlePoseController] Applying idle pose to avatar")
 
         // Rotate left arm down
         boneMapper.getBoneEntity(HumanoidBone.LEFT_UPPER_ARM)?.let { entity ->
@@ -85,7 +82,7 @@ class IdlePoseController(
         applyBodyAdjustments(tm)
 
         isApplied = true
-        Log.d(TAG, "Idle pose applied successfully")
+        println("[IdlePoseController] Idle pose applied successfully")
     }
 
     /**
@@ -134,7 +131,7 @@ class IdlePoseController(
         }
 
         isApplied = false
-        Log.d(TAG, "Reset to T-Pose")
+        println("[IdlePoseController] Reset to T-Pose")
     }
 
     /**

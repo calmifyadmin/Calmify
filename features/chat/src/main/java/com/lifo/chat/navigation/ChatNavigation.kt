@@ -1,9 +1,8 @@
 package com.lifo.chat.navigation
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.runtime.Composable
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
@@ -16,8 +15,7 @@ import com.lifo.util.Screen
 fun NavGraphBuilder.chatRoute(
     navigateBack: () -> Unit,
     navigateToWriteWithContent: (String) -> Unit,
-    navigateToLiveScreen: () -> Unit,
-    navigateToAvatarLiveChat: (() -> Unit)? = null
+    navigateToLiveScreen: () -> Unit
 ) {
     composable(
         route = Screen.Chat.route,
@@ -49,8 +47,7 @@ fun NavGraphBuilder.chatRoute(
         ChatScreen(
             navigateBack = navigateBack,
             navigateToWriteWithContent = navigateToWriteWithContent,
-            navigateToLiveScreen = navigateToLiveScreen,
-            navigateToAvatarLiveChat = navigateToAvatarLiveChat
+            navigateToLiveScreen = navigateToLiveScreen
         )
     }
 
@@ -80,7 +77,6 @@ fun NavGraphBuilder.chatRoute(
             navigateBack = navigateBack,
             navigateToWriteWithContent = navigateToWriteWithContent,
             navigateToLiveScreen = navigateToLiveScreen,
-            navigateToAvatarLiveChat = navigateToAvatarLiveChat,
             sessionId = sessionId
         )
     }
@@ -110,10 +106,13 @@ fun NavController.navigateToLiveChat() {
 
 /**
  * Add Live Chat route to navigation graph
+ *
+ * @param navigateBack Callback to navigate back
+ * @param avatarContent Optional composable slot for the 3D avatar (from features/humanoid)
  */
-@RequiresApi(Build.VERSION_CODES.O)
 fun NavGraphBuilder.liveRoute(
-    navigateBack: () -> Unit
+    navigateBack: () -> Unit,
+    avatarContent: (@Composable () -> Unit)? = null
 ) {
     composable(
         route = Screen.LiveChat.route,
@@ -128,20 +127,9 @@ fun NavGraphBuilder.liveRoute(
     ) {
         LiveScreen(
             onClose = navigateBack,
-            showAvatar = false
+            showAvatar = avatarContent != null,
+            avatarContent = avatarContent
         )
     }
 }
 
-/**
- * Navigate to Avatar Live Chat screen
- *
- * Note: The avatar live route is defined in the app module to avoid circular dependency.
- * See app/src/main/java/com/lifo/app/CalmifyApp.kt
- */
-fun NavController.navigateToAvatarLiveChat() {
-    navigate(Screen.AvatarLiveChat.route) {
-        launchSingleTop = true
-        restoreState = true
-    }
-}

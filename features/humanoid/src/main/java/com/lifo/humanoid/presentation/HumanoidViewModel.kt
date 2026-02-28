@@ -1,6 +1,5 @@
 package com.lifo.humanoid.presentation
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.filament.gltfio.FilamentAsset
@@ -47,10 +46,6 @@ class HumanoidViewModel @Inject constructor(
     private val vrmaAnimationLoader: VrmaAnimationLoader,
     private val vrmaAnimationPlayerFactory: VrmaAnimationPlayerFactory
 ) : ViewModel() {
-
-    companion object {
-        private const val TAG = "HumanoidViewModel"
-    }
 
     private val _uiState = MutableStateFlow(HumanoidUiState())
     val uiState: StateFlow<HumanoidUiState> = _uiState.asStateFlow()
@@ -137,7 +132,7 @@ class HumanoidViewModel @Inject constructor(
             }
         }
 
-        Log.d(TAG, "HumanoidViewModel initialized with ${_availableAnimations.value.size} animations available")
+        println("[HumanoidViewModel] HumanoidViewModel initialized with ${_availableAnimations.value.size} animations available")
     }
 
     /**
@@ -163,7 +158,7 @@ class HumanoidViewModel @Inject constructor(
                         avatarLoaded = true
                     )
 
-                    Log.d(TAG, "Avatar loaded with ${presetNames.size} blend shape presets")
+                    println("[HumanoidViewModel] Avatar loaded with ${presetNames.size} blend shape presets")
                 } else {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
@@ -171,7 +166,7 @@ class HumanoidViewModel @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error loading avatar", e)
+                println("[HumanoidViewModel] ERROR: Error loading avatar: ${e.message}")
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = "Error loading avatar: ${e.message}"
@@ -227,35 +222,35 @@ class HumanoidViewModel @Inject constructor(
         asset: FilamentAsset,
         nodeNames: List<String>
     ) {
-        Log.d(TAG, "onModelLoaded called - initializing animation system")
+        println("[HumanoidViewModel] onModelLoaded called - initializing animation system")
 
         filamentRenderer = renderer
 
         // Get Engine from renderer
         val engine = renderer.getEngine()
         if (engine == null) {
-            Log.e(TAG, "Engine not available from renderer")
+            println("[HumanoidViewModel] ERROR: Engine not available from renderer")
             return
         }
 
         // Initialize bone mapper with the asset
         boneMapper.initialize(engine, asset, nodeNames)
-        Log.d(TAG, "BoneMapper initialized with ${boneMapper.getBoneEntityMap().size} bones")
+        println("[HumanoidViewModel] BoneMapper initialized with ${boneMapper.getBoneEntityMap().size} bones")
 
         // Pass eye bone entities to renderer for LookAt (backup path)
         val leftEyeEntity = boneMapper.getBoneEntity(VrmHumanoidBoneMapper.HumanoidBone.LEFT_EYE)
         val rightEyeEntity = boneMapper.getBoneEntity(VrmHumanoidBoneMapper.HumanoidBone.RIGHT_EYE)
         if (leftEyeEntity != null || rightEyeEntity != null) {
             renderer.setEyeBoneEntities(leftEyeEntity ?: 0, rightEyeEntity ?: 0)
-            Log.d(TAG, "Eye bones from boneMapper: L=$leftEyeEntity R=$rightEyeEntity")
+            println("[HumanoidViewModel] Eye bones from boneMapper: L=$leftEyeEntity R=$rightEyeEntity")
         }
 
         // Initialize animation player
         vrmaAnimationPlayer = vrmaAnimationPlayerFactory.initializeWithAsset(engine, asset, nodeNames)
-        Log.d(TAG, "VrmaAnimationPlayer initialized")
+        println("[HumanoidViewModel] VrmaAnimationPlayer initialized")
 
         _isAnimationSystemReady.value = true
-        Log.d(TAG, "Animation system is ready")
+        println("[HumanoidViewModel] Animation system is ready")
 
         // Pre-load idle animation for immediate use
         viewModelScope.launch {
@@ -273,10 +268,10 @@ class HumanoidViewModel @Inject constructor(
         asset: FilamentAsset,
         nodeNames: List<String>
     ) {
-        Log.d(TAG, "onSceneViewArModelLoaded called - initializing AR animation system")
+        println("[HumanoidViewModel] onSceneViewArModelLoaded called - initializing AR animation system")
 
         boneMapper.initialize(engine, asset, nodeNames)
-        Log.d(TAG, "BoneMapper initialized (AR/SceneView) with ${boneMapper.getBoneEntityMap().size} bones")
+        println("[HumanoidViewModel] BoneMapper initialized (AR/SceneView) with ${boneMapper.getBoneEntityMap().size} bones")
 
         vrmaAnimationPlayer = vrmaAnimationPlayerFactory.initializeWithAsset(engine, asset, nodeNames)
         _isAnimationSystemReady.value = true
@@ -298,13 +293,13 @@ class HumanoidViewModel @Inject constructor(
             VrmaAnimationLoader.AnimationAsset.GREETING
         )
 
-        Log.d(TAG, "Pre-loading ${animationsToPreload.size} animations (${idleAnimations.size} idle animations)")
+        println("[HumanoidViewModel] Pre-loading ${animationsToPreload.size} animations (${idleAnimations.size} idle animations)")
 
         animationsToPreload.forEach { animationAsset ->
             if (!loadedAnimations.containsKey(animationAsset)) {
                 vrmaAnimationLoader.loadAnimation(animationAsset)?.let { animation ->
                     loadedAnimations[animationAsset] = animation
-                    Log.d(TAG, "Pre-loaded animation: ${animation.name}")
+                    println("[HumanoidViewModel] Pre-loaded animation: ${animation.name}")
                 }
             }
         }
@@ -313,7 +308,7 @@ class HumanoidViewModel @Inject constructor(
         // This will rotate between idle animations every 10-40 seconds
         initializeIdleRotation()
         startIdleRotation()
-        Log.d(TAG, "Idle rotation system started with ${idleAnimations.size} animations")
+        println("[HumanoidViewModel] Idle rotation system started with ${idleAnimations.size} animations")
     }
 
     // ==================== Animation Methods ====================
@@ -328,20 +323,20 @@ class HumanoidViewModel @Inject constructor(
         viewModelScope.launch {
             // Check if animation system is ready
             if (!_isAnimationSystemReady.value) {
-                Log.w(TAG, "Animation system not ready yet")
+                println("[HumanoidViewModel] WARNING: Animation system not ready yet")
                 return@launch
             }
 
             val player = vrmaAnimationPlayer
             if (player == null) {
-                Log.e(TAG, "Animation player not initialized")
+                println("[HumanoidViewModel] ERROR: Animation player not initialized")
                 return@launch
             }
 
             // Check cache first, load if needed
             val animation = loadedAnimations.getOrPut(animationAsset) {
                 vrmaAnimationLoader.loadAnimation(animationAsset) ?: run {
-                    Log.e(TAG, "Failed to load animation: ${animationAsset.fileName}")
+                    println("[HumanoidViewModel] ERROR: Failed to load animation: ${animationAsset.fileName}")
                     return@launch
                 }
             }
@@ -353,7 +348,7 @@ class HumanoidViewModel @Inject constructor(
                 currentAnimationName = animation.name
             )
 
-            Log.d(TAG, "Playing animation: ${animation.name}, duration: ${animation.durationSeconds}s, looping: ${animation.isLooping}")
+            println("[HumanoidViewModel] Playing animation: ${animation.name}, duration: ${animation.durationSeconds}s, looping: ${animation.isLooping}")
 
             // Following Amica pattern:
             // - idle animations play in loop as the default state
@@ -394,7 +389,7 @@ class HumanoidViewModel @Inject constructor(
                     isPlayingAnimation = true,
                     currentAnimationName = idleAnim.name
                 )
-                Log.d(TAG, "Returned to idle animation")
+                println("[HumanoidViewModel] Returned to idle animation")
             }
         } else {
             player?.stop()
@@ -403,7 +398,7 @@ class HumanoidViewModel @Inject constructor(
                 isPlayingAnimation = false,
                 currentAnimationName = null
             )
-            Log.d(TAG, "Animation stopped (no idle available)")
+            println("[HumanoidViewModel] Animation stopped (no idle available)")
         }
     }
 
@@ -419,7 +414,7 @@ class HumanoidViewModel @Inject constructor(
                     vrmaAnimationLoader.loadAnimation(animationAsset) ?: return@launch
                 }
                 vrmaAnimationPlayer?.let { player ->
-                    Log.d(TAG, "Idle rotation: playing ${animation.name}")
+                    println("[HumanoidViewModel] Idle rotation: playing ${animation.name}")
                     player.setIdleAnimation(animation, viewModelScope)
                     _currentAnimation.value = animation
                     _currentIdleAnimation.value = animationAsset
@@ -452,7 +447,7 @@ class HumanoidViewModel @Inject constructor(
             initializeIdleRotation()
         }
         idleRotationController?.start(viewModelScope)
-        Log.d(TAG, "Idle rotation started")
+        println("[HumanoidViewModel] Idle rotation started")
     }
 
     /**
@@ -460,7 +455,7 @@ class HumanoidViewModel @Inject constructor(
      */
     fun stopIdleRotation() {
         idleRotationController?.stop()
-        Log.d(TAG, "Idle rotation stopped")
+        println("[HumanoidViewModel] Idle rotation stopped")
     }
 
     /**
@@ -578,7 +573,7 @@ class HumanoidViewModel @Inject constructor(
      * See: https://github.com/google/filament/issues/7650
      */
     fun stopAllControllersBeforeCleanup() {
-        Log.d(TAG, "stopAllControllersBeforeCleanup - stopping all animation controllers")
+        println("[HumanoidViewModel] stopAllControllersBeforeCleanup - stopping all animation controllers")
         blinkController.stop()
         lipSyncController.stop()
         idleRotationController?.stop()
@@ -588,7 +583,7 @@ class HumanoidViewModel @Inject constructor(
         // (e.g., from IdleRotationController's onPlayAnimation) see null and skip.
         vrmaAnimationPlayer = null
         _isAnimationSystemReady.value = false
-        Log.d(TAG, "All controllers stopped and marked as destroyed")
+        println("[HumanoidViewModel] All controllers stopped and marked as destroyed")
     }
 
     override fun onCleared() {
@@ -600,7 +595,7 @@ class HumanoidViewModel @Inject constructor(
         vrmaAnimationPlayerFactory.clear()
         filamentRenderer = null
         _isAnimationSystemReady.value = false
-        Log.d(TAG, "HumanoidViewModel cleared")
+        println("[HumanoidViewModel] HumanoidViewModel cleared")
     }
 }
 

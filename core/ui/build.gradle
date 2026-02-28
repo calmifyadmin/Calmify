@@ -62,6 +62,17 @@ dependencies {
     implementation libs.coroutines.core
     implementation libs.coroutines.android
     implementation libs.lottie.compose
+
+    // Core modules
+    implementation project(':core:util')
+
+    // Image loading (Coil) — needed by Gallery component
+    implementation libs.coil
+    implementation libs.coil.network.okhttp
+
+    // Firebase — needed by fetchImagesFromFirebase
+    implementation platform(libs.firebase.bom)
+    implementation libs.firebase.storage
     // Testing
     testImplementation libs.junit
     androidTestImplementation libs.junit.ext

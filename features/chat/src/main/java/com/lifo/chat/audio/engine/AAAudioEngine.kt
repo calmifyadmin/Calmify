@@ -6,7 +6,7 @@ import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
 import android.util.Base64
-import android.util.Log
+
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,8 +46,6 @@ class AAAudioEngine @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     companion object {
-        private const val TAG = "AAAudioEngine"
-
         // Audio configuration
         const val SAMPLE_RATE = 24000
         const val CHANNEL_CONFIG = AudioFormat.CHANNEL_OUT_MONO
@@ -148,17 +146,17 @@ class AAAudioEngine @Inject constructor(
      */
     fun initialize(config: EngineConfig = EngineConfig()): Boolean {
         if (isInitialized.get()) {
-            Log.w(TAG, "⚠️ Engine già inizializzato")
+            println("[AAAudioEngine] WARNING: Engine già inizializzato")
             return true
         }
 
-        Log.d(TAG, "🚀 Inizializzazione AAA Audio Engine...")
+        println("[AAAudioEngine] Inizializzazione AAA Audio Engine...")
         this.config = config
 
         try {
             // 1. Crea Ring Buffer
             ringBuffer = LockFreeAudioRingBuffer(RING_BUFFER_SIZE)
-            Log.d(TAG, "✅ Ring Buffer creato: ${RING_BUFFER_SIZE / 1024}KB")
+            println("[AAAudioEngine] Ring Buffer creato: ${RING_BUFFER_SIZE / 1024}KB")
 
             // 2. Crea Jitter Buffer
             jitterBuffer = AdaptiveJitterBuffer(
@@ -167,21 +165,21 @@ class AAAudioEngine @Inject constructor(
                 maxBufferMs = config.maxJitterBufferMs,
                 targetBufferMs = config.preBufferTargetMs
             )
-            Log.d(TAG, "✅ Jitter Buffer creato: ${config.minJitterBufferMs}-${config.maxJitterBufferMs}ms")
+            println("[AAAudioEngine] Jitter Buffer creato: ${config.minJitterBufferMs}-${config.maxJitterBufferMs}ms")
 
             // 3. Crea PLC Engine
             plcEngine = PacketLossConcealmentEngine(
                 sampleRate = config.sampleRate,
                 frameSize = PLAYBACK_CHUNK_SIZE / BYTES_PER_SAMPLE
             )
-            Log.d(TAG, "✅ PLC Engine creato")
+            println("[AAAudioEngine] PLC Engine creato")
 
             // 4. Crea AudioTrack
             audioTrack = createAudioTrack()
             if (audioTrack == null) {
                 throw IllegalStateException("Failed to create AudioTrack")
             }
-            Log.d(TAG, "✅ AudioTrack creato")
+            println("[AAAudioEngine] AudioTrack creato")
 
             // 5. Crea Playback Thread
             playbackThread = HighPriorityAudioThread(
@@ -192,7 +190,7 @@ class AAAudioEngine @Inject constructor(
             ).apply {
                 setCallback(createPlaybackCallback())
             }
-            Log.d(TAG, "✅ Playback Thread creato")
+            println("[AAAudioEngine] Playback Thread creato")
 
             // 6. Avvia job trasferimento Jitter -> Ring
             startJitterToRingTransfer()
@@ -204,11 +202,11 @@ class AAAudioEngine @Inject constructor(
             _state.value = EngineState.INITIALIZED
             callback?.onStateChanged(EngineState.INITIALIZED)
 
-            Log.d(TAG, "✅ AAA Audio Engine inizializzato con successo")
+            println("[AAAudioEngine] AAA Audio Engine inizializzato con successo")
             return true
 
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Errore inizializzazione", e)
+            println("[AAAudioEngine] ERROR: Errore inizializzazione: ${e.message}")
             _state.value = EngineState.ERROR
             callback?.onError("Initialization failed: ${e.message}")
             return false
@@ -226,7 +224,7 @@ class AAAudioEngine @Inject constructor(
         )
 
         if (minBufferSize == AudioTrack.ERROR_BAD_VALUE) {
-            Log.e(TAG, "❌ Invalid AudioTrack parameters")
+            println("[AAAudioEngine] ERROR: Invalid AudioTrack parameters")
             return null
         }
 
@@ -253,10 +251,10 @@ class AAAudioEngine @Inject constructor(
                 .setBufferSizeInBytes(bufferSize)
                 .setTransferMode(AudioTrack.MODE_STREAM)
                 .build().also {
-                    Log.d(TAG, "🔊 AudioTrack buffer: ${bufferSize / 1024}KB")
+                    println("[AAAudioEngine] AudioTrack buffer: ${bufferSize / 1024}KB")
                 }
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to create AudioTrack", e)
+            println("[AAAudioEngine] ERROR: Failed to create AudioTrack: ${e.message}")
             null
         }
     }
@@ -266,7 +264,7 @@ class AAAudioEngine @Inject constructor(
      */
     private fun createPlaybackCallback() = object : HighPriorityAudioThread.Callback {
         override fun onPlaybackStarted() {
-            Log.d(TAG, "▶️ Playback avviato")
+            println("[AAAudioEngine] Playback avviato")
             _isPlaying.value = true
             _state.value = EngineState.PLAYING
             callback?.onPlaybackStarted()
@@ -274,13 +272,13 @@ class AAAudioEngine @Inject constructor(
         }
 
         override fun onPlaybackStopped() {
-            Log.d(TAG, "⏹️ Playback fermato")
+            println("[AAAudioEngine] Playback fermato")
             _isPlaying.value = false
             callback?.onPlaybackStopped()
         }
 
         override fun onUnderrun(consecutiveCount: Int) {
-            Log.w(TAG, "⚠️ Underrun #$consecutiveCount")
+            println("[AAAudioEngine] WARNING: Underrun #$consecutiveCount")
             if (consecutiveCount == 1) {
                 callback?.onUnderrun()
             }
@@ -291,7 +289,7 @@ class AAAudioEngine @Inject constructor(
         }
 
         override fun onRecovery() {
-            Log.d(TAG, "✅ Recovery da underrun")
+            println("[AAAudioEngine] Recovery da underrun")
             _state.value = EngineState.PLAYING
             callback?.onStateChanged(EngineState.PLAYING)
         }
@@ -304,7 +302,7 @@ class AAAudioEngine @Inject constructor(
         }
 
         override fun onError(error: String) {
-            Log.e(TAG, "❌ Playback error: $error")
+            println("[AAAudioEngine] ERROR: Playback error: $error")
             _state.value = EngineState.ERROR
             callback?.onError(error)
             callback?.onStateChanged(EngineState.ERROR)
@@ -331,7 +329,7 @@ class AAAudioEngine @Inject constructor(
             // ASPETTA che il pre-buffering sia completato!
             // Questo è critico: se iniziamo a popolare dal jitter buffer subito,
             // lo svuotiamo prima che raggiunga il target di pre-buffering.
-            Log.d(TAG, "⏳ Job trasferimento in attesa del pre-buffering...")
+            println("[AAAudioEngine] Job trasferimento in attesa del pre-buffering...")
 
             while (isActive && !preBufferingComplete.get()) {
                 delay(20)
@@ -339,7 +337,7 @@ class AAAudioEngine @Inject constructor(
 
             if (!isActive) return@launch
 
-            Log.d(TAG, "🚀 Pre-buffering completato, avvio trasferimento Jitter -> Ring")
+            println("[AAAudioEngine] Pre-buffering completato, avvio trasferimento Jitter -> Ring")
 
             while (isActive) {
                 try {
@@ -351,7 +349,7 @@ class AAAudioEngine @Inject constructor(
                         if (written < packet.data.size) {
                             // Overflow - il playback thread non sta consumando abbastanza veloce
                             if (written == 0) {
-                                Log.w(TAG, "⚠️ Ring buffer pieno, packet dropped")
+                                println("[AAAudioEngine] WARNING: Ring buffer pieno, packet dropped")
                                 // Aspetta che il consumer recuperi
                                 delay(10)
                             }
@@ -369,7 +367,7 @@ class AAAudioEngine @Inject constructor(
 
                 } catch (e: Exception) {
                     if (e !is CancellationException) {
-                        Log.e(TAG, "❌ Errore trasferimento jitter->ring", e)
+                        println("[AAAudioEngine] ERROR: Errore trasferimento jitter->ring: ${e.message}")
                     }
                 }
             }
@@ -392,7 +390,7 @@ class AAAudioEngine @Inject constructor(
                 plcEngine.processGoodFrame(frame)
             } catch (e: Exception) {
                 // Ignora errori PLC, non sono critici per il playback
-                Log.v(TAG, "PLC frame update skipped: ${e.message}")
+                println("[AAAudioEngine] PLC frame update skipped: ${e.message}")
             }
             offset += frameSize
         }
@@ -416,7 +414,7 @@ class AAAudioEngine @Inject constructor(
                     delay(METRICS_UPDATE_INTERVAL_MS)
                 } catch (e: Exception) {
                     if (e !is CancellationException) {
-                        Log.e(TAG, "❌ Errore aggiornamento metriche", e)
+                        println("[AAAudioEngine] ERROR: Errore aggiornamento metriche: ${e.message}")
                     }
                 }
             }
@@ -431,7 +429,7 @@ class AAAudioEngine @Inject constructor(
      */
     fun queueAudio(audioBase64: String): Boolean {
         if (!isInitialized.get()) {
-            Log.w(TAG, "⚠️ Engine non inizializzato")
+            println("[AAAudioEngine] WARNING: Engine non inizializzato")
             return false
         }
 
@@ -439,7 +437,7 @@ class AAAudioEngine @Inject constructor(
             val audioBytes = Base64.decode(audioBase64, Base64.DEFAULT)
             queueAudioBytes(audioBytes)
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Errore decodifica Base64", e)
+            println("[AAAudioEngine] ERROR: Errore decodifica Base64: ${e.message}")
             false
         }
     }
@@ -452,7 +450,7 @@ class AAAudioEngine @Inject constructor(
      */
     fun queueAudioBytes(audioBytes: ByteArray): Boolean {
         if (!isInitialized.get()) {
-            Log.w(TAG, "⚠️ Engine non inizializzato")
+            println("[AAAudioEngine] WARNING: Engine non inizializzato")
             return false
         }
 
@@ -473,7 +471,7 @@ class AAAudioEngine @Inject constructor(
 
                 if (bufferMs >= config.preBufferTargetMs) {
                     preBufferingComplete.set(true)
-                    Log.d(TAG, "✅ Pre-buffering completato: ${bufferMs}ms")
+                    println("[AAAudioEngine] Pre-buffering completato: ${bufferMs}ms")
 
                     // Avvia playback thread
                     startPlayback()
@@ -484,7 +482,7 @@ class AAAudioEngine @Inject constructor(
 
             return accepted
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Errore queue audio", e)
+            println("[AAAudioEngine] ERROR: Errore queue audio: ${e.message}")
             return false
         }
     }
@@ -502,16 +500,16 @@ class AAAudioEngine @Inject constructor(
      */
     fun startPlayback() {
         if (!isInitialized.get()) {
-            Log.w(TAG, "⚠️ Engine non inizializzato")
+            println("[AAAudioEngine] WARNING: Engine non inizializzato")
             return
         }
 
         if (playbackThread?.isAlive == true) {
-            Log.d(TAG, "▶️ Playback già attivo")
+            println("[AAAudioEngine] Playback già attivo")
             return
         }
 
-        Log.d(TAG, "▶️ Avvio playback...")
+        println("[AAAudioEngine] Avvio playback...")
 
         try {
             // Assicurati che AudioTrack sia pronto
@@ -534,7 +532,7 @@ class AAAudioEngine @Inject constructor(
             _isPlaying.value = true
 
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Errore avvio playback", e)
+            println("[AAAudioEngine] ERROR: Errore avvio playback: ${e.message}")
             callback?.onError("Start playback failed: ${e.message}")
         }
     }
@@ -543,7 +541,7 @@ class AAAudioEngine @Inject constructor(
      * Ferma riproduzione
      */
     fun stopPlayback() {
-        Log.d(TAG, "⏹️ Stop playback...")
+        println("[AAAudioEngine] Stop playback...")
 
         playbackThread?.stopPlayback()
         audioTrack?.pause()
@@ -580,7 +578,7 @@ class AAAudioEngine @Inject constructor(
      * Flush tutti i buffer (per interruzione/barge-in)
      */
     fun flush() {
-        Log.d(TAG, "🚿 Flush buffer...")
+        println("[AAAudioEngine] Flush buffer...")
 
         jitterBuffer.flush()
         ringBuffer.flush()
@@ -597,7 +595,7 @@ class AAAudioEngine @Inject constructor(
      * Gestisce interruzione (barge-in)
      */
     fun handleInterruption() {
-        Log.d(TAG, "⚠️ Handling interruption (barge-in)")
+        println("[AAAudioEngine] Handling interruption (barge-in)")
 
         // Stop playback
         playbackThread?.stopPlayback()
@@ -638,7 +636,7 @@ class AAAudioEngine @Inject constructor(
      * Rilascia risorse
      */
     fun release() {
-        Log.d(TAG, "🧹 Rilascio AAA Audio Engine...")
+        println("[AAAudioEngine] Rilascio AAA Audio Engine...")
 
         _state.value = EngineState.RELEASED
 
@@ -655,7 +653,7 @@ class AAAudioEngine @Inject constructor(
             audioTrack?.stop()
             audioTrack?.release()
         } catch (e: Exception) {
-            Log.w(TAG, "Errore rilascio AudioTrack", e)
+            println("[AAAudioEngine] WARNING: Errore rilascio AudioTrack: ${e.message}")
         }
         audioTrack = null
 
@@ -673,7 +671,7 @@ class AAAudioEngine @Inject constructor(
 
         callback?.onStateChanged(EngineState.RELEASED)
 
-        Log.d(TAG, "✅ AAA Audio Engine rilasciato")
+        println("[AAAudioEngine] AAA Audio Engine rilasciato")
     }
 
     // ==================== Helper Methods ====================

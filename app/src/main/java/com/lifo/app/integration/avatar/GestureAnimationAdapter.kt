@@ -1,6 +1,5 @@
 package com.lifo.app.integration.avatar
 
-import android.util.Log
 import com.lifo.chat.presentation.viewmodel.LiveChatViewModel
 import com.lifo.humanoid.api.HumanoidController
 import com.lifo.humanoid.api.HumanoidIntegrationHelper
@@ -33,10 +32,6 @@ import com.lifo.humanoid.api.HumanoidIntegrationHelper
  */
 class GestureAnimationAdapter {
 
-    companion object {
-        private const val TAG = "GestureAnimationAdapter"
-    }
-
     private var isConnected = false
 
     /**
@@ -50,17 +45,17 @@ class GestureAnimationAdapter {
         liveChatViewModel: LiveChatViewModel
     ) {
         if (isConnected) {
-            Log.d(TAG, "Already connected")
+            println("[GestureAnimationAdapter] Already connected")
             return
         }
 
-        Log.d(TAG, "🔗 Connecting Gemini AI to Avatar animations")
+        println("[GestureAnimationAdapter] Connecting Gemini AI to Avatar animations")
 
         // Create gesture callback using the helper
         val gestureCallback = HumanoidIntegrationHelper.createGestureCallback(
             controller = humanoidController,
             onUnknownAnimation = { animationName ->
-                Log.w(TAG, "⚠️ Unknown animation requested by AI: $animationName")
+                println("[GestureAnimationAdapter] WARNING: Unknown animation requested by AI: $animationName")
             }
         )
 
@@ -68,14 +63,14 @@ class GestureAnimationAdapter {
         liveChatViewModel.attachGestureCallback(gestureCallback)
 
         isConnected = true
-        Log.d(TAG, "✅ Gesture animations connected successfully")
+        println("[GestureAnimationAdapter] Gesture animations connected successfully")
     }
 
     /**
      * Disconnect and cleanup.
      */
     fun disconnect() {
-        Log.d(TAG, "🔌 Disconnecting gesture animations")
+        println("[GestureAnimationAdapter] Disconnecting gesture animations")
         isConnected = false
     }
 

@@ -1,6 +1,5 @@
 package com.lifo.humanoid.data.vrm
 
-import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
@@ -56,7 +55,6 @@ import java.nio.ByteOrder
 class GltfBoneOptimizer(private val context: android.content.Context) {
 
     private val gson = Gson()
-    private val tag = "GltfBoneOptimizer"
 
     /**
      * VRM 1.0 humanoid bone names that must ALWAYS be preserved.
@@ -100,9 +98,9 @@ class GltfBoneOptimizer(private val context: android.content.Context) {
      * @return OptimizationResult with new buffer and statistics
      */
     fun optimize(glbBuffer: ByteBuffer, maxBonesPerSkin: Int = 256): OptimizationResult {
-        Log.i(tag, "╔═══════════════════════════════════════════════════════════╗")
-        Log.i(tag, "║         glTF Bone Optimizer (Filament 256 Limit)         ║")
-        Log.i(tag, "╚═══════════════════════════════════════════════════════════╝")
+        println("[GltfBoneOptimizer] ╔═══════════════════════════════════════════════════════════╗")
+        println("[GltfBoneOptimizer] ║         glTF Bone Optimizer (Filament 256 Limit)         ║")
+        println("[GltfBoneOptimizer] ╚═══════════════════════════════════════════════════════════╝")
 
         glbBuffer.position(0)
 
@@ -114,7 +112,7 @@ class GltfBoneOptimizer(private val context: android.content.Context) {
 
         // Analyze skins
         val skins = rootJson.getAsJsonArray("skins") ?: run {
-            Log.w(tag, "No skins found in glTF - returning original buffer")
+            println("[GltfBoneOptimizer] WARNING: No skins found in glTF - returning original buffer")
             glbBuffer.position(0)
             return OptimizationResult(glbBuffer, 0, 0, 0, 0)
         }
@@ -123,7 +121,7 @@ class GltfBoneOptimizer(private val context: android.content.Context) {
         var optimizedBoneCount = 0
         var skinsOptimized = 0
 
-        Log.d(tag, "Found ${skins.size()} skins to analyze")
+        println("[GltfBoneOptimizer] Found ${skins.size()} skins to analyze")
 
         // Check if optimization is needed
         var needsOptimization = false
@@ -135,24 +133,24 @@ class GltfBoneOptimizer(private val context: android.content.Context) {
 
             if (jointCount > maxBonesPerSkin) {
                 needsOptimization = true
-                Log.w(tag, "Skin exceeds limit: $jointCount bones (max: $maxBonesPerSkin)")
+                println("[GltfBoneOptimizer] WARNING: Skin exceeds limit: $jointCount bones (max: $maxBonesPerSkin)")
             }
         }
 
         if (!needsOptimization) {
-            Log.i(tag, "All skins within limit - no optimization needed")
+            println("[GltfBoneOptimizer] All skins within limit - no optimization needed")
             glbBuffer.position(0)
             return OptimizationResult(glbBuffer, originalBoneCount, originalBoneCount, 0, 0)
         }
 
         // Perform optimization
-        Log.i(tag, "Starting bone optimization...")
+        println("[GltfBoneOptimizer] Starting bone optimization...")
 
         // For each skin, analyze bone usage
         val skinOptimizations = analyzeSkinBoneUsage(rootJson, glbData)
 
         skinOptimizations.forEach { (skinIndex, optimization) ->
-            Log.i(tag, "Skin $skinIndex: ${optimization.originalJointCount} -> ${optimization.compactedJointCount} bones (saved ${optimization.bonesSaved})")
+            println("[GltfBoneOptimizer] Skin $skinIndex: ${optimization.originalJointCount} -> ${optimization.compactedJointCount} bones (saved ${optimization.bonesSaved})")
             optimizedBoneCount += optimization.compactedJointCount
             if (optimization.bonesSaved > 0) {
                 skinsOptimized++
@@ -164,14 +162,14 @@ class GltfBoneOptimizer(private val context: android.content.Context) {
 
         val bonesSaved = originalBoneCount - optimizedBoneCount
 
-        Log.i(tag, "╔═══════════════════════════════════════════════════════════╗")
-        Log.i(tag, "║                 Optimization Complete                     ║")
-        Log.i(tag, "╠═══════════════════════════════════════════════════════════╣")
-        Log.i(tag, "║ Original bones:    $originalBoneCount                                  ║")
-        Log.i(tag, "║ Optimized bones:   $optimizedBoneCount                                  ║")
-        Log.i(tag, "║ Bones saved:       $bonesSaved                                  ║")
-        Log.i(tag, "║ Skins optimized:   $skinsOptimized                                     ║")
-        Log.i(tag, "╚═══════════════════════════════════════════════════════════╝")
+        println("[GltfBoneOptimizer] ╔═══════════════════════════════════════════════════════════╗")
+        println("[GltfBoneOptimizer] ║                 Optimization Complete                     ║")
+        println("[GltfBoneOptimizer] ╠═══════════════════════════════════════════════════════════╣")
+        println("[GltfBoneOptimizer] ║ Original bones:    $originalBoneCount                                  ║")
+        println("[GltfBoneOptimizer] ║ Optimized bones:   $optimizedBoneCount                                  ║")
+        println("[GltfBoneOptimizer] ║ Bones saved:       $bonesSaved                                  ║")
+        println("[GltfBoneOptimizer] ║ Skins optimized:   $skinsOptimized                                     ║")
+        println("[GltfBoneOptimizer] ╚═══════════════════════════════════════════════════════════╝")
 
         return OptimizationResult(
             optimizedBuffer = optimizedGlbData,
@@ -198,7 +196,7 @@ class GltfBoneOptimizer(private val context: android.content.Context) {
         val version = buffer.int
         val totalLength = buffer.int
 
-        Log.d(tag, "glTF version: $version, total length: $totalLength")
+        println("[GltfBoneOptimizer] glTF version: $version, total length: $totalLength")
 
         // Read JSON chunk
         val jsonLength = buffer.int
@@ -244,7 +242,7 @@ class GltfBoneOptimizer(private val context: android.content.Context) {
 
         // Extract VRM humanoid bone mappings
         val humanoidBoneNodeIndices = extractVrmHumanoidBones(rootJson)
-        Log.d(tag, "Found ${humanoidBoneNodeIndices.size} VRM humanoid bones to protect")
+        println("[GltfBoneOptimizer] Found ${humanoidBoneNodeIndices.size} VRM humanoid bones to protect")
 
         val skinOptimizations = mutableMapOf<Int, SkinOptimization>()
 
@@ -253,11 +251,11 @@ class GltfBoneOptimizer(private val context: android.content.Context) {
             val joints = skin.getAsJsonArray("joints")
             val jointCount = joints.size()
 
-            Log.d(tag, "═══ Analyzing Skin $skinIndex (${jointCount} joints) ═══")
+            println("[GltfBoneOptimizer] ═══ Analyzing Skin $skinIndex (${jointCount} joints) ═══")
 
             // Find primitives using this skin
             val primitivesUsingSkin = findPrimitivesUsingSkin(skinIndex, nodes, meshes)
-            Log.d(tag, "Found ${primitivesUsingSkin.size} primitives using this skin")
+            println("[GltfBoneOptimizer] Found ${primitivesUsingSkin.size} primitives using this skin")
 
             // Scan vertex data to find used joints
             val usedJointIndices = mutableSetOf<Int>()
@@ -280,18 +278,18 @@ class GltfBoneOptimizer(private val context: android.content.Context) {
                 }
             }
 
-            Log.d(tag, "Vertex data uses ${usedJointIndices.size} joints")
+            println("[GltfBoneOptimizer] Vertex data uses ${usedJointIndices.size} joints")
 
             // Add VRM humanoid bones (even if unused by vertices)
             joints.forEachIndexed { paletteIndex, jointElement ->
                 val nodeIndex = jointElement.asInt
                 if (humanoidBoneNodeIndices.contains(nodeIndex)) {
                     usedJointIndices.add(paletteIndex)
-                    Log.d(tag, "Protected humanoid bone at palette index $paletteIndex (node $nodeIndex)")
+                    println("[GltfBoneOptimizer] Protected humanoid bone at palette index $paletteIndex (node $nodeIndex)")
                 }
             }
 
-            Log.d(tag, "Total bones to keep (including humanoid): ${usedJointIndices.size}")
+            println("[GltfBoneOptimizer] Total bones to keep (including humanoid): ${usedJointIndices.size}")
 
             // Create compaction mapping
             val sortedUsedIndices = usedJointIndices.sorted()
@@ -333,7 +331,7 @@ class GltfBoneOptimizer(private val context: android.content.Context) {
 
                     if (nodeIndex != null && essentialHumanoidBones.contains(boneName.lowercase())) {
                         nodeIndices.add(nodeIndex)
-                        Log.d(tag, "VRM 1.0 humanoid bone: $boneName -> node $nodeIndex")
+                        println("[GltfBoneOptimizer] VRM 1.0 humanoid bone: $boneName -> node $nodeIndex")
                     }
                 }
             } else {
@@ -349,12 +347,12 @@ class GltfBoneOptimizer(private val context: android.content.Context) {
 
                     if (nodeIndex != null && boneName != null && essentialHumanoidBones.contains(boneName)) {
                         nodeIndices.add(nodeIndex)
-                        Log.d(tag, "VRM 0.x humanoid bone: $boneName -> node $nodeIndex")
+                        println("[GltfBoneOptimizer] VRM 0.x humanoid bone: $boneName -> node $nodeIndex")
                     }
                 }
             }
         } catch (e: Exception) {
-            Log.w(tag, "Failed to extract VRM humanoid bones: ${e.message}")
+            println("[GltfBoneOptimizer] WARNING: Failed to extract VRM humanoid bones: ${e.message}")
         }
 
         return nodeIndices
@@ -459,7 +457,7 @@ class GltfBoneOptimizer(private val context: android.content.Context) {
         glbData: GlbData,
         skinOptimizations: Map<Int, SkinOptimization>
     ): ByteBuffer {
-        Log.d(tag, "Applying optimization to JSON and BIN data...")
+        println("[GltfBoneOptimizer] Applying optimization to JSON and BIN data...")
 
         val accessors = rootJson.getAsJsonArray("accessors")
         val bufferViews = rootJson.getAsJsonArray("bufferViews")
@@ -485,7 +483,7 @@ class GltfBoneOptimizer(private val context: android.content.Context) {
             }
             skin.add("joints", newJoints)
 
-            Log.d(tag, "Skin $skinIndex: Updated joints array (${oldJoints.size()} -> ${newJoints.size()})")
+            println("[GltfBoneOptimizer] Skin $skinIndex: Updated joints array (${oldJoints.size()} -> ${newJoints.size()})")
 
             // Compact inverseBindMatrices
             val inverseBindMatricesAccessorIndex = skin.get("inverseBindMatrices")?.asInt
@@ -592,7 +590,7 @@ class GltfBoneOptimizer(private val context: android.content.Context) {
         // Step 4: Rebuild glb file
         val optimizedBuffer = rebuildGlbFile(rootJson, newBinData, binWriteOffset, glbData.version)
 
-        Log.i(tag, "Optimization applied successfully")
+        println("[GltfBoneOptimizer] Optimization applied successfully")
         return optimizedBuffer
     }
 

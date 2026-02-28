@@ -1,6 +1,5 @@
 package com.lifo.humanoid.rendering
 
-import android.util.Log
 import com.google.android.filament.Engine
 import com.google.android.filament.Material
 import com.google.android.filament.filamat.MaterialBuilder
@@ -19,8 +18,6 @@ import java.nio.ByteBuffer
  * - Brightness multiplier for HDR effect
  */
 object PointCloudMaterialBuilder {
-
-    private const val TAG = "PointCloudMaterial"
 
     /**
      * Vertex shader code for point rendering.
@@ -68,7 +65,7 @@ object PointCloudMaterialBuilder {
         brightness: Float = 2.0f
     ): Material? {
         return try {
-            Log.d(TAG, "Building point cloud material (pointSize=$pointSize, brightness=$brightness)")
+            println("[PointCloudMaterial] Building point cloud material (pointSize=$pointSize, brightness=$brightness)")
 
             // Create material builder
             val builder = MaterialBuilder()
@@ -98,16 +95,16 @@ object PointCloudMaterialBuilder {
             builder.material(FRAGMENT_SHADER)
 
             // Build material package
-            Log.d(TAG, "Compiling material...")
+            println("[PointCloudMaterial] Compiling material...")
             val materialPackage = builder.build()
 
             if (materialPackage.isValid.not()) {
-                Log.e(TAG, "Material compilation failed - invalid package")
+                println("[PointCloudMaterial] ERROR: Material compilation failed - invalid package")
                 return null
             }
 
             val packageBuffer = materialPackage.buffer
-            Log.d(TAG, "Material package compiled successfully (${packageBuffer.capacity()} bytes)")
+            println("[PointCloudMaterial] Material package compiled successfully (${packageBuffer.capacity()} bytes)")
 
             // Create material from package
             val material = Material.Builder()
@@ -119,11 +116,11 @@ object PointCloudMaterialBuilder {
             defaultInstance.setParameter("pointSize", pointSize)
             defaultInstance.setParameter("brightness", brightness)
 
-            Log.d(TAG, "Point cloud material created successfully")
+            println("[PointCloudMaterial] Point cloud material created successfully")
             material
 
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to create point cloud material", e)
+            println("[PointCloudMaterial] ERROR: Failed to create point cloud material: ${e.message}")
             e.printStackTrace()
             null
         }

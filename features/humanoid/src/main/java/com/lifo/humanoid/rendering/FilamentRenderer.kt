@@ -3,7 +3,6 @@ package com.lifo.humanoid.rendering
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.view.Surface
 import android.view.TextureView
 import com.google.android.filament.*
@@ -35,9 +34,9 @@ internal object FilamentNativeLoader {
             System.loadLibrary("gltfio-jni")
             System.loadLibrary("filament-utils-jni")
             System.loadLibrary("filamat-jni")
-            android.util.Log.d("FilamentRenderer", "All Filament native libraries loaded successfully")
+            println("[FilamentRenderer] All Filament native libraries loaded successfully")
         } catch (e: UnsatisfiedLinkError) {
-            android.util.Log.e("FilamentRenderer", "Failed to load Filament native libraries", e)
+            println("[FilamentRenderer] ERROR: Failed to load Filament native libraries: ${e.message}")
             throw e
         }
     }
@@ -148,8 +147,6 @@ class FilamentRenderer(
 
     private val frameScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
-    private val tag = "FilamentRenderer"
-
     // Lighting components
     private var sunEntity: Int = 0
 
@@ -213,7 +210,7 @@ class FilamentRenderer(
         if (isDestroyed.get()) return
         if (_rendererState.value == RendererState.RENDERING) {
             _rendererState.value = RendererState.PAUSED
-            Log.d(tag, "Rendering paused")
+            println("[FilamentRenderer] Rendering paused")
         }
     }
 
@@ -221,14 +218,14 @@ class FilamentRenderer(
         if (isDestroyed.get()) return
         if (_rendererState.value == RendererState.PAUSED) {
             _rendererState.value = RendererState.RENDERING
-            Log.d(tag, "Rendering resumed")
+            println("[FilamentRenderer] Rendering resumed")
         }
     }
 
     fun prepareForLayoutChange() {
         if (isDestroyed.get()) return
         pendingResize.set(true)
-        Log.d(tag, "Preparing for layout change")
+        println("[FilamentRenderer] Preparing for layout change")
     }
 
     /**
@@ -269,11 +266,11 @@ class FilamentRenderer(
                 renderCallback = object : UiHelper.RendererCallback {
                     override fun onNativeWindowChanged(surface: Surface) {
                         if (isDestroyed.get()) {
-                            Log.d(tag, "onNativeWindowChanged skipped - destroyed")
+                            println("[FilamentRenderer] onNativeWindowChanged skipped - destroyed")
                             return
                         }
 
-                        Log.d(tag, "onNativeWindowChanged - creating SwapChain")
+                        println("[FilamentRenderer] onNativeWindowChanged - creating SwapChain")
                         waitForFrameCompletion()
 
                         val eng = engine ?: return
@@ -287,11 +284,11 @@ class FilamentRenderer(
                     override fun onDetachedFromSurface() {
                         // CRITICAL: Early return if already destroyed to prevent native crashes
                         if (isDestroyed.get()) {
-                            Log.d(tag, "onDetachedFromSurface skipped - renderer already destroyed")
+                            println("[FilamentRenderer] onDetachedFromSurface skipped - renderer already destroyed")
                             return
                         }
 
-                        Log.d(tag, "onDetachedFromSurface - cleaning up SwapChain")
+                        println("[FilamentRenderer] onDetachedFromSurface - cleaning up SwapChain")
                         waitForFrameCompletion()
                         val eng = engine
                         if (eng != null && !isDestroyed.get()) {
@@ -321,9 +318,9 @@ class FilamentRenderer(
             configureTransparency()
 
             isInitialized = true
-            Log.d(tag, "FilamentRenderer initialized with TextureView (transparent)")
+            println("[FilamentRenderer] FilamentRenderer initialized with TextureView (transparent)")
         } catch (e: Exception) {
-            Log.e(tag, "Failed to initialize Filament", e)
+            println("[FilamentRenderer] ERROR: Failed to initialize Filament: ${e.message}")
             cleanup()
             throw RuntimeException("Failed to initialize Filament renderer", e)
         }
@@ -353,7 +350,7 @@ class FilamentRenderer(
             .orbitSpeed(0.005f, 0.005f)
             .build(Manipulator.Mode.ORBIT)
 
-        Log.d(tag, "Camera + Manipulator initialized: eye=($eyeX, $eyeY, $eyeZ), target=($targetX, $targetY, $targetZ)")
+        println("[FilamentRenderer] Camera + Manipulator initialized: eye=($eyeX, $eyeY, $eyeZ), target=($targetX, $targetY, $targetZ)")
     }
 
     private fun configureCameraProjection(width: Int, height: Int) {
@@ -430,7 +427,7 @@ class FilamentRenderer(
             hdrColorBuffer = View.QualityLevel.MEDIUM
         }
 
-        Log.d(tag, "Transparency configured: blendMode=TRANSLUCENT, skybox=null, clear=true")
+        println("[FilamentRenderer] Transparency configured: blendMode=TRANSLUCENT, skybox=null, clear=true")
     }
 
     // ==================== Touch / Camera Manipulator ====================
@@ -464,7 +461,7 @@ class FilamentRenderer(
         if (leftEye != 0) leftEyeEntity = leftEye
         if (rightEye != 0) rightEyeEntity = rightEye
         storeOriginalEyeTransforms()
-        Log.d(tag, "setEyeBoneEntities: L=$leftEyeEntity R=$rightEyeEntity " +
+        println("[FilamentRenderer] setEyeBoneEntities: L=$leftEyeEntity R=$rightEyeEntity " +
                 "(origTransforms: L=${originalLeftEyeTransform != null} R=${originalRightEyeTransform != null})")
     }
 
@@ -510,12 +507,12 @@ class FilamentRenderer(
             // Strategy 1: Exact match with VRM humanoid node name (definitive)
             if (leftEyeEntity == 0 && vrmLeftEyeNodeName != null && name == vrmLeftEyeNodeName) {
                 leftEyeEntity = entity
-                Log.d(tag, "Eye bone (VRM exact): leftEye '$name' → entity=$entity")
+                println("[FilamentRenderer] Eye bone (VRM exact): leftEye '$name' → entity=$entity")
                 return@forEach
             }
             if (rightEyeEntity == 0 && vrmRightEyeNodeName != null && name == vrmRightEyeNodeName) {
                 rightEyeEntity = entity
-                Log.d(tag, "Eye bone (VRM exact): rightEye '$name' → entity=$entity")
+                println("[FilamentRenderer] Eye bone (VRM exact): rightEye '$name' → entity=$entity")
                 return@forEach
             }
 
@@ -531,7 +528,7 @@ class FilamentRenderer(
                     lower == "eye.l"
                 ) -> {
                     leftEyeEntity = entity
-                    Log.d(tag, "Eye bone (pattern): leftEye '$name' → entity=$entity")
+                    println("[FilamentRenderer] Eye bone (pattern): leftEye '$name' → entity=$entity")
                 }
 
                 rightEyeEntity == 0 && (
@@ -543,7 +540,7 @@ class FilamentRenderer(
                     lower == "eye.r"
                 ) -> {
                     rightEyeEntity = entity
-                    Log.d(tag, "Eye bone (pattern): rightEye '$name' → entity=$entity")
+                    println("[FilamentRenderer] Eye bone (pattern): rightEye '$name' → entity=$entity")
                 }
             }
         }
@@ -551,7 +548,7 @@ class FilamentRenderer(
         // Store original (rest-pose) transforms — CRITICAL for preventing rotation accumulation
         storeOriginalEyeTransforms()
 
-        Log.i(tag, "Eye bones result: L=$leftEyeEntity R=$rightEyeEntity, " +
+        println("[FilamentRenderer] Eye bones result: L=$leftEyeEntity R=$rightEyeEntity, " +
                 "origTransform: L=${originalLeftEyeTransform != null} R=${originalRightEyeTransform != null}, " +
                 "vrmNames: L='$vrmLeftEyeNodeName' R='$vrmRightEyeNodeName'")
     }
@@ -655,7 +652,7 @@ class FilamentRenderer(
                     blendShapeMapping.containsKey("lookleft") ||
                     blendShapeMapping.containsKey("look_up") ||
                     blendShapeMapping.containsKey("look_left")
-            Log.i(tag, "LookAt DIAG: hasBlendShapes=$hasLookAtBlendShapes, " +
+            println("[FilamentRenderer] LookAt DIAG: hasBlendShapes=$hasLookAtBlendShapes, " +
                     "eyeBones=(L=$leftEyeEntity, R=$rightEyeEntity), " +
                     "origTransforms=(L=${originalLeftEyeTransform != null}, R=${originalRightEyeTransform != null}), " +
                     "blendShapeKeys=${blendShapeMapping.keys.take(20)}, " +
@@ -687,7 +684,7 @@ class FilamentRenderer(
     private fun handleResizeWithDebounce(width: Int, height: Int) {
         if (isDestroyed.get()) return
         if (width <= 0 || height <= 0) {
-            Log.w(tag, "Invalid resize dimensions: ${width}x${height}")
+            println("[FilamentRenderer] WARNING: Invalid resize dimensions: ${width}x${height}")
             return
         }
 
@@ -698,7 +695,7 @@ class FilamentRenderer(
             return
         }
 
-        Log.d(tag, "Resize requested: ${currentWidth.get()}x${currentHeight.get()} -> ${width}x${height}")
+        println("[FilamentRenderer] Resize requested: ${currentWidth.get()}x${currentHeight.get()} -> ${width}x${height}")
 
         pendingResizeRunnable?.let { resizeHandler.removeCallbacks(it) }
 
@@ -715,11 +712,11 @@ class FilamentRenderer(
 
     private fun performResize(width: Int, height: Int) {
         if (isDestroyed.get()) {
-            Log.d(tag, "performResize skipped - destroyed")
+            println("[FilamentRenderer] performResize skipped - destroyed")
             return
         }
 
-        Log.d(tag, "Performing resize to ${width}x${height}")
+        println("[FilamentRenderer] Performing resize to ${width}x${height}")
 
         try {
             waitForFrameCompletion()
@@ -731,9 +728,9 @@ class FilamentRenderer(
             currentWidth.set(width)
             currentHeight.set(height)
 
-            Log.d(tag, "Resize completed successfully")
+            println("[FilamentRenderer] Resize completed successfully")
         } catch (e: Exception) {
-            Log.e(tag, "Error during resize", e)
+            println("[FilamentRenderer] ERROR: Error during resize: ${e.message}")
         } finally {
             isResizing.set(false)
             pendingResize.set(false)
@@ -750,7 +747,7 @@ class FilamentRenderer(
         val startTime = System.currentTimeMillis()
         while (frameInProgress.get()) {
             if (System.currentTimeMillis() - startTime > FRAME_WAIT_TIMEOUT_MS) {
-                Log.w(tag, "Timeout waiting for frame completion")
+                println("[FilamentRenderer] WARNING: Timeout waiting for frame completion")
                 break
             }
             Thread.sleep(1)
@@ -769,7 +766,7 @@ class FilamentRenderer(
         rightEyeNodeName: String? = null
     ): FilamentAsset? {
         if (isDestroyed.get() || !isInitialized) {
-            Log.d(tag, "loadModel skipped - not safe to use")
+            println("[FilamentRenderer] loadModel skipped - not safe to use")
             return null
         }
 
@@ -779,10 +776,10 @@ class FilamentRenderer(
         val resLoader = resourceLoader ?: return null
 
         return try {
-            Log.d(tag, "loadModel called with buffer: capacity=${buffer.capacity()}")
+            println("[FilamentRenderer] loadModel called with buffer: capacity=${buffer.capacity()}")
 
             currentAsset?.let { asset ->
-                Log.d(tag, "Removing previous asset")
+                println("[FilamentRenderer] Removing previous asset")
                 scn.removeEntities(asset.entities)
                 loader.destroyAsset(asset)
             }
@@ -799,7 +796,7 @@ class FilamentRenderer(
             val asset = loader.createAsset(buffer)
 
             if (asset != null) {
-                Log.d(tag, "Asset created successfully! Entities: ${asset.entities.size}")
+                println("[FilamentRenderer] Asset created successfully! Entities: ${asset.entities.size}")
 
                 resLoader.loadResources(asset)
                 resLoader.asyncBeginLoad(asset)
@@ -832,14 +829,14 @@ class FilamentRenderer(
                     modelLoadedListener?.onModelLoaded(asset, nodeNames)
                 }
 
-                Log.d(tag, "Model loaded successfully! eyeBones: L=$leftEyeEntity R=$rightEyeEntity")
+                println("[FilamentRenderer] Model loaded successfully! eyeBones: L=$leftEyeEntity R=$rightEyeEntity")
             } else {
-                Log.e(tag, "AssetLoader.createAsset() returned null")
+                println("[FilamentRenderer] ERROR: AssetLoader.createAsset() returned null")
             }
 
             asset
         } catch (e: Exception) {
-            Log.e(tag, "Exception in loadModel", e)
+            println("[FilamentRenderer] ERROR: Exception in loadModel: ${e.message}")
             null
         }
     }
@@ -909,7 +906,7 @@ class FilamentRenderer(
             rend.endFrame()
 
             if (!blendShapesInitialized.get() && pendingBlendShapes != null && !isDestroyed.get()) {
-                Log.d(tag, "First render complete - initializing blend shapes")
+                println("[FilamentRenderer] First render complete - initializing blend shapes")
                 val (asset, vrmBlendShapes) = pendingBlendShapes!!
                 buildBlendShapeMapping(asset, vrmBlendShapes)
                 blendShapesInitialized.set(true)
@@ -918,7 +915,7 @@ class FilamentRenderer(
 
             return true
         } catch (e: Exception) {
-            Log.e(tag, "Error during render", e)
+            println("[FilamentRenderer] ERROR: Error during render: ${e.message}")
             return false
         } finally {
             frameInProgress.set(false)
@@ -934,12 +931,12 @@ class FilamentRenderer(
         vrmBlendShapes: List<com.lifo.humanoid.data.vrm.VrmBlendShape>
     ) {
         if (vrmBlendShapes.isEmpty()) {
-            Log.w(tag, "No VRM blend shapes provided")
+            println("[FilamentRenderer] WARNING: No VRM blend shapes provided")
             return
         }
 
         val eng = engine ?: return
-        Log.d(tag, "Building blend shape mapping from ${vrmBlendShapes.size} VRM blend shapes")
+        println("[FilamentRenderer] Building blend shape mapping from ${vrmBlendShapes.size} VRM blend shapes")
 
         val renderableManager = eng.renderableManager
         var totalMappings = 0
@@ -983,7 +980,7 @@ class FilamentRenderer(
             }
         }
 
-        Log.i(tag, "Blend shape mapping: $totalMappings created, $failedMappings failed")
+        println("[FilamentRenderer] Blend shape mapping: $totalMappings created, $failedMappings failed")
     }
 
     private fun extractNodeNames(asset: FilamentAsset): List<String> {
@@ -1033,16 +1030,16 @@ class FilamentRenderer(
     fun cleanup() {
         // Set destroyed flag FIRST to block ALL external access
         if (!isDestroyed.compareAndSet(false, true)) {
-            Log.d(tag, "Cleanup already called, skipping")
+            println("[FilamentRenderer] Cleanup already called, skipping")
             return
         }
 
         if (!isInitialized) {
-            Log.d(tag, "Not initialized, nothing to clean up")
+            println("[FilamentRenderer] Not initialized, nothing to clean up")
             return
         }
 
-        Log.d(tag, "Cleanup started")
+        println("[FilamentRenderer] Cleanup started")
 
         try {
             // Update state immediately
@@ -1099,7 +1096,7 @@ class FilamentRenderer(
             try {
                 eng?.flushAndWait()
             } catch (e: Exception) {
-                Log.w(tag, "flushAndWait failed: ${e.message}")
+                println("[FilamentRenderer] WARNING: flushAndWait failed: ${e.message}")
             }
 
             // Destroy asset first
@@ -1108,7 +1105,7 @@ class FilamentRenderer(
                     scn.removeEntities(assetToDestroy.entities)
                     loader.destroyAsset(assetToDestroy)
                 } catch (e: Exception) {
-                    Log.e(tag, "Error destroying asset: ${e.message}")
+                    println("[FilamentRenderer] ERROR: Error destroying asset: ${e.message}")
                 }
             }
 
@@ -1117,19 +1114,19 @@ class FilamentRenderer(
                 try {
                     eng.destroyEntity(sunEntity)
                 } catch (e: Exception) {
-                    Log.e(tag, "Error destroying sun: ${e.message}")
+                    println("[FilamentRenderer] ERROR: Error destroying sun: ${e.message}")
                 }
             }
 
             // Destroy loaders
-            try { loader?.destroy() } catch (e: Exception) { Log.e(tag, "Error: ${e.message}") }
-            try { resLoader?.destroy() } catch (e: Exception) { Log.e(tag, "Error: ${e.message}") }
-            try { matProvider?.destroy() } catch (e: Exception) { Log.e(tag, "Error: ${e.message}") }
+            try { loader?.destroy() } catch (e: Exception) { println("[FilamentRenderer] ERROR: ${e.message}") }
+            try { resLoader?.destroy() } catch (e: Exception) { println("[FilamentRenderer] ERROR: ${e.message}") }
+            try { matProvider?.destroy() } catch (e: Exception) { println("[FilamentRenderer] ERROR: ${e.message}") }
 
             // CRITICAL: Detach UI helper FIRST - this internally calls destroySwapChain()
             // According to Filament docs: "Always detach the surface before destroying the engine"
             // See: https://github.com/google/filament/blob/main/android/filament-android/src/main/java/com/google/android/filament/android/UiHelper.java
-            try { ui?.detach() } catch (e: Exception) { Log.e(tag, "Error detaching UI: ${e.message}") }
+            try { ui?.detach() } catch (e: Exception) { println("[FilamentRenderer] ERROR: Error detaching UI: ${e.message}") }
 
             // NOTE: SwapChain is already destroyed by ui.detach() - do NOT destroy it again!
 
@@ -1144,21 +1141,21 @@ class FilamentRenderer(
                         EntityManager.get().destroy(camEntity)
                     }
                 } catch (e: Exception) {
-                    Log.e(tag, "Error destroying components: ${e.message}")
+                    println("[FilamentRenderer] ERROR: Error destroying components: ${e.message}")
                 }
 
                 // Finally destroy engine
                 try {
                     eng.destroy()
                 } catch (e: Exception) {
-                    Log.e(tag, "Error destroying engine: ${e.message}")
+                    println("[FilamentRenderer] ERROR: Error destroying engine: ${e.message}")
                 }
             }
 
             isInitialized = false
-            Log.d(tag, "Cleanup completed")
+            println("[FilamentRenderer] Cleanup completed")
         } catch (e: Exception) {
-            Log.e(tag, "Error during cleanup", e)
+            println("[FilamentRenderer] ERROR: Error during cleanup: ${e.message}")
         }
     }
 }

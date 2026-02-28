@@ -60,8 +60,6 @@ class NavigationState(
                 route == Screen.LiveChat.route -> false
                 route == Screen.AvatarChat.route -> false
                 route.startsWith("${Screen.AvatarChat.route}/") -> false
-                route == Screen.AvatarLiveChat.route -> false
-
                 // Hide on write screen (creation and editing)
                 route == Screen.Write.route -> false
                 route == Screen.Write.routeNew -> false

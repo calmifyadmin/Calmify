@@ -15,7 +15,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.google.firebase.auth.FirebaseAuth
 
 /**
  * SnapshotScreen
@@ -239,7 +238,7 @@ fun SnapshotScreen(
             // Submit Button
             Button(
                 onClick = {
-                    val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+                    val userId = viewModel.getCurrentUserId()
                     viewModel.submitSnapshot(
                         ownerId = userId,
                         onSuccess = {},

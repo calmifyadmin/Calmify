@@ -1,6 +1,6 @@
 package com.lifo.chat.audio.engine
 
-import android.util.Log
+
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -48,8 +48,6 @@ class AdaptiveJitterBuffer(
     private val targetBufferMs: Int = INITIAL_TARGET_MS
 ) {
     companion object {
-        private const val TAG = "AdaptiveJitterBuffer"
-
         // Buffer limits (ms)
         const val MIN_BUFFER_MS = 50
         const val MAX_BUFFER_MS = 300
@@ -175,14 +173,14 @@ class AdaptiveJitterBuffer(
                 sequenceNumber < expected -> {
                     // Pacchetto troppo vecchio, scarta
                     packetsDropped.incrementAndGet()
-                    Log.w(TAG, "⚠️ Pacchetto troppo vecchio: seq=$sequenceNumber, expected=$expected")
+                    println("[AdaptiveJitterBuffer] WARNING: Pacchetto troppo vecchio: seq=$sequenceNumber, expected=$expected")
                     return false
                 }
                 sequenceNumber > expected -> {
                     // Pacchetti persi nel mezzo
                     val lost = (sequenceNumber - expected).toInt()
                     packetsLost.addAndGet(lost.toLong())
-                    Log.w(TAG, "⚠️ Pacchetti persi: $lost (seq=$sequenceNumber, expected=$expected)")
+                    println("[AdaptiveJitterBuffer] WARNING: Pacchetti persi: $lost (seq=$sequenceNumber, expected=$expected)")
                 }
             }
         }
@@ -234,7 +232,7 @@ class AdaptiveJitterBuffer(
             }
             isBufferingComplete.set(true)
             _bufferState.value = BufferState.PLAYING
-            Log.d(TAG, "✅ Buffering completo: ${currentMs}ms")
+            println("[AdaptiveJitterBuffer] Buffering completo: ${currentMs}ms")
         }
 
         val packet = packetQueue.poll()
@@ -294,7 +292,7 @@ class AdaptiveJitterBuffer(
             clockSkewPpm = clockSkewSamples.average()
 
             if (abs(clockSkewPpm) > CLOCK_SKEW_THRESHOLD_PPM) {
-                Log.w(TAG, "⚠️ Clock skew rilevato: ${clockSkewPpm}ppm")
+                println("[AdaptiveJitterBuffer] WARNING: Clock skew rilevato: ${clockSkewPpm}ppm")
             }
         }
     }
@@ -326,7 +324,7 @@ class AdaptiveJitterBuffer(
             }
 
             currentTargetMs = (currentTargetMs + step).coerceIn(minBufferMs, maxBufferMs)
-            Log.d(TAG, "🎯 Target buffer adattato: ${currentTargetMs}ms (jitter p95: ${percentileJitter}ms)")
+            println("[AdaptiveJitterBuffer] Target buffer adattato: ${currentTargetMs}ms (jitter p95: ${percentileJitter}ms)")
         }
     }
 
@@ -405,7 +403,7 @@ class AdaptiveJitterBuffer(
         _bufferState.value = BufferState.BUFFERING
         _currentBufferMs.value = 0f
 
-        Log.d(TAG, "🔄 Jitter buffer reset")
+        println("[AdaptiveJitterBuffer] Jitter buffer reset")
     }
 
     /**
@@ -416,7 +414,7 @@ class AdaptiveJitterBuffer(
         isBufferingComplete.set(false)
         _bufferState.value = BufferState.BUFFERING
         _currentBufferMs.value = 0f
-        Log.d(TAG, "🚿 Jitter buffer flushed")
+        println("[AdaptiveJitterBuffer] Jitter buffer flushed")
     }
 
     /**

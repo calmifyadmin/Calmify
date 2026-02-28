@@ -2,7 +2,7 @@ package com.lifo.onboarding
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lifo.mongo.repository.ProfileSettingsRepository
+import com.lifo.util.repository.ProfileSettingsRepository
 import com.lifo.util.model.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow

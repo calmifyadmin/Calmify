@@ -1,6 +1,5 @@
 package com.lifo.app.integration.avatar
 
-import android.util.Log
 import com.lifo.chat.audio.GeminiNativeVoiceSystem
 import com.lifo.humanoid.api.HumanoidController
 import kotlinx.coroutines.CoroutineScope
@@ -29,10 +28,6 @@ class TTSLipSyncAdapter(
     private val voiceStateFlow: StateFlow<GeminiNativeVoiceSystem.VoiceState>,
     private val scope: CoroutineScope
 ) {
-    companion object {
-        private const val TAG = "TTSLipSyncAdapter"
-    }
-
     private var syncJob: Job? = null
 
     /**
@@ -41,7 +36,7 @@ class TTSLipSyncAdapter(
      * This function starts monitoring TTS playback events and controls lip-sync in real-time.
      */
     fun startSyncedLipSync(text: String) {
-        Log.d(TAG, "🎬 Starting synced lip-sync for: ${text.take(50)}...")
+        println("[TTSLipSyncAdapter] Starting synced lip-sync for: ${text.take(50)}...")
 
         val cleanText = cleanTextForLipSync(text)
 
@@ -54,7 +49,7 @@ class TTSLipSyncAdapter(
                 when (state.playbackState) {
                     GeminiNativeVoiceSystem.PlaybackState.STARTED -> {
                         // 🎬 Audio playback started - start lip-sync
-                        Log.d(TAG, "🎵 STARTED - Initiating lip-sync")
+                        println("[TTSLipSyncAdapter] STARTED - Initiating lip-sync")
                         // Use estimated duration initially (will be updated in FINISHING)
                         val estimatedDuration = estimateInitialDuration(cleanText)
                         humanoidController.speakText(cleanText, estimatedDuration)
@@ -62,13 +57,13 @@ class TTSLipSyncAdapter(
 
                     GeminiNativeVoiceSystem.PlaybackState.PLAYING -> {
                         // 🎵 Audio is playing - lip-sync should be active
-                        Log.d(TAG, "🎵 PLAYING - Bytes: ${state.totalBytesPlayed}")
+                        println("[TTSLipSyncAdapter] PLAYING - Bytes: ${state.totalBytesPlayed}")
                     }
 
                     GeminiNativeVoiceSystem.PlaybackState.FINISHING -> {
                         // 🎵 Audio data complete, use ACTUAL duration
                         val actualDuration = state.estimatedDurationMs
-                        Log.d(TAG, "🎵 FINISHING - Actual duration: ${actualDuration}ms")
+                        println("[TTSLipSyncAdapter] FINISHING - Actual duration: ${actualDuration}ms")
 
                         // Restart lip-sync with precise duration
                         humanoidController.stopSpeaking()
@@ -77,7 +72,7 @@ class TTSLipSyncAdapter(
 
                     GeminiNativeVoiceSystem.PlaybackState.ENDED -> {
                         // 🎵 Audio playback ended - stop lip-sync
-                        Log.d(TAG, "🎵 ENDED - Stopping lip-sync")
+                        println("[TTSLipSyncAdapter] ENDED - Stopping lip-sync")
                         humanoidController.stopSpeaking()
                         syncJob?.cancel() // Stop monitoring
                     }
@@ -94,7 +89,7 @@ class TTSLipSyncAdapter(
      * Stop lip sync and cancel synchronization.
      */
     fun stopLipSync() {
-        Log.d(TAG, "🛑 Stopping lip-sync")
+        println("[TTSLipSyncAdapter] Stopping lip-sync")
         syncJob?.cancel()
         humanoidController.stopSpeaking()
     }

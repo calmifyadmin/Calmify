@@ -3,7 +3,8 @@ package com.lifo.auth.navigation
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.lifo.auth.AuthenticationScreen
@@ -19,9 +20,9 @@ fun NavGraphBuilder.authenticationRoute(
     onDataLoaded: () -> Unit
 ) {
     composable(route = Screen.Authentication.route) {
-        val viewModel: AuthenticationViewModel = viewModel()
-        val authenticated by viewModel.authenticated
-        val loadingState by viewModel.loadingState
+        val viewModel: AuthenticationViewModel = hiltViewModel()
+        val authenticated by viewModel.authenticated.collectAsStateWithLifecycle()
+        val loadingState by viewModel.loadingState.collectAsStateWithLifecycle()
         val oneTapState = rememberOneTapSignInState()
         val messageBarState = rememberMessageBarState()
 

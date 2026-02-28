@@ -8,7 +8,7 @@ import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
-import android.util.Log
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
@@ -860,7 +860,7 @@ private fun startNaturalListening(
         }
 
         override fun onError(error: Int) {
-            Log.e("NaturalChatInput", "Speech recognition error: $error")
+            println("[NaturalChatInput] ERROR: Speech recognition error: $error")
             val errorMessage = when (error) {
                 SpeechRecognizer.ERROR_NETWORK -> "Errore di rete"
                 SpeechRecognizer.ERROR_NO_MATCH -> "Non ho capito, riprova"

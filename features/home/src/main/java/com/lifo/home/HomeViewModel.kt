@@ -1,8 +1,5 @@
 package com.lifo.home
 
-import android.os.Build
-import android.util.Log
-import androidx.annotation.RequiresApi
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -16,11 +13,10 @@ import com.lifo.home.domain.model.*
 import com.lifo.home.domain.usecase.*
 import com.lifo.mongo.database.dao.ImageToDeleteDao
 import com.lifo.mongo.database.entity.ImageToDelete
-import com.lifo.mongo.repository.Diaries
-import com.lifo.mongo.repository.MongoRepository
-import com.lifo.mongo.repository.UnifiedContentRepository
+import com.lifo.util.repository.Diaries
+import com.lifo.util.repository.MongoRepository
+import com.lifo.util.repository.UnifiedContentRepository
 import com.lifo.util.connectivity.ConnectivityObserver
-import com.lifo.util.connectivity.NetworkConnectivityObserver
 import com.lifo.util.model.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
@@ -61,14 +57,15 @@ data class DailyInsightData(
     val diaryCount: Int                  // Number of diaries for that day
 )
 
-@RequiresApi(Build.VERSION_CODES.N)
 @HiltViewModel
 internal class HomeViewModel @Inject constructor(
-    private val connectivity: NetworkConnectivityObserver,
+    private val connectivity: ConnectivityObserver,
+    private val auth: FirebaseAuth,
+    private val storage: FirebaseStorage,
     private val imageToDeleteDao: ImageToDeleteDao,
     private val unifiedContentRepository: UnifiedContentRepository,
     private val diaryRepository: MongoRepository,
-    private val insightRepository: com.lifo.mongo.repository.InsightRepository,
+    private val insightRepository: com.lifo.util.repository.InsightRepository,
     private val savedStateHandle: SavedStateHandle,
     // New Use Cases for Home Redesign
     private val calculateMoodDistributionUseCase: CalculateMoodDistributionUseCase,
@@ -79,7 +76,6 @@ internal class HomeViewModel @Inject constructor(
 ) : ViewModel() {
 
     companion object {
-        private const val TAG = "HomeViewModel"
         private const val KEY_DATE_SELECTED = "date_is_selected"
         private const val KEY_SELECTED_DATE = "selected_date"
         private const val RETRY_DELAY = 1000L
@@ -177,7 +173,7 @@ internal class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             connectivity.observe()
                 .catch { e ->
-                    Log.e(TAG, "Network observation error", e)
+                    println("[HomeViewModel] ERROR: Network observation error: ${e.message}")
                 }
                 .collect { status ->
                     _networkStatus.value = status
@@ -213,7 +209,7 @@ internal class HomeViewModel @Inject constructor(
                 )}
                 dateIsSelected = true
             } catch (e: Exception) {
-                Log.e(TAG, "Error restoring date", e)
+                println("[HomeViewModel] ERROR: Error restoring date: ${e.message}")
             }
         }
     }
@@ -280,10 +276,10 @@ internal class HomeViewModel @Inject constructor(
                 }
             } catch (e: CancellationException) {
                 // Expected cancellation when switching dates - don't log as error
-                Log.d(TAG, "Diaries loading cancelled (switching filters)")
+                println("[HomeViewModel] Diaries loading cancelled (switching filters)")
                 throw e // Re-throw to properly cancel the coroutine
             } catch (e: Exception) {
-                Log.e(TAG, "Error in getDiaries", e)
+                println("[HomeViewModel] ERROR: Error in getDiaries: ${e.message}")
                 handleError(e)
             }
         }
@@ -297,7 +293,7 @@ internal class HomeViewModel @Inject constructor(
             .catch { e ->
                 // Don't log cancellation as error - it's expected when switching filters
                 if (e !is CancellationException) {
-                    Log.e(TAG, "Error observing all diaries", e)
+                    println("[HomeViewModel] ERROR: Error observing all diaries: ${e.message}")
                     handleError(e)
                     emit(RequestState.Error(e as Exception))
                 } else {
@@ -314,7 +310,7 @@ internal class HomeViewModel @Inject constructor(
             .catch { e ->
                 // Don't log cancellation as error - it's expected when switching filters
                 if (e !is CancellationException) {
-                    Log.e(TAG, "Error observing filtered diaries", e)
+                    println("[HomeViewModel] ERROR: Error observing filtered diaries: ${e.message}")
                     handleError(e)
                     emit(RequestState.Error(e as Exception))
                 } else {
@@ -344,7 +340,7 @@ internal class HomeViewModel @Inject constructor(
     }
 
     private fun handleError(error: Throwable) {
-        Log.e(TAG, "Error loading diaries", error)
+        println("[HomeViewModel] ERROR: Error loading diaries: ${error.message}")
         val errorMessage = when {
             _networkStatus.value != ConnectivityObserver.Status.Available ->
                 "No internet connection"
@@ -364,9 +360,9 @@ internal class HomeViewModel @Inject constructor(
 
     fun getUserPhotoUrl(): String? {
         return try {
-            FirebaseAuth.getInstance().currentUser?.photoUrl?.toString()
+            auth.currentUser?.photoUrl?.toString()
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting user photo", e)
+            println("[HomeViewModel] ERROR: Error getting user photo: ${e.message}")
             null
         }
     }
@@ -387,12 +383,12 @@ internal class HomeViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
 
             try {
-                val userId = FirebaseAuth.getInstance().currentUser?.uid
+                val userId = auth.currentUser?.uid
                     ?: throw Exception("User not authenticated")
 
                 deleteAllDiariesInternal(userId, onSuccess, onError)
             } catch (e: Exception) {
-                Log.e(TAG, "Error in deleteAllDiaries", e)
+                println("[HomeViewModel] ERROR: Error in deleteAllDiaries: ${e.message}")
                 onError(e)
             } finally {
                 _uiState.update { it.copy(isLoading = false) }
@@ -406,11 +402,11 @@ internal class HomeViewModel @Inject constructor(
         onError: (Throwable) -> Unit
     ) {
         val imagesDirectory = "images/$userId"
-        val storage = FirebaseStorage.getInstance().reference
+        val storageRef = storage.reference
 
         try {
             // Delete images from Firebase Storage
-            val listResult = storage.child(imagesDirectory).listAll().await()
+            val listResult = storageRef.child(imagesDirectory).listAll().await()
 
             // Delete each image
             listResult.items.forEach { ref ->
@@ -443,12 +439,12 @@ internal class HomeViewModel @Inject constructor(
                         }
                     }
                     else -> {
-                        Log.w(TAG, "Unexpected state during deleteAllUserData")
+                        println("[HomeViewModel] WARN: Unexpected state during deleteAllUserData")
                     }
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error deleting all diaries", e)
+            println("[HomeViewModel] ERROR: Error deleting all diaries: ${e.message}")
             onError(e)
         }
     }
@@ -461,7 +457,7 @@ internal class HomeViewModel @Inject constructor(
     // UNIFIED CONTENT METHODS
     
     private fun getCurrentUserId(): String {
-        return FirebaseAuth.getInstance().currentUser?.uid 
+        return auth.currentUser?.uid
             ?: throw IllegalStateException("User not authenticated")
     }
 
@@ -504,7 +500,7 @@ internal class HomeViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error loading unified content", e)
+                println("[HomeViewModel] ERROR: Error loading unified content: ${e.message}")
                 _unifiedState.update {
                     it.copy(
                         isLoading = false,
@@ -536,7 +532,7 @@ internal class HomeViewModel @Inject constructor(
                         }
                     }
             } catch (e: Exception) {
-                Log.e(TAG, "Error refreshing unified content", e)
+                println("[HomeViewModel] ERROR: Error refreshing unified content: ${e.message}")
                 _unifiedState.update { 
                     it.copy(
                         isRefreshing = false,
@@ -572,12 +568,12 @@ internal class HomeViewModel @Inject constructor(
     // Navigation methods
     fun onDiaryItemClicked(diaryItem: HomeContentItem.DiaryItem) {
         // Will be handled by navigation in the UI layer
-        Log.d(TAG, "Diary item clicked: ${diaryItem.title}")
+        println("[HomeViewModel] Diary item clicked: ${diaryItem.title}")
     }
 
     fun onChatItemClicked(chatItem: HomeContentItem.ChatItem) {
         // Will be handled by navigation in the UI layer
-        Log.d(TAG, "Chat item clicked: ${chatItem.title}")
+        println("[HomeViewModel] Chat item clicked: ${chatItem.title}")
     }
 
     /**
@@ -611,12 +607,12 @@ internal class HomeViewModel @Inject constructor(
     fun loadDailyInsights() {
         viewModelScope.launch {
             try {
-                Log.d(TAG, "Loading daily insights for week offset: ${_currentWeekOffset.value}...")
+                println("[HomeViewModel] Loading daily insights for week offset: ${_currentWeekOffset.value}...")
                 insightRepository.getAllInsights().collect { result ->
                     when (result) {
                         is RequestState.Success -> {
                             val insights = result.data
-                            Log.d(TAG, "Loaded ${insights.size} insights from repository")
+                            println("[HomeViewModel] Loaded ${insights.size} insights from repository")
                             val now = ZonedDateTime.now()
 
                             // Calculate Monday of the target week
@@ -637,7 +633,7 @@ internal class HomeViewModel @Inject constructor(
                                     insight.dayKey == targetDayKey
                                 }
 
-                                Log.d(TAG, "Day $dayIndex ($targetDayKey): ${dayInsights.size} insights")
+                                println("[HomeViewModel] Day $dayIndex ($targetDayKey): ${dayInsights.size} insights")
 
                                 // Calculate average sentiment magnitude
                                 val avgMagnitude = if (dayInsights.isNotEmpty()) {
@@ -678,22 +674,22 @@ internal class HomeViewModel @Inject constructor(
                             }
 
                             _dailyInsights.value = dailyData
-                            Log.d(TAG, "Daily insights processed: ${dailyData.size} days (M-S)")
+                            println("[HomeViewModel] Daily insights processed: ${dailyData.size} days (M-S)")
                             dailyData.forEachIndexed { index, data ->
-                                Log.d(TAG, "Day $index: ${data.dayLabel}, magnitude: ${data.sentimentMagnitude}, emotion: ${data.dominantEmotion}, diaries: ${data.diaryCount}")
+                                println("[HomeViewModel] Day $index: ${data.dayLabel}, magnitude: ${data.sentimentMagnitude}, emotion: ${data.dominantEmotion}, diaries: ${data.diaryCount}")
                             }
                         }
                         is RequestState.Error -> {
-                            Log.e(TAG, "Error loading daily insights", result.error)
+                            println("[HomeViewModel] ERROR: Error loading daily insights: ${result.error.message}")
                         }
                         else -> {
                             // Loading state
-                            Log.d(TAG, "Loading daily insights...")
+                            println("[HomeViewModel] Loading daily insights...")
                         }
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error in loadDailyInsights", e)
+                println("[HomeViewModel] ERROR: Error in loadDailyInsights: ${e.message}")
             }
         }
     }
@@ -726,8 +722,8 @@ internal class HomeViewModel @Inject constructor(
                 calculateAchievements()
 
                 // Get user name
-                val userName = FirebaseAuth.getInstance().currentUser?.displayName
-                    ?: FirebaseAuth.getInstance().currentUser?.email?.substringBefore("@")
+                val userName = auth.currentUser?.displayName
+                    ?: auth.currentUser?.email?.substringBefore("@")
                     ?: "Utente"
 
                 // Update complete state
@@ -745,10 +741,10 @@ internal class HomeViewModel @Inject constructor(
                     )
                 }
 
-                Log.d(TAG, "Redesign data loaded successfully")
+                println("[HomeViewModel] Redesign data loaded successfully")
 
             } catch (e: Exception) {
-                Log.e(TAG, "Error loading redesign data", e)
+                println("[HomeViewModel] ERROR: Error loading redesign data: ${e.message}")
                 _homeRedesignState.update {
                     it.copy(
                         heroLoadingState = SectionLoadingState(
@@ -777,7 +773,7 @@ internal class HomeViewModel @Inject constructor(
             }
             result
         } catch (e: Exception) {
-            Log.e(TAG, "Error loading insights for redesign", e)
+            println("[HomeViewModel] ERROR: Error loading insights for redesign: ${e.message}")
             emptyList()
         }
     }
@@ -797,7 +793,7 @@ internal class HomeViewModel @Inject constructor(
             }
             result
         } catch (e: Exception) {
-            Log.e(TAG, "Error loading diaries for redesign", e)
+            println("[HomeViewModel] ERROR: Error loading diaries for redesign: ${e.message}")
             emptyList()
         }
     }
@@ -817,9 +813,9 @@ internal class HomeViewModel @Inject constructor(
                 )
             }
 
-            Log.d(TAG, "Today's pulse calculated: ${result.pulse.score}")
+            println("[HomeViewModel] Today's pulse calculated: ${result.pulse.score}")
         } catch (e: Exception) {
-            Log.e(TAG, "Error calculating today's pulse", e)
+            println("[HomeViewModel] ERROR: Error calculating today's pulse: ${e.message}")
         }
     }
 
@@ -832,9 +828,9 @@ internal class HomeViewModel @Inject constructor(
             _moodDistribution.value = distribution
             _dominantMood.value = dominant
 
-            Log.d(TAG, "Mood distribution calculated: positive=${distribution.positive}, neutral=${distribution.neutral}, negative=${distribution.negative}")
+            println("[HomeViewModel] Mood distribution calculated: positive=${distribution.positive}, neutral=${distribution.neutral}, negative=${distribution.negative}")
         } catch (e: Exception) {
-            Log.e(TAG, "Error calculating mood distribution", e)
+            println("[HomeViewModel] ERROR: Error calculating mood distribution: ${e.message}")
         }
     }
 
@@ -844,9 +840,9 @@ internal class HomeViewModel @Inject constructor(
             val result = aggregateCognitivePatternsUseCase(cachedInsights, timeRange)
             _cognitivePatterns.value = result.patterns
 
-            Log.d(TAG, "Cognitive patterns calculated: ${result.patterns.size} patterns found")
+            println("[HomeViewModel] Cognitive patterns calculated: ${result.patterns.size} patterns found")
         } catch (e: Exception) {
-            Log.e(TAG, "Error calculating cognitive patterns", e)
+            println("[HomeViewModel] ERROR: Error calculating cognitive patterns: ${e.message}")
         }
     }
 
@@ -857,9 +853,9 @@ internal class HomeViewModel @Inject constructor(
             _topicsFrequency.value = result.topics
             _emergingTopic.value = result.emergingTopic
 
-            Log.d(TAG, "Topics frequency calculated: ${result.topics.size} topics, emerging: ${result.emergingTopic?.topic}")
+            println("[HomeViewModel] Topics frequency calculated: ${result.topics.size} topics, emerging: ${result.emergingTopic?.topic}")
         } catch (e: Exception) {
-            Log.e(TAG, "Error calculating topics frequency", e)
+            println("[HomeViewModel] ERROR: Error calculating topics frequency: ${e.message}")
         }
     }
 
@@ -874,9 +870,9 @@ internal class HomeViewModel @Inject constructor(
             )
             _achievementsState.value = result
 
-            Log.d(TAG, "Achievements calculated: streak=${result.streak.currentStreak}, badges=${result.earnedBadges.size}")
+            println("[HomeViewModel] Achievements calculated: streak=${result.streak.currentStreak}, badges=${result.earnedBadges.size}")
         } catch (e: Exception) {
-            Log.e(TAG, "Error calculating achievements", e)
+            println("[HomeViewModel] ERROR: Error calculating achievements: ${e.message}")
         }
     }
 
@@ -906,10 +902,14 @@ internal class HomeViewModel @Inject constructor(
      * Get user's first name for greeting
      */
     fun getUserFirstName(): String {
-        return FirebaseAuth.getInstance().currentUser?.displayName
+        return auth.currentUser?.displayName
             ?.split(" ")?.firstOrNull()
-            ?: FirebaseAuth.getInstance().currentUser?.email?.substringBefore("@")
+            ?: auth.currentUser?.email?.substringBefore("@")
             ?: "Utente"
+    }
+
+    fun signOut() {
+        auth.signOut()
     }
 
     override fun onCleared() {

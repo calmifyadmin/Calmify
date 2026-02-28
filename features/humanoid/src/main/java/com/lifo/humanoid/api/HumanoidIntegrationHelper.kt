@@ -1,7 +1,5 @@
 package com.lifo.humanoid.api
 
-import android.util.Log
-
 /**
  * Helper class for integrating HumanoidController with external modules.
  *
@@ -17,8 +15,6 @@ import android.util.Log
  */
 object HumanoidIntegrationHelper {
 
-    private const val TAG = "HumanoidIntegration"
-
     /**
      * Create a gesture callback that can be attached to any ViewModel
      * that needs to trigger avatar animations via string names.
@@ -28,7 +24,7 @@ object HumanoidIntegrationHelper {
      */
     fun createGestureCallback(controller: HumanoidController): (String) -> Unit {
         return { animationName ->
-            Log.d(TAG, "🎭 Gesture callback triggered: $animationName")
+            println("[HumanoidIntegration] Gesture callback triggered: $animationName")
             controller.playAnimationByName(animationName)
         }
     }
@@ -45,7 +41,7 @@ object HumanoidIntegrationHelper {
         onUnknownAnimation: ((String) -> Unit)? = null
     ): (String) -> Unit {
         return { animationName ->
-            Log.d(TAG, "🎭 Gesture callback triggered: $animationName")
+            println("[HumanoidIntegration] Gesture callback triggered: $animationName")
             val success = controller.playAnimationByName(animationName)
             if (!success) {
                 onUnknownAnimation?.invoke(animationName)

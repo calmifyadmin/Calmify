@@ -1,6 +1,5 @@
 package com.lifo.humanoid.data.vrm
 
-import android.util.Log
 import com.google.android.filament.Engine
 import com.google.android.filament.gltfio.FilamentAsset
 import com.google.gson.JsonObject
@@ -12,10 +11,6 @@ import com.google.gson.JsonObject
  * Reference: https://github.com/vrm-c/vrm-specification/blob/master/specification/0.0/schema/vrm.humanoid.bone.schema.json
  */
 class VrmHumanoidBoneMapper {
-
-    companion object {
-        private const val TAG = "VrmHumanoidBoneMapper"
-    }
 
     /**
      * VRM Humanoid bone names (VRM 0.x specification)
@@ -211,7 +206,7 @@ class VrmHumanoidBoneMapper {
 
                 if (humanoidBone != null && !boneEntityMap.containsKey(humanoidBone)) {
                     boneEntityMap[humanoidBone] = entity
-                    Log.d(TAG, "Auto-mapped bone ${humanoidBone.name} from node name '$name' -> entity $entity")
+                    println("[VrmHumanoidBoneMapper] Auto-mapped bone ${humanoidBone.name} from node name '$name' -> entity $entity")
                 }
             }
         }
@@ -227,18 +222,18 @@ class VrmHumanoidBoneMapper {
             }
         }
 
-        Log.d(TAG, "=== VrmHumanoidBoneMapper Initialization ===")
-        Log.d(TAG, "Total nodes: ${nodeNameToEntityMap.size}")
-        Log.d(TAG, "Auto-mapped humanoid bones: ${boneEntityMap.size}")
-        Log.d(TAG, "Mapped bones:")
+        println("[VrmHumanoidBoneMapper] === VrmHumanoidBoneMapper Initialization ===")
+        println("[VrmHumanoidBoneMapper] Total nodes: ${nodeNameToEntityMap.size}")
+        println("[VrmHumanoidBoneMapper] Auto-mapped humanoid bones: ${boneEntityMap.size}")
+        println("[VrmHumanoidBoneMapper] Mapped bones:")
         boneEntityMap.forEach { (bone, entity) ->
-            Log.d(TAG, "  ${bone.vrmName} -> entity $entity")
+            println("[VrmHumanoidBoneMapper]   ${bone.vrmName} -> entity $entity")
         }
-        Log.d(TAG, "Node names sample (first 10):")
+        println("[VrmHumanoidBoneMapper] Node names sample (first 10):")
         nodeNameToEntityMap.keys.take(10).forEach { name ->
-            Log.d(TAG, "  '$name' -> entity ${nodeNameToEntityMap[name]}")
+            println("[VrmHumanoidBoneMapper]   '$name' -> entity ${nodeNameToEntityMap[name]}")
         }
-        Log.d(TAG, "=== End Initialization ===")
+        println("[VrmHumanoidBoneMapper] === End Initialization ===")
     }
 
     /**
@@ -315,7 +310,7 @@ class VrmHumanoidBoneMapper {
         nodeToEntityMap.clear()
 
         if (vrmHumanoidData == null) {
-            Log.w(TAG, "No VRM humanoid data provided")
+            println("[VrmHumanoidBoneMapper] WARNING: No VRM humanoid data provided")
             return emptyMap()
         }
 
@@ -327,7 +322,7 @@ class VrmHumanoidBoneMapper {
         // Parse humanBones array from VRM extension
         val humanBones = vrmHumanoidData.getAsJsonArray("humanBones")
         if (humanBones == null) {
-            Log.w(TAG, "No humanBones array in VRM humanoid data")
+            println("[VrmHumanoidBoneMapper] WARNING: No humanBones array in VRM humanoid data")
             return emptyMap()
         }
 
@@ -342,19 +337,19 @@ class VrmHumanoidBoneMapper {
                     val entity = nodeToEntityMap[nodeIndex]
                     if (entity != null) {
                         boneEntityMap[humanoidBone] = entity
-                        Log.d(TAG, "Mapped bone $boneName (${humanoidBone.name}) -> entity $entity (node $nodeIndex)")
+                        println("[VrmHumanoidBoneMapper] Mapped bone $boneName (${humanoidBone.name}) -> entity $entity (node $nodeIndex)")
                     } else {
-                        Log.w(TAG, "No entity found for node index $nodeIndex (bone: $boneName)")
+                        println("[VrmHumanoidBoneMapper] WARNING: No entity found for node index $nodeIndex (bone: $boneName)")
                     }
                 } else {
-                    Log.w(TAG, "Unknown humanoid bone name: $boneName")
+                    println("[VrmHumanoidBoneMapper] WARNING: Unknown humanoid bone name: $boneName")
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error parsing bone element", e)
+                println("[VrmHumanoidBoneMapper] ERROR: Error parsing bone element: ${e.message}")
             }
         }
 
-        Log.d(TAG, "Total bones mapped: ${boneEntityMap.size}")
+        println("[VrmHumanoidBoneMapper] Total bones mapped: ${boneEntityMap.size}")
         return boneEntityMap.toMap()
     }
 

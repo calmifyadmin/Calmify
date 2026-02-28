@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.lifo.home.components.*
-import com.lifo.mongo.repository.Diaries
+import com.lifo.util.repository.Diaries
 import com.lifo.ui.components.loading.*
 import com.lifo.util.model.RequestState
 import com.lifo.util.model.HomeContentItem

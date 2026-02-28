@@ -11,7 +11,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -86,10 +85,13 @@ class MainActivity : ComponentActivity() {
     lateinit var geminiNativeVoiceSystem: GeminiNativeVoiceSystem // Assuming you inject this too
 
     @Inject
-    lateinit var mongoRepository: com.lifo.mongo.repository.MongoRepository // For FCM token
+    lateinit var mongoRepository: com.lifo.util.repository.MongoRepository // For FCM token
 
     @Inject
-    lateinit var profileSettingsRepository: com.lifo.mongo.repository.ProfileSettingsRepository // For onboarding check
+    lateinit var profileSettingsRepository: com.lifo.util.repository.ProfileSettingsRepository // For onboarding check
+
+    @Inject
+    lateinit var auth: FirebaseAuth
 
     // App state management
     private val _appState = MutableStateFlow<AppState>(AppState.Initializing)
@@ -114,9 +116,9 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            Log.d("MainActivity", "Notification permission granted")
+            println("[MainActivity] Notification permission granted")
         } else {
-            Log.w("MainActivity", "Notification permission denied")
+            println("[MainActivity] WARNING: Notification permission denied")
         }
     }
 
@@ -159,19 +161,19 @@ class MainActivity : ComponentActivity() {
             // Set the API keys if they are not empty
             if (geminiApiKey.isNotEmpty()) {
                 apiConfigManager.setGeminiApiKey(geminiApiKey)
-                Log.d("MainActivity", "Gemini API key configured from BuildConfig")
+                println("[MainActivity] Gemini API key configured from BuildConfig")
             } else {
-                Log.w("MainActivity", "Gemini API key is empty in BuildConfig")
+                println("[MainActivity] WARNING: Gemini API key is empty in BuildConfig")
             }
 
             if (openAIApiKey.isNotEmpty()) {
                 apiConfigManager.setOpenAIApiKey(openAIApiKey)
-                Log.d("MainActivity", "OpenAI API key configured from BuildConfig")
+                println("[MainActivity] OpenAI API key configured from BuildConfig")
             } else {
-                Log.w("MainActivity", "OpenAI API key is empty in BuildConfig")
+                println("[MainActivity] WARNING: OpenAI API key is empty in BuildConfig")
             }
         } catch (e: Exception) {
-            Log.e("MainActivity", "Failed to load API keys from BuildConfig", e)
+            println("[MainActivity] ERROR: Failed to load API keys from BuildConfig: ${e.message}")
             // In production, you might want to handle this more gracefully
         }
         lifecycleScope.launch {
@@ -214,6 +216,7 @@ class MainActivity : ComponentActivity() {
                                 CalmifyApp(
                                     startDestination = getStartDestination(),
                                     repository = mongoRepository,
+                                    auth = auth,
                                     deepLinkRoute = deepLinkRoute,
                                     onDeepLinkHandled = {
                                         // Clear deep link after navigation
@@ -221,7 +224,7 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onDataLoaded = {
                                         // Data loaded callback - can be used for analytics
-                                        Log.d("MainActivity", "Navigation data loaded")
+                                        println("[MainActivity] Navigation data loaded")
                                     }
                                 )
                             }
@@ -249,7 +252,7 @@ class MainActivity : ComponentActivity() {
             }
 
             // Check onboarding completion status
-            val user = FirebaseAuth.getInstance().currentUser
+            val user = auth.currentUser
             if (user != null) {
                 withContext(Dispatchers.IO) {
                     val result = profileSettingsRepository.hasCompletedOnboarding()
@@ -286,7 +289,7 @@ class MainActivity : ComponentActivity() {
             registerFCMToken()
 
         } catch (e: Exception) {
-            Log.e("MainActivity", "Error initializing app", e)
+            println("[MainActivity] ERROR: Error initializing app: ${e.message}")
             _appState.value = AppState.Error(
                 message = "Failed to initialize app",
                 retry = {
@@ -302,7 +305,7 @@ class MainActivity : ComponentActivity() {
 
     private fun getStartDestination(): String {
         return try {
-            val user = FirebaseAuth.getInstance().currentUser
+            val user = auth.currentUser
             if (user != null) {
                 // User is authenticated, check onboarding status
                 val onboardingComplete = _hasCompletedOnboarding.value ?: false
@@ -315,7 +318,7 @@ class MainActivity : ComponentActivity() {
                 Screen.Authentication.route
             }
         } catch (e: Exception) {
-            Log.e("MainActivity", "Error checking user status", e)
+            println("[MainActivity] ERROR: Error checking user status: ${e.message}")
             Screen.Authentication.route
         }
     }
@@ -377,7 +380,7 @@ class MainActivity : ComponentActivity() {
                 listOf(insightsChannel, remindersChannel, wellnessChannel, crisisChannel)
             )
 
-            Log.d("MainActivity", "Notification channels created successfully")
+            println("[MainActivity] Notification channels created successfully")
         }
     }
 
@@ -391,7 +394,7 @@ class MainActivity : ComponentActivity() {
                     this,
                     Manifest.permission.POST_NOTIFICATIONS
                 ) == PackageManager.PERMISSION_GRANTED -> {
-                    Log.d("MainActivity", "Notification permission already granted")
+                    println("[MainActivity] Notification permission already granted")
                 }
                 else -> {
                     // Request permission
@@ -405,20 +408,20 @@ class MainActivity : ComponentActivity() {
      * Register FCM token with Firestore (Week 8)
      */
     private fun registerFCMToken() {
-        val userId = FirebaseAuth.getInstance().currentUser?.uid
+        val userId = auth.currentUser?.uid
         if (userId == null) {
-            Log.d("MainActivity", "User not authenticated, skipping FCM token registration")
+            println("[MainActivity] User not authenticated, skipping FCM token registration")
             return
         }
 
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
             if (!task.isSuccessful) {
-                Log.w("MainActivity", "Fetching FCM token failed", task.exception)
+                println("[MainActivity] WARNING: Fetching FCM token failed: ${task.exception?.message}")
                 return@addOnCompleteListener
             }
 
             val token = task.result
-            Log.d("MainActivity", "FCM token obtained: ${token.take(20)}...")
+            println("[MainActivity] FCM token obtained: ${token.take(20)}...")
 
             // Save to Firestore using repository
             lifecycleScope.launch {
@@ -426,17 +429,17 @@ class MainActivity : ComponentActivity() {
                     val result = mongoRepository.saveFCMToken(token)
                     when (result) {
                         is com.lifo.util.model.RequestState.Success -> {
-                            Log.d("MainActivity", "FCM token saved to Firestore")
+                            println("[MainActivity] FCM token saved to Firestore")
                         }
                         is com.lifo.util.model.RequestState.Error -> {
-                            Log.e("MainActivity", "Failed to save FCM token", result.error)
+                            println("[MainActivity] ERROR: Failed to save FCM token: ${result.error.message}")
                         }
                         else -> {
-                            Log.w("MainActivity", "FCM token save in unexpected state")
+                            println("[MainActivity] WARNING: FCM token save in unexpected state")
                         }
                     }
                 } catch (e: Exception) {
-                    Log.e("MainActivity", "Error saving FCM token", e)
+                    println("[MainActivity] ERROR: Error saving FCM token: ${e.message}")
                 }
             }
         }
@@ -453,7 +456,7 @@ class MainActivity : ComponentActivity() {
      */
     private fun handleDeepLink(intent: Intent?) {
         intent?.getStringExtra("navigate_to")?.let { route ->
-            Log.d("MainActivity", "Deep link navigation to: $route")
+            println("[MainActivity] Deep link navigation to: $route")
             _deepLinkTarget.value = route
         }
     }
@@ -601,7 +604,7 @@ private fun cleanupCheck(
                             try {
                                 imageToUploadDao.cleanupImage(imageId = imageToUpload.id)
                             } catch (e: Exception) {
-                                Log.e("MainActivity", "Error cleaning up uploaded image", e)
+                                println("[MainActivity] ERROR: Error cleaning up uploaded image: ${e.message}")
                             }
                         }
                     }
@@ -618,14 +621,14 @@ private fun cleanupCheck(
                             try {
                                 imageToDeleteDao.cleanupImage(imageId = imageToDelete.id)
                             } catch (e: Exception) {
-                                Log.e("MainActivity", "Error cleaning up deleted image", e)
+                                println("[MainActivity] ERROR: Error cleaning up deleted image: ${e.message}")
                             }
                         }
                     }
                 )
             }
         } catch (e: Exception) {
-            Log.e("MainActivity", "Error during cleanup check", e)
+            println("[MainActivity] ERROR: Error during cleanup check: ${e.message}")
         }
     }
 }
@@ -639,19 +642,19 @@ fun retryUploadingImageToFirebase(
         val imageUri = Uri.parse(imageToUpload.imageUri)
         val sessionUri = Uri.parse(imageToUpload.sessionUri)
 
-        Log.d("MainActivity", "Attempting to retry upload for: ${imageToUpload.remoteImagePath}")
+        println("[MainActivity] Attempting to retry upload for: ${imageToUpload.remoteImagePath}")
 
         storage.child(imageToUpload.remoteImagePath)
             .putFile(imageUri, StorageMetadata.Builder().build(), sessionUri)
             .addOnSuccessListener {
-                Log.d("MainActivity", "Successfully uploaded: ${imageToUpload.remoteImagePath}")
+                println("[MainActivity] Successfully uploaded: ${imageToUpload.remoteImagePath}")
                 onSuccess()
             }
             .addOnFailureListener { e ->
-                Log.e("MainActivity", "Failed to upload: ${imageToUpload.remoteImagePath}", e)
+                println("[MainActivity] ERROR: Failed to upload: ${imageToUpload.remoteImagePath}: ${e.message}")
             }
     } catch (e: Exception) {
-        Log.e("MainActivity", "Critical error during retry upload", e)
+        println("[MainActivity] ERROR: Critical error during retry upload: ${e.message}")
     }
 }
 
@@ -666,10 +669,10 @@ fun retryDeletingImageFromFirebase(
                 onSuccess()
             }
             .addOnFailureListener { e ->
-                Log.e("MainActivity", "Failed to delete: ${imageToDelete.remoteImagePath}", e)
+                println("[MainActivity] ERROR: Failed to delete: ${imageToDelete.remoteImagePath}: ${e.message}")
             }
     } catch (e: Exception) {
-        Log.e("MainActivity", "Error during delete retry", e)
+        println("[MainActivity] ERROR: Error during delete retry: ${e.message}")
     }
 }
 

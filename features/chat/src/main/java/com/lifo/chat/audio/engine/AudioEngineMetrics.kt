@@ -1,6 +1,6 @@
 package com.lifo.chat.audio.engine
 
-import android.util.Log
+
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,8 +26,6 @@ import java.util.concurrent.atomic.AtomicLong
 class AudioEngineMetrics {
 
     companion object {
-        private const val TAG = "AudioEngineMetrics"
-
         // Soglie per health score
         private const val EXCELLENT_LATENCY_MS = 100f
         private const val GOOD_LATENCY_MS = 150f
@@ -274,7 +272,7 @@ class AudioEngineMetrics {
 
         // Log se health degradato
         if (grade == HealthGrade.POOR || grade == HealthGrade.CRITICAL) {
-            Log.w(TAG, "⚠️ Audio health degradato: $grade - $issueDescription")
+            println("[AudioEngineMetrics] WARNING: Audio health degradato: $grade - $issueDescription")
         }
     }
 
@@ -363,7 +361,7 @@ class AudioEngineMetrics {
 
         _metrics.value = MetricsSnapshot()
 
-        Log.d(TAG, "🔄 Metriche reset")
+        println("[AudioEngineMetrics] Metriche reset")
     }
 
     /**

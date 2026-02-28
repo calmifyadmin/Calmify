@@ -1,7 +1,6 @@
 package com.lifo.humanoid.animation
 
 import android.content.Context
-import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import java.nio.ByteBuffer
@@ -61,8 +60,6 @@ class VrmaAnimationLoader(private val context: Context) {
     }
 
     companion object {
-        private const val TAG = "VrmaAnimationLoader"
-
         // glTF magic number "glTF" in ASCII
         private const val GLTF_MAGIC = 0x46546C67
 
@@ -97,12 +94,12 @@ class VrmaAnimationLoader(private val context: Context) {
      */
     suspend fun loadAnimationFromPath(assetPath: String): VrmaAnimation? {
         return try {
-            Log.d(TAG, "Loading VRMA animation: $assetPath")
+            println("[VrmaAnimationLoader] Loading VRMA animation: $assetPath")
 
             // Read file from assets
             val buffer = context.assets.open(assetPath).use { inputStream ->
                 val bytes = inputStream.readBytes()
-                Log.d(TAG, "Read ${bytes.size} bytes from $assetPath")
+                println("[VrmaAnimationLoader] Read ${bytes.size} bytes from $assetPath")
 
                 ByteBuffer.allocateDirect(bytes.size).apply {
                     order(ByteOrder.LITTLE_ENDIAN)
@@ -114,7 +111,7 @@ class VrmaAnimationLoader(private val context: Context) {
             // Parse glTF structure
             parseVrmaFile(buffer, assetPath)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to load VRMA animation: $assetPath", e)
+            println("[VrmaAnimationLoader] ERROR: Failed to load VRMA animation: $assetPath: ${e.message}")
             null
         }
     }
@@ -128,19 +125,19 @@ class VrmaAnimationLoader(private val context: Context) {
         // Read glTF header
         val magic = buffer.int
         if (magic != GLTF_MAGIC) {
-            Log.e(TAG, "Invalid glTF magic: 0x${magic.toString(16)}")
+            println("[VrmaAnimationLoader] ERROR: Invalid glTF magic: 0x${magic.toString(16)}")
             return null
         }
 
         val version = buffer.int
         val length = buffer.int
-        Log.d(TAG, "glTF version: $version, total length: $length")
+        println("[VrmaAnimationLoader] glTF version: $version, total length: $length")
 
         // Read JSON chunk
         val jsonChunkLength = buffer.int
         val jsonChunkType = buffer.int
         if (jsonChunkType != JSON_CHUNK_TYPE) {
-            Log.e(TAG, "Expected JSON chunk, got: 0x${jsonChunkType.toString(16)}")
+            println("[VrmaAnimationLoader] ERROR: Expected JSON chunk, got: 0x${jsonChunkType.toString(16)}")
             return null
         }
 
@@ -160,7 +157,7 @@ class VrmaAnimationLoader(private val context: Context) {
                 val binBytes = ByteArray(binChunkLength)
                 buffer.get(binBytes)
                 binaryData = ByteBuffer.wrap(binBytes).order(ByteOrder.LITTLE_ENDIAN)
-                Log.d(TAG, "Read binary chunk: $binChunkLength bytes")
+                println("[VrmaAnimationLoader] Read binary chunk: $binChunkLength bytes")
             }
         }
 
@@ -181,12 +178,12 @@ class VrmaAnimationLoader(private val context: Context) {
         val vrmAnimExt = extensions?.getAsJsonObject("VRMC_vrm_animation")
 
         val isVrma = vrmAnimExt != null
-        Log.d(TAG, "VRMC_vrm_animation extension present: $isVrma")
+        println("[VrmaAnimationLoader] VRMC_vrm_animation extension present: $isVrma")
 
         // Parse animations array
         val animations = gltf.getAsJsonArray("animations")
         if (animations == null || animations.size() == 0) {
-            Log.w(TAG, "No animations found in file")
+            println("[VrmaAnimationLoader] WARNING: No animations found in file")
             return null
         }
 
@@ -290,29 +287,29 @@ class VrmaAnimationLoader(private val context: Context) {
                 fileName.contains("idle", ignoreCase = true)
 
         // Log detailed debug info for animation
-        Log.d(TAG, "=== Animation Debug Info ===")
-        Log.d(TAG, "Animation: '$displayName' from file '$fileName'")
-        Log.d(TAG, "Duration: ${maxDuration}s, Looping: $shouldLoop")
-        Log.d(TAG, "Tracks: ${tracks.size}")
-        Log.d(TAG, "Humanoid bone mapping: ${humanoidBoneMap.size} entries")
+        println("[VrmaAnimationLoader] === Animation Debug Info ===")
+        println("[VrmaAnimationLoader] Animation: '$displayName' from file '$fileName'")
+        println("[VrmaAnimationLoader] Duration: ${maxDuration}s, Looping: $shouldLoop")
+        println("[VrmaAnimationLoader] Tracks: ${tracks.size}")
+        println("[VrmaAnimationLoader] Humanoid bone mapping: ${humanoidBoneMap.size} entries")
         humanoidBoneMap.forEach { (vrmBoneName, animNodeName) ->
-            Log.d(TAG, "  $vrmBoneName -> $animNodeName")
+            println("[VrmaAnimationLoader]   $vrmBoneName -> $animNodeName")
         }
 
         // Log rest pose data
         if (restPoseData.first != null) {
-            Log.d(TAG, "Rest hips position: [${restPoseData.first!!.joinToString()}]")
+            println("[VrmaAnimationLoader] Rest hips position: [${restPoseData.first!!.joinToString()}]")
         }
-        Log.d(TAG, "Bone world quaternions: ${restPoseData.second.size} bones")
+        println("[VrmaAnimationLoader] Bone world quaternions: ${restPoseData.second.size} bones")
 
         // Log track details
         tracks.take(10).forEach { track ->
-            Log.d(TAG, "Track: nodeName='${track.nodeName}', path=${track.path}, keyframes=${track.keyframes.size}")
+            println("[VrmaAnimationLoader] Track: nodeName='${track.nodeName}', path=${track.path}, keyframes=${track.keyframes.size}")
         }
         if (tracks.size > 10) {
-            Log.d(TAG, "... and ${tracks.size - 10} more tracks")
+            println("[VrmaAnimationLoader] ... and ${tracks.size - 10} more tracks")
         }
-        Log.d(TAG, "=== End Animation Debug ===")
+        println("[VrmaAnimationLoader] === End Animation Debug ===")
 
         return VrmaAnimation(
             name = displayName,
@@ -396,7 +393,7 @@ class VrmaAnimationLoader(private val context: Context) {
                 val nodeName = nodes[nodeIndex].asJsonObject?.get("name")?.asString
                 if (nodeName != null) {
                     mapping[boneName] = nodeName
-                    Log.d(TAG, "Humanoid bone mapping: $boneName -> $nodeName (node $nodeIndex)")
+                    println("[VrmaAnimationLoader] Humanoid bone mapping: $boneName -> $nodeName (node $nodeIndex)")
                 }
             }
         }
@@ -468,13 +465,13 @@ class VrmaAnimationLoader(private val context: Context) {
                 val worldQuat = calculateWorldQuaternion(nodeIndex, nodeTransforms, nodeParents)
                 boneWorldQuaternions[vrmBoneName] = worldQuat
 
-                Log.d(TAG, "Bone '$vrmBoneName' world quaternion: [${worldQuat.joinToString { "%.4f".format(it) }}]")
+                println("[VrmaAnimationLoader] Bone '$vrmBoneName' world quaternion: [${worldQuat.joinToString { "%.4f".format(it) }}]")
 
                 // For hips, also calculate and store the parent's world quaternion
                 if (vrmBoneName == "hips") {
                     val worldPos = calculateWorldPosition(nodeIndex, nodeTransforms, nodeParents)
                     hipsPosition = worldPos
-                    Log.d(TAG, "Hips world position: [${worldPos.joinToString()}]")
+                    println("[VrmaAnimationLoader] Hips world position: [${worldPos.joinToString()}]")
 
                     // CRITICAL: Calculate hipsParent world quaternion (following amica pattern)
                     val hipsParentIndex = nodeParents[nodeIndex]
@@ -485,12 +482,12 @@ class VrmaAnimationLoader(private val context: Context) {
                         floatArrayOf(0f, 0f, 0f, 1f)
                     }
                     boneWorldQuaternions["hipsParent"] = hipsParentWorldQuat
-                    Log.d(TAG, "HipsParent world quaternion: [${hipsParentWorldQuat.joinToString { "%.4f".format(it) }}]")
+                    println("[VrmaAnimationLoader] HipsParent world quaternion: [${hipsParentWorldQuat.joinToString { "%.4f".format(it) }}]")
                 }
             }
         }
 
-        Log.d(TAG, "Extracted rest pose data for ${boneWorldQuaternions.size} bones (including hipsParent)")
+        println("[VrmaAnimationLoader] Extracted rest pose data for ${boneWorldQuaternions.size} bones (including hipsParent)")
         return Pair(hipsPosition, boneWorldQuaternions)
     }
 

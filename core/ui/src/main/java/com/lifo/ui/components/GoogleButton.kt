@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
@@ -29,7 +30,7 @@ fun GoogleButton(
     loadingState: Boolean = false,
     primaryText: String = "Sign in with Google",
     secondaryText: String = "Please wait...",
-    icon: Int = R.drawable.google_logo_ic,
+    iconPainter: Painter,
     shape: Shape = Shapes().extraSmall,
     borderColor: Color = MaterialTheme.colorScheme.surfaceVariant,
     backgroundColor: Color = MaterialTheme.colorScheme.surface,
@@ -64,7 +65,7 @@ fun GoogleButton(
             horizontalArrangement = Arrangement.Center
         ) {
             Icon(
-                painter = painterResource(id = icon),
+                painter = iconPainter,
                 contentDescription = "Google Logo",
                 tint = Color.Unspecified
             )
@@ -89,11 +90,14 @@ fun GoogleButton(
 @Composable
 @Preview
 fun GoogleButtonPreview() {
-    GoogleButton {}
+    GoogleButton(iconPainter = painterResource(id = R.drawable.google_logo_ic)) {}
 }
 
 @Composable
 @Preview
 fun GoogleButtonPreview2() {
-    GoogleButton(loadingState = true) {}
+    GoogleButton(
+        iconPainter = painterResource(id = R.drawable.google_logo_ic),
+        loadingState = true
+    ) {}
 }

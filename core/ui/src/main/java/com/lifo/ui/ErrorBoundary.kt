@@ -1,4 +1,5 @@
-import android.util.Log
+package com.lifo.ui
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -31,7 +32,7 @@ fun ErrorBoundary(
 
     val errorHandler = remember {
         CoroutineExceptionHandler { _, throwable ->
-            Log.e("ErrorBoundary", "Error caught in composable", throwable)
+            println("ErrorBoundary: Error caught in composable: $throwable")
             hasError = true
             errorMessage = throwable.message ?: "Unknown error occurred"
         }
@@ -75,7 +76,7 @@ fun ErrorBoundary(
                     // impostare uno stato che controlla cosa viene visualizzato
                 }
             } catch (e: Exception) {
-                Log.e("ErrorBoundary", "Exception in LaunchedEffect", e)
+                println("ErrorBoundary: Exception in LaunchedEffect: $e")
                 hasError = true
                 errorMessage = e.message
             }

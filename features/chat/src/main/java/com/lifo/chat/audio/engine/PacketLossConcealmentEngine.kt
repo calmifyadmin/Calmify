@@ -1,6 +1,6 @@
 package com.lifo.chat.audio.engine
 
-import android.util.Log
+
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.abs
@@ -42,8 +42,6 @@ class PacketLossConcealmentEngine(
     private val historyFrames: Int = HISTORY_FRAMES
 ) {
     companion object {
-        private const val TAG = "PLCEngine"
-
         // Frame size: 20ms @ 24kHz = 480 samples
         const val DEFAULT_FRAME_SIZE = 480
         const val HISTORY_FRAMES = 4 // 80ms di storia
@@ -141,7 +139,7 @@ class PacketLossConcealmentEngine(
 
         // Reset consecutive lost
         if (consecutiveLostFrames > 0) {
-            Log.d(TAG, "✅ Ripresa dopo $consecutiveLostFrames frame persi")
+            println("[PLCEngine] Ripresa dopo $consecutiveLostFrames frame persi")
         }
         consecutiveLostFrames = 0
         currentAttenuation = 1.0f
@@ -484,7 +482,7 @@ class PacketLossConcealmentEngine(
 
         pinkNoiseState.fill(0f)
 
-        Log.d(TAG, "🔄 PLC Engine reset")
+        println("[PLCEngine] PLC Engine reset")
     }
 
     /**

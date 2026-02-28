@@ -3,7 +3,7 @@ package com.lifo.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
-import com.lifo.mongo.repository.ProfileRepository
+import com.lifo.util.repository.ProfileRepository
 import com.lifo.util.model.PsychologicalProfile
 import com.lifo.util.model.RequestState
 import com.lifo.util.model.getWeekLabel
