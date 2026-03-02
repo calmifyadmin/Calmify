@@ -8,8 +8,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Adapter that wraps GeminiLiveAudioManager for streaming audio and implements SpeechAudioSource.
@@ -24,8 +22,7 @@ import javax.inject.Singleton
  * - Uses actual audio level measurements from the audio manager
  * - Works with continuous streaming rather than discrete messages
  */
-@Singleton
-class GeminiLiveAudioSource @Inject constructor(
+class GeminiLiveAudioSource constructor(
     private val audioManager: GeminiLiveAudioManager
 ) : SpeechAudioSource {
 

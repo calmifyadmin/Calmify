@@ -14,15 +14,13 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
-import javax.inject.Inject
-
 /**
  * Get Achievements Use Case
  *
  * Calculates all achievements, badges, and progress
  * for the gamification system
  */
-class GetAchievementsUseCase @Inject constructor(
+class GetAchievementsUseCase(
     private val calculateStreaksUseCase: CalculateStreaksUseCase
 ) {
 
@@ -176,9 +174,9 @@ class GetAchievementsUseCase @Inject constructor(
         progress["early_bird"] = (earlyEntries.toFloat() / 10).coerceAtMost(1f)
 
         // Anniversary (1 year)
-        val oldestEntry = diaries.minByOrNull { it.date }
+        val oldestEntry = diaries.minByOrNull { it.dateMillis }
         val daysUsing = if (oldestEntry != null) {
-            val oldest = oldestEntry.date.toInstant()
+            val oldest = java.time.Instant.ofEpochMilli(oldestEntry.dateMillis)
                 .atZone(ZoneId.systemDefault())
                 .toLocalDate()
             (LocalDate.now().toEpochDay() - oldest.toEpochDay()).toInt()
@@ -201,7 +199,7 @@ class GetAchievementsUseCase @Inject constructor(
                     if (insight.dayKey.isNotBlank()) {
                         insight.dayKey
                     } else {
-                        insight.generatedAt.toInstant()
+                        java.time.Instant.ofEpochMilli(insight.generatedAtMillis)
                             .atZone(ZoneId.systemDefault())
                             .toLocalDate()
                             .toString()
@@ -244,7 +242,7 @@ class GetAchievementsUseCase @Inject constructor(
     ): Int {
         return diaries.count { diary ->
             try {
-                val hour = diary.date.toInstant()
+                val hour = java.time.Instant.ofEpochMilli(diary.dateMillis)
                     .atZone(ZoneId.systemDefault())
                     .hour
                 hour in startHour until endHour

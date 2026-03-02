@@ -4,12 +4,9 @@ import android.content.Context
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Real-time audio output routing monitor.
@@ -24,9 +21,8 @@ import javax.inject.Singleton
  *
  * Uses [AudioDeviceCallback] for instant plug/unplug detection.
  */
-@Singleton
-class HeadphoneDetector @Inject constructor(
-    @ApplicationContext private val context: Context
+class HeadphoneDetector constructor(
+    private val context: Context
 ) {
     enum class AudioOutputRoute {
         SPEAKER,

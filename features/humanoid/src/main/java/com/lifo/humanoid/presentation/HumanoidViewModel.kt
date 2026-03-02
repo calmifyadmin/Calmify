@@ -1,7 +1,5 @@
 package com.lifo.humanoid.presentation
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.google.android.filament.gltfio.FilamentAsset
 import com.lifo.humanoid.animation.BlinkController
 import com.lifo.humanoid.animation.IdleRotationController
@@ -17,13 +15,112 @@ import com.lifo.humanoid.data.vrm.VrmLoader
 import com.lifo.humanoid.domain.model.AvatarState
 import com.lifo.humanoid.domain.model.Emotion
 import com.lifo.humanoid.lipsync.LipSyncController
-// ArFilamentRenderer replaced by SceneView — see onSceneViewArModelLoaded()
+// ArFilamentRenderer replaced by SceneView -- see onSceneViewArModelLoaded()
 import com.lifo.humanoid.rendering.FilamentRenderer
-import dagger.hilt.android.lifecycle.HiltViewModel
+import com.lifo.util.mvi.MviContract
+import com.lifo.util.mvi.MviViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.nio.ByteBuffer
-import javax.inject.Inject
+
+// ==================== MVI Contract ====================
+
+/**
+ * MVI Contract for the Humanoid avatar screen.
+ *
+ * Defines all user intents, the consolidated UI state, and one-shot effects.
+ */
+object HumanoidContract {
+
+    sealed interface Intent : MviContract.Intent {
+        // Avatar loading
+        data object LoadDefaultAvatar : Intent
+
+        // Avatar state changes
+        data class SetEmotion(val emotion: Emotion) : Intent
+        data class SetSpeaking(val isSpeaking: Boolean) : Intent
+        data class SetListening(val isListening: Boolean) : Intent
+        data class SetVisionEnabled(val enabled: Boolean) : Intent
+
+        // Model loaded callbacks (from Filament/SceneView)
+        data class OnModelLoaded(
+            val renderer: FilamentRenderer,
+            val asset: FilamentAsset,
+            val nodeNames: List<String>
+        ) : Intent
+
+        data class OnSceneViewArModelLoaded(
+            val engine: com.google.android.filament.Engine,
+            val asset: FilamentAsset,
+            val nodeNames: List<String>
+        ) : Intent
+
+        // Animation control
+        data class PlayAnimation(val animationAsset: VrmaAnimationLoader.AnimationAsset) : Intent
+        data object StopAnimation : Intent
+
+        // Idle rotation
+        data object StartIdleRotation : Intent
+        data object StopIdleRotation : Intent
+        data object ToggleIdleRotation : Intent
+
+        // Lip-sync
+        data class SpeakText(val text: String, val durationMs: Long) : Intent
+        data object StopSpeaking : Intent
+
+        // Blink
+        data object TriggerBlink : Intent
+
+        // Blend shapes
+        data class UpdateBlendShapes(val deltaTime: Float) : Intent
+
+        // Reset
+        data object ResetAvatar : Intent
+
+        // Debug
+        data object ToggleDebugMode : Intent
+
+        // Lifecycle
+        data object StopAllControllersBeforeCleanup : Intent
+    }
+
+    data class State(
+        val isLoading: Boolean = false,
+        val avatarLoaded: Boolean = false,
+        val error: String? = null,
+        val debugMode: Boolean = false,
+        val isPlayingAnimation: Boolean = false,
+        val currentAnimationName: String? = null,
+        // Avatar domain state
+        val avatarState: AvatarState = AvatarState.Default,
+        // VRM model data
+        val vrmModelData: Pair<ByteBuffer, VrmExtensions>? = null,
+        val vrmExtensions: VrmExtensions? = null,
+        // Animations
+        val availableAnimations: List<VrmaAnimationLoader.AnimationAsset> = emptyList(),
+        val currentAnimation: VrmaAnimation? = null,
+        // Animation system
+        val isAnimationSystemReady: Boolean = false,
+        val isIdleRotationActive: Boolean = false,
+        val currentIdleAnimation: VrmaAnimationLoader.AnimationAsset? = null
+    ) : MviContract.State
+
+    sealed interface Effect : MviContract.Effect {
+        data class AvatarLoadError(val message: String) : Effect
+        data class AnimationError(val message: String) : Effect
+        data class IdleRotationToggled(val isActive: Boolean) : Effect
+    }
+}
+
+// ==================== Backward-Compat Type Alias ====================
+
+/**
+ * Backward-compatible type alias.
+ * Callers that reference `HumanoidUiState` will keep compiling.
+ */
+typealias HumanoidUiState = HumanoidContract.State
+
+// ==================== ViewModel ====================
 
 /**
  * ViewModel for the Humanoid avatar screen.
@@ -35,9 +132,12 @@ import javax.inject.Inject
  * - Blink animation
  * - Lip-sync animation
  * - VRMA animation playback
+ *
+ * Migrated to MVI pattern (MviViewModel).
+ * All former public functions are kept as thin backward-compatible wrappers
+ * that delegate to [onIntent].
  */
-@HiltViewModel
-class HumanoidViewModel @Inject constructor(
+class HumanoidViewModel constructor(
     private val vrmLoader: VrmLoader,
     private val blendShapeController: VrmBlendShapeController,
     private val boneMapper: VrmHumanoidBoneMapper,
@@ -45,41 +145,89 @@ class HumanoidViewModel @Inject constructor(
     private val lipSyncController: LipSyncController,
     private val vrmaAnimationLoader: VrmaAnimationLoader,
     private val vrmaAnimationPlayerFactory: VrmaAnimationPlayerFactory
-) : ViewModel() {
+) : MviViewModel<HumanoidContract.Intent, HumanoidContract.State, HumanoidContract.Effect>(
+    initialState = HumanoidContract.State()
+) {
 
-    private val _uiState = MutableStateFlow(HumanoidUiState())
-    val uiState: StateFlow<HumanoidUiState> = _uiState.asStateFlow()
+    // ==================== Backward-Compatible Aliases ====================
 
-    private val _avatarState = MutableStateFlow(AvatarState.Default)
-    val avatarState: StateFlow<AvatarState> = _avatarState.asStateFlow()
+    /**
+     * Backward-compatible alias: `uiState` -> MVI `state`.
+     * Callers collecting `viewModel.uiState` keep working unchanged.
+     */
+    val uiState: StateFlow<HumanoidContract.State> get() = state
 
-    // VRM model data (ByteBuffer and extensions)
-    private val _vrmModelData = MutableStateFlow<Pair<ByteBuffer, VrmExtensions>?>(null)
-    val vrmModelData: StateFlow<Pair<ByteBuffer, VrmExtensions>?> = _vrmModelData.asStateFlow()
+    /**
+     * Backward-compatible: expose avatarState as a derived StateFlow.
+     */
+    val avatarState: StateFlow<AvatarState> =
+        state.map { it.avatarState }
+            .stateIn(scope, SharingStarted.Eagerly, AvatarState.Default)
 
-    // VRM extensions (blend shapes, etc.)
-    private val _vrmExtensions = MutableStateFlow<VrmExtensions?>(null)
-    val vrmExtensions: StateFlow<VrmExtensions?> = _vrmExtensions.asStateFlow()
+    /**
+     * Backward-compatible: expose vrmModelData as a derived StateFlow.
+     */
+    val vrmModelData: StateFlow<Pair<ByteBuffer, VrmExtensions>?> =
+        state.map { it.vrmModelData }
+            .stateIn(scope, SharingStarted.Eagerly, null)
 
-    // Blend shape weights from controller
+    /**
+     * Backward-compatible: expose vrmExtensions as a derived StateFlow.
+     */
+    val vrmExtensions: StateFlow<VrmExtensions?> =
+        state.map { it.vrmExtensions }
+            .stateIn(scope, SharingStarted.Eagerly, null)
+
+    /**
+     * Blend shape weights from controller (unchanged - not owned by MVI state).
+     */
     val blendShapeWeights: StateFlow<Map<String, Float>> = blendShapeController.currentWeights
 
-    // Available animations
-    private val _availableAnimations = MutableStateFlow<List<VrmaAnimationLoader.AnimationAsset>>(emptyList())
-    val availableAnimations: StateFlow<List<VrmaAnimationLoader.AnimationAsset>> = _availableAnimations.asStateFlow()
+    /**
+     * Backward-compatible: expose availableAnimations as a derived StateFlow.
+     */
+    val availableAnimations: StateFlow<List<VrmaAnimationLoader.AnimationAsset>> =
+        state.map { it.availableAnimations }
+            .stateIn(scope, SharingStarted.Eagerly, emptyList())
 
-    // Loaded animations cache
-    private val loadedAnimations = mutableMapOf<VrmaAnimationLoader.AnimationAsset, VrmaAnimation>()
+    /**
+     * Backward-compatible: expose currentAnimation as a derived StateFlow.
+     */
+    val currentAnimation: StateFlow<VrmaAnimation?> =
+        state.map { it.currentAnimation }
+            .stateIn(scope, SharingStarted.Eagerly, null)
 
-    // Current animation being played
-    private val _currentAnimation = MutableStateFlow<VrmaAnimation?>(null)
-    val currentAnimation: StateFlow<VrmaAnimation?> = _currentAnimation.asStateFlow()
-
-    // Animation states from controllers
+    /**
+     * Animation states from controllers (unchanged - external StateFlows).
+     */
     val isBlinking: StateFlow<Boolean> = blinkController.isBlinking
     val isSpeaking: StateFlow<Boolean> = lipSyncController.isSpeaking
 
-    // ==================== Animation Player State ====================
+    /**
+     * Backward-compatible: expose isAnimationSystemReady as a derived StateFlow.
+     */
+    val isAnimationSystemReady: StateFlow<Boolean> =
+        state.map { it.isAnimationSystemReady }
+            .stateIn(scope, SharingStarted.Eagerly, false)
+
+    /**
+     * Backward-compatible: expose isIdleRotationActive as a derived StateFlow.
+     */
+    val isIdleRotationActive: StateFlow<Boolean> =
+        state.map { it.isIdleRotationActive }
+            .stateIn(scope, SharingStarted.Eagerly, false)
+
+    /**
+     * Backward-compatible: expose currentIdleAnimation as a derived StateFlow.
+     */
+    val currentIdleAnimation: StateFlow<VrmaAnimationLoader.AnimationAsset?> =
+        state.map { it.currentIdleAnimation }
+            .stateIn(scope, SharingStarted.Eagerly, null)
+
+    // ==================== Internal Mutable State (not in MVI State) ====================
+
+    // Loaded animations cache
+    private val loadedAnimations = mutableMapOf<VrmaAnimationLoader.AnimationAsset, VrmaAnimation>()
 
     // Reference to FilamentRenderer for animation
     private var filamentRenderer: FilamentRenderer? = null
@@ -87,39 +235,30 @@ class HumanoidViewModel @Inject constructor(
     // Animation player (initialized when model is loaded)
     private var vrmaAnimationPlayer: VrmaAnimationPlayer? = null
 
-    // Flag to track if animation system is ready
-    private val _isAnimationSystemReady = MutableStateFlow(false)
-    val isAnimationSystemReady: StateFlow<Boolean> = _isAnimationSystemReady.asStateFlow()
-
     // Idle rotation controller for automatic idle animation cycling
     private var idleRotationController: IdleRotationController? = null
 
-    // Idle rotation state
-    private val _isIdleRotationActive = MutableStateFlow(false)
-    val isIdleRotationActive: StateFlow<Boolean> = _isIdleRotationActive.asStateFlow()
-
-    private val _currentIdleAnimation = MutableStateFlow<VrmaAnimationLoader.AnimationAsset?>(null)
-    val currentIdleAnimation: StateFlow<VrmaAnimationLoader.AnimationAsset?> = _currentIdleAnimation.asStateFlow()
+    // ==================== Init ====================
 
     init {
         // Load available animations
-        _availableAnimations.value = vrmaAnimationLoader.getAvailableAnimations()
+        updateState { copy(availableAnimations = vrmaAnimationLoader.getAvailableAnimations()) }
 
         // Auto-load default avatar on initialization
-        loadDefaultAvatar()
+        onIntent(HumanoidContract.Intent.LoadDefaultAvatar)
 
         // Start blink controller
-        blinkController.start(viewModelScope)
+        blinkController.start(scope)
 
         // Observe avatar state changes and update blend shapes
-        viewModelScope.launch {
-            avatarState.collect { state ->
-                updateBlendShapesForState(state)
+        scope.launch {
+            state.map { it.avatarState }.distinctUntilChanged().collect { avatarState ->
+                updateBlendShapesForState(avatarState)
             }
         }
 
         // Integrate blink controller with blend shapes
-        viewModelScope.launch {
+        scope.launch {
             blinkController.blinkWeight.collect { weight ->
                 if (weight > 0.001f) {
                     blendShapeController.setCategoryWeights(
@@ -132,92 +271,102 @@ class HumanoidViewModel @Inject constructor(
             }
         }
 
-        println("[HumanoidViewModel] HumanoidViewModel initialized with ${_availableAnimations.value.size} animations available")
+        println("[HumanoidViewModel] HumanoidViewModel initialized with ${currentState.availableAnimations.size} animations available")
     }
 
-    /**
-     * Load the default VRM avatar from assets
-     */
-    fun loadDefaultAvatar() {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+    // ==================== MVI handleIntent ====================
+
+    override fun handleIntent(intent: HumanoidContract.Intent) {
+        when (intent) {
+            is HumanoidContract.Intent.LoadDefaultAvatar -> handleLoadDefaultAvatar()
+            is HumanoidContract.Intent.SetEmotion -> handleSetEmotion(intent.emotion)
+            is HumanoidContract.Intent.SetSpeaking -> handleSetSpeaking(intent.isSpeaking)
+            is HumanoidContract.Intent.SetListening -> handleSetListening(intent.isListening)
+            is HumanoidContract.Intent.SetVisionEnabled -> handleSetVisionEnabled(intent.enabled)
+            is HumanoidContract.Intent.OnModelLoaded -> handleOnModelLoaded(intent.renderer, intent.asset, intent.nodeNames)
+            is HumanoidContract.Intent.OnSceneViewArModelLoaded -> handleOnSceneViewArModelLoaded(intent.engine, intent.asset, intent.nodeNames)
+            is HumanoidContract.Intent.PlayAnimation -> handlePlayAnimation(intent.animationAsset)
+            is HumanoidContract.Intent.StopAnimation -> handleStopAnimation()
+            is HumanoidContract.Intent.StartIdleRotation -> handleStartIdleRotation()
+            is HumanoidContract.Intent.StopIdleRotation -> handleStopIdleRotation()
+            is HumanoidContract.Intent.ToggleIdleRotation -> handleToggleIdleRotation()
+            is HumanoidContract.Intent.SpeakText -> handleSpeakText(intent.text, intent.durationMs)
+            is HumanoidContract.Intent.StopSpeaking -> handleStopSpeaking()
+            is HumanoidContract.Intent.TriggerBlink -> handleTriggerBlink()
+            is HumanoidContract.Intent.UpdateBlendShapes -> handleUpdateBlendShapes(intent.deltaTime)
+            is HumanoidContract.Intent.ResetAvatar -> handleResetAvatar()
+            is HumanoidContract.Intent.ToggleDebugMode -> handleToggleDebugMode()
+            is HumanoidContract.Intent.StopAllControllersBeforeCleanup -> handleStopAllControllersBeforeCleanup()
+        }
+    }
+
+    // ==================== Intent Handlers ====================
+
+    private fun handleLoadDefaultAvatar() {
+        scope.launch {
+            updateState { copy(isLoading = true, error = null) }
 
             try {
                 val modelData = vrmLoader.loadVrmFromAssets("models/default_avatar.vrm")
 
                 if (modelData != null) {
-                    _vrmModelData.value = modelData
-                    _vrmExtensions.value = modelData.second
-
                     // Set available presets in blend shape controller
                     val presetNames = modelData.second.blendShapes.map { it.name }.toSet()
                     blendShapeController.setAvailablePresets(presetNames)
 
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        avatarLoaded = true
-                    )
+                    updateState {
+                        copy(
+                            isLoading = false,
+                            avatarLoaded = true,
+                            vrmModelData = modelData,
+                            vrmExtensions = modelData.second
+                        )
+                    }
 
                     println("[HumanoidViewModel] Avatar loaded with ${presetNames.size} blend shape presets")
                 } else {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = "Failed to load default avatar"
-                    )
+                    updateState {
+                        copy(
+                            isLoading = false,
+                            error = "Failed to load default avatar"
+                        )
+                    }
+                    sendEffect(HumanoidContract.Effect.AvatarLoadError("Failed to load default avatar"))
                 }
             } catch (e: Exception) {
                 println("[HumanoidViewModel] ERROR: Error loading avatar: ${e.message}")
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = "Error loading avatar: ${e.message}"
-                )
+                updateState {
+                    copy(
+                        isLoading = false,
+                        error = "Error loading avatar: ${e.message}"
+                    )
+                }
+                sendEffect(HumanoidContract.Effect.AvatarLoadError("Error loading avatar: ${e.message}"))
             }
         }
     }
 
-    /**
-     * Set avatar emotion with improved preset matching
-     */
-    fun setEmotion(emotion: Emotion) {
-        _avatarState.value = _avatarState.value.copy(emotion = emotion)
+    private fun handleSetEmotion(emotion: Emotion) {
+        updateState { copy(avatarState = avatarState.copy(emotion = emotion)) }
     }
 
-    /**
-     * Set avatar to speaking state
-     */
-    fun setSpeaking(isSpeaking: Boolean) {
-        _avatarState.value = _avatarState.value.copy(isSpeaking = isSpeaking)
+    private fun handleSetSpeaking(isSpeaking: Boolean) {
+        updateState { copy(avatarState = avatarState.copy(isSpeaking = isSpeaking)) }
     }
 
-    /**
-     * Set avatar to listening state
-     */
-    fun setListening(isListening: Boolean) {
-        _avatarState.value = if (isListening) {
-            AvatarState.listening()
+    private fun handleSetListening(isListening: Boolean) {
+        if (isListening) {
+            updateState { copy(avatarState = AvatarState.listening()) }
         } else {
-            _avatarState.value.copy(isListening = false)
+            updateState { copy(avatarState = avatarState.copy(isListening = false)) }
         }
     }
 
-    /**
-     * Enable/disable vision
-     */
-    fun setVisionEnabled(enabled: Boolean) {
-        _avatarState.value = _avatarState.value.copy(visionEnabled = enabled)
+    private fun handleSetVisionEnabled(enabled: Boolean) {
+        updateState { copy(avatarState = avatarState.copy(visionEnabled = enabled)) }
     }
 
-    // ==================== Model Loaded Callback ====================
-
-    /**
-     * Called when the VRM model is loaded by FilamentRenderer.
-     * Initializes the animation player with the loaded asset.
-     *
-     * @param renderer The FilamentRenderer instance
-     * @param asset The loaded FilamentAsset
-     * @param nodeNames List of node names from the asset
-     */
-    fun onModelLoaded(
+    private fun handleOnModelLoaded(
         renderer: FilamentRenderer,
         asset: FilamentAsset,
         nodeNames: List<String>
@@ -249,21 +398,16 @@ class HumanoidViewModel @Inject constructor(
         vrmaAnimationPlayer = vrmaAnimationPlayerFactory.initializeWithAsset(engine, asset, nodeNames)
         println("[HumanoidViewModel] VrmaAnimationPlayer initialized")
 
-        _isAnimationSystemReady.value = true
+        updateState { copy(isAnimationSystemReady = true) }
         println("[HumanoidViewModel] Animation system is ready")
 
         // Pre-load idle animation for immediate use
-        viewModelScope.launch {
+        scope.launch {
             preloadCommonAnimations()
         }
     }
 
-    /**
-     * Called when the VRM model is loaded in AR mode (SceneView).
-     * Takes Engine directly (SceneView provides its own Engine).
-     * Eye bone setup is handled by the composable, not the ViewModel.
-     */
-    fun onSceneViewArModelLoaded(
+    private fun handleOnSceneViewArModelLoaded(
         engine: com.google.android.filament.Engine,
         asset: FilamentAsset,
         nodeNames: List<String>
@@ -274,12 +418,169 @@ class HumanoidViewModel @Inject constructor(
         println("[HumanoidViewModel] BoneMapper initialized (AR/SceneView) with ${boneMapper.getBoneEntityMap().size} bones")
 
         vrmaAnimationPlayer = vrmaAnimationPlayerFactory.initializeWithAsset(engine, asset, nodeNames)
-        _isAnimationSystemReady.value = true
+        updateState { copy(isAnimationSystemReady = true) }
 
-        viewModelScope.launch {
+        scope.launch {
             preloadCommonAnimations()
         }
     }
+
+    private fun handlePlayAnimation(animationAsset: VrmaAnimationLoader.AnimationAsset) {
+        scope.launch {
+            // Check if animation system is ready
+            if (!currentState.isAnimationSystemReady) {
+                println("[HumanoidViewModel] WARNING: Animation system not ready yet")
+                return@launch
+            }
+
+            val player = vrmaAnimationPlayer
+            if (player == null) {
+                println("[HumanoidViewModel] ERROR: Animation player not initialized")
+                sendEffect(HumanoidContract.Effect.AnimationError("Animation player not initialized"))
+                return@launch
+            }
+
+            // Check cache first, load if needed
+            val animation = loadedAnimations.getOrPut(animationAsset) {
+                vrmaAnimationLoader.loadAnimation(animationAsset) ?: run {
+                    println("[HumanoidViewModel] ERROR: Failed to load animation: ${animationAsset.fileName}")
+                    sendEffect(HumanoidContract.Effect.AnimationError("Failed to load animation: ${animationAsset.fileName}"))
+                    return@launch
+                }
+            }
+
+            // Update state
+            updateState {
+                copy(
+                    currentAnimation = animation,
+                    isPlayingAnimation = true,
+                    currentAnimationName = animation.name
+                )
+            }
+
+            println("[HumanoidViewModel] Playing animation: ${animation.name}, duration: ${animation.durationSeconds}s, looping: ${animation.isLooping}")
+
+            // Following Amica pattern:
+            // - idle animations play in loop as the default state
+            // - Other animations play once then return to idle
+            if (animationAsset.isIdle()) {
+                // Set as the new idle animation
+                player.setIdleAnimation(animation, scope)
+            } else {
+                // Pause idle rotation during non-idle animation
+                pauseIdleRotation()
+
+                // Play as one-shot, will automatically return to idle
+                player.playOneShot(
+                    animation = animation,
+                    scope = scope,
+                    fadeDuration = 0.5f,
+                    onComplete = {
+                        // Resume idle rotation when animation completes
+                        resumeIdleRotation()
+                    }
+                )
+            }
+        }
+    }
+
+    private fun handleStopAnimation() {
+        val player = vrmaAnimationPlayer
+        if (player != null && player.hasIdleAnimation()) {
+            // Return to idle animation
+            player.getIdleAnimation()?.let { idleAnim ->
+                player.setIdleAnimation(idleAnim, scope)
+                updateState {
+                    copy(
+                        currentAnimation = idleAnim,
+                        isPlayingAnimation = true,
+                        currentAnimationName = idleAnim.name
+                    )
+                }
+                println("[HumanoidViewModel] Returned to idle animation")
+            }
+        } else {
+            player?.stop()
+            updateState {
+                copy(
+                    currentAnimation = null,
+                    isPlayingAnimation = false,
+                    currentAnimationName = null
+                )
+            }
+            println("[HumanoidViewModel] Animation stopped (no idle available)")
+        }
+    }
+
+    private fun handleStartIdleRotation() {
+        if (idleRotationController == null) {
+            initializeIdleRotation()
+        }
+        idleRotationController?.start(scope)
+        println("[HumanoidViewModel] Idle rotation started")
+    }
+
+    private fun handleStopIdleRotation() {
+        idleRotationController?.stop()
+        println("[HumanoidViewModel] Idle rotation stopped")
+    }
+
+    private fun handleToggleIdleRotation() {
+        val controller = idleRotationController
+        val isActive = if (controller?.isActive?.value == true) {
+            handleStopIdleRotation()
+            false
+        } else {
+            handleStartIdleRotation()
+            true
+        }
+        sendEffect(HumanoidContract.Effect.IdleRotationToggled(isActive))
+    }
+
+    private fun handleSpeakText(text: String, durationMs: Long) {
+        lipSyncController.speak(text, durationMs, scope)
+    }
+
+    private fun handleStopSpeaking() {
+        lipSyncController.stop()
+    }
+
+    private fun handleTriggerBlink() {
+        scope.launch {
+            blinkController.triggerBlink()
+        }
+    }
+
+    private fun handleUpdateBlendShapes(deltaTime: Float) {
+        blendShapeController.update(deltaTime)
+    }
+
+    private fun handleResetAvatar() {
+        updateState { copy(avatarState = AvatarState.Default) }
+        blendShapeController.reset()
+        handleStopAnimation()
+        handleStopSpeaking()
+    }
+
+    private fun handleToggleDebugMode() {
+        updateState { copy(debugMode = !debugMode) }
+    }
+
+    private fun handleStopAllControllersBeforeCleanup() {
+        println("[HumanoidViewModel] stopAllControllersBeforeCleanup - stopping all animation controllers")
+        blinkController.stop()
+        lipSyncController.stop()
+        idleRotationController?.stop()
+        // Mark animation player as destroyed to prevent accessing Filament assets
+        vrmaAnimationPlayer?.stop(blendOut = false, destroy = true)
+        // Null out the reference so any late scope.launch callbacks
+        // (e.g., from IdleRotationController's onPlayAnimation) see null and skip.
+        vrmaAnimationPlayer = null
+        updateState { copy(isAnimationSystemReady = false) }
+        println("[HumanoidViewModel] All controllers stopped and marked as destroyed")
+    }
+
+    // ==================== Private Helpers ====================
 
     /**
      * Pre-load commonly used animations and set up idle rotation system.
@@ -307,168 +608,44 @@ class HumanoidViewModel @Inject constructor(
         // Initialize and start idle rotation system automatically
         // This will rotate between idle animations every 10-40 seconds
         initializeIdleRotation()
-        startIdleRotation()
+        handleStartIdleRotation()
         println("[HumanoidViewModel] Idle rotation system started with ${idleAnimations.size} animations")
     }
-
-    // ==================== Animation Methods ====================
-
-    /**
-     * Play a VRMA animation by asset type.
-     * Following Amica pattern:
-     * - If it's the idle animation, set it as the new idle
-     * - Otherwise, play as one-shot and return to idle when done
-     */
-    fun playAnimation(animationAsset: VrmaAnimationLoader.AnimationAsset) {
-        viewModelScope.launch {
-            // Check if animation system is ready
-            if (!_isAnimationSystemReady.value) {
-                println("[HumanoidViewModel] WARNING: Animation system not ready yet")
-                return@launch
-            }
-
-            val player = vrmaAnimationPlayer
-            if (player == null) {
-                println("[HumanoidViewModel] ERROR: Animation player not initialized")
-                return@launch
-            }
-
-            // Check cache first, load if needed
-            val animation = loadedAnimations.getOrPut(animationAsset) {
-                vrmaAnimationLoader.loadAnimation(animationAsset) ?: run {
-                    println("[HumanoidViewModel] ERROR: Failed to load animation: ${animationAsset.fileName}")
-                    return@launch
-                }
-            }
-
-            // Update UI state
-            _currentAnimation.value = animation
-            _uiState.value = _uiState.value.copy(
-                isPlayingAnimation = true,
-                currentAnimationName = animation.name
-            )
-
-            println("[HumanoidViewModel] Playing animation: ${animation.name}, duration: ${animation.durationSeconds}s, looping: ${animation.isLooping}")
-
-            // Following Amica pattern:
-            // - idle animations play in loop as the default state
-            // - Other animations play once then return to idle
-            if (animationAsset.isIdle()) {
-                // Set as the new idle animation
-                player.setIdleAnimation(animation, viewModelScope)
-            } else {
-                // Pause idle rotation during non-idle animation
-                pauseIdleRotation()
-
-                // Play as one-shot, will automatically return to idle
-                player.playOneShot(
-                    animation = animation,
-                    scope = viewModelScope,
-                    fadeDuration = 0.5f,
-                    onComplete = {
-                        // Resume idle rotation when animation completes
-                        resumeIdleRotation()
-                    }
-                )
-            }
-        }
-    }
-
-    /**
-     * Stop current one-shot animation and return to idle.
-     * Following Amica pattern: idle always plays, so "stop" means return to idle.
-     */
-    fun stopAnimation() {
-        val player = vrmaAnimationPlayer
-        if (player != null && player.hasIdleAnimation()) {
-            // Return to idle animation
-            player.getIdleAnimation()?.let { idleAnim ->
-                player.setIdleAnimation(idleAnim, viewModelScope)
-                _currentAnimation.value = idleAnim
-                _uiState.value = _uiState.value.copy(
-                    isPlayingAnimation = true,
-                    currentAnimationName = idleAnim.name
-                )
-                println("[HumanoidViewModel] Returned to idle animation")
-            }
-        } else {
-            player?.stop()
-            _currentAnimation.value = null
-            _uiState.value = _uiState.value.copy(
-                isPlayingAnimation = false,
-                currentAnimationName = null
-            )
-            println("[HumanoidViewModel] Animation stopped (no idle available)")
-        }
-    }
-
-    // ==================== Idle Rotation Methods ====================
 
     /**
      * Initialize idle rotation controller (called when animation system is ready)
      */
     private fun initializeIdleRotation() {
         idleRotationController = IdleRotationController { animationAsset ->
-            viewModelScope.launch {
+            scope.launch {
                 val animation = loadedAnimations.getOrPut(animationAsset) {
                     vrmaAnimationLoader.loadAnimation(animationAsset) ?: return@launch
                 }
                 vrmaAnimationPlayer?.let { player ->
                     println("[HumanoidViewModel] Idle rotation: playing ${animation.name}")
-                    player.setIdleAnimation(animation, viewModelScope)
-                    _currentAnimation.value = animation
-                    _currentIdleAnimation.value = animationAsset
-                    _uiState.value = _uiState.value.copy(
-                        isPlayingAnimation = true,
-                        currentAnimationName = animation.name
-                    )
+                    player.setIdleAnimation(animation, scope)
+                    updateState {
+                        copy(
+                            currentAnimation = animation,
+                            currentIdleAnimation = animationAsset,
+                            isPlayingAnimation = true,
+                            currentAnimationName = animation.name
+                        )
+                    }
                 }
             }
         }
 
         // Observe idle rotation state
-        viewModelScope.launch {
+        scope.launch {
             idleRotationController?.isActive?.collect { isActive ->
-                _isIdleRotationActive.value = isActive
+                updateState { copy(isIdleRotationActive = isActive) }
             }
         }
-        viewModelScope.launch {
+        scope.launch {
             idleRotationController?.currentIdle?.collect { idle ->
-                _currentIdleAnimation.value = idle
+                updateState { copy(currentIdleAnimation = idle) }
             }
-        }
-    }
-
-    /**
-     * Start automatic idle animation rotation
-     */
-    fun startIdleRotation() {
-        if (idleRotationController == null) {
-            initializeIdleRotation()
-        }
-        idleRotationController?.start(viewModelScope)
-        println("[HumanoidViewModel] Idle rotation started")
-    }
-
-    /**
-     * Stop automatic idle animation rotation
-     */
-    fun stopIdleRotation() {
-        idleRotationController?.stop()
-        println("[HumanoidViewModel] Idle rotation stopped")
-    }
-
-    /**
-     * Toggle automatic idle animation rotation
-     */
-    fun toggleIdleRotation(): Boolean {
-        val controller = idleRotationController
-        return if (controller?.isActive?.value == true) {
-            stopIdleRotation()
-            false
-        } else {
-            startIdleRotation()
-            true
         }
     }
 
@@ -483,50 +660,18 @@ class HumanoidViewModel @Inject constructor(
      * Resume idle rotation after gesture animation
      */
     private fun resumeIdleRotation() {
-        if (_isIdleRotationActive.value) {
-            idleRotationController?.resume(viewModelScope)
+        if (currentState.isIdleRotationActive) {
+            idleRotationController?.resume(scope)
         }
     }
-
-    // ==================== Lip-Sync Methods ====================
-
-    /**
-     * Start lip-sync for text
-     *
-     * @param text The text to speak
-     * @param durationMs Duration of the speech in milliseconds
-     */
-    fun speakText(text: String, durationMs: Long) {
-        lipSyncController.speak(text, durationMs, viewModelScope)
-    }
-
-    /**
-     * Stop lip-sync
-     */
-    fun stopSpeaking() {
-        lipSyncController.stop()
-    }
-
-    // ==================== Blink Methods ====================
-
-    /**
-     * Trigger a manual blink
-     */
-    fun triggerBlink() {
-        viewModelScope.launch {
-            blinkController.triggerBlink()
-        }
-    }
-
-    // ==================== Blend Shape Updates ====================
 
     /**
      * Update blend shapes based on current avatar state.
      * Uses VrmBlendShapePresets for better compatibility.
      */
-    private fun updateBlendShapesForState(state: AvatarState) {
-        val emotionName = state.emotion.getName().lowercase()
-        val intensity = state.emotion.intensity
+    private fun updateBlendShapesForState(avatarState: AvatarState) {
+        val emotionName = avatarState.emotion.getName().lowercase()
+        val intensity = avatarState.emotion.intensity
 
         // Use preset system for better matching
         val weights = VrmBlendShapePresets.getEmotionWeights(
@@ -542,49 +687,93 @@ class HumanoidViewModel @Inject constructor(
         )
     }
 
-    /**
-     * Update blend shapes - call every frame
-     */
-    fun updateBlendShapes(deltaTime: Float) {
-        blendShapeController.update(deltaTime)
-    }
+    // ==================== Backward-Compatible Public Wrappers ====================
+    // These thin wrappers delegate to onIntent() so existing callers keep working.
+
+    /** Load the default VRM avatar from assets */
+    fun loadDefaultAvatar() = onIntent(HumanoidContract.Intent.LoadDefaultAvatar)
+
+    /** Set avatar emotion with improved preset matching */
+    fun setEmotion(emotion: Emotion) = onIntent(HumanoidContract.Intent.SetEmotion(emotion))
+
+    /** Set avatar to speaking state */
+    fun setSpeaking(isSpeaking: Boolean) = onIntent(HumanoidContract.Intent.SetSpeaking(isSpeaking))
+
+    /** Set avatar to listening state */
+    fun setListening(isListening: Boolean) = onIntent(HumanoidContract.Intent.SetListening(isListening))
+
+    /** Enable/disable vision */
+    fun setVisionEnabled(enabled: Boolean) = onIntent(HumanoidContract.Intent.SetVisionEnabled(enabled))
 
     /**
-     * Reset avatar to default state
+     * Called when the VRM model is loaded by FilamentRenderer.
+     * Initializes the animation player with the loaded asset.
      */
-    fun resetAvatar() {
-        _avatarState.value = AvatarState.Default
-        blendShapeController.reset()
-        stopAnimation()
-        stopSpeaking()
-    }
+    fun onModelLoaded(
+        renderer: FilamentRenderer,
+        asset: FilamentAsset,
+        nodeNames: List<String>
+    ) = onIntent(HumanoidContract.Intent.OnModelLoaded(renderer, asset, nodeNames))
 
     /**
-     * Toggle debug mode
+     * Called when the VRM model is loaded in AR mode (SceneView).
+     * Takes Engine directly (SceneView provides its own Engine).
      */
-    fun toggleDebugMode() {
-        _uiState.value = _uiState.value.copy(debugMode = !_uiState.value.debugMode)
+    fun onSceneViewArModelLoaded(
+        engine: com.google.android.filament.Engine,
+        asset: FilamentAsset,
+        nodeNames: List<String>
+    ) = onIntent(HumanoidContract.Intent.OnSceneViewArModelLoaded(engine, asset, nodeNames))
+
+    /** Play a VRMA animation by asset type */
+    fun playAnimation(animationAsset: VrmaAnimationLoader.AnimationAsset) =
+        onIntent(HumanoidContract.Intent.PlayAnimation(animationAsset))
+
+    /** Stop current one-shot animation and return to idle */
+    fun stopAnimation() = onIntent(HumanoidContract.Intent.StopAnimation)
+
+    /** Start automatic idle animation rotation */
+    fun startIdleRotation() = onIntent(HumanoidContract.Intent.StartIdleRotation)
+
+    /** Stop automatic idle animation rotation */
+    fun stopIdleRotation() = onIntent(HumanoidContract.Intent.StopIdleRotation)
+
+    /** Toggle automatic idle animation rotation */
+    fun toggleIdleRotation(): Boolean {
+        onIntent(HumanoidContract.Intent.ToggleIdleRotation)
+        // Return the new state (after toggle)
+        return currentState.isIdleRotationActive
     }
+
+    /** Start lip-sync for text */
+    fun speakText(text: String, durationMs: Long) =
+        onIntent(HumanoidContract.Intent.SpeakText(text, durationMs))
+
+    /** Stop lip-sync */
+    fun stopSpeaking() = onIntent(HumanoidContract.Intent.StopSpeaking)
+
+    /** Trigger a manual blink */
+    fun triggerBlink() = onIntent(HumanoidContract.Intent.TriggerBlink)
+
+    /** Update blend shapes - call every frame */
+    fun updateBlendShapes(deltaTime: Float) =
+        onIntent(HumanoidContract.Intent.UpdateBlendShapes(deltaTime))
+
+    /** Reset avatar to default state */
+    fun resetAvatar() = onIntent(HumanoidContract.Intent.ResetAvatar)
+
+    /** Toggle debug mode */
+    fun toggleDebugMode() = onIntent(HumanoidContract.Intent.ToggleDebugMode)
 
     /**
      * Stop all animation controllers before Filament cleanup.
      * CRITICAL: Must be called BEFORE FilamentRenderer.cleanup() to prevent
      * accessing destroyed Filament assets.
-     * See: https://github.com/google/filament/issues/7650
      */
-    fun stopAllControllersBeforeCleanup() {
-        println("[HumanoidViewModel] stopAllControllersBeforeCleanup - stopping all animation controllers")
-        blinkController.stop()
-        lipSyncController.stop()
-        idleRotationController?.stop()
-        // Mark animation player as destroyed to prevent accessing Filament assets
-        vrmaAnimationPlayer?.stop(blendOut = false, destroy = true)
-        // Null out the reference so any late viewModelScope.launch callbacks
-        // (e.g., from IdleRotationController's onPlayAnimation) see null and skip.
-        vrmaAnimationPlayer = null
-        _isAnimationSystemReady.value = false
-        println("[HumanoidViewModel] All controllers stopped and marked as destroyed")
-    }
+    fun stopAllControllersBeforeCleanup() =
+        onIntent(HumanoidContract.Intent.StopAllControllersBeforeCleanup)
+
+    // ==================== Lifecycle ====================
 
     override fun onCleared() {
         super.onCleared()
@@ -594,19 +783,7 @@ class HumanoidViewModel @Inject constructor(
         vrmaAnimationPlayer?.stop(blendOut = false, destroy = true)
         vrmaAnimationPlayerFactory.clear()
         filamentRenderer = null
-        _isAnimationSystemReady.value = false
+        // State is already dead at this point; no need to updateState
         println("[HumanoidViewModel] HumanoidViewModel cleared")
     }
 }
-
-/**
- * UI State for Humanoid screen
- */
-data class HumanoidUiState(
-    val isLoading: Boolean = false,
-    val avatarLoaded: Boolean = false,
-    val error: String? = null,
-    val debugMode: Boolean = false,
-    val isPlayingAnimation: Boolean = false,
-    val currentAnimationName: String? = null
-)

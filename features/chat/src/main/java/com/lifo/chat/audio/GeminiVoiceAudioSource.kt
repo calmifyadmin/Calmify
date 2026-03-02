@@ -7,8 +7,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Adapter that wraps GeminiNativeVoiceSystem and implements SpeechAudioSource.
@@ -23,8 +21,7 @@ import javax.inject.Singleton
  * 2. Connect to HumanoidController via SynchronizedSpeechController
  * 3. Call speak() instead of directly calling voiceSystem.speakWithEmotion()
  */
-@Singleton
-class GeminiVoiceAudioSource @Inject constructor(
+class GeminiVoiceAudioSource constructor(
     private val voiceSystem: GeminiNativeVoiceSystem
 ) : SpeechAudioSource {
 

@@ -9,15 +9,13 @@ import com.lifo.util.model.DiaryInsight
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZonedDateTime
-import javax.inject.Inject
-
 /**
  * Calculate Topics Frequency Use Case
  *
  * Aggregates topics from diary insights to show
  * word cloud and emerging topics
  */
-class CalculateTopicsFrequencyUseCase @Inject constructor() {
+class CalculateTopicsFrequencyUseCase {
 
     companion object {
         private const val EMERGING_THRESHOLD = 0.3f  // 30% increase to be "emerging"
@@ -46,7 +44,7 @@ class CalculateTopicsFrequencyUseCase @Inject constructor() {
         // Filter insights by time range
         val filteredInsights = insights.filter { insight ->
             try {
-                val insightDate = insight.generatedAt.toInstant()
+                val insightDate = java.time.Instant.ofEpochMilli(insight.generatedAtMillis)
                     .atZone(ZoneId.systemDefault())
                     .toLocalDate()
                 insightDate.isAfter(cutoffDate) || insightDate.isEqual(cutoffDate)
@@ -66,7 +64,7 @@ class CalculateTopicsFrequencyUseCase @Inject constructor() {
         val secondHalfTopics = mutableMapOf<String, TopicData>()
 
         filteredInsights.forEach { insight ->
-            val insightDate = insight.generatedAt.toInstant()
+            val insightDate = java.time.Instant.ofEpochMilli(insight.generatedAtMillis)
                 .atZone(ZoneId.systemDefault())
                 .toLocalDate()
             val isFirstHalf = insightDate.isBefore(midpoint)

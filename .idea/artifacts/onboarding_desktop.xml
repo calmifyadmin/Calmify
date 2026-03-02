@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="onboarding-desktop">
+    <output-path>$PROJECT_DIR$/features/onboarding/build/libs</output-path>
+    <root id="archive" name="onboarding-desktop.jar">
+      <element id="module-output" name="Calmify.features.onboarding.desktopMain" />
+    </root>
+  </artifact>
+</component>

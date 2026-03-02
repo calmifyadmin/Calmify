@@ -7,15 +7,13 @@ import com.lifo.util.model.DiaryInsight
 import com.lifo.util.model.SentimentLabel
 import java.time.LocalDate
 import java.time.ZoneId
-import javax.inject.Inject
-
 /**
  * Calculate Mood Distribution Use Case
  *
  * Aggregates diary insights to calculate mood distribution
  * for the donut chart visualization
  */
-class CalculateMoodDistributionUseCase @Inject constructor() {
+class CalculateMoodDistributionUseCase {
 
     /**
      * Calculate mood distribution from diary insights
@@ -36,7 +34,7 @@ class CalculateMoodDistributionUseCase @Inject constructor() {
         val cutoffDate = LocalDate.now().minusDays(timeRange.days.toLong())
         val filteredInsights = insights.filter { insight ->
             try {
-                val insightDate = insight.generatedAt.toInstant()
+                val insightDate = java.time.Instant.ofEpochMilli(insight.generatedAtMillis)
                     .atZone(ZoneId.systemDefault())
                     .toLocalDate()
                 insightDate.isAfter(cutoffDate) || insightDate.isEqual(cutoffDate)

@@ -12,7 +12,6 @@ import com.lifo.chat.domain.audio.AdaptiveBargeinDetector
 import com.lifo.chat.domain.audio.FullDuplexAudioSession
 import com.lifo.chat.domain.audio.ReferenceSignalBargeInDetector
 import com.lifo.util.audio.AudioVisemeAnalyzer
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,11 +20,8 @@ import java.nio.ByteOrder
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
-import javax.inject.Inject
-import javax.inject.Singleton
-@Singleton
-class GeminiLiveAudioManager @Inject constructor(
-    @ApplicationContext private val context: Context,
+class GeminiLiveAudioManager constructor(
+    private val context: Context,
     private val adaptiveBargeinDetector: AdaptiveBargeinDetector,
     private val sileroVadEngine: SileroVadEngine,
     private val referenceSignalDetector: ReferenceSignalBargeInDetector,

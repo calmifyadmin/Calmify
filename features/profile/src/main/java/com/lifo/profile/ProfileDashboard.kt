@@ -30,8 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.koin.compose.viewmodel.koinViewModel
 import com.lifo.util.model.PsychologicalProfile
 import com.lifo.util.model.Trend
 import com.lifo.util.model.getWeekLabelFull
@@ -53,9 +52,9 @@ import kotlin.math.pow
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileDashboard(
-    viewModel: ProfileViewModel = hiltViewModel()
+    viewModel: ProfileViewModel = koinViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,

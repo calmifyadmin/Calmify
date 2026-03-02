@@ -1,17 +1,20 @@
 package com.lifo.mongo.repository
 
-import com.lifo.mongo.database.dao.ChatSessionDao
+import app.cash.sqldelight.coroutines.asFlow
+import app.cash.sqldelight.coroutines.mapToList
+import com.lifo.mongo.database.CalmifyDatabase
 import com.lifo.util.model.*
 import com.lifo.util.repository.MongoRepository
 import com.lifo.util.repository.UnifiedContentRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
-import java.time.*
-import javax.inject.Inject
-import javax.inject.Singleton
+import kotlinx.datetime.LocalDate
+import java.time.DayOfWeek
+import java.time.LocalTime
+import java.time.ZoneId
 
-@Singleton
-class UnifiedContentRepositoryImpl @Inject constructor(
-    private val chatSessionDao: ChatSessionDao,
+class UnifiedContentRepositoryImpl(
+    private val database: CalmifyDatabase,
     private val diaryRepository: MongoRepository  // Inject Firestore repository
 ) : UnifiedContentRepository {
 
@@ -19,8 +22,8 @@ class UnifiedContentRepositoryImpl @Inject constructor(
         println("[UnifiedContent] " + "Loading unified content for owner: $ownerId")
 
         return combine(
-            // Load chat sessions (uses ownerId for Room database filtering)
-            chatSessionDao.getAllSessions(ownerId),
+            // Load chat sessions (uses ownerId for SQLDelight database filtering)
+            database.chatSessionQueries.getAllSessions(ownerId).asFlow().mapToList(Dispatchers.IO),
             // Load diaries (Firestore uses current authenticated user)
             diaryRepository.getAllDiaries()
                 .onStart {
@@ -120,18 +123,18 @@ class UnifiedContentRepositoryImpl @Inject constructor(
             ContentFilter.DIARY -> filterByType(ownerId, ContentType.DIARY)
             ContentFilter.CHAT -> filterByType(ownerId, ContentType.CHAT)
             ContentFilter.TODAY -> {
-                val startOfDay = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                val endOfDay = LocalDate.now().atTime(LocalTime.MAX).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                val startOfDay = java.time.LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                val endOfDay = java.time.LocalDate.now().atTime(LocalTime.MAX).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
                 filterByDateRange(ownerId, startOfDay, endOfDay)
             }
             ContentFilter.THIS_WEEK -> {
-                val now = LocalDate.now()
+                val now = java.time.LocalDate.now()
                 val startOfWeek = now.with(DayOfWeek.MONDAY).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
                 val endOfWeek = now.with(DayOfWeek.SUNDAY).atTime(LocalTime.MAX).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
                 filterByDateRange(ownerId, startOfWeek, endOfWeek)
             }
             ContentFilter.THIS_MONTH -> {
-                val now = LocalDate.now()
+                val now = java.time.LocalDate.now()
                 val startOfMonth = now.withDayOfMonth(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
                 val endOfMonth = now.withDayOfMonth(now.lengthOfMonth()).atTime(LocalTime.MAX).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
                 filterByDateRange(ownerId, startOfMonth, endOfMonth)

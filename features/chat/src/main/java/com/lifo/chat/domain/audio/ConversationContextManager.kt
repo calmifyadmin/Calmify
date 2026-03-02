@@ -9,8 +9,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlin.math.*
 
 /**
@@ -28,8 +26,7 @@ import kotlin.math.*
  * 
  * @author Jarvis AI Assistant
  */
-@Singleton
-class ConversationContextManager @Inject constructor() {
+class ConversationContextManager {
     
     // Coroutine scope for StateFlow transformations
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)

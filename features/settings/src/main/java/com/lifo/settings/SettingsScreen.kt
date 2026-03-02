@@ -19,7 +19,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import coil3.compose.rememberAsyncImagePainter
 import com.lifo.settings.components.SettingsNavigationItem
 import com.lifo.settings.components.SettingsSectionHeader
@@ -45,7 +45,7 @@ fun SettingsScreen(
     onNavigateToGoals: () -> Unit,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: SettingsViewModel = hiltViewModel()
+    viewModel: SettingsViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()

@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="insight-desktop">
+    <output-path>$PROJECT_DIR$/features/insight/build/libs</output-path>
+    <root id="archive" name="insight-desktop.jar">
+      <element id="module-output" name="Calmify.features.insight.desktopMain" />
+    </root>
+  </artifact>
+</component>

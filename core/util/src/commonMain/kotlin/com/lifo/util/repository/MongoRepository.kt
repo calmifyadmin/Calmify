@@ -1,0 +1,25 @@
+package com.lifo.util.repository
+
+import com.lifo.util.model.Diary
+import com.lifo.util.model.RequestState
+import kotlinx.coroutines.flow.Flow
+import kotlinx.datetime.LocalDate
+
+// Type alias for diary collections returned by the repository
+typealias Diaries = RequestState<Map<LocalDate, List<Diary>>>
+
+interface MongoRepository {
+    fun getAllDiaries(): Flow<RequestState<Map<LocalDate, List<Diary>>>>
+    fun getFilteredDiaries(dayKey: String): Flow<RequestState<Map<LocalDate, List<Diary>>>>
+    fun getSelectedDiary(diaryId: String): Flow<RequestState<Diary>>
+    suspend fun insertDiary(diary: Diary): RequestState<Diary>
+    suspend fun updateDiary(diary: Diary): RequestState<Diary>
+    suspend fun deleteDiary(id: String): RequestState<Boolean>
+    suspend fun deleteAllDiaries(): RequestState<Boolean>
+
+    // Delete ALL user data (diaries, insights, profiles, snapshots, chat sessions)
+    suspend fun deleteAllUserData(): RequestState<Boolean>
+
+    // Week 8: FCM Token Management
+    suspend fun saveFCMToken(token: String): RequestState<Boolean>
+}

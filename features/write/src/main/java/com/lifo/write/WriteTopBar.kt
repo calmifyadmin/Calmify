@@ -30,7 +30,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import com.lifo.ui.components.DisplayAlertDialog
 import com.lifo.util.model.Diary
-import com.lifo.util.toInstant
 import com.maxkeppeker.sheets.core.models.base.rememberSheetState
 import com.maxkeppeler.sheets.calendar.CalendarDialog
 import com.maxkeppeler.sheets.calendar.models.CalendarConfig
@@ -73,7 +72,7 @@ internal fun WriteTopBar(
         if (selectedDiary != null) {
             DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a", Locale.getDefault())
                 .withZone(ZoneId.systemDefault())
-                .format(selectedDiary.date.toInstant())
+                .format(java.time.Instant.ofEpochMilli(selectedDiary.dateMillis))
         } else "Unknown"
     }
     CenterAlignedTopAppBar(

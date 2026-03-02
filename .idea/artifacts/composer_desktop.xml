@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="composer-desktop">
+    <output-path>$PROJECT_DIR$/features/composer/build/libs</output-path>
+    <root id="archive" name="composer-desktop.jar">
+      <element id="module-output" name="Calmify.features.composer.desktopMain" />
+    </root>
+  </artifact>
+</component>

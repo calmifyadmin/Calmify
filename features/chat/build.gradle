@@ -1,22 +1,11 @@
 plugins {
-    id 'com.android.library'
-    id 'org.jetbrains.kotlin.android'
-    id 'org.jetbrains.kotlin.plugin.compose'
-    id 'com.google.devtools.ksp'
-    id 'dagger.hilt.android.plugin'
+    id 'calmify.kmp.compose'
 }
 
 android {
     namespace 'com.lifo.chat'
-    compileSdk ProjectConfig.compileSdk
 
     defaultConfig {
-        minSdk ProjectConfig.minSdk
-        targetSdk ProjectConfig.targetSdk
-
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles "consumer-rules.pro"
-
         // Add API key from local.properties
         buildConfigField("String", "GEMINI_API_KEY", "\"${getGeminiApiKey()}\"")
         buildConfigField("String", "KEY_OPENAI_API", "\"${getOpenAIApiKey()}\"")
@@ -52,22 +41,15 @@ android {
         }
     }
 
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
-
-    kotlinOptions {
-        jvmTarget = ProjectConfig.jvmTarget
-    }
-
     buildFeatures {
-        compose true
         buildConfig true
     }
+}
 
-    packagingOptions {
-        resources.excludes.add("META-INF/*")
+configurations.configureEach {
+    resolutionStrategy {
+        force "org.jetbrains.kotlin:kotlin-stdlib:2.1.0"
+        force "org.jetbrains.kotlin:kotlin-stdlib-common:2.1.0"
     }
 }
 
@@ -89,96 +71,81 @@ def getOpenAIApiKey() {
     return localProperties.getProperty('KEY_OPENAI_API', '')
 }
 
-dependencies {
-    // Compose BOM
-    implementation platform(libs.compose.bom)
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation project(':core:util')
+            implementation project(':core:ui')
 
-    // Compose dependencies
-    implementation libs.compose.ui
-    implementation libs.compose.ui.graphics
-    implementation libs.compose.ui.tooling.preview
-    implementation libs.compose.material3
-    implementation libs.compose.material.icons.extended
-    debugImplementation libs.compose.ui.tooling
+            implementation libs.koin.core
+            implementation libs.koin.compose
+            implementation libs.koin.compose.viewmodel
+        }
 
-    // Core
-    implementation libs.core.ktx
-    implementation libs.activity.compose
-    implementation libs.navigation.compose
-    implementation libs.lifecycle.runtime.compose
-    implementation libs.lifecycle.viewmodel.compose
+        androidMain {
+            kotlin.srcDirs('src/main/java')
 
-    // Firebase AI - Replaces old generativeai SDK (no Ktor needed!)
-    implementation libs.firebase.ai
+            dependencies {
+                // Compose extras
+                implementation libs.compose.material.icons.extended
 
-    // Markdown rendering
-    implementation libs.richtext.ui
-    implementation libs.richtext.ui.material3
-    implementation libs.richtext.commonmark
+                // Core
+                implementation libs.core.ktx
+                implementation libs.activity.compose
+                implementation libs.navigation.compose
+                implementation libs.lifecycle.runtime.compose
+                implementation libs.lifecycle.viewmodel.compose
+                implementation libs.coroutines.android
 
-    // Room
-    implementation libs.room.runtime
-    implementation libs.room.ktx
-    ksp libs.room.compiler
+                // Firebase (explicit versions for KMP source sets)
+                implementation libs.firebase.auth.kmp
+                implementation libs.firebase.storage.kmp
+                implementation libs.firebase.functions.kmp
+                implementation libs.firebase.database.kmp
+                implementation libs.firebase.ai.kmp
 
-    // Hilt
-    implementation libs.hilt.android
-    ksp libs.hilt.compiler
-    implementation libs.hilt.navigation.compose
+                // Markdown rendering
+                implementation libs.richtext.ui
+                implementation libs.richtext.ui.material3
+                implementation libs.richtext.commonmark
 
-    // Firebase BOM - manages all Firebase versions
-    implementation platform(libs.firebase.bom)
+                // Koin Android
+                implementation libs.koin.android
 
-    // Firebase dependencies (no versions needed with BOM)
-    implementation libs.firebase.auth
-    implementation libs.firebase.storage
-    implementation libs.firebase.analytics
-    implementation libs.firebase.functions
-    implementation libs.firebase.database
-    implementation libs.firebase.ai  // Firebase AI support (formerly vertexai)
+                // Networking
+                implementation libs.okhttp
+                implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
-    // Coroutines
-    implementation libs.coroutines.core
-    implementation libs.coroutines.android
-    implementation libs.coroutines.play.services
+                // WebSocket for Gemini Live
+                implementation "org.java-websocket:Java-WebSocket:1.5.4"
 
-    // Networking
-    implementation libs.okhttp
-    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
-    
-    // WebSocket for Gemini Live  
-    implementation "org.java-websocket:Java-WebSocket:1.5.4"
+                // Security for API key storage
+                implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
-    // Security for API key storage
-    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+                // JSON parsing
+                implementation("org.json:json:20230618")
 
-    // JSON parsing
-    implementation("org.json:json:20230618")
+                // Audio permissions handling
+                implementation libs.accompanist.permissions
 
-    // Audio permissions handling
-    implementation libs.accompanist.permissions
+                // WebRTC for OpenAI Realtime API
+                implementation 'org.webrtc:google-webrtc:1.0.30039@aar'
 
-    // WebRTC for OpenAI Realtime API
-    implementation 'org.webrtc:google-webrtc:1.0.30039@aar'
+                // AAA VAD System
+                implementation libs.vad.silero
+                implementation libs.vad.webrtc
 
-    // AAA VAD System - Enterprise-grade Voice Activity Detection
-    // Dual-engine architecture: WebRTC pre-filter + Silero VAD v6 (DNN)
-    implementation libs.vad.silero
-    implementation libs.vad.webrtc
+                // Image Loading
+                implementation libs.coil
+                implementation libs.coil.network.okhttp
 
-    // Image Loading - Coil 3.x
-    implementation libs.coil
-    implementation libs.coil.network.okhttp
+                // Internal modules
+                implementation project(':data:mongo')
+            }
+        }
 
-    // Testing
-    testImplementation libs.junit
-    androidTestImplementation libs.junit.ext
-    androidTestImplementation libs.compose.ui.test
-
-    // Internal modules
-    implementation(project(":core:ui"))
-    implementation(project(":core:util"))
-    implementation(project(":data:mongo"))
-    // NOTE: DO NOT add features:humanoid here - causes circular dependency
-    // Integration happens at app level via HumanoidViewModel injection
+        commonTest.dependencies {
+            implementation kotlin('test')
+        }
+    }
 }

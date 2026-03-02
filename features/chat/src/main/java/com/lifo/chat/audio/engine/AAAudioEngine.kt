@@ -7,15 +7,12 @@ import android.media.AudioManager
 import android.media.AudioTrack
 import android.util.Base64
 
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * AAA Audio Engine - Orchestratore Principale
@@ -41,9 +38,8 @@ import javax.inject.Singleton
  *
  * @author Jarvis AI Assistant - AAA Audio Engine
  */
-@Singleton
-class AAAudioEngine @Inject constructor(
-    @ApplicationContext private val context: Context
+class AAAudioEngine constructor(
+    private val context: Context
 ) {
     companion object {
         // Audio configuration

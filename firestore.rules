@@ -1,133 +1,236 @@
 rules_version = '2';
   service cloud.firestore {
     match /databases/{database}/documents {
+
+      // ============================================================
+      // WELLNESS FEATURES (Original)
+      // ============================================================
+
       // Diaries collection
       match /diaries/{diaryId} {
-        // Lettura: solo se autenticato e sei il proprietario
         allow read: if request.auth != null &&
                        resource.data.ownerId == request.auth.uid;
-
-        // Creazione: solo se autenticato e imposti te stesso come proprietario
         allow create: if request.auth != null &&
                          request.resource.data.ownerId == request.auth.uid;
-
-        // Aggiornamento: solo se autenticato e sei il proprietario
         allow update: if request.auth != null &&
                          resource.data.ownerId == request.auth.uid &&
                          request.resource.data.ownerId == request.auth.uid;
-
-        // Eliminazione: solo se autenticato e sei il proprietario
         allow delete: if request.auth != null &&
                          resource.data.ownerId == request.auth.uid;
       }
 
-      // Query sulla collection (per getAllDiaries)
       match /diaries {
         allow list: if request.auth != null;
       }
 
       // Wellbeing Snapshots collection
       match /wellbeing_snapshots/{snapshotId} {
-        // Lettura: solo se autenticato e sei il proprietario
         allow read: if request.auth != null &&
                        resource.data.ownerId == request.auth.uid;
-
-        // Creazione: solo se autenticato e imposti te stesso come proprietario
         allow create: if request.auth != null &&
                          request.resource.data.ownerId == request.auth.uid;
-
-        // Aggiornamento: solo se autenticato e sei il proprietario
         allow update: if request.auth != null &&
                          resource.data.ownerId == request.auth.uid &&
                          request.resource.data.ownerId == request.auth.uid;
-
-        // Eliminazione: solo se autenticato e sei il proprietario
         allow delete: if request.auth != null &&
                          resource.data.ownerId == request.auth.uid;
       }
 
-      // Query sulla collection wellbeing_snapshots
       match /wellbeing_snapshots {
         allow list: if request.auth != null;
       }
 
-      // Users collection (Week 8: FCM Token Storage)
+      // Users collection (FCM Token Storage)
       match /users/{userId} {
-        // Lettura: solo se autenticato e sei tu stesso
         allow read: if request.auth != null &&
                        request.auth.uid == userId;
-
-        // Creazione/Aggiornamento: solo se autenticato e sei tu stesso
-        // Permette di salvare il proprio fcmToken
         allow create, update: if request.auth != null &&
                                  request.auth.uid == userId;
-
-        // Eliminazione: solo se autenticato e sei tu stesso
         allow delete: if request.auth != null &&
                          request.auth.uid == userId;
       }
 
-      // Diary Insights collection (Week 5 - AI-generated insights)
+      // Diary Insights collection (AI-generated)
       match /diary_insights/{insightId} {
-        // Lettura: solo se autenticato e sei il proprietario
         allow read: if request.auth != null &&
                        resource.data.ownerId == request.auth.uid;
-
-        // Creazione: solo se autenticato e imposti te stesso come proprietario
-        // (tipicamente chiamato da Cloud Function, ma supporta anche client-side)
         allow create: if request.auth != null &&
                          request.resource.data.ownerId == request.auth.uid;
-
-        // Aggiornamento: solo se autenticato e sei il proprietario
-        // (permette di aggiungere feedback: userRating, userCorrection)
         allow update: if request.auth != null &&
                          resource.data.ownerId == request.auth.uid &&
                          request.resource.data.ownerId == request.auth.uid;
-
-        // Eliminazione: solo se autenticato e sei il proprietario
         allow delete: if request.auth != null &&
                          resource.data.ownerId == request.auth.uid;
       }
 
-      // Query sulla collection diary_insights
       match /diary_insights {
         allow list: if request.auth != null;
       }
 
-      // Psychological Profiles collection (Week 7 - AI-computed profiles)
+      // Psychological Profiles (AI-computed, read-only)
       match /psychological_profiles/{profileId} {
-        // Lettura: solo se autenticato e sei il proprietario
         allow read: if request.auth != null &&
                        resource.data.ownerId == request.auth.uid;
-
-        // Creazione: SOLO Cloud Function (Admin SDK bypassa queste regole)
         allow create: if false;
-
-        // Aggiornamento: VIETATO (profili read-only)
         allow update: if false;
-
-        // Eliminazione: solo se autenticato e sei il proprietario
         allow delete: if request.auth != null &&
                          resource.data.ownerId == request.auth.uid;
       }
 
-      // Profile Settings collection (Onboarding data - SENSITIVE)
+      // Profile Settings (Onboarding data)
       match /profile_settings/{userId} {
-        // Lettura: solo se autenticato e sei tu stesso
         allow read: if request.auth != null &&
                        request.auth.uid == userId;
-
-        // Creazione/Aggiornamento: solo se autenticato e sei tu stesso
-        // Il document ID corrisponde all'user ID, quindi è intrinsecamente sicuro
         allow create, update: if request.auth != null &&
                                  request.auth.uid == userId;
-
-        // Eliminazione: solo se autenticato e sei tu stesso
         allow delete: if request.auth != null &&
                          request.auth.uid == userId;
       }
 
-      // NEGA TUTTO IL RESTO (DEVE ESSERE L'ULTIMA REGOLA)
+      // ============================================================
+      // SOCIAL FEATURES (Wave 6-9)
+      // ============================================================
+
+      // --- Threads (Posts) ---
+      match /threads/{threadId} {
+        // Anyone authenticated can read public threads
+        allow read: if request.auth != null;
+
+        // Only authenticated users can create, must set themselves as author
+        allow create: if request.auth != null &&
+                         request.resource.data.authorId == request.auth.uid;
+
+        // Only the author can update their own thread
+        allow update: if request.auth != null &&
+                         resource.data.authorId == request.auth.uid;
+
+        // Only the author can delete their own thread
+        allow delete: if request.auth != null &&
+                         resource.data.authorId == request.auth.uid;
+
+        // Likes sub-collection: any authenticated user can like/unlike
+        match /likes/{likeId} {
+          allow read: if request.auth != null;
+          allow create, delete: if request.auth != null &&
+                                   request.auth.uid == likeId;
+        }
+      }
+
+      // --- User Profiles (Public) ---
+      match /user_profiles/{userId} {
+        // Anyone authenticated can read public profiles
+        allow read: if request.auth != null;
+
+        // Only the user can create/update their own profile
+        allow create, update: if request.auth != null &&
+                                 request.auth.uid == userId;
+
+        // Only the user can delete their own profile
+        allow delete: if request.auth != null &&
+                         request.auth.uid == userId;
+      }
+
+      // --- Social Graph (Following/Followers/Blocked) ---
+      match /social_graph/{userId} {
+        allow read: if request.auth != null;
+
+        // Following sub-collection
+        match /following/{followedUserId} {
+          allow read: if request.auth != null;
+          allow create, delete: if request.auth != null &&
+                                   request.auth.uid == userId;
+        }
+
+        // Followers sub-collection
+        match /followers/{followerUserId} {
+          allow read: if request.auth != null;
+          // Followers are managed by the follower (when they follow/unfollow)
+          allow create, delete: if request.auth != null &&
+                                   request.auth.uid == followerUserId;
+        }
+
+        // Blocked sub-collection
+        match /blocked/{blockedUserId} {
+          allow read: if request.auth != null &&
+                         request.auth.uid == userId;
+          allow create, delete: if request.auth != null &&
+                                   request.auth.uid == userId;
+        }
+      }
+
+      // --- Conversations (DM) ---
+      match /conversations/{conversationId} {
+        // Only participants can read the conversation
+        allow read: if request.auth != null &&
+                       request.auth.uid in resource.data.participantIds;
+
+        // Authenticated users can create (must include themselves as participant)
+        allow create: if request.auth != null &&
+                         request.auth.uid in request.resource.data.participantIds;
+
+        // Only participants can update (e.g., lastMessage)
+        allow update: if request.auth != null &&
+                         request.auth.uid in resource.data.participantIds;
+
+        // Only participants can delete
+        allow delete: if request.auth != null &&
+                         request.auth.uid in resource.data.participantIds;
+
+        // Messages sub-collection
+        match /messages/{messageId} {
+          allow read: if request.auth != null &&
+                         request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+          allow create: if request.auth != null &&
+                           request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds &&
+                           request.resource.data.senderId == request.auth.uid;
+        }
+
+        // Typing indicators sub-collection
+        match /typing/{typingUserId} {
+          allow read: if request.auth != null &&
+                         request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+          allow create, update, delete: if request.auth != null &&
+                                           request.auth.uid == typingUserId;
+        }
+      }
+
+      // --- Notifications ---
+      match /notifications/{notificationId} {
+        // Only the target user can read their notifications
+        allow read: if request.auth != null &&
+                       resource.data.userId == request.auth.uid;
+
+        // Cloud Functions create notifications (Admin SDK bypasses rules)
+        // But allow client to create for testing/direct notifications
+        allow create: if request.auth != null;
+
+        // Only the target user can update (mark as read)
+        allow update: if request.auth != null &&
+                         resource.data.userId == request.auth.uid;
+
+        // Only the target user can delete
+        allow delete: if request.auth != null &&
+                         resource.data.userId == request.auth.uid;
+      }
+
+      // --- Subscriptions (Billing State) ---
+      match /subscriptions/{userId} {
+        // Only the user can read their subscription
+        allow read: if request.auth != null &&
+                       request.auth.uid == userId;
+
+        // Only the user can create/update their subscription state
+        allow create, update: if request.auth != null &&
+                                 request.auth.uid == userId;
+
+        // Only the user can delete
+        allow delete: if request.auth != null &&
+                         request.auth.uid == userId;
+      }
+
+      // ============================================================
+      // DENY ALL OTHER ACCESS (MUST BE LAST RULE)
+      // ============================================================
       match /{document=**} {
         allow read, write: if false;
       }

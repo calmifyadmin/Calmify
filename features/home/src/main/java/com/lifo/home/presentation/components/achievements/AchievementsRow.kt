@@ -41,7 +41,6 @@ import com.lifo.home.presentation.components.common.BadgeShapeIndicator
  * │  └─────────────────────────────────────────┘   │
  * └─────────────────────────────────────────────────┘
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AchievementsRow(
     streak: StreakData,
@@ -85,7 +84,7 @@ fun AchievementsRow(
             ) {
                 Text(
                     text = "I tuoi progressi",
-                    style = MaterialTheme.typography.titleLargeEmphasized,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )

@@ -45,7 +45,6 @@ import java.time.LocalTime
  * │  └─────────────────────────────────────────┘ │
  * └────────────────────────────────────────────────┘
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun HeroGreetingCard(
     userName: String,
@@ -91,7 +90,7 @@ fun HeroGreetingCard(
                 Column {
                     Text(
                         text = "$greeting, $userName",
-                        style = MaterialTheme.typography.headlineLargeEmphasized,
+                        style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )

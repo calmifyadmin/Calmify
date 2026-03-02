@@ -13,8 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * SnapshotScreen
@@ -29,9 +28,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 fun SnapshotScreen(
     onBackPressed: () -> Unit,
     onSnapshotComplete: () -> Unit,
-    viewModel: SnapshotViewModel = hiltViewModel()
+    viewModel: SnapshotViewModel = koinViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsState()
     val metrics = viewModel.metrics
     val notes = viewModel.notes
     val scrollState = rememberScrollState()

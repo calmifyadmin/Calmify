@@ -1,16 +1,33 @@
 package com.lifo.history
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.FirebaseAuth
+import com.lifo.util.auth.AuthProvider
+import com.lifo.util.mvi.MviContract
+import com.lifo.util.mvi.MviViewModel
 import com.lifo.util.repository.MongoRepository
 import com.lifo.util.repository.UnifiedContentRepository
 import com.lifo.util.model.ContentFilter
 import com.lifo.util.model.HomeContentItem
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import javax.inject.Inject
+
+/**
+ * MVI Contract for the History screen.
+ */
+object HistoryContract {
+
+    sealed interface Intent : MviContract.Intent {
+        /** Load recent history (chat + diary). */
+        data object LoadHistory : Intent
+        /** Refresh history data. */
+        data object RefreshHistory : Intent
+    }
+
+    // State is the existing HistoryUiState data class (see below).
+
+    sealed interface Effect : MviContract.Effect {
+        // No one-shot effects needed for now; placeholder for future use.
+    }
+}
 
 /**
  * ViewModel for the History screen
@@ -23,37 +40,52 @@ data class HistoryUiState(
     val error: String? = null,
     val isChatsEmpty: Boolean = true,
     val isDiariesEmpty: Boolean = true
-)
+) : MviContract.State
 
-@HiltViewModel
-class HistoryViewModel @Inject constructor(
+class HistoryViewModel constructor(
     private val unifiedContentRepository: UnifiedContentRepository,
     private val diaryRepository: MongoRepository,
-    private val auth: FirebaseAuth
-) : ViewModel() {
+    private val authProvider: AuthProvider
+) : MviViewModel<HistoryContract.Intent, HistoryUiState, HistoryContract.Effect>(
+    initialState = HistoryUiState()
+) {
 
     companion object {
         private const val RECENT_ITEMS_LIMIT = 4 // Show last 4 items in each section
     }
 
-    private val _uiState = MutableStateFlow(HistoryUiState())
-    val uiState: StateFlow<HistoryUiState> = _uiState.asStateFlow()
+    /**
+     * Backward-compatible alias so existing callers that read
+     * `viewModel.uiState.collectAsState()` keep compiling.
+     */
+    val uiState: StateFlow<HistoryUiState> get() = state
 
     init {
-        loadHistory()
+        onIntent(HistoryContract.Intent.LoadHistory)
     }
 
+    // ── MVI plumbing ────────────────────────────────────────────────────
+
+    override fun handleIntent(intent: HistoryContract.Intent) {
+        when (intent) {
+            is HistoryContract.Intent.LoadHistory -> loadHistory()
+            is HistoryContract.Intent.RefreshHistory -> loadHistory()
+        }
+    }
+
+    // ── Private helpers ─────────────────────────────────────────────────
+
     private fun getCurrentUserId(): String {
-        return auth.currentUser?.uid
+        return authProvider.currentUserId
             ?: throw IllegalStateException("User not authenticated")
     }
 
     /**
      * Load history for both chats and diaries
      */
-    fun loadHistory() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+    private fun loadHistory() {
+        scope.launch {
+            updateState { copy(isLoading = true, error = null) }
 
             try {
                 val userId = getCurrentUserId()
@@ -62,8 +94,8 @@ class HistoryViewModel @Inject constructor(
                 unifiedContentRepository.getUnifiedContent(userId)
                     .catch { e ->
                         println("[HistoryViewModel] ERROR: Error loading history: ${e.message}")
-                        _uiState.update {
-                            it.copy(
+                        updateState {
+                            copy(
                                 isLoading = false,
                                 error = e.message ?: "Failed to load history"
                             )
@@ -79,8 +111,8 @@ class HistoryViewModel @Inject constructor(
                             .filterIsInstance<HomeContentItem.DiaryItem>()
                             .take(RECENT_ITEMS_LIMIT)
 
-                        _uiState.update {
-                            it.copy(
+                        updateState {
+                            copy(
                                 chatHistory = chats,
                                 diaryHistory = diaries,
                                 isLoading = false,
@@ -92,8 +124,8 @@ class HistoryViewModel @Inject constructor(
                     }
             } catch (e: Exception) {
                 println("[HistoryViewModel] ERROR: Error loading history: ${e.message}")
-                _uiState.update {
-                    it.copy(
+                updateState {
+                    copy(
                         isLoading = false,
                         error = e.message ?: "Unknown error occurred"
                     )
@@ -102,15 +134,23 @@ class HistoryViewModel @Inject constructor(
         }
     }
 
+    // ── Backward-compatible public API ──────────────────────────────────
+
     /**
-     * Refresh history data
+     * Refresh history data. Delegates to the MVI intent.
+     * Kept as a public function so existing callers (`viewModel.refreshHistory()`) compile.
      */
     fun refreshHistory() {
-        loadHistory()
+        onIntent(HistoryContract.Intent.RefreshHistory)
     }
 
     /**
-     * Load full chat history with search query
+     * Load full chat history with search query.
+     *
+     * Returns a Flow directly (used by ChatHistoryFullScreen composable).
+     * Kept as a regular function for backward compatibility — the full-screen
+     * composables call `viewModel.loadFullChatHistory(query)` and collect the
+     * returned Flow via `collectAsState`.
      */
     fun loadFullChatHistory(searchQuery: String = ""): Flow<List<HomeContentItem.ChatItem>> {
         return try {
@@ -129,7 +169,12 @@ class HistoryViewModel @Inject constructor(
     }
 
     /**
-     * Load full diary history with search query
+     * Load full diary history with search query.
+     *
+     * Returns a Flow directly (used by DiaryHistoryFullScreen composable).
+     * Kept as a regular function for backward compatibility — the full-screen
+     * composables call `viewModel.loadFullDiaryHistory(query)` and collect the
+     * returned Flow via `collectAsState`.
      */
     fun loadFullDiaryHistory(searchQuery: String = ""): Flow<List<HomeContentItem.DiaryItem>> {
         return try {

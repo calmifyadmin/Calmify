@@ -24,6 +24,13 @@ splash = "1.0.1"
 # Firebase - LATEST 2025 (NO KTX MODULES!)
 # v34.7.0 includes firebase-ai 17.7.0 with LiveAudioConversationConfig for lip-sync
 firebase-bom = "34.7.0"
+firebase-auth-version = "23.2.0"       # Explicit version for KMP source sets (BOM platform() unsupported)
+firebase-firestore-version = "25.1.3"  # Explicit version for KMP source sets (BOM platform() unsupported)
+firebase-storage-version = "21.0.1"    # Explicit version for KMP source sets
+firebase-database-version = "21.0.0"   # Explicit version for KMP source sets
+firebase-functions-version = "21.1.0"  # Explicit version for KMP source sets
+firebase-config-version = "22.0.1"     # Explicit version for KMP source sets
+firebase-ai-version = "17.7.0"         # Explicit version for KMP source sets
 google-services = "4.4.2"
 
 # Database - Room 2.7 + FIRESTORE (no realm!)
@@ -59,6 +66,9 @@ okhttp = "4.12.0"
 retrofit = "2.11.0"
 ktor = "2.3.12"
 
+# Billing - Google Play Billing
+billing = "7.1.1"
+
 # Testing - LATEST 2025
 junit = "4.13.2"
 junit-ext = "1.1.5"
@@ -78,20 +88,27 @@ media3-transformer = "1.8.0"
 # AAA VAD System - Enterprise-grade Voice Activity Detection
 android-vad = "2.0.10"
 
-# === KMP-READY (uncomment when converting to Kotlin Multiplatform) ===
-# compose-multiplatform = "1.7.1"
-# sqldelight = "2.0.2"
-# voyager = "1.1.0"
-# koin = "4.0.4"
-# kotlinx-datetime = "0.6.2"
-# kotlinx-serialization = "1.7.3"
-# multiplatform-settings = "1.3.0"
+# === KMP ACTIVE ===
+compose-multiplatform = "1.7.1"
+sqldelight = "2.0.2"
+koin = "4.1.1"
+kotlinx-datetime = "0.6.2"
+kotlinx-serialization = "1.7.3"
+multiplatform-settings = "1.3.0"
+
+# Decompose Navigation (KMP lifecycle-aware)
+decompose = "3.4.0"
+essenty = "2.5.0"
+
+# GitLive Firebase KMP SDK (bridge until official KFire is stable)
+gitlive-firebase = "2.4.0"
 
 [libraries]
 # Core Android
 core-ktx = { module = "androidx.core:core-ktx", version.ref = "core-ktx" }
 lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle" }
 lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
+lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
 lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity-compose" }
 appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
@@ -117,16 +134,24 @@ navigation-compose = { module = "androidx.navigation:navigation-compose", versio
 # Firebase BOM and libraries (NO -ktx IN v34.0.0+!)
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }
 firebase-auth = { module = "com.google.firebase:firebase-auth" }
+firebase-auth-kmp = { module = "com.google.firebase:firebase-auth", version.ref = "firebase-auth-version" }
 firebase-firestore = { module = "com.google.firebase:firebase-firestore" }
+firebase-firestore-kmp = { module = "com.google.firebase:firebase-firestore", version.ref = "firebase-firestore-version" }
+firebase-storage-kmp = { module = "com.google.firebase:firebase-storage", version.ref = "firebase-storage-version" }
 firebase-storage = { module = "com.google.firebase:firebase-storage" }
 firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
 firebase-functions = { module = "com.google.firebase:firebase-functions" }
+firebase-functions-kmp = { module = "com.google.firebase:firebase-functions", version.ref = "firebase-functions-version" }
 firebase-database = { module = "com.google.firebase:firebase-database" }
+firebase-database-kmp = { module = "com.google.firebase:firebase-database", version.ref = "firebase-database-version" }
 firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
 firebase-performance = { module = "com.google.firebase:firebase-perf" }
 firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
 firebase-ai = { module = "com.google.firebase:firebase-ai" }
+firebase-ai-kmp = { module = "com.google.firebase:firebase-ai", version.ref = "firebase-ai-version" }
 firebase-ai-logic = { module = "com.google.firebase:firebase-ai-logic" }
+firebase-config = { module = "com.google.firebase:firebase-config" }
+firebase-config-kmp = { module = "com.google.firebase:firebase-config", version.ref = "firebase-config-version" }
 firebase-ml-modeldownloader = { module = "com.google.firebase:firebase-ml-modeldownloader" }
 
 # Room - 2.7.2 with KSP support
@@ -136,10 +161,8 @@ room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 room-paging = { module = "androidx.room:room-paging", version.ref = "room" }
 
 
-# Dependency Injection - Hilt 2.54
-hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "dagger-hilt" }
-hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "dagger-hilt" }
-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hilt-navigation-compose" }
+# JSR-330 standard annotations (javax.inject.Inject, javax.inject.Singleton)
+javax-inject = { module = "javax.inject:javax.inject", version = "1" }
 
 # Coroutines
 coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlin-coroutines" }
@@ -194,6 +217,10 @@ espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref =
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 compose-ui-test = { module = "androidx.compose.ui:ui-test-junit4", version.ref = "junit4" }
+coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlin-coroutines" }
+
+# Google Play Billing
+billing-ktx = { module = "com.android.billingclient:billing-ktx", version.ref = "billing" }
 
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
@@ -215,18 +242,38 @@ media3-transformer = { group = "androidx.media3", name = "media3-transformer", v
 vad-silero = { module = "com.github.gkonovalov.android-vad:silero", version.ref = "android-vad" }
 vad-webrtc = { module = "com.github.gkonovalov.android-vad:webrtc", version.ref = "android-vad" }
 
-# === KMP ALTERNATIVES (uncomment when converting to Kotlin Multiplatform) ===
-# sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }
-# sqldelight-android = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
-# sqldelight-native = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
-# koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
-# koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
-# koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koin" }
-# voyager-navigator = { module = "cafe.adriel.voyager:voyager-navigator", version.ref = "voyager" }
-# voyager-screenmodel = { module = "cafe.adriel.voyager:voyager-screenmodel", version.ref = "voyager" }
-# kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
-# kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
-# multiplatform-settings = { module = "com.russhwolf:multiplatform-settings", version.ref = "multiplatform-settings" }
+# === KMP LIBRARIES (ACTIVE) ===
+# SQLDelight (Room replacement for KMP)
+sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }
+sqldelight-android = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
+sqldelight-native = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
+sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
+
+# Koin DI (Hilt replacement for KMP)
+koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
+koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
+koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koin" }
+koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel", version.ref = "koin" }
+
+# Decompose Navigation (type-safe, lifecycle-aware KMP navigation)
+decompose = { module = "com.arkivanov.decompose:decompose", version.ref = "decompose" }
+decompose-compose = { module = "com.arkivanov.decompose:extensions-compose", version.ref = "decompose" }
+essenty-lifecycle = { module = "com.arkivanov.essenty:lifecycle", version.ref = "essenty" }
+essenty-statekeeper = { module = "com.arkivanov.essenty:state-keeper", version.ref = "essenty" }
+essenty-instancekeeper = { module = "com.arkivanov.essenty:instance-keeper", version.ref = "essenty" }
+essenty-backhandler = { module = "com.arkivanov.essenty:back-handler", version.ref = "essenty" }
+
+# GitLive Firebase KMP SDK (multiplatform Firebase, bridge until KFire stable)
+gitlive-firebase-auth = { module = "dev.gitlive:firebase-auth", version.ref = "gitlive-firebase" }
+gitlive-firebase-firestore = { module = "dev.gitlive:firebase-firestore", version.ref = "gitlive-firebase" }
+gitlive-firebase-storage = { module = "dev.gitlive:firebase-storage", version.ref = "gitlive-firebase" }
+gitlive-firebase-messaging = { module = "dev.gitlive:firebase-messaging", version.ref = "gitlive-firebase" }
+gitlive-firebase-analytics = { module = "dev.gitlive:firebase-analytics", version.ref = "gitlive-firebase" }
+
+# kotlinx libraries (KMP)
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+multiplatform-settings = { module = "com.russhwolf:multiplatform-settings", version.ref = "multiplatform-settings" }
 
 [plugins]
 com-android-application = { id = "com.android.application", version.ref = "agp" }
@@ -242,7 +289,7 @@ org-jetbrains-kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", ver
 com-google-firebase-crashlytics = { id = "com.google.firebase.crashlytics", version = "3.0.2" }
 com-google-firebase-perf = { id = "com.google.firebase.firebase-perf", version = "1.4.2" }
 
-# === KMP PLUGINS (uncomment when converting to Kotlin Multiplatform) ===
-# org-jetbrains-kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
-# org-jetbrains-compose = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
-# app-cash-sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
+# === KMP PLUGINS (ACTIVE) ===
+org-jetbrains-kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+org-jetbrains-compose = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
+app-cash-sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }

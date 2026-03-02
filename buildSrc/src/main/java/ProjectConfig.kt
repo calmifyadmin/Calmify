@@ -17,4 +17,12 @@ object ProjectConfig {
 
     // KMP Migration — Set to true after full conversion to Kotlin Multiplatform
     const val KMP_READY = false
+
+    // Nexus Social Features — Feature flags for gradual rollout
+    const val SOCIAL_ENABLED = false           // Master toggle for all social features
+    const val FEED_ENABLED = false             // Feed/Threads
+    const val MESSAGING_ENABLED = false        // DM between users
+    const val FEDERATION_ENABLED = false       // ActivityPub bridge
+    const val SEMANTIC_SEARCH_ENABLED = false  // Vertex AI Vector Search
+    const val MEDIA_PIPELINE_ENABLED = false   // Cloud transcoding + CDN
 }

@@ -32,26 +32,25 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.rememberNavController
+import com.arkivanov.decompose.defaultComponentContext
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageMetadata
-import com.lifo.app.CalmifyApp
+import com.lifo.app.DecomposeApp
+import com.lifo.calmifyapp.navigation.decompose.RootComponent
+import com.lifo.calmifyapp.navigation.decompose.RootDestination
 import com.lifo.chat.audio.GeminiNativeVoiceSystem
 import com.lifo.chat.config.ApiConfigManager
-import com.lifo.mongo.database.dao.ImageToDeleteDao
-import com.lifo.mongo.database.dao.ImageToUploadDao
-import com.lifo.mongo.database.entity.ImageToDelete
-import com.lifo.mongo.database.entity.ImageToUpload
+import com.lifo.mongo.database.ImageToUploadQueries
+import com.lifo.mongo.database.ImageToDeleteQueries
+import com.lifo.mongo.database.Image_to_upload_table
+import com.lifo.mongo.database.Image_to_delete_table
 import com.lifo.ui.theme.CalmifyAppTheme
-import com.lifo.util.Screen
-import dagger.hilt.android.AndroidEntryPoint
+import org.koin.android.ext.android.inject
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import javax.inject.Inject
 
 // Screen state management
 sealed class AppState {
@@ -60,45 +59,23 @@ sealed class AppState {
     data class Error(val message: String, val retry: () -> Unit) : AppState()
 }
 
-// Assuming you have an ApiConfigManager class and it's set up for Hilt injection
-// For example:
-// class ApiConfigManager @Inject constructor() {
-//    fun setGeminiApiKey(apiKey: String) {
-//        // Implement your logic to set the API key, e.g., store it in preferences or a singleton
-//        Log.d("ApiConfigManager", "Setting Gemini API Key: $apiKey")
-//    }
-// }
-
-@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    @Inject
-    lateinit var imageToUploadDao: ImageToUploadDao
-
-    @Inject
-    lateinit var imageToDeleteDao: ImageToDeleteDao
-
-    @Inject
-    lateinit var apiConfigManager: ApiConfigManager // Inject your ApiConfigManager here
-
-    @Inject
-    lateinit var geminiNativeVoiceSystem: GeminiNativeVoiceSystem // Assuming you inject this too
-
-    @Inject
-    lateinit var mongoRepository: com.lifo.util.repository.MongoRepository // For FCM token
-
-    @Inject
-    lateinit var profileSettingsRepository: com.lifo.util.repository.ProfileSettingsRepository // For onboarding check
-
-    @Inject
-    lateinit var auth: FirebaseAuth
+    private val imageToUploadQueries: ImageToUploadQueries by inject()
+    private val imageToDeleteQueries: ImageToDeleteQueries by inject()
+    private val apiConfigManager: ApiConfigManager by inject()
+    private val geminiNativeVoiceSystem: GeminiNativeVoiceSystem by inject()
+    private val mongoRepository: com.lifo.util.repository.MongoRepository by inject()
+    private val profileSettingsRepository: com.lifo.util.repository.ProfileSettingsRepository by inject()
+    private val featureFlagRepository: com.lifo.util.repository.FeatureFlagRepository by inject()
+    private val auth: FirebaseAuth by inject()
 
     // App state management
     private val _appState = MutableStateFlow<AppState>(AppState.Initializing)
     private val appState: StateFlow<AppState> = _appState.asStateFlow()
 
-    // Navigation controller state
-    private var navController: NavHostController? = null
+    // Decompose root component — created once in onCreate, survives config changes
+    private lateinit var rootComponent: RootComponent
 
     // Keep splash screen visible until app is ready
     private var keepSplashScreen = true
@@ -182,7 +159,15 @@ class MainActivity : ComponentActivity() {
         // Check for deep link from notification
         handleDeepLink(intent)
 
-        // Initialize in background
+        // Create Decompose root component with Auth as initial destination.
+        // Once initializeApp() resolves the actual start destination,
+        // it will call replaceAll() to navigate to the correct screen.
+        rootComponent = RootComponent(
+            componentContext = defaultComponentContext(),
+            initialDestination = RootDestination.Auth
+        )
+
+        // Initialize in background — will resolve start destination and navigate
         lifecycleScope.launch {
             initializeApp()
         }
@@ -212,18 +197,16 @@ class MainActivity : ComponentActivity() {
                                 InitializingScreen()
                             }
                             is AppState.Ready -> {
-                                // Use the new CalmifyApp with global navigation bar
-                                CalmifyApp(
-                                    startDestination = getStartDestination(),
+                                // Use DecomposeApp with Decompose navigation
+                                DecomposeApp(
+                                    rootComponent = rootComponent,
                                     repository = mongoRepository,
                                     auth = auth,
                                     deepLinkRoute = deepLinkRoute,
                                     onDeepLinkHandled = {
-                                        // Clear deep link after navigation
                                         _deepLinkTarget.value = null
                                     },
                                     onDataLoaded = {
-                                        // Data loaded callback - can be used for analytics
                                         println("[MainActivity] Navigation data loaded")
                                     }
                                 )
@@ -251,6 +234,16 @@ class MainActivity : ComponentActivity() {
                 FirebaseApp.initializeApp(this@MainActivity)
             }
 
+            // Fetch feature flags from Remote Config
+            withContext(Dispatchers.IO) {
+                try {
+                    featureFlagRepository.fetchAndActivate()
+                    println("[MainActivity] Feature flags fetched: ${featureFlagRepository.flags.value}")
+                } catch (e: Exception) {
+                    println("[MainActivity] WARNING: Feature flags fetch failed, using defaults: ${e.message}")
+                }
+            }
+
             // Check onboarding completion status
             val user = auth.currentUser
             if (user != null) {
@@ -272,6 +265,12 @@ class MainActivity : ComponentActivity() {
                 delay(1000 - elapsedTime)
             }
 
+            // Navigate to the correct start destination before showing UI
+            val startDestination = getStartDestinationDecompose()
+            if (startDestination != RootDestination.Auth) {
+                rootComponent.replaceAll(startDestination)
+            }
+
             // Update state to ready
             _appState.value = AppState.Ready
 
@@ -281,8 +280,8 @@ class MainActivity : ComponentActivity() {
             // Start cleanup in background
             cleanupCheck(
                 scope = lifecycleScope,
-                imageToUploadDao = imageToUploadDao,
-                imageToDeleteDao = imageToDeleteDao
+                imageToUploadQueries = imageToUploadQueries,
+                imageToDeleteQueries = imageToDeleteQueries
             )
 
             // Register FCM token (Week 8)
@@ -303,23 +302,25 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun getStartDestination(): String {
+    /**
+     * Determine the initial Decompose destination based on auth/onboarding state.
+     */
+    private fun getStartDestinationDecompose(): RootDestination {
         return try {
             val user = auth.currentUser
             if (user != null) {
-                // User is authenticated, check onboarding status
                 val onboardingComplete = _hasCompletedOnboarding.value ?: false
                 if (onboardingComplete) {
-                    Screen.Home.route
+                    RootDestination.Home
                 } else {
-                    Screen.Onboarding.route
+                    RootDestination.Onboarding
                 }
             } else {
-                Screen.Authentication.route
+                RootDestination.Auth
             }
         } catch (e: Exception) {
             println("[MainActivity] ERROR: Error checking user status: ${e.message}")
-            Screen.Authentication.route
+            RootDestination.Auth
         }
     }
 
@@ -589,20 +590,20 @@ private fun ErrorScreen(
 // Cleanup functions remain the same
 private fun cleanupCheck(
     scope: CoroutineScope,
-    imageToUploadDao: ImageToUploadDao,
-    imageToDeleteDao: ImageToDeleteDao
+    imageToUploadQueries: ImageToUploadQueries,
+    imageToDeleteQueries: ImageToDeleteQueries
 ) {
     scope.launch(Dispatchers.IO) {
         try {
             // Cleanup images to upload
-            val imagesToUpload = imageToUploadDao.getAllImages()
+            val imagesToUpload = imageToUploadQueries.getAllImages().executeAsList()
             imagesToUpload.forEach { imageToUpload ->
                 retryUploadingImageToFirebase(
                     imageToUpload = imageToUpload,
                     onSuccess = {
                         scope.launch(Dispatchers.IO) {
                             try {
-                                imageToUploadDao.cleanupImage(imageId = imageToUpload.id)
+                                imageToUploadQueries.cleanupImage(imageToUpload.id)
                             } catch (e: Exception) {
                                 println("[MainActivity] ERROR: Error cleaning up uploaded image: ${e.message}")
                             }
@@ -612,14 +613,14 @@ private fun cleanupCheck(
             }
 
             // Cleanup images to delete
-            val imagesToDelete = imageToDeleteDao.getAllImages()
+            val imagesToDelete = imageToDeleteQueries.getAllImages().executeAsList()
             imagesToDelete.forEach { imageToDelete ->
                 retryDeletingImageFromFirebase(
                     imageToDelete = imageToDelete,
                     onSuccess = {
                         scope.launch(Dispatchers.IO) {
                             try {
-                                imageToDeleteDao.cleanupImage(imageId = imageToDelete.id)
+                                imageToDeleteQueries.cleanupImage(imageToDelete.id)
                             } catch (e: Exception) {
                                 println("[MainActivity] ERROR: Error cleaning up deleted image: ${e.message}")
                             }
@@ -634,7 +635,7 @@ private fun cleanupCheck(
 }
 
 fun retryUploadingImageToFirebase(
-    imageToUpload: ImageToUpload,
+    imageToUpload: Image_to_upload_table,
     onSuccess: () -> Unit
 ) {
     try {
@@ -659,7 +660,7 @@ fun retryUploadingImageToFirebase(
 }
 
 fun retryDeletingImageFromFirebase(
-    imageToDelete: ImageToDelete,
+    imageToDelete: Image_to_delete_table,
     onSuccess: () -> Unit
 ) {
     try {

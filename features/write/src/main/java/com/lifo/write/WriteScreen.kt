@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import coil3.compose.SubcomposeAsyncImage
 import coil3.request.ImageRequest
 import com.google.accompanist.pager.ExperimentalPagerApi
@@ -110,7 +110,7 @@ internal fun WriteScreen(
             }
 
             // Get WriteViewModel
-            val writeViewModel: WriteViewModel = hiltViewModel()
+            val writeViewModel: WriteViewModel = koinViewModel()
 
             // Update the Mood when selecting an existing Diary
             LaunchedEffect(key1 = uiState.mood) {

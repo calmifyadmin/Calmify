@@ -40,7 +40,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import com.lifo.home.domain.model.*
 import com.lifo.home.presentation.components.hero.HeroGreetingCard
@@ -56,14 +55,16 @@ import com.lifo.ui.components.loading.*
 import com.lifo.home.components.DiaryHolder
 import com.lifo.util.model.Diary
 import com.lifo.util.model.SentimentLabel
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
+import kotlinx.datetime.Clock
+import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
+import kotlinx.datetime.todayIn
 
 @OptIn(
     ExperimentalFoundationApi::class,
-    ExperimentalMaterial3Api::class,
-    ExperimentalMaterial3ExpressiveApi::class  // Required for LoadingIndicator
+    ExperimentalMaterial3Api::class
 )
 @Composable
 internal fun HomeContent(
@@ -84,16 +85,16 @@ internal fun HomeContent(
     val coroutineScope = rememberCoroutineScope()
 
     // New redesign state
-    val homeRedesignState by viewModel.homeRedesignState.collectAsStateWithLifecycle()
-    val todayPulse by viewModel.todayPulse.collectAsStateWithLifecycle()
-    val moodDistribution by viewModel.moodDistribution.collectAsStateWithLifecycle()
-    val dominantMood by viewModel.dominantMood.collectAsStateWithLifecycle()
-    val cognitivePatterns by viewModel.cognitivePatterns.collectAsStateWithLifecycle()
-    val topicsFrequency by viewModel.topicsFrequency.collectAsStateWithLifecycle()
-    val emergingTopic by viewModel.emergingTopic.collectAsStateWithLifecycle()
-    val achievementsState by viewModel.achievementsState.collectAsStateWithLifecycle()
-    val selectedTimeRange by viewModel.selectedTimeRange.collectAsStateWithLifecycle()
-    val quickActionState by viewModel.quickActionState.collectAsStateWithLifecycle()
+    val homeRedesignState by viewModel.homeRedesignState.collectAsState()
+    val todayPulse by viewModel.todayPulse.collectAsState()
+    val moodDistribution by viewModel.moodDistribution.collectAsState()
+    val dominantMood by viewModel.dominantMood.collectAsState()
+    val cognitivePatterns by viewModel.cognitivePatterns.collectAsState()
+    val topicsFrequency by viewModel.topicsFrequency.collectAsState()
+    val emergingTopic by viewModel.emergingTopic.collectAsState()
+    val achievementsState by viewModel.achievementsState.collectAsState()
+    val selectedTimeRange by viewModel.selectedTimeRange.collectAsState()
+    val quickActionState by viewModel.quickActionState.collectAsState()
 
     // Debug logging
     LaunchedEffect(dailyInsights) {
@@ -128,7 +129,7 @@ internal fun HomeContent(
             onRefresh = onRefresh,
             modifier = Modifier.fillMaxSize(),
             indicator = {
-                PullToRefreshDefaults.LoadingIndicator(
+                PullToRefreshDefaults.Indicator(
                     state = pullToRefreshState,
                     isRefreshing = isRefreshing,
                     modifier = Modifier.align(Alignment.TopCenter),
@@ -399,11 +400,12 @@ internal fun EnhancedDateHeader(
     localDate: LocalDate,
     diaryCount: Int
 ) {
-    val today = LocalDate.now()
+    val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+    val yesterday = today.minus(DatePeriod(days = 1))
     val displayText = when (localDate) {
         today -> "Today"
-        today.minusDays(1) -> "Yesterday"
-        else -> localDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
+        yesterday -> "Yesterday"
+        else -> localDate.toString()
     }
 
     AnimatedVisibility(
@@ -594,7 +596,6 @@ fun DailyInsightsChart(
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun DailyInsightsHeader(
     currentWeekOffset: Int = 0,
@@ -614,7 +615,7 @@ private fun DailyInsightsHeader(
                 currentWeekOffset < 0 -> "${-currentWeekOffset} weeks ago"
                 else -> "In ${currentWeekOffset} weeks" // Future weeks
             },
-            style = MaterialTheme.typography.titleLargeEmphasized,
+            style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface
         )

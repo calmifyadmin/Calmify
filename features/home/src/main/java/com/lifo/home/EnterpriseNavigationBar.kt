@@ -85,6 +85,13 @@ open class NavigationDestination(
         selectedIcon = Icons.Filled.Face,
         unselectedIcon = Icons.Outlined.Face
     )
+
+    object Feed : NavigationDestination(
+        route = "feed_screen",
+        label = "Feed",
+        selectedIcon = Icons.Filled.DynamicFeed,
+        unselectedIcon = Icons.Outlined.DynamicFeed
+    )
 }
 
 /**
@@ -420,7 +427,7 @@ fun CalmifyBottomAppBar(
     val currentDestination = navBackStackEntry?.destination
 
     // NavigationBar standard M3 - persistente e integrata nel Scaffold
-    ShortNavigationBar(
+    NavigationBar(
         modifier = modifier,
         windowInsets = NavigationBarDefaults.windowInsets, // WindowInsets ufficiali M3
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -434,7 +441,7 @@ fun CalmifyBottomAppBar(
             } == true
 
             // NavigationBarItem standard M3 - garantisce accessibilità e layout corretto
-            ShortNavigationBarItem(
+            NavigationBarItem(
                 selected = selected,
                 onClick = {
                     navController.navigate(destination.route) {

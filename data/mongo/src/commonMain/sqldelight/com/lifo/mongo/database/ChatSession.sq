@@ -1,0 +1,45 @@
+CREATE TABLE chat_sessions (
+    id TEXT PRIMARY KEY NOT NULL,
+    title TEXT NOT NULL,
+    createdAt INTEGER NOT NULL,
+    lastMessageAt INTEGER NOT NULL,
+    aiModel TEXT NOT NULL,
+    messageCount INTEGER NOT NULL DEFAULT 0,
+    ownerId TEXT NOT NULL,
+    summary TEXT,
+    lastMessage TEXT,
+    mood TEXT,
+    isLiveMode INTEGER NOT NULL DEFAULT 0
+);
+
+getAllSessions:
+SELECT * FROM chat_sessions
+WHERE ownerId = ?
+ORDER BY lastMessageAt DESC;
+
+getSession:
+SELECT * FROM chat_sessions
+WHERE id = ? AND ownerId = ?;
+
+insertSession:
+INSERT OR REPLACE INTO chat_sessions(id, title, createdAt, lastMessageAt, aiModel, messageCount, ownerId, summary, lastMessage, mood, isLiveMode)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateSession:
+UPDATE chat_sessions
+SET title = ?, createdAt = ?, lastMessageAt = ?, aiModel = ?, messageCount = ?, ownerId = ?, summary = ?, lastMessage = ?, mood = ?, isLiveMode = ?
+WHERE id = ?;
+
+deleteSession:
+DELETE FROM chat_sessions
+WHERE id = ? AND ownerId = ?;
+
+incrementMessageCount:
+UPDATE chat_sessions
+SET messageCount = messageCount + 1, lastMessageAt = ?
+WHERE id = ?;
+
+updateLastMessage:
+UPDATE chat_sessions
+SET lastMessageAt = ?
+WHERE id = ?;

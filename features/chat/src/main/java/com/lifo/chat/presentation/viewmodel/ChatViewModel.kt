@@ -2,63 +2,93 @@ package com.lifo.chat.presentation.viewmodel
 
 import android.content.Context
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.lifo.chat.audio.GeminiNativeVoiceSystem
 import com.lifo.chat.audio.GeminiVoiceAudioSource
 import com.lifo.chat.config.ApiConfigManager
 import com.lifo.chat.domain.model.*
-import com.lifo.util.model.ChatMessage
-import com.lifo.util.repository.ChatRepository
 import com.lifo.util.model.RequestState
+import com.lifo.util.mvi.MviContract
+import com.lifo.util.mvi.MviViewModel
+import com.lifo.util.speech.SpeechAnimationTarget
 import com.lifo.util.speech.SpeechEmotion
 import com.lifo.util.speech.SpeechRequest
 import com.lifo.util.speech.SynchronizedSpeechController
-import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
+import com.lifo.util.repository.ChatRepository
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import javax.inject.Inject
 
-@HiltViewModel
-class ChatViewModel @Inject constructor(
+// ---------------------------------------------------------------------------
+// Contract
+// ---------------------------------------------------------------------------
+object ChatContract {
+
+    sealed interface Intent : MviContract.Intent {
+        data class SendMessage(val content: String) : Intent
+        data class UpdateInputText(val text: String) : Intent
+        data object ClearError : Intent
+        data class DeleteMessage(val messageId: String) : Intent
+        data class SpeakMessage(val messageId: String) : Intent
+        data object StopSpeaking : Intent
+        data class LoadExistingSession(val sessionId: String) : Intent
+        data class AttachHumanoidController(val controller: SpeechAnimationTarget) : Intent
+        data object DetachHumanoidController : Intent
+    }
+
+    /** UI state — wraps the existing [ChatUiState] data class. */
+    data class State(
+        val chat: ChatUiState = ChatUiState()
+    ) : MviContract.State
+
+    sealed interface Effect : MviContract.Effect {
+        data class ShowError(val message: String) : Effect
+    }
+}
+
+// ---------------------------------------------------------------------------
+// ViewModel
+// ---------------------------------------------------------------------------
+class ChatViewModel constructor(
     private val repository: ChatRepository,
-    @ApplicationContext private val context: Context,
+    private val context: Context,
     private val voiceSystem: GeminiNativeVoiceSystem,
     private val voiceAudioSource: GeminiVoiceAudioSource,
     private val synchronizedSpeechController: SynchronizedSpeechController,
     private val apiConfigManager: ApiConfigManager,
     private val auth: FirebaseAuth,
     savedStateHandle: SavedStateHandle
-) : ViewModel() {
+) : MviViewModel<ChatContract.Intent, ChatContract.State, ChatContract.Effect>(
+    initialState = ChatContract.State()
+) {
 
-    private val _uiState = MutableStateFlow(ChatUiState())
-    val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
+    // ── Backward-compatible alias ──────────────────────────────────────
+    /** Alias so existing UI code that reads `viewModel.uiState` keeps compiling. */
+    val uiState: StateFlow<ChatUiState> = state.map { it.chat }
+        .stateIn(scope, SharingStarted.Eagerly, ChatUiState())
 
-    // Current session tracking
+    // ── Current session tracking ───────────────────────────────────────
     private var currentSessionId: String? = null
 
-    // Voice state exposed to UI (existing Gemini system)
+    // ── Voice state exposed to UI (external system, NOT internal state) ─
     val voiceState = voiceSystem.voiceState
-    val isVoiceActive = voiceState
+    val isVoiceActive: StateFlow<Boolean> = voiceState
         .map { it.isSpeaking }
         .stateIn(
-            scope = viewModelScope,
+            scope = scope,
             started = SharingStarted.WhileSubscribed(),
             initialValue = false
         )
-    val voiceEmotion = voiceState
+    val voiceEmotion: StateFlow<GeminiNativeVoiceSystem.Emotion> = voiceState
         .map { it.emotion }
         .stateIn(
-            scope = viewModelScope,
+            scope = scope,
             started = SharingStarted.WhileSubscribed(),
             initialValue = GeminiNativeVoiceSystem.Emotion.NEUTRAL
         )
-    val voiceLatency = voiceState
+    val voiceLatency: StateFlow<Long> = voiceState
         .map { it.latencyMs }
         .stateIn(
-            scope = viewModelScope,
+            scope = scope,
             started = SharingStarted.WhileSubscribed(),
             initialValue = 0L
         )
@@ -68,12 +98,13 @@ class ChatViewModel @Inject constructor(
 
     private val emotionDetector = SimpleEmotionDetector()
 
-    // SEMPLIFICATO: niente più chunking, solo messaggi completi
+    // Pending voice — not UI state, purely internal bookkeeping
     private var pendingVoiceMessage: String? = null
     private var pendingVoiceMessageId: String? = null
 
+    // ── Init ───────────────────────────────────────────────────────────
     init {
-        viewModelScope.launch {
+        scope.launch {
             println("[ChatViewModel] Initializing ChatViewModel...")
             initializeVoiceSystem()
             initializeSynchronizedSpeech()
@@ -87,114 +118,64 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Initialize synchronized speech by attaching the audio source
-     */
-    private fun initializeSynchronizedSpeech() {
-        println("[ChatViewModel] Initializing synchronized speech controller...")
-        synchronizedSpeechController.attachAudioSource(voiceAudioSource)
+    // ── MVI intent dispatch ────────────────────────────────────────────
+    override fun handleIntent(intent: ChatContract.Intent) {
+        when (intent) {
+            is ChatContract.Intent.SendMessage -> handleSendMessage(intent.content)
+            is ChatContract.Intent.UpdateInputText -> handleUpdateInputText(intent.text)
+            is ChatContract.Intent.ClearError -> handleClearError()
+            is ChatContract.Intent.DeleteMessage -> handleDeleteMessage(intent.messageId)
+            is ChatContract.Intent.SpeakMessage -> handleSpeakMessage(intent.messageId)
+            is ChatContract.Intent.StopSpeaking -> handleStopSpeaking()
+            is ChatContract.Intent.LoadExistingSession -> handleLoadExistingSession(intent.sessionId)
+            is ChatContract.Intent.AttachHumanoidController -> handleAttachHumanoid(intent.controller)
+            is ChatContract.Intent.DetachHumanoidController -> handleDetachHumanoid()
+        }
     }
 
-    /**
-     * Attach HumanoidController for synchronized lip-sync.
-     * Call this from the UI layer when humanoid is ready.
-     */
-    fun attachHumanoidController(controller: com.lifo.util.speech.SpeechAnimationTarget) {
-        println("[ChatViewModel] Attaching HumanoidController for synchronized lip-sync")
-        synchronizedSpeechController.attachAnimationTarget(controller)
-    }
+    // ── Backward-compatible public wrappers ─────────────────────────────
+    // Existing UI code calls these directly; they simply delegate to intents.
 
-    /**
-     * Detach HumanoidController when no longer needed.
-     */
-    fun detachHumanoidController() {
-        println("[ChatViewModel] Detaching HumanoidController")
-        synchronizedSpeechController.detachAnimationTarget()
-    }
+    fun sendMessage(content: String) = onIntent(ChatContract.Intent.SendMessage(content))
 
-    private suspend fun initializeVoiceSystem() {
-        try {
-            println("[ChatViewModel] Starting voice system initialization...")
+    fun updateInputText(text: String) = onIntent(ChatContract.Intent.UpdateInputText(text))
 
-            val apiKey = apiConfigManager.getGeminiApiKey()
+    fun clearError() = onIntent(ChatContract.Intent.ClearError)
 
-            if (apiKey.isEmpty()) {
-                println("[ChatViewModel] ERROR: API key is empty")
-                _uiState.update {
-                    it.copy(error = "API key not configured")
-                }
-                return
-            }
+    fun deleteMessage(messageId: String) = onIntent(ChatContract.Intent.DeleteMessage(messageId))
 
-            println("[ChatViewModel] Initializing voice system with API key")
-            voiceSystem.initialize(apiKey)
+    fun speakMessage(messageId: String) = onIntent(ChatContract.Intent.SpeakMessage(messageId))
 
-            delay(500)
+    fun stopSpeaking() = onIntent(ChatContract.Intent.StopSpeaking)
 
-            val isInitialized = voiceSystem.voiceState.value.isInitialized
-            println("[ChatViewModel] Voice system initialized: $isInitialized")
+    fun loadExistingSession(sessionId: String) = onIntent(ChatContract.Intent.LoadExistingSession(sessionId))
 
-            if (!isInitialized) {
-                println("[ChatViewModel] ERROR: Voice system failed to initialize")
-                _uiState.update {
-                    it.copy(error = "Voice system initialization failed")
-                }
-            }
+    fun attachHumanoidController(controller: SpeechAnimationTarget) =
+        onIntent(ChatContract.Intent.AttachHumanoidController(controller))
 
+    fun detachHumanoidController() = onIntent(ChatContract.Intent.DetachHumanoidController)
+
+    fun getUserPhotoUrl(): String? {
+        return try {
+            auth.currentUser?.photoUrl?.toString()
         } catch (e: Exception) {
-            println("[ChatViewModel] ERROR: Exception during voice initialization: ${e.message}")
-            _uiState.update {
-                it.copy(error = "Voice error: ${e.message}")
-            }
+            println("[ChatViewModel] ERROR: Error getting user photo: ${e.message}")
+            null
         }
     }
 
-    fun loadExistingSession(sessionId: String) {
-        println("[ChatViewModel] Loading existing session: $sessionId")
-        viewModelScope.launch {
-            try {
-                // Load the session from database
-                val sessionResult = repository.getSession(sessionId)
-                val session = when (sessionResult) {
-                    is RequestState.Success -> sessionResult.data
-                    else -> null
-                }
-                session?.let {
-                    // Update current session
-                    currentSessionId = sessionId
-                    
-                    // Update UI state with session info
-                    _uiState.update { state ->
-                        state.copy(
-                            currentSession = it,
-                            sessionStarted = true
-                        )
-                    }
-                    
-                    // Load messages for this session
-                    loadMessages(sessionId)
-                    
-                    println("[ChatViewModel] Loaded session $sessionId with ${it.messageCount} messages")
-                } ?: run {
-                    println("[ChatViewModel] WARNING: Session $sessionId not found")
-                    _uiState.update { state ->
-                        state.copy(
-                            error = "Session not found"
-                        )
-                    }
-                }
-            } catch (e: Exception) {
-                println("[ChatViewModel] ERROR: Error loading session $sessionId: ${e.message}")
-                _uiState.update { state ->
-                    state.copy(
-                        error = e.message ?: "Failed to load session"
-                    )
-                }
-            }
+    fun getUserDisplayName(): String? {
+        return try {
+            auth.currentUser?.displayName?.toString()?.split(" ")?.firstOrNull()
+        } catch (e: Exception) {
+            println("[ChatViewModel] ERROR: Error getting user name: ${e.message}")
+            null
         }
     }
 
-    fun sendMessage(content: String) {
+    // ── Intent handlers (private business logic) ────────────────────────
+
+    private fun handleSendMessage(content: String) {
         if (content.isBlank()) return
 
         // Stop any ongoing speech
@@ -202,18 +183,42 @@ class ChatViewModel @Inject constructor(
         pendingVoiceMessage = null
         pendingVoiceMessageId = null
 
-        viewModelScope.launch {
-            _uiState.update { it.copy(inputText = "") }
+        scope.launch {
+            updateState { copy(chat = chat.copy(inputText = "")) }
 
-            val sessionId = _uiState.value.currentSession?.id ?: return@launch
+            val sessionId = currentState.chat.currentSession?.id ?: return@launch
 
             when (val result = repository.sendMessage(sessionId, content)) {
                 is RequestState.Success -> {
                     generateAiResponseWithVoice(sessionId, content)
                 }
                 is RequestState.Error -> {
-                    _uiState.update {
-                        it.copy(error = result.error.message)
+                    updateState { copy(chat = chat.copy(error = result.error.message)) }
+                }
+                else -> {}
+            }
+        }
+    }
+
+    private fun handleUpdateInputText(text: String) {
+        updateState { copy(chat = chat.copy(inputText = text)) }
+    }
+
+    private fun handleClearError() {
+        updateState { copy(chat = chat.copy(error = null)) }
+    }
+
+    private fun handleDeleteMessage(messageId: String) {
+        scope.launch {
+            when (val result = repository.deleteMessage(messageId)) {
+                is RequestState.Success -> {
+                    if (currentState.chat.messages.size <= 1) {
+                        updateState { copy(chat = chat.copy(sessionStarted = false)) }
+                    }
+                }
+                is RequestState.Error -> {
+                    updateState {
+                        copy(chat = chat.copy(error = result.error.message ?: "Failed to delete message"))
                     }
                 }
                 else -> {}
@@ -221,114 +226,14 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    private fun generateAiResponseWithVoice(sessionId: String, userMessage: String) {
-        viewModelScope.launch {
-            val streamingMessage = StreamingMessage()
-            _uiState.update { it.copy(streamingMessage = streamingMessage) }
-
-            var fullContent = ""
-            val currentMessageId = "streaming_${System.currentTimeMillis()}"
-
-            repository.generateAiResponse(sessionId, userMessage, emptyList())
-                .collect { result ->
-                    when (result) {
-                        is RequestState.Success -> {
-                            fullContent = result.data
-
-                            // Update UI with streaming text
-                            _uiState.update { state ->
-                                state.copy(
-                                    streamingMessage = streamingMessage.copy(
-                                        content = StringBuilder(fullContent)
-                                    )
-                                )
-                            }
-
-                            // Store for voice but DON'T speak yet - wait for complete message
-                            pendingVoiceMessage = fullContent
-                            pendingVoiceMessageId = currentMessageId
-                        }
-                        is RequestState.Error -> {
-                            _uiState.update {
-                                it.copy(
-                                    streamingMessage = null,
-                                    error = result.error.message
-                                )
-                            }
-                        }
-                        else -> {}
-                    }
-                }
-
-            // STREAMING COMPLETE - Now speak the ENTIRE message at once
-            if (fullContent.isNotEmpty()) {
-                // Save the message first
-                repository.saveAiMessage(sessionId, fullContent)
-                _uiState.update { it.copy(streamingMessage = null) }
-
-                // Then speak the ENTIRE message if voice is initialized
-                if (voiceSystem.voiceState.value.isInitialized && pendingVoiceMessage != null) {
-                    speakCompleteMessage(pendingVoiceMessage!!, currentMessageId)
-                }
-            }
-        }
-    }
-
-    private fun speakCompleteMessage(text: String, messageId: String) {
-        viewModelScope.launch {
-            try {
-                // Clean the text
-                val cleanText = cleanTextForSpeech(text)
-
-                // Detect overall emotion for the entire message
-                val emotion = emotionDetector.detectEmotion(cleanText)
-
-                // Map to SpeechEmotion for synchronized speech
-                val speechEmotion = mapToSpeechEmotion(emotion)
-
-                println("[ChatViewModel] Speaking complete message (synchronized): ${cleanText.take(50)}...")
-
-                // Estimate duration for lip-sync preparation
-                val estimatedDuration = voiceAudioSource.estimateDuration(cleanText)
-
-                // Use synchronized speech controller for ultra-accurate lip-sync
-                synchronizedSpeechController.speakSynchronized(
-                    SpeechRequest(
-                        text = cleanText,
-                        messageId = messageId,
-                        emotion = speechEmotion,
-                        estimatedDurationMs = estimatedDuration
-                    )
-                )
-            } catch (e: Exception) {
-                println("[ChatViewModel] ERROR: Error speaking message: ${e.message}")
-            }
-        }
-    }
-
-    /**
-     * Map internal emotion to SpeechEmotion for synchronized speech
-     */
-    private fun mapToSpeechEmotion(emotion: GeminiNativeVoiceSystem.Emotion): SpeechEmotion {
-        return when (emotion) {
-            GeminiNativeVoiceSystem.Emotion.NEUTRAL -> SpeechEmotion.NEUTRAL
-            GeminiNativeVoiceSystem.Emotion.HAPPY -> SpeechEmotion.HAPPY
-            GeminiNativeVoiceSystem.Emotion.SAD -> SpeechEmotion.SAD
-            GeminiNativeVoiceSystem.Emotion.EXCITED -> SpeechEmotion.EXCITED
-            GeminiNativeVoiceSystem.Emotion.THOUGHTFUL -> SpeechEmotion.THOUGHTFUL
-            GeminiNativeVoiceSystem.Emotion.EMPATHETIC -> SpeechEmotion.EMPATHETIC
-            GeminiNativeVoiceSystem.Emotion.CURIOUS -> SpeechEmotion.CURIOUS
-        }
-    }
-
-    fun speakMessage(messageId: String) {
-        val message = _uiState.value.messages.find { it.id == messageId }
+    private fun handleSpeakMessage(messageId: String) {
+        val message = currentState.chat.messages.find { it.id == messageId }
         message?.let {
             if (!it.isUser) {
                 // Stop any current speech
                 synchronizedSpeechController.stopSynchronized()
 
-                viewModelScope.launch {
+                scope.launch {
                     delay(100) // Small delay to ensure stop is processed
 
                     val cleanText = cleanTextForSpeech(it.content)
@@ -350,10 +255,181 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    fun stopSpeaking() {
+    private fun handleStopSpeaking() {
         synchronizedSpeechController.stopSynchronized()
         pendingVoiceMessage = null
         pendingVoiceMessageId = null
+    }
+
+    private fun handleLoadExistingSession(sessionId: String) {
+        println("[ChatViewModel] Loading existing session: $sessionId")
+        scope.launch {
+            try {
+                val sessionResult = repository.getSession(sessionId)
+                val session = when (sessionResult) {
+                    is RequestState.Success -> sessionResult.data
+                    else -> null
+                }
+                session?.let {
+                    currentSessionId = sessionId
+
+                    updateState {
+                        copy(chat = chat.copy(
+                            currentSession = it,
+                            sessionStarted = true
+                        ))
+                    }
+
+                    loadMessages(sessionId)
+
+                    println("[ChatViewModel] Loaded session $sessionId with ${it.messageCount} messages")
+                } ?: run {
+                    println("[ChatViewModel] WARNING: Session $sessionId not found")
+                    updateState { copy(chat = chat.copy(error = "Session not found")) }
+                }
+            } catch (e: Exception) {
+                println("[ChatViewModel] ERROR: Error loading session $sessionId: ${e.message}")
+                updateState {
+                    copy(chat = chat.copy(error = e.message ?: "Failed to load session"))
+                }
+            }
+        }
+    }
+
+    private fun handleAttachHumanoid(controller: SpeechAnimationTarget) {
+        println("[ChatViewModel] Attaching HumanoidController for synchronized lip-sync")
+        synchronizedSpeechController.attachAnimationTarget(controller)
+    }
+
+    private fun handleDetachHumanoid() {
+        println("[ChatViewModel] Detaching HumanoidController")
+        synchronizedSpeechController.detachAnimationTarget()
+    }
+
+    // ── Internal helpers ────────────────────────────────────────────────
+
+    private fun initializeSynchronizedSpeech() {
+        println("[ChatViewModel] Initializing synchronized speech controller...")
+        synchronizedSpeechController.attachAudioSource(voiceAudioSource)
+    }
+
+    private suspend fun initializeVoiceSystem() {
+        try {
+            println("[ChatViewModel] Starting voice system initialization...")
+
+            val apiKey = apiConfigManager.getGeminiApiKey()
+
+            if (apiKey.isEmpty()) {
+                println("[ChatViewModel] ERROR: API key is empty")
+                updateState { copy(chat = chat.copy(error = "API key not configured")) }
+                return
+            }
+
+            println("[ChatViewModel] Initializing voice system with API key")
+            voiceSystem.initialize(apiKey)
+
+            delay(500)
+
+            val isInitialized = voiceSystem.voiceState.value.isInitialized
+            println("[ChatViewModel] Voice system initialized: $isInitialized")
+
+            if (!isInitialized) {
+                println("[ChatViewModel] ERROR: Voice system failed to initialize")
+                updateState { copy(chat = chat.copy(error = "Voice system initialization failed")) }
+            }
+
+        } catch (e: Exception) {
+            println("[ChatViewModel] ERROR: Exception during voice initialization: ${e.message}")
+            updateState { copy(chat = chat.copy(error = "Voice error: ${e.message}")) }
+        }
+    }
+
+    private fun generateAiResponseWithVoice(sessionId: String, userMessage: String) {
+        scope.launch {
+            val streamingMessage = StreamingMessage()
+            updateState { copy(chat = chat.copy(streamingMessage = streamingMessage)) }
+
+            var fullContent = ""
+            val currentMessageId = "streaming_${System.currentTimeMillis()}"
+
+            repository.generateAiResponse(sessionId, userMessage, emptyList())
+                .collect { result ->
+                    when (result) {
+                        is RequestState.Success -> {
+                            fullContent = result.data
+
+                            // Update UI with streaming text
+                            updateState {
+                                copy(chat = chat.copy(
+                                    streamingMessage = streamingMessage.copy(
+                                        content = StringBuilder(fullContent)
+                                    )
+                                ))
+                            }
+
+                            // Store for voice but DON'T speak yet — wait for complete message
+                            pendingVoiceMessage = fullContent
+                            pendingVoiceMessageId = currentMessageId
+                        }
+                        is RequestState.Error -> {
+                            updateState {
+                                copy(chat = chat.copy(
+                                    streamingMessage = null,
+                                    error = result.error.message
+                                ))
+                            }
+                        }
+                        else -> {}
+                    }
+                }
+
+            // STREAMING COMPLETE — Now speak the ENTIRE message at once
+            if (fullContent.isNotEmpty()) {
+                repository.saveAiMessage(sessionId, fullContent)
+                updateState { copy(chat = chat.copy(streamingMessage = null)) }
+
+                if (voiceSystem.voiceState.value.isInitialized && pendingVoiceMessage != null) {
+                    speakCompleteMessage(pendingVoiceMessage!!, currentMessageId)
+                }
+            }
+        }
+    }
+
+    private fun speakCompleteMessage(text: String, messageId: String) {
+        scope.launch {
+            try {
+                val cleanText = cleanTextForSpeech(text)
+                val emotion = emotionDetector.detectEmotion(cleanText)
+                val speechEmotion = mapToSpeechEmotion(emotion)
+
+                println("[ChatViewModel] Speaking complete message (synchronized): ${cleanText.take(50)}...")
+
+                val estimatedDuration = voiceAudioSource.estimateDuration(cleanText)
+
+                synchronizedSpeechController.speakSynchronized(
+                    SpeechRequest(
+                        text = cleanText,
+                        messageId = messageId,
+                        emotion = speechEmotion,
+                        estimatedDurationMs = estimatedDuration
+                    )
+                )
+            } catch (e: Exception) {
+                println("[ChatViewModel] ERROR: Error speaking message: ${e.message}")
+            }
+        }
+    }
+
+    private fun mapToSpeechEmotion(emotion: GeminiNativeVoiceSystem.Emotion): SpeechEmotion {
+        return when (emotion) {
+            GeminiNativeVoiceSystem.Emotion.NEUTRAL -> SpeechEmotion.NEUTRAL
+            GeminiNativeVoiceSystem.Emotion.HAPPY -> SpeechEmotion.HAPPY
+            GeminiNativeVoiceSystem.Emotion.SAD -> SpeechEmotion.SAD
+            GeminiNativeVoiceSystem.Emotion.EXCITED -> SpeechEmotion.EXCITED
+            GeminiNativeVoiceSystem.Emotion.THOUGHTFUL -> SpeechEmotion.THOUGHTFUL
+            GeminiNativeVoiceSystem.Emotion.EMPATHETIC -> SpeechEmotion.EMPATHETIC
+            GeminiNativeVoiceSystem.Emotion.CURIOUS -> SpeechEmotion.CURIOUS
+        }
     }
 
     private fun cleanTextForSpeech(text: String): String {
@@ -369,66 +445,20 @@ class ChatViewModel @Inject constructor(
             .trim()
     }
 
-    fun updateInputText(text: String) {
-        _uiState.update { it.copy(inputText = text) }
-    }
-
-    fun clearError() {
-        _uiState.update { it.copy(error = null) }
-    }
-
-    fun deleteMessage(messageId: String) {
-        viewModelScope.launch {
-            when (val result = repository.deleteMessage(messageId)) {
-                is RequestState.Success -> {
-                    if (_uiState.value.messages.size <= 1) {
-                        _uiState.update { it.copy(sessionStarted = false) }
-                    }
-                }
-                is RequestState.Error -> {
-                    _uiState.update {
-                        it.copy(error = result.error.message ?: "Failed to delete message")
-                    }
-                }
-                else -> {}
-            }
-        }
-    }
-
-    fun getUserPhotoUrl(): String? {
-        return try {
-            auth.currentUser?.photoUrl?.toString()
-        } catch (e: Exception) {
-            println("[ChatViewModel] ERROR: Error getting user photo: ${e.message}")
-            null
-        }
-    }
-
-    fun getUserDisplayName(): String? {
-        return try {
-            auth.currentUser?.displayName?.toString()?.split(" ")?.firstOrNull()
-        } catch (e: Exception) {
-            println("[ChatViewModel] ERROR: Error getting user name: ${e.message}")
-            null
-        }
-    }
-
     private fun createNewSession() {
-        viewModelScope.launch {
+        scope.launch {
             when (val result = repository.createSession(null)) {
                 is RequestState.Success -> {
-                    _uiState.update {
-                        it.copy(
+                    updateState {
+                        copy(chat = chat.copy(
                             currentSession = result.data,
                             messages = emptyList()
-                        )
+                        ))
                     }
                     loadMessages(result.data.id)
                 }
                 is RequestState.Error -> {
-                    _uiState.update {
-                        it.copy(error = result.error.message)
-                    }
+                    updateState { copy(chat = chat.copy(error = result.error.message)) }
                 }
                 else -> {}
             }
@@ -436,19 +466,15 @@ class ChatViewModel @Inject constructor(
     }
 
     private fun loadMessages(sessionId: String) {
-        viewModelScope.launch {
+        scope.launch {
             repository.getMessagesForSession(sessionId)
                 .collect { result ->
                     when (result) {
                         is RequestState.Success -> {
-                            _uiState.update {
-                                it.copy(messages = result.data)
-                            }
+                            updateState { copy(chat = chat.copy(messages = result.data)) }
                         }
                         is RequestState.Error -> {
-                            _uiState.update {
-                                it.copy(error = result.error.message)
-                            }
+                            updateState { copy(chat = chat.copy(error = result.error.message)) }
                         }
                         else -> {}
                     }
@@ -462,7 +488,7 @@ class ChatViewModel @Inject constructor(
         voiceSystem.cleanup()
     }
 
-    // Simplified emotion detector
+    // ── Simplified emotion detector ─────────────────────────────────────
     inner class SimpleEmotionDetector {
         fun detectEmotion(text: String): GeminiNativeVoiceSystem.Emotion {
             val lowercaseText = text.lowercase()

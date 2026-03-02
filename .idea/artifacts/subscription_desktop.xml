@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="subscription-desktop">
+    <output-path>$PROJECT_DIR$/features/subscription/build/libs</output-path>
+    <root id="archive" name="subscription-desktop.jar">
+      <element id="module-output" name="Calmify.features.subscription.desktopMain" />
+    </root>
+  </artifact>
+</component>

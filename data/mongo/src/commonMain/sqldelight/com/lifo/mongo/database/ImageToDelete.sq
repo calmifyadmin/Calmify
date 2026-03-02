@@ -1,0 +1,16 @@
+CREATE TABLE image_to_delete_table (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    remoteImagePath TEXT NOT NULL
+);
+
+getAllImages:
+SELECT * FROM image_to_delete_table
+ORDER BY id ASC;
+
+addImageToDelete:
+INSERT OR REPLACE INTO image_to_delete_table(remoteImagePath)
+VALUES (?);
+
+cleanupImage:
+DELETE FROM image_to_delete_table
+WHERE id = ?;

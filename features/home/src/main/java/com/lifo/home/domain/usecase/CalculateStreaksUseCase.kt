@@ -11,15 +11,13 @@ import java.time.ZonedDateTime
 import java.time.format.TextStyle
 import java.time.temporal.TemporalAdjusters
 import java.util.Locale
-import javax.inject.Inject
-
 /**
  * Calculate Streaks Use Case
  *
  * Calculates writing streaks, monthly stats, and weekly goals
  * for the achievements/gamification system
  */
-class CalculateStreaksUseCase @Inject constructor() {
+class CalculateStreaksUseCase {
 
     companion object {
         private const val DEFAULT_WEEKLY_GOAL = 5
@@ -43,7 +41,7 @@ class CalculateStreaksUseCase @Inject constructor() {
                     if (diary.dayKey.isNotBlank()) {
                         LocalDate.parse(diary.dayKey)
                     } else {
-                        diary.date.toInstant()
+                        java.time.Instant.ofEpochMilli(diary.dateMillis)
                             .atZone(ZoneId.systemDefault())
                             .toLocalDate()
                     }
@@ -272,7 +270,7 @@ class CalculateStreaksUseCase @Inject constructor() {
             if (diary.dayKey.isNotBlank()) {
                 LocalDate.parse(diary.dayKey)
             } else {
-                diary.date.toInstant()
+                java.time.Instant.ofEpochMilli(diary.dateMillis)
                     .atZone(ZoneId.systemDefault())
                     .toLocalDate()
             }

@@ -1,0 +1,286 @@
+package com.lifo.mongo.repository
+
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
+import com.lifo.util.model.RequestState
+import com.lifo.util.repository.ThreadRepository
+import com.lifo.util.repository.ThreadRepository.Thread
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/**
+ * FirestoreThreadRepository Implementation
+ *
+ * Firestore-backed implementation of ThreadRepository.
+ * Collection: threads (top-level)
+ * Sub-collection: threads/{threadId}/likes (for like tracking)
+ *
+ * MVP implementation — social threads (posts/replies).
+ */
+@Singleton
+class FirestoreThreadRepository @Inject constructor(
+    private val firestore: FirebaseFirestore,
+    private val auth: FirebaseAuth
+) : ThreadRepository {
+
+    companion object {
+        private const val TAG = "FirestoreThreadRepo"
+        private const val COLLECTION_THREADS = "threads"
+        private const val SUBCOLLECTION_LIKES = "likes"
+    }
+
+    private val threadsCollection by lazy { firestore.collection(COLLECTION_THREADS) }
+
+    private val currentUserId: String
+        get() = auth.currentUser?.uid ?: throw IllegalStateException("User not authenticated")
+
+    override fun getThreadById(threadId: String): Flow<RequestState<Thread?>> = callbackFlow {
+        trySend(RequestState.Loading)
+
+        val listenerRegistration = threadsCollection
+            .document(threadId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    println("[$TAG] ERROR: Error getting thread $threadId: ${error.message}")
+                    trySend(RequestState.Error(error))
+                    return@addSnapshotListener
+                }
+
+                if (snapshot != null && snapshot.exists()) {
+                    try {
+                        val thread = snapshotToThread(snapshot)
+                        trySend(RequestState.Success(thread))
+                    } catch (e: Exception) {
+                        println("[$TAG] ERROR: Error parsing thread: ${e.message}")
+                        trySend(RequestState.Error(e))
+                    }
+                } else {
+                    trySend(RequestState.Success(null))
+                }
+            }
+
+        awaitClose { listenerRegistration.remove() }
+    }
+
+    override fun getThreadsByAuthor(authorId: String, limit: Int): Flow<RequestState<List<Thread>>> = callbackFlow {
+        trySend(RequestState.Loading)
+
+        val listenerRegistration = threadsCollection
+            .whereEqualTo("authorId", authorId)
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .limit(limit.toLong())
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    println("[$TAG] ERROR: Error getting threads by author: ${error.message}")
+                    trySend(RequestState.Error(error))
+                    return@addSnapshotListener
+                }
+
+                if (snapshot != null) {
+                    val threads = snapshot.documents.mapNotNull { doc ->
+                        try {
+                            snapshotToThread(doc)
+                        } catch (e: Exception) {
+                            println("[$TAG] WARN: Skipping malformed thread doc ${doc.id}")
+                            null
+                        }
+                    }
+                    trySend(RequestState.Success(threads))
+                } else {
+                    trySend(RequestState.Success(emptyList()))
+                }
+            }
+
+        awaitClose { listenerRegistration.remove() }
+    }
+
+    override fun getReplies(parentThreadId: String): Flow<RequestState<List<Thread>>> = callbackFlow {
+        trySend(RequestState.Loading)
+
+        val listenerRegistration = threadsCollection
+            .whereEqualTo("parentThreadId", parentThreadId)
+            .orderBy("createdAt", Query.Direction.ASCENDING)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    println("[$TAG] ERROR: Error getting replies: ${error.message}")
+                    trySend(RequestState.Error(error))
+                    return@addSnapshotListener
+                }
+
+                if (snapshot != null) {
+                    val threads = snapshot.documents.mapNotNull { doc ->
+                        try {
+                            snapshotToThread(doc)
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+                    trySend(RequestState.Success(threads))
+                } else {
+                    trySend(RequestState.Success(emptyList()))
+                }
+            }
+
+        awaitClose { listenerRegistration.remove() }
+    }
+
+    override suspend fun createThread(thread: Thread): RequestState<String> {
+        return try {
+            val userId = currentUserId
+            val docRef = threadsCollection.document()
+            val threadWithId = thread.copy(
+                threadId = docRef.id,
+                authorId = userId,
+                createdAt = System.currentTimeMillis()
+            )
+
+            val data = threadToMap(threadWithId)
+            docRef.set(data).await()
+
+            // If this is a reply, increment parent's replyCount
+            val parentId = thread.parentThreadId
+            if (parentId != null) {
+                threadsCollection.document(parentId)
+                    .update("replyCount", FieldValue.increment(1))
+                    .await()
+            }
+
+            println("[$TAG] Thread created: ${docRef.id}")
+            RequestState.Success(docRef.id)
+        } catch (e: Exception) {
+            println("[$TAG] ERROR: Error creating thread: ${e.message}")
+            RequestState.Error(e)
+        }
+    }
+
+    override suspend fun deleteThread(threadId: String): RequestState<Boolean> {
+        return try {
+            val doc = threadsCollection.document(threadId).get().await()
+            val authorId = doc.getString("authorId")
+
+            if (authorId != currentUserId) {
+                return RequestState.Error(Exception("Access denied: not the author"))
+            }
+
+            // If it's a reply, decrement parent's replyCount
+            val parentId = doc.getString("parentThreadId")
+            if (parentId != null) {
+                threadsCollection.document(parentId)
+                    .update("replyCount", FieldValue.increment(-1))
+                    .await()
+            }
+
+            threadsCollection.document(threadId).delete().await()
+
+            println("[$TAG] Thread deleted: $threadId")
+            RequestState.Success(true)
+        } catch (e: Exception) {
+            println("[$TAG] ERROR: Error deleting thread: ${e.message}")
+            RequestState.Error(e)
+        }
+    }
+
+    override suspend fun likeThread(userId: String, threadId: String): RequestState<Boolean> {
+        return try {
+            val likeRef = threadsCollection.document(threadId)
+                .collection(SUBCOLLECTION_LIKES)
+                .document(userId)
+
+            // Check if already liked
+            val existing = likeRef.get().await()
+            if (existing.exists()) {
+                return RequestState.Success(true) // Already liked
+            }
+
+            // Add like document and increment counter atomically
+            val batch = firestore.batch()
+            batch.set(likeRef, mapOf("userId" to userId, "createdAt" to System.currentTimeMillis()))
+            batch.update(threadsCollection.document(threadId), "likeCount", FieldValue.increment(1))
+            batch.commit().await()
+
+            println("[$TAG] Thread $threadId liked by $userId")
+            RequestState.Success(true)
+        } catch (e: Exception) {
+            println("[$TAG] ERROR: Error liking thread: ${e.message}")
+            RequestState.Error(e)
+        }
+    }
+
+    override suspend fun unlikeThread(userId: String, threadId: String): RequestState<Boolean> {
+        return try {
+            val likeRef = threadsCollection.document(threadId)
+                .collection(SUBCOLLECTION_LIKES)
+                .document(userId)
+
+            val existing = likeRef.get().await()
+            if (!existing.exists()) {
+                return RequestState.Success(true) // Already not liked
+            }
+
+            // Remove like document and decrement counter atomically
+            val batch = firestore.batch()
+            batch.delete(likeRef)
+            batch.update(threadsCollection.document(threadId), "likeCount", FieldValue.increment(-1))
+            batch.commit().await()
+
+            println("[$TAG] Thread $threadId unliked by $userId")
+            RequestState.Success(true)
+        } catch (e: Exception) {
+            println("[$TAG] ERROR: Error unliking thread: ${e.message}")
+            RequestState.Error(e)
+        }
+    }
+
+    override suspend fun isLikedByUser(userId: String, threadId: String): Boolean {
+        return try {
+            val likeDoc = threadsCollection.document(threadId)
+                .collection(SUBCOLLECTION_LIKES)
+                .document(userId)
+                .get()
+                .await()
+            likeDoc.exists()
+        } catch (e: Exception) {
+            println("[$TAG] WARN: Error checking like status: ${e.message}")
+            false
+        }
+    }
+
+    // -- Helpers --
+
+    private fun snapshotToThread(doc: com.google.firebase.firestore.DocumentSnapshot): Thread {
+        return Thread(
+            threadId = doc.id,
+            authorId = doc.getString("authorId") ?: "",
+            parentThreadId = doc.getString("parentThreadId"),
+            text = doc.getString("text") ?: "",
+            likeCount = doc.getLong("likeCount") ?: 0,
+            replyCount = doc.getLong("replyCount") ?: 0,
+            visibility = doc.getString("visibility") ?: "public",
+            moodTag = doc.getString("moodTag"),
+            isFromJournal = doc.getBoolean("isFromJournal") ?: false,
+            createdAt = doc.getLong("createdAt") ?: 0,
+            updatedAt = doc.getLong("updatedAt")
+        )
+    }
+
+    private fun threadToMap(thread: Thread): Map<String, Any?> {
+        return mapOf(
+            "authorId" to thread.authorId,
+            "parentThreadId" to thread.parentThreadId,
+            "text" to thread.text,
+            "likeCount" to thread.likeCount,
+            "replyCount" to thread.replyCount,
+            "visibility" to thread.visibility,
+            "moodTag" to thread.moodTag,
+            "isFromJournal" to thread.isFromJournal,
+            "createdAt" to thread.createdAt,
+            "updatedAt" to thread.updatedAt
+        )
+    }
+}

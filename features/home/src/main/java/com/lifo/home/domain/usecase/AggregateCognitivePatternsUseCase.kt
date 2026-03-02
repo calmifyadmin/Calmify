@@ -11,15 +11,13 @@ import com.lifo.util.model.DiaryInsight
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZonedDateTime
-import javax.inject.Inject
-
 /**
  * Aggregate Cognitive Patterns Use Case
  *
  * Aggregates cognitive patterns from diary insights
  * to show CBT pattern trends and frequencies
  */
-class AggregateCognitivePatternsUseCase @Inject constructor() {
+class AggregateCognitivePatternsUseCase {
 
     /**
      * Aggregate cognitive patterns from diary insights
@@ -44,7 +42,7 @@ class AggregateCognitivePatternsUseCase @Inject constructor() {
         // Filter insights by time range
         val filteredInsights = insights.filter { insight ->
             try {
-                val insightDate = insight.generatedAt.toInstant()
+                val insightDate = java.time.Instant.ofEpochMilli(insight.generatedAtMillis)
                     .atZone(ZoneId.systemDefault())
                     .toLocalDate()
                 insightDate.isAfter(cutoffDate) || insightDate.isEqual(cutoffDate)
@@ -66,7 +64,7 @@ class AggregateCognitivePatternsUseCase @Inject constructor() {
                 patternOccurrences.getOrPut(key) { mutableListOf() }.add(
                     PatternOccurrence(
                         pattern = pattern,
-                        date = insight.generatedAt.toInstant()
+                        date = java.time.Instant.ofEpochMilli(insight.generatedAtMillis)
                             .atZone(ZoneId.systemDefault()),
                         examples = pattern.evidence
                     )

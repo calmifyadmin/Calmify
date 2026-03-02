@@ -9,12 +9,9 @@ import android.media.audiofx.AutomaticGainControl
 import android.media.audiofx.NoiseSuppressor
 import android.os.Build
 
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Full-Duplex Audio Session Manager
@@ -59,9 +56,8 @@ import javax.inject.Singleton
  *    → setSpeakerphoneOn(true) / setCommunicationDevice(SPEAKER) keeps speaker output
  *    → Same pattern used by WhatsApp/Telegram/Discord speakerphone mode
  */
-@Singleton
-class FullDuplexAudioSession @Inject constructor(
-    @ApplicationContext private val context: Context
+class FullDuplexAudioSession constructor(
+    private val context: Context
 ) {
     // Shared audio session ID for AEC synchronization
     private var sharedSessionId: Int = AudioManager.AUDIO_SESSION_ID_GENERATE

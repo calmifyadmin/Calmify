@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="social-profile-desktop">
+    <output-path>$PROJECT_DIR$/features/social-profile/build/libs</output-path>
+    <root id="archive" name="social-profile-desktop.jar">
+      <element id="module-output" name="Calmify.features.social-profile.desktopMain" />
+    </root>
+  </artifact>
+</component>

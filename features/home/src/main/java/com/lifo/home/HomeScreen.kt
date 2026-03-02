@@ -20,7 +20,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.lifo.home.components.*
 import com.lifo.util.repository.Diaries
@@ -42,7 +41,7 @@ sealed class HomeScreenState {
 @Composable
 internal fun HomeScreen(
     diaries: Diaries,
-    navController: NavHostController,
+    navController: NavHostController? = null,
     drawerState: DrawerState,
     onMenuClicked: () -> Unit,
     onSignOutClicked: () -> Unit,
@@ -82,7 +81,7 @@ internal fun HomeScreen(
         // FAB rimosso - gestito a livello Scaffold principale in CalmifyApp
         content = { paddingValues ->
             // Observe state and show appropriate content
-            val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+            val isLoading by viewModel.isLoading.collectAsState()
 
             when (diaries) {
                 is RequestState.Success -> {

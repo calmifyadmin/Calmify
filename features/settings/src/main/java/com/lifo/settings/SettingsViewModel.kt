@@ -1,21 +1,61 @@
 package com.lifo.settings
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.FirebaseAuth
-import com.lifo.util.repository.ProfileSettingsRepository
+import com.lifo.util.auth.AuthProvider
 import com.lifo.util.model.ProfileSettings
 import com.lifo.util.model.RequestState
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
+import com.lifo.util.mvi.MviContract
+import com.lifo.util.mvi.MviViewModel
+import com.lifo.util.repository.ProfileSettingsRepository
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
+
+// ──────────────────────────────────────────────────────────────────────────────
+// MVI Contract
+// ──────────────────────────────────────────────────────────────────────────────
+
+object SettingsContract {
+
+    sealed interface Intent : MviContract.Intent {
+        data class UpdateNotificationSettings(
+            val dailyReminders: Boolean? = null,
+            val weeklyInsights: Boolean? = null,
+            val achievementAlerts: Boolean? = null
+        ) : Intent
+
+        data class UpdateProfileInfo(val updatedSettings: ProfileSettings) : Intent
+
+        data class UpdatePrivacySettings(
+            val shareDataForResearch: Boolean? = null,
+            val enableAdvancedInsights: Boolean? = null
+        ) : Intent
+
+        data class UpdateAppPreferences(
+            val darkMode: Boolean? = null,
+            val language: String? = null
+        ) : Intent
+
+        data object Logout : Intent
+        data class ShowDeleteAccountDialog(val show: Boolean) : Intent
+        data object DeleteAccount : Intent
+        data object ClearError : Intent
+    }
+
+    // State = SettingsUiState (defined below, implements MviContract.State)
+
+    sealed interface Effect : MviContract.Effect {
+        data object LogoutSuccess : Effect
+        data object AccountDeleted : Effect
+        data class ShowError(val message: String) : Effect
+        data object ProfileSaved : Effect
+    }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// ViewModel
+// ──────────────────────────────────────────────────────────────────────────────
 
 /**
- * SettingsViewModel - Manages settings state and user profile updates
+ * SettingsViewModel - Manages settings state and user profile updates (MVI)
  *
  * Features:
  * - Profile settings management
@@ -23,47 +63,116 @@ import javax.inject.Inject
  * - Loading and error states
  * - Real-time profile updates
  */
-@HiltViewModel
-class SettingsViewModel @Inject constructor(
+class SettingsViewModel constructor(
     private val profileSettingsRepository: ProfileSettingsRepository,
-    private val auth: FirebaseAuth
-) : ViewModel() {
+    private val authProvider: AuthProvider
+) : MviViewModel<SettingsContract.Intent, SettingsUiState, SettingsContract.Effect>(
+    initialState = SettingsUiState()
+) {
 
-    private val _uiState = MutableStateFlow(SettingsUiState())
-    val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+    /** Backward-compatible alias so existing callers keep compiling. */
+    val uiState: StateFlow<SettingsUiState> get() = state
 
     init {
         loadProfileSettings()
     }
 
-    /**
-     * Load user profile settings
-     */
+    // ── Intent dispatch ─────────────────────────────────────────────────────
+
+    override fun handleIntent(intent: SettingsContract.Intent) {
+        when (intent) {
+            is SettingsContract.Intent.UpdateNotificationSettings -> handleUpdateNotificationSettings(
+                intent.dailyReminders,
+                intent.weeklyInsights,
+                intent.achievementAlerts
+            )
+            is SettingsContract.Intent.UpdateProfileInfo -> handleUpdateProfileInfo(intent.updatedSettings)
+            is SettingsContract.Intent.UpdatePrivacySettings -> handleUpdatePrivacySettings(
+                intent.shareDataForResearch,
+                intent.enableAdvancedInsights
+            )
+            is SettingsContract.Intent.UpdateAppPreferences -> handleUpdateAppPreferences(
+                intent.darkMode,
+                intent.language
+            )
+            is SettingsContract.Intent.Logout -> handleLogout()
+            is SettingsContract.Intent.ShowDeleteAccountDialog -> handleShowDeleteAccountDialog(intent.show)
+            is SettingsContract.Intent.DeleteAccount -> handleDeleteAccount()
+            is SettingsContract.Intent.ClearError -> updateState { copy(error = null) }
+        }
+    }
+
+    // ── Backward-compatible public wrappers ─────────────────────────────────
+
+    fun updateNotificationSettings(
+        dailyReminders: Boolean? = null,
+        weeklyInsights: Boolean? = null,
+        achievementAlerts: Boolean? = null
+    ) = onIntent(
+        SettingsContract.Intent.UpdateNotificationSettings(dailyReminders, weeklyInsights, achievementAlerts)
+    )
+
+    fun updateProfileInfo(updatedSettings: ProfileSettings) =
+        onIntent(SettingsContract.Intent.UpdateProfileInfo(updatedSettings))
+
+    fun updatePrivacySettings(
+        shareDataForResearch: Boolean? = null,
+        enableAdvancedInsights: Boolean? = null
+    ) = onIntent(
+        SettingsContract.Intent.UpdatePrivacySettings(shareDataForResearch, enableAdvancedInsights)
+    )
+
+    fun updateAppPreferences(
+        darkMode: Boolean? = null,
+        language: String? = null
+    ) = onIntent(SettingsContract.Intent.UpdateAppPreferences(darkMode, language))
+
+    fun logout(onSuccess: () -> Unit) {
+        // Legacy wrapper: store callback BEFORE dispatching so it's available when the
+        // handler completes. For full MVI, callers should observe effects instead.
+        _legacyLogoutCallback = onSuccess
+        onIntent(SettingsContract.Intent.Logout)
+    }
+
+    fun showDeleteAccountDialog(show: Boolean) =
+        onIntent(SettingsContract.Intent.ShowDeleteAccountDialog(show))
+
+    fun deleteAccount(onSuccess: () -> Unit) {
+        // Legacy wrapper — see logout() above
+        _legacyDeleteCallback = onSuccess
+        onIntent(SettingsContract.Intent.DeleteAccount)
+    }
+
+    fun clearError() = onIntent(SettingsContract.Intent.ClearError)
+
+    // ── Legacy callback bridge ──────────────────────────────────────────────
+    // These temporary fields bridge the old callback-based API until
+    // SettingsScreen is migrated to collect effects directly.
+
+    private var _legacyLogoutCallback: (() -> Unit)? = null
+    private var _legacyDeleteCallback: (() -> Unit)? = null
+
+    // ── Private handlers ────────────────────────────────────────────────────
+
     private fun loadProfileSettings() {
-        viewModelScope.launch {
-            _uiState.update {
-                it.copy(
+        scope.launch {
+            updateState {
+                copy(
                     isLoading = true,
-                    error = null,
-                    userProfileImageUrl = auth.currentUser?.photoUrl?.toString()
+                    error = null
                 )
             }
 
-            val userId = auth.currentUser?.uid
+            val userId = authProvider.currentUserId
             if (userId == null) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = "User not authenticated"
-                    )
-                }
+                updateState { copy(isLoading = false, error = "User not authenticated") }
                 return@launch
             }
 
             when (val result = profileSettingsRepository.getProfileSettings(userId)) {
                 is RequestState.Success -> {
-                    _uiState.update {
-                        it.copy(
+                    updateState {
+                        copy(
                             isLoading = false,
                             profileSettings = result.data ?: ProfileSettings(),
                             error = null
@@ -71,197 +180,169 @@ class SettingsViewModel @Inject constructor(
                     }
                 }
                 is RequestState.Error -> {
-                    _uiState.update {
-                        it.copy(
+                    updateState {
+                        copy(
                             isLoading = false,
                             error = result.error.message ?: "Failed to load settings"
                         )
                     }
                 }
                 else -> {
-                    _uiState.update { it.copy(isLoading = false) }
+                    updateState { copy(isLoading = false) }
                 }
             }
         }
     }
 
-    /**
-     * Update notification preferences
-     * Note: These are local app preferences and could be stored in DataStore
-     * For now, they're just UI state
-     */
-    fun updateNotificationSettings(
-        dailyReminders: Boolean? = null,
-        weeklyInsights: Boolean? = null,
-        achievementAlerts: Boolean? = null
+    private fun handleUpdateNotificationSettings(
+        dailyReminders: Boolean?,
+        weeklyInsights: Boolean?,
+        achievementAlerts: Boolean?
     ) {
-        _uiState.update { state ->
-            state.copy(
-                notificationSettings = state.notificationSettings.copy(
-                    dailyReminders = dailyReminders ?: state.notificationSettings.dailyReminders,
-                    weeklyInsights = weeklyInsights ?: state.notificationSettings.weeklyInsights,
-                    achievementAlerts = achievementAlerts ?: state.notificationSettings.achievementAlerts
+        updateState {
+            copy(
+                notificationSettings = notificationSettings.copy(
+                    dailyReminders = dailyReminders ?: notificationSettings.dailyReminders,
+                    weeklyInsights = weeklyInsights ?: notificationSettings.weeklyInsights,
+                    achievementAlerts = achievementAlerts ?: notificationSettings.achievementAlerts
                 )
             )
         }
     }
 
-    /**
-     * Update profile information (name, location, etc.)
-     */
-    fun updateProfileInfo(updatedSettings: ProfileSettings) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isSaving = true, error = null) }
+    private fun handleUpdateProfileInfo(updatedSettings: ProfileSettings) {
+        scope.launch {
+            updateState { copy(isSaving = true, error = null) }
 
             when (val result = profileSettingsRepository.saveProfileSettings(updatedSettings)) {
                 is RequestState.Success -> {
-                    _uiState.update {
-                        it.copy(
+                    updateState {
+                        copy(
                             isSaving = false,
                             profileSettings = updatedSettings,
                             error = null
                         )
                     }
+                    sendEffect(SettingsContract.Effect.ProfileSaved)
                 }
                 is RequestState.Error -> {
-                    _uiState.update {
-                        it.copy(
+                    updateState {
+                        copy(
                             isSaving = false,
                             error = result.error.message ?: "Failed to save profile"
                         )
                     }
+                    sendEffect(
+                        SettingsContract.Effect.ShowError(
+                            result.error.message ?: "Failed to save profile"
+                        )
+                    )
                 }
                 else -> {
-                    _uiState.update { it.copy(isSaving = false) }
+                    updateState { copy(isSaving = false) }
                 }
             }
         }
     }
 
-    /**
-     * Update privacy settings
-     */
-    fun updatePrivacySettings(
-        shareDataForResearch: Boolean? = null,
-        enableAdvancedInsights: Boolean? = null
+    private fun handleUpdatePrivacySettings(
+        shareDataForResearch: Boolean?,
+        enableAdvancedInsights: Boolean?
     ) {
-        viewModelScope.launch {
-            _uiState.update { state ->
-                state.copy(
+        scope.launch {
+            updateState {
+                copy(
                     isSaving = true,
-                    profileSettings = state.profileSettings.copy(
-                        shareDataForResearch = shareDataForResearch ?: state.profileSettings.shareDataForResearch,
-                        enableAdvancedInsights = enableAdvancedInsights ?: state.profileSettings.enableAdvancedInsights
+                    profileSettings = profileSettings.copy(
+                        shareDataForResearch = shareDataForResearch ?: profileSettings.shareDataForResearch,
+                        enableAdvancedInsights = enableAdvancedInsights ?: profileSettings.enableAdvancedInsights
                     )
                 )
             }
 
-            // Save to repository
-            val result = profileSettingsRepository.saveProfileSettings(_uiState.value.profileSettings)
+            val result = profileSettingsRepository.saveProfileSettings(currentState.profileSettings)
 
-            _uiState.update { it.copy(isSaving = false) }
+            updateState { copy(isSaving = false) }
 
             if (result is RequestState.Error) {
-                _uiState.update {
-                    it.copy(error = result.error.message ?: "Failed to save settings")
-                }
+                updateState { copy(error = result.error.message ?: "Failed to save settings") }
+                sendEffect(
+                    SettingsContract.Effect.ShowError(
+                        result.error.message ?: "Failed to save settings"
+                    )
+                )
             }
         }
     }
 
-    /**
-     * Update app preferences
-     * Note: These are local app preferences and could be stored in DataStore
-     * For now, they're just UI state
-     */
-    fun updateAppPreferences(
-        darkMode: Boolean? = null,
-        language: String? = null
+    private fun handleUpdateAppPreferences(
+        darkMode: Boolean?,
+        language: String?
     ) {
-        _uiState.update { state ->
-            state.copy(
-                appPreferences = state.appPreferences.copy(
-                    darkMode = darkMode ?: state.appPreferences.darkMode,
-                    language = language ?: state.appPreferences.language
+        updateState {
+            copy(
+                appPreferences = appPreferences.copy(
+                    darkMode = darkMode ?: appPreferences.darkMode,
+                    language = language ?: appPreferences.language
                 )
             )
         }
     }
 
-    /**
-     * Logout user
-     */
-    fun logout(onSuccess: () -> Unit) {
-        viewModelScope.launch {
+    private fun handleLogout() {
+        scope.launch {
             try {
-                auth.signOut()
-                onSuccess()
+                authProvider.signOut()
+                sendEffect(SettingsContract.Effect.LogoutSuccess)
+                _legacyLogoutCallback?.invoke()
+                _legacyLogoutCallback = null
             } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(error = "Failed to logout: ${e.message}")
-                }
+                updateState { copy(error = "Failed to logout: ${e.message}") }
+                sendEffect(SettingsContract.Effect.ShowError("Failed to logout: ${e.message}"))
             }
         }
     }
 
-    /**
-     * Show delete account confirmation dialog
-     */
-    fun showDeleteAccountDialog(show: Boolean) {
-        _uiState.update { it.copy(showDeleteAccountDialog = show) }
+    private fun handleShowDeleteAccountDialog(show: Boolean) {
+        updateState { copy(showDeleteAccountDialog = show) }
     }
 
-    /**
-     * Delete user account
-     */
-    fun deleteAccount(onSuccess: () -> Unit) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isDeleting = true, error = null) }
+    private fun handleDeleteAccount() {
+        scope.launch {
+            updateState { copy(isDeleting = true, error = null) }
 
             try {
-                val userId = auth.currentUser?.uid
+                val userId = authProvider.currentUserId
                 if (userId != null) {
-                    // Delete from Firestore
                     profileSettingsRepository.deleteProfileSettings(userId)
                 }
 
-                // Delete Firebase Auth account
-                auth.currentUser?.delete()?.addOnSuccessListener {
-                    _uiState.update { it.copy(isDeleting = false) }
-                    onSuccess()
-                }?.addOnFailureListener { e ->
-                    _uiState.update {
-                        it.copy(
-                            isDeleting = false,
-                            error = "Failed to delete account: ${e.message}"
-                        )
-                    }
-                }
+                // Sign out (account deletion is handled server-side or via platform-specific code)
+                authProvider.signOut()
+                updateState { copy(isDeleting = false) }
+                sendEffect(SettingsContract.Effect.AccountDeleted)
+                _legacyDeleteCallback?.invoke()
+                _legacyDeleteCallback = null
             } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
+                updateState {
+                    copy(
                         isDeleting = false,
                         error = "Failed to delete account: ${e.message}"
                     )
                 }
+                sendEffect(
+                    SettingsContract.Effect.ShowError(
+                        "Failed to delete account: ${e.message}"
+                    )
+                )
             }
         }
     }
-
-    /**
-     * Clear error message
-     */
-    fun clearError() {
-        _uiState.update { it.copy(error = null) }
-    }
-
-    /**
-     * Navigate to edit profile
-     */
-    fun navigateToEditProfile() {
-        // Will be handled by navigation in the UI layer
-    }
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// State & supporting data classes
+// ──────────────────────────────────────────────────────────────────────────────
 
 /**
  * UI State for Settings screen
@@ -276,7 +357,7 @@ data class SettingsUiState(
     val userProfileImageUrl: String? = null,
     val showDeleteAccountDialog: Boolean = false,
     val error: String? = null
-)
+) : MviContract.State
 
 /**
  * Notification Settings

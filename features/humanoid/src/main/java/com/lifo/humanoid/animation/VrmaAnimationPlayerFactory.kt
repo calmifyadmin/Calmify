@@ -3,17 +3,13 @@ package com.lifo.humanoid.animation
 import com.google.android.filament.Engine
 import com.google.android.filament.gltfio.FilamentAsset
 import com.lifo.humanoid.data.vrm.VrmHumanoidBoneMapper
-import javax.inject.Inject
-import javax.inject.Singleton
-
 /**
  * Factory for creating VrmaAnimationPlayer instances.
  *
  * Since VrmaAnimationPlayer requires a Filament Engine which is only available
  * after the renderer is initialized, this factory provides deferred instantiation.
  */
-@Singleton
-class VrmaAnimationPlayerFactory @Inject constructor(
+class VrmaAnimationPlayerFactory(
     private val boneMapper: VrmHumanoidBoneMapper
 ) {
     private var currentPlayer: VrmaAnimationPlayer? = null

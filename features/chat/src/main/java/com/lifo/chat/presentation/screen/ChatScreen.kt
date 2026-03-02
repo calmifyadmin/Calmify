@@ -51,7 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lifo.chat.presentation.components.*
 import com.lifo.chat.presentation.viewmodel.ChatViewModel
@@ -70,8 +70,8 @@ fun ChatScreen(
     navigateToLiveScreen: () -> Unit = {},
     modifier: Modifier = Modifier,
     sessionId: String? = null,
-    viewModel: ChatViewModel = hiltViewModel(),
-    liveChatViewModel: LiveChatViewModel = hiltViewModel()
+    viewModel: ChatViewModel = koinViewModel(),
+    liveChatViewModel: LiveChatViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val voiceState by viewModel.voiceState.collectAsStateWithLifecycle()

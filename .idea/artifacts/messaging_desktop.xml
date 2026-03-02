@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="messaging-desktop">
+    <output-path>$PROJECT_DIR$/features/messaging/build/libs</output-path>
+    <root id="archive" name="messaging-desktop.jar">
+      <element id="module-output" name="Calmify.features.messaging.desktopMain" />
+    </root>
+  </artifact>
+</component>

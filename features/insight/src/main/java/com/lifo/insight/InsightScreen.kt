@@ -16,8 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.koin.compose.viewmodel.koinViewModel
 import com.lifo.util.model.*
 
 /**
@@ -32,9 +31,9 @@ fun InsightScreen(
     diaryId: String,
     onBackPressed: () -> Unit,
     onPromptClicked: (String) -> Unit,
-    viewModel: InsightViewModel = hiltViewModel()
+    viewModel: InsightViewModel = koinViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val uiState by viewModel.state.collectAsState()
     val scrollState = rememberScrollState()
 
     // Correction dialog state
@@ -42,7 +41,7 @@ fun InsightScreen(
 
     // Load insight on first composition
     LaunchedEffect(diaryId) {
-        viewModel.loadInsight(diaryId)
+        viewModel.onIntent(InsightContract.Intent.LoadInsight(diaryId))
     }
 
     Scaffold(
@@ -150,7 +149,7 @@ fun InsightScreen(
                                 confidence = uiState.insight!!.confidence,
                                 modelUsed = uiState.insight!!.modelUsed,
                                 isExpanded = uiState.isSummaryExpanded,
-                                onExpandClick = { viewModel.toggleSummaryExpanded() }
+                                onExpandClick = { viewModel.onIntent(InsightContract.Intent.ToggleSummaryExpanded) }
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                         }
@@ -171,9 +170,9 @@ fun InsightScreen(
                             isSubmitting = uiState.isSubmittingFeedback,
                             onFeedbackClick = { isCorrect ->
                                 if (isCorrect) {
-                                    viewModel.submitFeedback(true)
+                                    viewModel.onIntent(InsightContract.Intent.SubmitFeedback(isHelpful = true))
                                 } else {
-                                    viewModel.showCorrectionDialog(true)
+                                    viewModel.onIntent(InsightContract.Intent.ShowCorrectionDialog(true))
                                 }
                             }
                         )
@@ -186,7 +185,7 @@ fun InsightScreen(
             // Correction Dialog
             if (uiState.showCorrectionDialog) {
                 AlertDialog(
-                    onDismissRequest = { viewModel.showCorrectionDialog(false) },
+                    onDismissRequest = { viewModel.onIntent(InsightContract.Intent.ShowCorrectionDialog(false)) },
                     title = { Text("Cosa non è corretto?") },
                     text = {
                         OutlinedTextField(
@@ -201,8 +200,8 @@ fun InsightScreen(
                     confirmButton = {
                         TextButton(
                             onClick = {
-                                viewModel.submitFeedback(false, correctionText)
-                                viewModel.showCorrectionDialog(false)
+                                viewModel.onIntent(InsightContract.Intent.SubmitFeedback(isHelpful = false, correction = correctionText))
+                                viewModel.onIntent(InsightContract.Intent.ShowCorrectionDialog(false))
                                 correctionText = ""
                             },
                             enabled = correctionText.isNotBlank()
@@ -212,7 +211,7 @@ fun InsightScreen(
                     },
                     dismissButton = {
                         TextButton(onClick = {
-                            viewModel.showCorrectionDialog(false)
+                            viewModel.onIntent(InsightContract.Intent.ShowCorrectionDialog(false))
                             correctionText = ""
                         }) {
                             Text("Annulla")

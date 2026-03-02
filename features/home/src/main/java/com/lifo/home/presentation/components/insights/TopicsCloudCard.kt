@@ -33,7 +33,7 @@ import kotlinx.coroutines.delay
  * │  Tema emergente: 📈 creatività (+40%)          │
  * └─────────────────────────────────────────────────┘
  */
-@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TopicsCloudCard(
     topics: List<TopicFrequency>,
@@ -70,7 +70,7 @@ fun TopicsCloudCard(
             // Header
             Text(
                 text = "I tuoi temi",
-                style = MaterialTheme.typography.titleLargeEmphasized,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
             )

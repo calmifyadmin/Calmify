@@ -9,11 +9,8 @@ import com.lifo.util.model.RequestState
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
-import java.time.LocalDate
-import java.time.ZoneId
-import java.time.ZonedDateTime
+import kotlinx.datetime.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -62,9 +59,7 @@ class FirestoreDiaryRepository @Inject constructor(
                 if (snapshot != null) {
                     try {
                         val diaries = snapshot.documents.mapNotNull { doc ->
-                            doc.toObject(Diary::class.java)?.apply {
-                                _id = doc.id
-                            }
+                            doc.toDiary()
                         }
 
                         // Group by dayKey (timezone-safe) and convert to LocalDate for Map key
@@ -92,7 +87,7 @@ class FirestoreDiaryRepository @Inject constructor(
      * Ottiene diary filtrati per una specifica data
      * Usa dayKey per filtraggio timezone-safe
      */
-    override fun getFilteredDiaries(zonedDateTime: ZonedDateTime): Flow<RequestState<Map<LocalDate, List<Diary>>>> = callbackFlow {
+    override fun getFilteredDiaries(dayKey: String): Flow<RequestState<Map<LocalDate, List<Diary>>>> = callbackFlow {
         val userId = currentUserId
         if (userId == null) {
             trySend(RequestState.Error(UserNotAuthenticatedException()))
@@ -100,13 +95,10 @@ class FirestoreDiaryRepository @Inject constructor(
             return@callbackFlow
         }
 
-        // Convert ZonedDateTime to dayKey (business date)
-        val targetDayKey = zonedDateTime.toLocalDate().toString() // "YYYY-MM-DD"
-
         val listenerRegistration = firestore
             .collection(COLLECTION_DIARIES)
             .whereEqualTo("ownerId", userId)
-            .whereEqualTo("dayKey", targetDayKey) // Use dayKey for filtering (timezone-safe)
+            .whereEqualTo("dayKey", dayKey) // Use dayKey for filtering (timezone-safe)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     println("[" + TAG + "] ERROR: " + "Error getting filtered diaries")
@@ -117,9 +109,7 @@ class FirestoreDiaryRepository @Inject constructor(
                 if (snapshot != null) {
                     try {
                         val diaries = snapshot.documents.mapNotNull { doc ->
-                            doc.toObject(Diary::class.java)?.apply {
-                                _id = doc.id
-                            }
+                            doc.toDiary()
                         }
 
                         // Group by dayKey (timezone-safe) and convert to LocalDate for Map key
@@ -166,9 +156,8 @@ class FirestoreDiaryRepository @Inject constructor(
 
                 if (snapshot != null && snapshot.exists()) {
                     try {
-                        val diary = snapshot.toObject(Diary::class.java)
+                        val diary = snapshot.toDiary()
                         if (diary != null && diary.ownerId == userId) {
-                            diary._id = snapshot.id
                             trySend(RequestState.Success(diary))
                         } else {
                             trySend(RequestState.Error(Exception("Diary not found or access denied")))
@@ -205,7 +194,7 @@ class FirestoreDiaryRepository @Inject constructor(
             diary._id = docRef.id
 
             // Salva
-            docRef.set(diary).await()
+            docRef.set(diary.toFirestoreMap()).await()
 
             println("[" + TAG + "] " + "Diary inserted successfully: ${diary._id}")
             RequestState.Success(diary)
@@ -233,7 +222,7 @@ class FirestoreDiaryRepository @Inject constructor(
             // Aggiorna
             firestore.collection(COLLECTION_DIARIES)
                 .document(diary._id)
-                .set(diary)
+                .set(diary.toFirestoreMap())
                 .await()
 
             println("[" + TAG + "] " + "Diary updated successfully")
@@ -256,7 +245,7 @@ class FirestoreDiaryRepository @Inject constructor(
 
             // Verifica ownership prima di eliminare
             val doc = firestore.collection(COLLECTION_DIARIES).document(id).get().await()
-            val diary = doc.toObject(Diary::class.java)
+            val diary = doc.toDiary()
 
             if (diary == null || diary.ownerId != userId) {
                 return RequestState.Error(Exception("Diary not found or access denied"))

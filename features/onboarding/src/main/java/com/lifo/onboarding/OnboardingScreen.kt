@@ -13,7 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import com.lifo.onboarding.steps.*
 import com.lifo.ui.components.stepper.ExpressiveStepper
 
@@ -34,7 +34,7 @@ fun OnboardingScreen(
     onComplete: () -> Unit,
     modifier: Modifier = Modifier,
     showStepper: Boolean = false,
-    viewModel: OnboardingViewModel = hiltViewModel()
+    viewModel: OnboardingViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 

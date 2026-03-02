@@ -36,7 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lifo.chat.domain.model.AIEmotion
 import com.lifo.chat.domain.model.ConnectionStatus
@@ -67,7 +67,7 @@ fun LiveScreen(
     showAvatar: Boolean = false,
     avatarContent: (@Composable () -> Unit)? = null,
     onAvatarSetup: ((com.lifo.util.speech.SpeechAnimationTarget) -> Unit)? = null,
-    viewModel: LiveChatViewModel = hiltViewModel()
+    viewModel: LiveChatViewModel = koinViewModel()
 ) {
     val liveChatState by viewModel.uiState.collectAsStateWithLifecycle()
     val currentTranscript by viewModel.currentTranscript.collectAsStateWithLifecycle()

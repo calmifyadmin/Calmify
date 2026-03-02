@@ -4,8 +4,6 @@ package com.lifo.chat.audio
 import com.lifo.util.speech.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Implementation of SynchronizedSpeechController that bridges audio sources
@@ -22,8 +20,7 @@ import javax.inject.Singleton
  * 2. Attach an animation target (HumanoidController)
  * 3. Call speakSynchronized() to start synchronized speech
  */
-@Singleton
-class SynchronizedSpeechControllerImpl @Inject constructor() : SynchronizedSpeechController {
+class SynchronizedSpeechControllerImpl : SynchronizedSpeechController {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 

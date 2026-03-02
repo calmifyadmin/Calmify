@@ -21,11 +21,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.io.ByteArrayOutputStream
-import javax.inject.Inject
-import javax.inject.Singleton
-
-@Singleton
-class GeminiLiveCameraManager @Inject constructor(
+class GeminiLiveCameraManager constructor(
     private val context: Context
 ) {
 

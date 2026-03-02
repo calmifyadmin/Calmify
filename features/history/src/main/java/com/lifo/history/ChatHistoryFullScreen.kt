@@ -17,8 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.koin.compose.viewmodel.koinViewModel
 import com.lifo.util.model.HomeContentItem
 import java.time.Instant
 import java.time.ZoneId
@@ -33,13 +32,13 @@ import java.time.format.FormatStyle
 internal fun ChatHistoryFullScreen(
     onBackClick: () -> Unit,
     onChatClick: (HomeContentItem.ChatItem) -> Unit,
-    viewModel: HistoryViewModel = hiltViewModel()
+    viewModel: HistoryViewModel = koinViewModel()
 ) {
     var searchQuery by remember { mutableStateOf("") }
     val chatHistoryFlow = remember(searchQuery) {
         viewModel.loadFullChatHistory(searchQuery)
     }
-    val chatHistory by chatHistoryFlow.collectAsStateWithLifecycle(initialValue = emptyList())
+    val chatHistory by chatHistoryFlow.collectAsState(initial = emptyList())
 
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
 

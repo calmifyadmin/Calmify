@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="profile-desktop">
+    <output-path>$PROJECT_DIR$/features/profile/build/libs</output-path>
+    <root id="archive" name="profile-desktop.jar">
+      <element id="module-output" name="Calmify.features.profile.desktopMain" />
+    </root>
+  </artifact>
+</component>

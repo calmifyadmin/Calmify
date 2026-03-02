@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="chat-desktop">
+    <output-path>$PROJECT_DIR$/features/chat/build/libs</output-path>
+    <root id="archive" name="chat-desktop.jar">
+      <element id="module-output" name="Calmify.features.chat.desktopMain" />
+    </root>
+  </artifact>
+</component>

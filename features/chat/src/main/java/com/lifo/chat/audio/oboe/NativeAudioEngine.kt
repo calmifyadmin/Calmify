@@ -1,7 +1,5 @@
 package com.lifo.chat.audio.oboe
 
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Kotlin wrapper for the Oboe C++ audio engine (via JNI).
@@ -24,8 +22,7 @@ import javax.inject.Singleton
  * All methods are thread-safe. The C++ layer uses atomic operations and
  * Oboe manages its own high-priority callback thread.
  */
-@Singleton
-class NativeAudioEngine @Inject constructor() {
+class NativeAudioEngine {
 
     private var nativeHandle: Long = 0L
 

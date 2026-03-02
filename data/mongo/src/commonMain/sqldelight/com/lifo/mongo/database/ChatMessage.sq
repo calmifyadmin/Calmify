@@ -1,0 +1,47 @@
+CREATE TABLE chat_messages (
+    id TEXT PRIMARY KEY NOT NULL,
+    sessionId TEXT NOT NULL,
+    content TEXT NOT NULL,
+    isUser INTEGER NOT NULL,
+    timestamp INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    error TEXT,
+    FOREIGN KEY(sessionId) REFERENCES chat_sessions(id) ON DELETE CASCADE
+);
+
+CREATE INDEX index_chat_messages_sessionId ON chat_messages(sessionId);
+
+getMessagesForSession:
+SELECT * FROM chat_messages
+WHERE sessionId = ?
+ORDER BY timestamp ASC;
+
+getMessage:
+SELECT * FROM chat_messages
+WHERE id = ?;
+
+insertMessage:
+INSERT INTO chat_messages(id, sessionId, content, isUser, timestamp, status, error)
+VALUES (?, ?, ?, ?, ?, ?, ?);
+
+updateMessage:
+UPDATE chat_messages
+SET sessionId = ?, content = ?, isUser = ?, timestamp = ?, status = ?, error = ?
+WHERE id = ?;
+
+deleteMessage:
+DELETE FROM chat_messages
+WHERE id = ?;
+
+deleteMessagesForSession:
+DELETE FROM chat_messages
+WHERE sessionId = ?;
+
+updateMessageStatus:
+UPDATE chat_messages
+SET status = ?, error = ?
+WHERE id = ?;
+
+getMessageCount:
+SELECT COUNT(*) FROM chat_messages
+WHERE sessionId = ?;

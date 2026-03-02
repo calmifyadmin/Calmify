@@ -19,7 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lifo.humanoid.animation.VrmaAnimationLoader
 import com.lifo.humanoid.domain.model.Emotion
@@ -37,7 +37,7 @@ import com.lifo.humanoid.presentation.components.FilamentView
 @Composable
 fun HumanoidScreen(
     navigateBack: () -> Unit,
-    viewModel: HumanoidViewModel = hiltViewModel()
+    viewModel: HumanoidViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val avatarState by viewModel.avatarState.collectAsStateWithLifecycle()

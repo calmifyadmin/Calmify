@@ -1,14 +1,15 @@
 package com.lifo.mongo.repository
 
+import app.cash.sqldelight.coroutines.asFlow
+import app.cash.sqldelight.coroutines.mapToList
+import app.cash.sqldelight.coroutines.mapToOneOrNull
 import com.google.firebase.Firebase
 import com.google.firebase.ai.ai
 import com.google.firebase.ai.type.generationConfig
 import com.google.firebase.auth.FirebaseAuth
-import com.lifo.mongo.database.dao.ChatMessageDao
-import com.lifo.mongo.database.dao.ChatSessionDao
-import com.lifo.mongo.database.entity.ChatMessageEntity
-import com.lifo.mongo.database.entity.ChatSessionEntity
-import com.lifo.util.Constants.GEMINI_API_KEY
+import com.lifo.mongo.database.CalmifyDatabase
+import com.lifo.mongo.database.Chat_messages
+import com.lifo.mongo.database.Chat_sessions
 import com.lifo.util.model.ChatMessage
 import com.lifo.util.model.ChatSession
 import com.lifo.util.model.Diary
@@ -16,25 +17,23 @@ import com.lifo.util.model.MessageStatus
 import com.lifo.util.model.RequestState
 import com.lifo.util.repository.ChatRepository
 import com.lifo.util.repository.MongoRepository
-import com.lifo.util.toInstant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.withContext
-import java.time.Instant
+import kotlinx.datetime.Clock
+import kotlinx.datetime.toJavaInstant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
 import java.util.UUID
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class ChatRepositoryImpl @Inject constructor(
-    private val chatSessionDao: ChatSessionDao,
-    private val chatMessageDao: ChatMessageDao,
+class ChatRepositoryImpl(
+    private val database: CalmifyDatabase,
     private val auth: FirebaseAuth,
-    private val diaryRepository: MongoRepository  // Inject Firestore repository
+    private val diaryRepository: MongoRepository
 ) : ChatRepository {
+
+    private val chatSessionQueries get() = database.chatSessionQueries
+    private val chatMessageQueries get() = database.chatMessageQueries
 
     companion object {
         private const val TAG = "ChatRepository"
@@ -63,9 +62,11 @@ class ChatRepositoryImpl @Inject constructor(
         get() = auth.currentUser?.uid ?: throw IllegalStateException("User not authenticated")
 
     override fun getAllSessions(): Flow<RequestState<List<ChatSession>>> {
-        return chatSessionDao.getAllSessions(currentUserId)
-            .map<List<ChatSessionEntity>, RequestState<List<ChatSession>>> { entities ->
-                RequestState.Success(entities.map { it.toDomain() })
+        return chatSessionQueries.getAllSessions(currentUserId)
+            .asFlow()
+            .mapToList(Dispatchers.IO)
+            .map<List<Chat_sessions>, RequestState<List<ChatSession>>> { rows ->
+                RequestState.Success(rows.map { it.toDomain() })
             }
             .catch { e ->
                 emit(RequestState.Error(Exception(e)))
@@ -76,7 +77,8 @@ class ChatRepositoryImpl @Inject constructor(
     override suspend fun getSession(sessionId: String): RequestState<ChatSession> {
         return withContext(Dispatchers.IO) {
             try {
-                val session = chatSessionDao.getSession(sessionId, currentUserId)
+                val session = chatSessionQueries.getSession(sessionId, currentUserId)
+                    .executeAsOneOrNull()
                 if (session != null) {
                     RequestState.Success(session.toDomain())
                 } else {
@@ -95,13 +97,25 @@ class ChatRepositoryImpl @Inject constructor(
                 val session = ChatSession(
                     id = UUID.randomUUID().toString(),
                     title = title ?: generatePersonalizedSessionTitle(),
-                    createdAt = Instant.now(),
-                    lastMessageAt = Instant.now(),
+                    createdAt = Clock.System.now(),
+                    lastMessageAt = Clock.System.now(),
                     aiModel = "gemini-2.0-flash",
                     messageCount = 0,
                     ownerId = currentUserId
                 )
-                chatSessionDao.insertSession(session.toEntity())
+                chatSessionQueries.insertSession(
+                    id = session.id,
+                    title = session.title,
+                    createdAt = session.createdAt.toEpochMilliseconds(),
+                    lastMessageAt = session.lastMessageAt.toEpochMilliseconds(),
+                    aiModel = session.aiModel,
+                    messageCount = session.messageCount.toLong(),
+                    ownerId = session.ownerId,
+                    summary = null,
+                    lastMessage = null,
+                    mood = null,
+                    isLiveMode = 0L
+                )
                 RequestState.Success(session)
             } catch (e: Exception) {
                 println("[" + TAG + "] ERROR: " + "Error creating session")
@@ -113,7 +127,19 @@ class ChatRepositoryImpl @Inject constructor(
     override suspend fun updateSession(session: ChatSession): RequestState<Unit> {
         return withContext(Dispatchers.IO) {
             try {
-                chatSessionDao.updateSession(session.toEntity())
+                chatSessionQueries.updateSession(
+                    title = session.title,
+                    createdAt = session.createdAt.toEpochMilliseconds(),
+                    lastMessageAt = session.lastMessageAt.toEpochMilliseconds(),
+                    aiModel = session.aiModel,
+                    messageCount = session.messageCount.toLong(),
+                    ownerId = session.ownerId,
+                    summary = null,
+                    lastMessage = null,
+                    mood = null,
+                    isLiveMode = 0L,
+                    id = session.id
+                )
                 RequestState.Success(Unit)
             } catch (e: Exception) {
                 println("[" + TAG + "] ERROR: " + "Error updating session")
@@ -125,8 +151,8 @@ class ChatRepositoryImpl @Inject constructor(
     override suspend fun deleteSession(sessionId: String): RequestState<Boolean> {
         return withContext(Dispatchers.IO) {
             try {
-                chatMessageDao.deleteMessagesForSession(sessionId)
-                chatSessionDao.deleteSession(sessionId, currentUserId)
+                chatMessageQueries.deleteMessagesForSession(sessionId)
+                chatSessionQueries.deleteSession(sessionId, currentUserId)
                 RequestState.Success(true)
             } catch (e: Exception) {
                 println("[" + TAG + "] ERROR: " + "Error deleting session")
@@ -136,9 +162,11 @@ class ChatRepositoryImpl @Inject constructor(
     }
 
     override fun getMessagesForSession(sessionId: String): Flow<RequestState<List<ChatMessage>>> {
-        return chatMessageDao.getMessagesForSession(sessionId)
-            .map<List<ChatMessageEntity>, RequestState<List<ChatMessage>>> { entities ->
-                RequestState.Success(entities.map { it.toDomain() })
+        return chatMessageQueries.getMessagesForSession(sessionId)
+            .asFlow()
+            .mapToList(Dispatchers.IO)
+            .map<List<Chat_messages>, RequestState<List<ChatMessage>>> { rows ->
+                RequestState.Success(rows.map { it.toDomain() })
             }
             .catch { e ->
                 emit(RequestState.Error(Exception(e)))
@@ -155,8 +183,19 @@ class ChatRepositoryImpl @Inject constructor(
                     isUser = true,
                     status = MessageStatus.SENT
                 )
-                chatMessageDao.insertMessage(message.toEntity())
-                chatSessionDao.incrementMessageCount(sessionId, Instant.now().toEpochMilli())
+                chatMessageQueries.insertMessage(
+                    id = message.id,
+                    sessionId = message.sessionId,
+                    content = message.content,
+                    isUser = if (message.isUser) 1L else 0L,
+                    timestamp = message.timestamp.toEpochMilliseconds(),
+                    status = message.status.name,
+                    error = message.error
+                )
+                chatSessionQueries.incrementMessageCount(
+                    lastMessageAt = Clock.System.now().toEpochMilliseconds(),
+                    id = sessionId
+                )
                 RequestState.Success(message)
             } catch (e: Exception) {
                 println("[" + TAG + "] ERROR: " + "Error sending message")
@@ -186,11 +225,22 @@ class ChatRepositoryImpl @Inject constructor(
                     content = content,
                     isUser = isUser,
                     status = MessageStatus.SENT,
-                    timestamp = Instant.now()
+                    timestamp = Clock.System.now()
                 )
 
-                chatMessageDao.insertMessage(message.toEntity())
-                chatSessionDao.incrementMessageCount(sessionId, Instant.now().toEpochMilli())
+                chatMessageQueries.insertMessage(
+                    id = message.id,
+                    sessionId = message.sessionId,
+                    content = message.content,
+                    isUser = if (message.isUser) 1L else 0L,
+                    timestamp = message.timestamp.toEpochMilliseconds(),
+                    status = message.status.name,
+                    error = message.error
+                )
+                chatSessionQueries.incrementMessageCount(
+                    lastMessageAt = Clock.System.now().toEpochMilliseconds(),
+                    id = sessionId
+                )
 
                 println("[" + TAG + "] " + "✅ Live message saved successfully")
                 RequestState.Success(message)
@@ -206,7 +256,8 @@ class ChatRepositoryImpl @Inject constructor(
      */
     private suspend fun ensureLiveSession(sessionId: String) {
         try {
-            val existingSession = chatSessionDao.getSession(sessionId, currentUserId)
+            val existingSession = chatSessionQueries.getSession(sessionId, currentUserId)
+                .executeAsOneOrNull()
 
             if (existingSession == null) {
                 println("[" + TAG + "] " + "📱 Creating new Live session: $sessionId")
@@ -214,18 +265,33 @@ class ChatRepositoryImpl @Inject constructor(
                 val liveSession = ChatSession(
                     id = sessionId,
                     title = "Conversazione Live - ${java.time.format.DateTimeFormatter.ofPattern("HH:mm").format(java.time.LocalTime.now())}",
-                    createdAt = Instant.now(),
-                    lastMessageAt = Instant.now(),
+                    createdAt = Clock.System.now(),
+                    lastMessageAt = Clock.System.now(),
                     aiModel = "gemini-2.0-flash-live",
                     messageCount = 0,
                     ownerId = currentUserId
                 )
 
-                chatSessionDao.insertSession(liveSession.toEntity())
+                chatSessionQueries.insertSession(
+                    id = liveSession.id,
+                    title = liveSession.title,
+                    createdAt = liveSession.createdAt.toEpochMilliseconds(),
+                    lastMessageAt = liveSession.lastMessageAt.toEpochMilliseconds(),
+                    aiModel = liveSession.aiModel,
+                    messageCount = liveSession.messageCount.toLong(),
+                    ownerId = liveSession.ownerId,
+                    summary = null,
+                    lastMessage = null,
+                    mood = null,
+                    isLiveMode = 1L
+                )
                 println("[" + TAG + "] " + "✅ Live session created: ${liveSession.title}")
             } else {
                 // Aggiorna solo il timestamp dell'ultima attività
-                chatSessionDao.updateLastMessage(sessionId, Instant.now().toEpochMilli())
+                chatSessionQueries.updateLastMessage(
+                    lastMessageAt = Clock.System.now().toEpochMilliseconds(),
+                    id = sessionId
+                )
             }
         } catch (e: Exception) {
             println("[" + TAG + "] ERROR: " + "❌ Error ensuring Live session")
@@ -235,7 +301,7 @@ class ChatRepositoryImpl @Inject constructor(
     override suspend fun deleteMessage(messageId: String): RequestState<Boolean> {
         return withContext(Dispatchers.IO) {
             try {
-                chatMessageDao.deleteMessage(messageId)
+                chatMessageQueries.deleteMessage(messageId)
                 RequestState.Success(true)
             } catch (e: Exception) {
                 println("[" + TAG + "] ERROR: " + "Error deleting message")
@@ -247,15 +313,24 @@ class ChatRepositoryImpl @Inject constructor(
     override suspend fun retryMessage(messageId: String): RequestState<ChatMessage> {
         return withContext(Dispatchers.IO) {
             try {
-                val message = chatMessageDao.getMessage(messageId)?.toDomain()
+                val message = chatMessageQueries.getMessage(messageId)
+                    .executeAsOneOrNull()?.toDomain()
                     ?: return@withContext RequestState.Error(Exception("Message not found"))
 
                 if (!message.isUser) {
                     return@withContext RequestState.Error(Exception("Cannot retry AI messages"))
                 }
 
-                chatMessageDao.updateMessageStatus(messageId, MessageStatus.SENDING.name)
-                chatMessageDao.updateMessageStatus(messageId, MessageStatus.SENT.name)
+                chatMessageQueries.updateMessageStatus(
+                    status = MessageStatus.SENDING.name,
+                    error = null,
+                    id = messageId
+                )
+                chatMessageQueries.updateMessageStatus(
+                    status = MessageStatus.SENT.name,
+                    error = null,
+                    id = messageId
+                )
 
                 RequestState.Success(message.copy(status = MessageStatus.SENT))
             } catch (e: Exception) {
@@ -330,8 +405,19 @@ class ChatRepositoryImpl @Inject constructor(
                     isUser = false,
                     status = MessageStatus.SENT
                 )
-                chatMessageDao.insertMessage(message.toEntity())
-                chatSessionDao.incrementMessageCount(sessionId, Instant.now().toEpochMilli())
+                chatMessageQueries.insertMessage(
+                    id = message.id,
+                    sessionId = message.sessionId,
+                    content = message.content,
+                    isUser = 0L,
+                    timestamp = message.timestamp.toEpochMilliseconds(),
+                    status = message.status.name,
+                    error = message.error
+                )
+                chatSessionQueries.incrementMessageCount(
+                    lastMessageAt = Clock.System.now().toEpochMilliseconds(),
+                    id = sessionId
+                )
                 println("[" + TAG + "] " + "AI message saved")
                 RequestState.Success(message)
             } catch (e: Exception) {
@@ -344,10 +430,14 @@ class ChatRepositoryImpl @Inject constructor(
     override suspend fun exportSessionToDiary(sessionId: String): RequestState<String> {
         return withContext(Dispatchers.IO) {
             try {
-                val session = chatSessionDao.getSession(sessionId, currentUserId)?.toDomain()
+                val session = chatSessionQueries.getSession(sessionId, currentUserId)
+                    .executeAsOneOrNull()?.toDomain()
                     ?: return@withContext RequestState.Error(Exception("Session not found"))
 
-                val messages = chatMessageDao.getMessagesForSession(sessionId).first()
+                val messages = chatMessageQueries.getMessagesForSession(sessionId)
+                    .asFlow()
+                    .mapToList(Dispatchers.IO)
+                    .first()
                     .map { it.toDomain() }
                     .filter { it.status == MessageStatus.SENT }
 
@@ -368,13 +458,14 @@ class ChatRepositoryImpl @Inject constructor(
 
                 when (diariesResult) {
                     is RequestState.Success -> {
-                        val cutoffDate = Instant.now().minus(DIARY_CONTEXT_DAYS.toLong(), ChronoUnit.DAYS)
+                        val cutoffMillis = kotlinx.datetime.Clock.System.now().toEpochMilliseconds() -
+                            (DIARY_CONTEXT_DAYS.toLong() * 24 * 60 * 60 * 1000)
                         val diaries = diariesResult.data
                             .flatMap { it.value }
                             .filter { diary ->
-                                diary.date.toInstant().isAfter(cutoffDate)
+                                diary.dateMillis > cutoffMillis
                             }
-                            .sortedByDescending { it.date.toInstant() }
+                            .sortedByDescending { it.dateMillis }
                             .take(MAX_DIARY_ENTRIES)
 
                         println("[" + TAG + "] " + "Found ${diaries.size} diary entries in the last $DIARY_CONTEXT_DAYS days")
@@ -403,7 +494,7 @@ class ChatRepositoryImpl @Inject constructor(
         val dominantMood = moodFrequency.maxByOrNull { it.value }?.key ?: "Neutral"
 
         val writingTimes = diaries.map {
-            it.date.toInstant()
+            java.time.Instant.ofEpochMilli(it.dateMillis)
                 .atZone(ZoneId.systemDefault())
                 .hour
         }
@@ -539,8 +630,8 @@ class ChatRepositoryImpl @Inject constructor(
         }
 
         return """
-        Sei Lifo, l'amico AI di Calmify. 
-        
+        Sei Lifo, l'amico AI di Calmify.
+
         REGOLE FONDAMENTALI:
         ⚠️ MASSIMO 1-2 FRASI BREVI. Mai di più.
         ⚠️ Parla come un amico, non come un assistente o narratore
@@ -549,20 +640,20 @@ class ChatRepositoryImpl @Inject constructor(
         ⚠️ Evita liste, punti elenco o spiegazioni lunghe
         ⚠️ Una domanda? Una risposta diretta. Un problema? Un consiglio pratico.
         ⚠️ SEMPRE in italiano colloquiale
-        
+
         Personalità:
         - Parla come parlerebbe un amico al bar
         - Usa espressioni naturali ("dai", "magari", "beh", "sai che...")
         - Se non sai qualcosa, chiedi semplicemente
         - Emoji con parsimonia (max 1 per messaggio)
-        
+
         $diaryInsights
-        
+
         Conversazione:
         $conversationHistory
-        
+
         User: $userMessage
-        
+
         Rispondi SOLO con 1-2 frasi brevi e dirette, come farebbe un amico.
     """.trimIndent()
     }
@@ -578,7 +669,7 @@ class ChatRepositoryImpl @Inject constructor(
 
         val formatter = DateTimeFormatter.ofPattern("d MMM")
             .withZone(ZoneId.systemDefault())
-        return "$greeting - ${formatter.format(Instant.now())}"
+        return "$greeting - ${formatter.format(java.time.Instant.now())}"
     }
 
     private fun buildEnhancedDiaryContent(session: ChatSession, messages: List<ChatMessage>): String {
@@ -594,20 +685,20 @@ class ChatRepositoryImpl @Inject constructor(
 
         val header = """
             # ${session.title}
-            *Conversazione con Lifo esportata il ${formatter.format(Instant.now())}*
-            
+            *Conversazione con Lifo esportata il ${formatter.format(java.time.Instant.now())}*
+
             ## Punti chiave della conversazione:
             ${insights.joinToString("\n") { "- $it" }}
-            
+
             ---
-            
+
         """.trimIndent()
 
         val conversation = messages.joinToString("\n\n") { message ->
             val role = if (message.isUser) "**Tu**" else "**Lifo**"
             val time = DateTimeFormatter.ofPattern("HH:mm")
                 .withZone(ZoneId.systemDefault())
-                .format(message.timestamp)
+                .format(message.timestamp.toJavaInstant())
 
             "$role ($time):\n${message.content}"
         }
@@ -642,44 +733,24 @@ class ChatRepositoryImpl @Inject constructor(
         val writingStyle: String
     )
 
-    // Extension functions
-    private fun ChatSessionEntity.toDomain() = ChatSession(
+    // Extension functions for SQLDelight generated types
+    private fun Chat_sessions.toDomain() = ChatSession(
         id = id,
         title = title,
-        createdAt = Instant.ofEpochMilli(createdAt),
-        lastMessageAt = Instant.ofEpochMilli(lastMessageAt),
+        createdAt = kotlinx.datetime.Instant.fromEpochMilliseconds(createdAt),
+        lastMessageAt = kotlinx.datetime.Instant.fromEpochMilliseconds(lastMessageAt),
         aiModel = aiModel,
-        messageCount = messageCount,
+        messageCount = messageCount.toInt(),
         ownerId = ownerId
     )
 
-    private fun ChatSession.toEntity() = ChatSessionEntity(
-        id = id,
-        title = title,
-        createdAt = createdAt.toEpochMilli(),
-        lastMessageAt = lastMessageAt.toEpochMilli(),
-        aiModel = aiModel,
-        messageCount = messageCount,
-        ownerId = ownerId
-    )
-
-    private fun ChatMessageEntity.toDomain() = ChatMessage(
+    private fun Chat_messages.toDomain() = ChatMessage(
         id = id,
         sessionId = sessionId,
         content = content,
-        isUser = isUser,
-        timestamp = Instant.ofEpochMilli(timestamp),
+        isUser = isUser != 0L,
+        timestamp = kotlinx.datetime.Instant.fromEpochMilliseconds(timestamp),
         status = MessageStatus.valueOf(status),
-        error = error
-    )
-
-    private fun ChatMessage.toEntity() = ChatMessageEntity(
-        id = id,
-        sessionId = sessionId,
-        content = content,
-        isUser = isUser,
-        timestamp = timestamp.toEpochMilli(),
-        status = status.name,
         error = error
     )
 }

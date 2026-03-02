@@ -42,7 +42,7 @@ class FirestoreInsightRepository @Inject constructor(
                 }
 
                 if (snapshot != null && !snapshot.isEmpty) {
-                    val insight = snapshot.documents.first().toObject(DiaryInsight::class.java)
+                    val insight = snapshot.documents.first().toDiaryInsight()
                     trySend(RequestState.Success(insight))
                 } else {
                     trySend(RequestState.Success(null))
@@ -65,7 +65,7 @@ class FirestoreInsightRepository @Inject constructor(
                 }
 
                 if (snapshot != null) {
-                    val insights = snapshot.toObjects(DiaryInsight::class.java)
+                    val insights = snapshot.documents.mapNotNull { it.toDiaryInsight() }
                     trySend(RequestState.Success(insights))
                 } else {
                     trySend(RequestState.Success(emptyList()))
@@ -85,7 +85,7 @@ class FirestoreInsightRepository @Inject constructor(
             // Add to Firestore
             val docRef = collection.document()
             insight.id = docRef.id
-            docRef.set(insight).await()
+            docRef.set(insight.toFirestoreMap()).await()
 
             RequestState.Success(insight.id)
         } catch (e: Exception) {

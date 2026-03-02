@@ -3,8 +3,6 @@ package com.lifo.chat.domain.audio
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlin.math.abs
 import kotlin.math.sqrt
 
@@ -28,8 +26,7 @@ import kotlin.math.sqrt
  * - IO dispatcher: feedReferenceSignal() (from playAudio)
  * - Main/ViewModel scope: startMonitoring(), stopMonitoring(), reset()
  */
-@Singleton
-class AecReliabilityDetector @Inject constructor() {
+class AecReliabilityDetector {
 
     enum class AecStatus {
         IDLE,               // Not monitoring (AI not speaking)

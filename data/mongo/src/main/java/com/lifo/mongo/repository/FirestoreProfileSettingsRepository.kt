@@ -9,6 +9,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import kotlinx.datetime.Clock
 import javax.inject.Inject
 
 /**
@@ -49,7 +50,7 @@ class FirestoreProfileSettingsRepository @Inject constructor(
 
                 if (snapshot != null && snapshot.exists()) {
                     try {
-                        val settings = snapshot.toObject(ProfileSettings::class.java)
+                        val settings = snapshot.toProfileSettings()
                         trySend(RequestState.Success(settings))
                     } catch (e: Exception) {
                         println("[" + TAG + "] ERROR: " + "Error parsing profile settings")
@@ -80,12 +81,12 @@ class FirestoreProfileSettingsRepository @Inject constructor(
             val settingsToSave = settings.copy(
                 id = userId,
                 ownerId = userId,
-                updatedAt = com.google.firebase.Timestamp.now().toDate()
+                updatedAtMillis = Clock.System.now().toEpochMilliseconds()
             )
 
             firestore.collection(COLLECTION_PROFILE_SETTINGS)
                 .document(userId)
-                .set(settingsToSave)
+                .set(settingsToSave.toFirestoreMap())
                 .await()
 
             println("[" + TAG + "] " + "Profile settings saved successfully")
@@ -109,7 +110,7 @@ class FirestoreProfileSettingsRepository @Inject constructor(
                 .await()
 
             if (doc.exists()) {
-                val settings = doc.toObject(ProfileSettings::class.java)
+                val settings = doc.toProfileSettings()
                 RequestState.Success(settings?.isOnboardingCompleted ?: false)
             } else {
                 RequestState.Success(false)
@@ -130,7 +131,7 @@ class FirestoreProfileSettingsRepository @Inject constructor(
                 .await()
 
             if (doc.exists()) {
-                val settings = doc.toObject(ProfileSettings::class.java)
+                val settings = doc.toProfileSettings()
                 println("[" + TAG + "] " + "Profile settings retrieved successfully")
                 RequestState.Success(settings)
             } else {

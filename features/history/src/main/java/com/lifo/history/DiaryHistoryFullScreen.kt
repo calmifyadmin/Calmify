@@ -19,8 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.koin.compose.viewmodel.koinViewModel
 import com.lifo.ui.providers.MoodUiProvider
 import com.lifo.util.model.HomeContentItem
 import java.time.Instant
@@ -37,13 +36,13 @@ internal fun DiaryHistoryFullScreen(
     onBackClick: () -> Unit,
     onDiaryClick: (HomeContentItem.DiaryItem) -> Unit,
     onInsightClick: (String) -> Unit = {},
-    viewModel: HistoryViewModel = hiltViewModel()
+    viewModel: HistoryViewModel = koinViewModel()
 ) {
     var searchQuery by remember { mutableStateOf("") }
     val diaryHistoryFlow = remember(searchQuery) {
         viewModel.loadFullDiaryHistory(searchQuery)
     }
-    val diaryHistory by diaryHistoryFlow.collectAsStateWithLifecycle(initialValue = emptyList())
+    val diaryHistory by diaryHistoryFlow.collectAsState(initial = emptyList())
 
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
 

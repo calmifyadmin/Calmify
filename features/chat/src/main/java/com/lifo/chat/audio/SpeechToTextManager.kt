@@ -9,13 +9,10 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 
 import androidx.annotation.RequiresPermission
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.Locale
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * SpeechToTextManager - Captures voice input and converts to text
@@ -38,9 +35,8 @@ import javax.inject.Singleton
  *
  * @author Jarvis AI Assistant
  */
-@Singleton
-class SpeechToTextManager @Inject constructor(
-    @ApplicationContext private val context: Context
+class SpeechToTextManager constructor(
+    private val context: Context
 ) {
     companion object {
         // Audio level normalization

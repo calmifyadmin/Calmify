@@ -6,8 +6,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.koin.compose.viewmodel.koinViewModel
+import androidx.compose.runtime.collectAsState
 import com.lifo.util.model.HomeContentItem
 
 /**
@@ -22,9 +22,9 @@ internal fun HistoryScreen(
     onDiaryClick: (HomeContentItem.DiaryItem) -> Unit,
     onChatHistoryHeaderClick: () -> Unit,
     onDiaryHistoryHeaderClick: () -> Unit,
-    viewModel: HistoryViewModel = hiltViewModel()
+    viewModel: HistoryViewModel = koinViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsState()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     Scaffold(

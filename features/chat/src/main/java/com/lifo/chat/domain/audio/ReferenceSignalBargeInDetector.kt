@@ -3,8 +3,6 @@ package com.lifo.chat.domain.audio
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -24,8 +22,7 @@ import kotlin.math.sqrt
  * 4. Measures residual energy - if high, user is speaking
  * 5. Triggers barge-in when residual energy exceeds adaptive threshold
  */
-@Singleton
-class ReferenceSignalBargeInDetector @Inject constructor() {
+class ReferenceSignalBargeInDetector {
 
     companion object {
         // Reference buffer: ~500ms of audio at 16kHz

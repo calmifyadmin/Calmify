@@ -35,7 +35,6 @@ import com.lifo.home.util.EmotionAwareColors
  * │                       😊 Sereno                │
  * └─────────────────────────────────────────────────┘
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun MoodDistributionCard(
     distribution: MoodDistribution,
@@ -78,7 +77,7 @@ fun MoodDistributionCard(
             ) {
                 Text(
                     text = "Distribuzione Emotiva",
-                    style = MaterialTheme.typography.titleLargeEmphasized,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )

@@ -3,8 +3,6 @@ package com.lifo.chat.domain.audio
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlin.math.*
 
 /**
@@ -21,8 +19,7 @@ import kotlin.math.*
  * 
  * @author Jarvis AI Assistant
  */
-@Singleton
-class AdaptiveBargeinDetector @Inject constructor() {
+class AdaptiveBargeinDetector {
     
     companion object {
         // Learning parameters

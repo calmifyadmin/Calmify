@@ -1,80 +1,72 @@
 plugins {
-    id 'com.android.library'
-    id 'org.jetbrains.kotlin.android'
-    id 'com.google.devtools.ksp'
-    // id 'io.realm.kotlin'  // RIMOSSO - Migrato a Firestore
-    id 'dagger.hilt.android.plugin'
+    id 'calmify.kmp.library'
+    id 'org.jetbrains.kotlin.plugin.serialization'
+    id 'app.cash.sqldelight'
 }
 
 android {
     namespace 'com.lifo.mongo'
-    compileSdk ProjectConfig.compileSdk
+}
 
-    defaultConfig {
-        minSdk ProjectConfig.minSdk
-        targetSdk ProjectConfig.targetSdk
-
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles "consumer-rules.pro"
-    }
-
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
-    }
-
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
-
-    kotlinOptions {
-        jvmTarget = ProjectConfig.jvmTarget
-    }
-
-    packagingOptions {
-        resources.excludes.add("META-INF/*")
+configurations.configureEach {
+    resolutionStrategy {
+        force "org.jetbrains.kotlin:kotlin-stdlib:2.1.0"
+        force "org.jetbrains.kotlin:kotlin-stdlib-common:2.1.0"
     }
 }
 
-dependencies {
-    // Core
-    implementation libs.core.ktx
+sqldelight {
+    databases {
+        create("CalmifyDatabase") {
+            packageName.set("com.lifo.mongo.database")
+        }
+    }
+}
 
-    // Realm - RIMOSSO (Migrato a Firestore)
-    // api libs.realm.sync
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation project(':core:util')
 
-    // Room
-    implementation libs.room.runtime
-    implementation libs.room.ktx
-    ksp libs.room.compiler
+            implementation libs.sqldelight.runtime
+            implementation libs.sqldelight.coroutines
+            implementation libs.kotlinx.serialization.json
+            implementation libs.kotlinx.datetime
+        }
 
-    // Firebase AI - Replaces old generativeai SDK (no Ktor needed!)
-    implementation libs.firebase.ai
+        androidMain {
+            kotlin.srcDirs('src/main/java')
 
-    // Hilt
-    implementation libs.hilt.android
-    ksp libs.hilt.compiler
+            dependencies {
+                // SQLDelight Android driver
+                implementation libs.sqldelight.android
 
-    // Firebase BOM
-    implementation platform(libs.firebase.bom)
+                // Core Android
+                implementation libs.core.ktx
+                implementation libs.coroutines.android
 
-    // Firebase (no versions with BOM)
-    implementation libs.firebase.auth
-    implementation libs.firebase.storage
-    implementation libs.firebase.firestore
+                // Firebase AI
+                implementation libs.firebase.ai.kmp
 
-    // Coroutines
-    implementation libs.coroutines.core
-    implementation libs.coroutines.android
+                // Koin DI
+                implementation libs.koin.core
+                implementation libs.koin.android
 
-    implementation libs.gson
-    // Testing
-    testImplementation libs.junit
-    androidTestImplementation libs.junit.ext
+                // Firebase (explicit versions for KMP source sets)
+                implementation libs.firebase.auth.kmp
+                implementation libs.firebase.storage.kmp
+                implementation libs.firebase.firestore.kmp
+                implementation libs.firebase.database.kmp
+                implementation libs.firebase.functions.kmp
+                implementation libs.firebase.config.kmp
 
-    // Internal modules
-    implementation(project(":core:util"))
+                // Google Play Billing
+                implementation libs.billing.ktx
+            }
+        }
+
+        commonTest.dependencies {
+            implementation kotlin('test')
+        }
+    }
 }

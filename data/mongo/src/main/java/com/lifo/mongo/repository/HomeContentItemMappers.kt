@@ -1,11 +1,9 @@
 package com.lifo.mongo.repository
 
-import com.lifo.mongo.database.entity.ChatSessionEntity
+import com.lifo.mongo.database.Chat_sessions
 import com.lifo.util.model.Diary
 import com.lifo.util.model.HomeContentItem
 import com.lifo.util.model.Mood
-import com.lifo.util.toInstant
-
 /**
  * Extension functions to convert database entities to HomeContentItem
  */
@@ -15,9 +13,9 @@ import com.lifo.util.toInstant
  */
 fun Diary.toHomeContentItem(): HomeContentItem.DiaryItem {
     return HomeContentItem.DiaryItem(
-        id = _id,  // Already a String in Firestore
+        id = _id,
         title = title.ifBlank { "Diary Entry" },
-        createdAt = date.toInstant().toEpochMilli(),
+        createdAt = dateMillis,
         content = description,
         mood = try { Mood.valueOf(mood) } catch (e: Exception) { Mood.Neutral },
         images = images
@@ -25,19 +23,19 @@ fun Diary.toHomeContentItem(): HomeContentItem.DiaryItem {
 }
 
 /**
- * Convert ChatSessionEntity to HomeContentItem.ChatItem
+ * Convert SQLDelight Chat_sessions to HomeContentItem.ChatItem
  */
-fun ChatSessionEntity.toHomeContentItem(): HomeContentItem.ChatItem {
+fun Chat_sessions.toHomeContentItem(): HomeContentItem.ChatItem {
     return HomeContentItem.ChatItem(
         id = id,
         title = title.ifBlank { "Chat Session" },
         createdAt = createdAt,
         summary = summary,
-        messageCount = messageCount,
+        messageCount = messageCount.toInt(), // SQLDelight uses Long
         lastMessage = lastMessage,
         lastMessageAt = lastMessageAt,
         mood = mood,
         aiModel = aiModel,
-        isLiveMode = isLiveMode
+        isLiveMode = isLiveMode == 1L // SQLDelight uses Long for boolean
     )
 }

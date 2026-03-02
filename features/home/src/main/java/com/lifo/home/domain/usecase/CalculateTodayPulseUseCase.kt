@@ -8,7 +8,6 @@ import com.lifo.util.model.SentimentLabel
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZonedDateTime
-import javax.inject.Inject
 import kotlin.math.abs
 
 /**
@@ -17,7 +16,7 @@ import kotlin.math.abs
  * Calculates the "emotional pulse" for today based on
  * diary insights, showing sentiment score and trends
  */
-class CalculateTodayPulseUseCase @Inject constructor() {
+class CalculateTodayPulseUseCase {
 
     companion object {
         // Sentiment polarity ranges from -1 to +1
@@ -120,7 +119,7 @@ class CalculateTodayPulseUseCase @Inject constructor() {
             if (insight.dayKey.isNotBlank()) {
                 LocalDate.parse(insight.dayKey)
             } else {
-                insight.generatedAt.toInstant()
+                java.time.Instant.ofEpochMilli(insight.generatedAtMillis)
                     .atZone(ZoneId.systemDefault())
                     .toLocalDate()
             }

@@ -17,16 +17,13 @@ import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
 import java.util.concurrent.TimeUnit
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * FIXED V6:
  * - NO endian conversion (data is already Little Endian)
  * - Create fresh AudioTrack just before playback to avoid underrun
  */
-@Singleton
-open class GeminiNativeVoiceSystem @Inject constructor(
+open class GeminiNativeVoiceSystem constructor(
     private val context: Context
 ) {
     companion object {

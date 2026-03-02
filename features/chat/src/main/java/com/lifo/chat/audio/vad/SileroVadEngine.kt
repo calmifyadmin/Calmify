@@ -10,15 +10,12 @@ import com.konovalov.vad.webrtc.VadWebRTC
 import com.konovalov.vad.webrtc.config.FrameSize as WebRtcFrameSize
 import com.konovalov.vad.webrtc.config.Mode as WebRtcMode
 import com.konovalov.vad.webrtc.config.SampleRate as WebRtcSampleRate
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Enterprise-grade Voice Activity Detection Engine with dual-engine architecture.
@@ -43,9 +40,8 @@ import javax.inject.Singleton
  *
  * @author Jarvis AI Assistant - Calmify Project
  */
-@Singleton
-class SileroVadEngine @Inject constructor(
-    @ApplicationContext private val context: Context
+class SileroVadEngine constructor(
+    private val context: Context
 ) {
     companion object {
         // Audio Configuration (Gemini Live API compatible)

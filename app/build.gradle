@@ -3,9 +3,9 @@ plugins {
     id 'org.jetbrains.kotlin.android'
     id 'org.jetbrains.kotlin.plugin.compose'
     id 'com.google.devtools.ksp'
-    id 'dagger.hilt.android.plugin'
     // id 'io.realm.kotlin'  // RIMOSSO - Migrato a Firestore
     id 'com.google.gms.google-services'
+    alias(libs.plugins.org.jetbrains.kotlin.serialization)
     // id 'com.google.firebase.crashlytics' // Uncomment for crash reporting
     // id 'com.google.firebase.firebase-perf' // Uncomment for performance monitoring
 }
@@ -27,12 +27,7 @@ android {
             useSupportLibrary true
         }
 
-        // ProGuard rules for Room
-        javaCompileOptions {
-            annotationProcessorOptions {
-                arguments += ["room.schemaLocation": "$projectDir/schemas"]
-            }
-        }
+        // Room schema location removed — migrated to SQLDelight
     }
 
     buildTypes {
@@ -154,11 +149,8 @@ dependencies {
     implementation libs.firebase.ai  // Firebase AI support (formerly vertexai)
     // implementation libs.firebase.crashlytics // Uncomment if needed
 
-    // Room
-    implementation libs.room.runtime
-    implementation libs.room.ktx
-    implementation libs.room.paging
-    ksp libs.room.compiler
+    // SQLDelight (Room replacement)
+    implementation libs.sqldelight.android
 
     // Splash Screen
     implementation libs.splash.api
@@ -169,10 +161,12 @@ dependencies {
     // Firestore - NEW
     implementation libs.firebase.firestore
 
-    // Hilt
-    implementation libs.hilt.android
-    ksp libs.hilt.compiler
-    implementation libs.hilt.navigation.compose
+    // Koin DI
+    implementation libs.koin.core
+    implementation libs.koin.android
+    implementation libs.koin.compose
+    implementation libs.koin.compose.viewmodel
+    implementation libs.javax.inject
 
     // Coroutines
     implementation libs.coroutines.core
@@ -197,6 +191,27 @@ dependencies {
     implementation(project(":features:insight"))
     implementation(project(":features:profile"))
     implementation(project(":features:settings"))
+    // Social Features (Wave 7)
+    implementation(project(":features:feed"))
+    implementation(project(":features:composer"))
+    implementation(project(":features:social-profile"))
+    implementation(project(":features:search"))
+    implementation(project(":features:notifications"))
+    // Social Features (Wave 8)
+    implementation(project(":features:messaging"))
+    // Monetization (Wave 9)
+    implementation(project(":features:subscription"))
+
+    // Decompose Navigation (KMP lifecycle-aware) — Shell for future migration
+    implementation libs.decompose
+    implementation libs.decompose.compose
+    implementation libs.essenty.lifecycle
+    implementation libs.essenty.statekeeper
+    implementation libs.essenty.instancekeeper
+    implementation libs.essenty.backhandler
+
+    // Kotlinx Serialization (required by Decompose for type-safe config serialization)
+    implementation libs.kotlinx.serialization.json
 
     // Testing
     testImplementation libs.junit

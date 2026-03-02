@@ -56,7 +56,7 @@ class FirestoreProfileRepository @Inject constructor(
                 }
 
                 if (snapshot != null) {
-                    val profiles = snapshot.toObjects(PsychologicalProfile::class.java)
+                    val profiles = snapshot.documents.mapNotNull { it.toPsychologicalProfile() }
                     trySend(RequestState.Success(profiles))
                 } else {
                     trySend(RequestState.Success(emptyList()))
@@ -81,7 +81,7 @@ class FirestoreProfileRepository @Inject constructor(
                 }
 
                 if (snapshot != null && !snapshot.isEmpty) {
-                    val profile = snapshot.documents.first().toObject(PsychologicalProfile::class.java)
+                    val profile = snapshot.documents.first().toPsychologicalProfile()
                     trySend(RequestState.Success(profile))
                 } else {
                     trySend(RequestState.Success(null))
@@ -110,7 +110,7 @@ class FirestoreProfileRepository @Inject constructor(
                 }
 
                 if (snapshot != null && snapshot.exists()) {
-                    val profile = snapshot.toObject(PsychologicalProfile::class.java)
+                    val profile = snapshot.toPsychologicalProfile()
                     trySend(RequestState.Success(profile))
                 } else {
                     trySend(RequestState.Success(null))

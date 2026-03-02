@@ -32,10 +32,10 @@ import com.lifo.ui.theme.Elevation
 import com.lifo.ui.providers.MoodUiProvider
 import com.lifo.util.model.Diary
 import com.lifo.util.model.Mood
-import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
+import kotlinx.datetime.Instant
 
 @Composable
 fun DiaryHolder(diary: Diary, onClick: (String) -> Unit) {
@@ -95,7 +95,7 @@ fun DiaryHolder(diary: Diary, onClick: (String) -> Unit) {
             tonalElevation = Elevation.Level1
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
-                DiaryHeader(moodName =  diary.mood, time = diary.date.toInstant())
+                DiaryHeader(moodName =  diary.mood, time = Instant.fromEpochMilliseconds(diary.dateMillis))
                 Text(
                     modifier = Modifier.padding(all = 14.dp),
                     text = diary.description,
@@ -159,7 +159,7 @@ fun DiaryHeader(moodName: String, time: Instant?) {
             )
         }
         Text(
-            text = formatter.format(time),
+            text = if (time != null) formatter.format(java.time.Instant.ofEpochMilli(time.toEpochMilliseconds())) else "",
             color = MoodUiProvider.getContentColor(mood),
             style = TextStyle(fontSize = MaterialTheme.typography.bodyMedium.fontSize)
         )

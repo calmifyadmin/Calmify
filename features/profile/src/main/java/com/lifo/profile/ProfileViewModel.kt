@@ -1,19 +1,34 @@
 package com.lifo.profile
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.FirebaseAuth
+import com.lifo.util.auth.AuthProvider
+import com.lifo.util.mvi.MviContract
+import com.lifo.util.mvi.MviViewModel
 import com.lifo.util.repository.ProfileRepository
 import com.lifo.util.model.PsychologicalProfile
 import com.lifo.util.model.RequestState
 import com.lifo.util.model.getWeekLabel
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
+
+/**
+ * MVI Contract for the Profile screen.
+ */
+object ProfileContract {
+
+    sealed interface Intent : MviContract.Intent {
+        /** Load profiles for the given number of weeks. */
+        data class LoadProfiles(val weeks: Int = 4) : Intent
+        /** Refresh profiles (shortcut for LoadProfiles with default weeks). */
+        data object Refresh : Intent
+    }
+
+    // State is the existing ProfileUiState sealed hierarchy (see below).
+    // It already covers Loading / Success / Error / Empty.
+
+    sealed interface Effect : MviContract.Effect {
+        // No one-shot effects needed for now; placeholder for future use.
+    }
+}
 
 /**
  * ProfileViewModel
@@ -21,54 +36,73 @@ import javax.inject.Inject
  * Manages psychological profile display and chart data transformation
  * Week 7 - PSYCHOLOGICAL_INSIGHTS_PLAN.md Section 5 (Week 7)
  */
-@HiltViewModel
-class ProfileViewModel @Inject constructor(
+class ProfileViewModel constructor(
     private val profileRepository: ProfileRepository,
-    private val auth: FirebaseAuth
-) : ViewModel() {
-
-    private val _uiState = MutableStateFlow<ProfileUiState>(ProfileUiState.Loading)
-    val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
-
-    private val currentUserId: String
-        get() = auth.currentUser?.uid ?: ""
-
-    init {
-        loadProfiles()
-    }
+    private val authProvider: AuthProvider
+) : MviViewModel<ProfileContract.Intent, ProfileUiState, ProfileContract.Effect>(
+    initialState = ProfileUiState.Loading
+) {
 
     /**
-     * Load last 4 weeks of profiles for trend visualization
+     * Backward-compatible alias so existing callers that read
+     * `viewModel.uiState.collectAsState()` keep compiling.
      */
-    fun loadProfiles(weeks: Int = 4) {
+    val uiState: StateFlow<ProfileUiState> get() = state
+
+    private val currentUserId: String
+        get() = authProvider.currentUserId ?: ""
+
+    init {
+        onIntent(ProfileContract.Intent.LoadProfiles())
+    }
+
+    // ── MVI plumbing ────────────────────────────────────────────────────
+
+    override fun handleIntent(intent: ProfileContract.Intent) {
+        when (intent) {
+            is ProfileContract.Intent.LoadProfiles -> loadProfiles(intent.weeks)
+            is ProfileContract.Intent.Refresh -> loadProfiles()
+        }
+    }
+
+    // ── Business logic (private) ────────────────────────────────────────
+
+    /**
+     * Load last N weeks of profiles for trend visualization.
+     */
+    private fun loadProfiles(weeks: Int = 4) {
         if (currentUserId.isEmpty()) {
-            _uiState.value = ProfileUiState.Error("User not authenticated")
+            updateState { ProfileUiState.Error("User not authenticated") }
             return
         }
 
-        viewModelScope.launch {
+        scope.launch {
             profileRepository.getProfilesForUser(currentUserId, weeks).collect { result ->
                 when (result) {
                     is RequestState.Loading -> {
-                        _uiState.value = ProfileUiState.Loading
+                        updateState { ProfileUiState.Loading }
                     }
                     is RequestState.Success -> {
                         val profiles = result.data
                         if (profiles.isEmpty() || profiles.all { !it.hasSufficientData() }) {
-                            _uiState.value = ProfileUiState.Empty
+                            updateState { ProfileUiState.Empty }
                         } else {
                             // Transform profiles to chart data
                             val chartData = transformToChartData(profiles)
-                            _uiState.value = ProfileUiState.Success(
-                                profiles = profiles,
-                                chartData = chartData
-                            )
+                            updateState {
+                                ProfileUiState.Success(
+                                    profiles = profiles,
+                                    chartData = chartData
+                                )
+                            }
                         }
                     }
                     is RequestState.Error -> {
-                        _uiState.value = ProfileUiState.Error(
-                            result.error.message ?: "Failed to load profiles"
-                        )
+                        updateState {
+                            ProfileUiState.Error(
+                                result.error.message ?: "Failed to load profiles"
+                            )
+                        }
                     }
                     else -> {}
                 }
@@ -77,8 +111,8 @@ class ProfileViewModel @Inject constructor(
     }
 
     /**
-     * Transform profiles to chart-ready data
-     * Returns data in chronological order (oldest to newest) for proper chart display
+     * Transform profiles to chart-ready data.
+     * Returns data in chronological order (oldest to newest) for proper chart display.
      */
     private fun transformToChartData(profiles: List<PsychologicalProfile>): ChartData {
         // Sort profiles chronologically (oldest first) for chart X-axis
@@ -98,7 +132,7 @@ class ProfileViewModel @Inject constructor(
                     PeakMarker(
                         weekIndex = index,
                         level = peak.level,
-                        timestamp = peak.timestamp
+                        timestamp = peak.timestampMillis
                     )
                 )
             }
@@ -112,18 +146,21 @@ class ProfileViewModel @Inject constructor(
         )
     }
 
+    // ── Backward-compatible public API ──────────────────────────────────
+
     /**
-     * Refresh profiles
+     * Refresh profiles. Delegates to the MVI intent.
+     * Kept as a public function so existing callers (`viewModel.refresh()`) compile.
      */
     fun refresh() {
-        loadProfiles()
+        onIntent(ProfileContract.Intent.Refresh)
     }
 }
 
 /**
  * UI State for profile screen
  */
-sealed class ProfileUiState {
+sealed class ProfileUiState : MviContract.State {
     data object Loading : ProfileUiState()
 
     data class Success(

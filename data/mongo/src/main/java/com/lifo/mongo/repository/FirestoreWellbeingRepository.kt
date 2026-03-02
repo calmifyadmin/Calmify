@@ -1,5 +1,6 @@
 package com.lifo.mongo.repository
 
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -39,7 +40,7 @@ class FirestoreWellbeingRepository @Inject constructor(
             // Add to Firestore
             val docRef = collection.document()
             snapshot.id = docRef.id
-            docRef.set(snapshot).await()
+            docRef.set(snapshot.toFirestoreMap()).await()
 
             RequestState.Success(snapshot.id)
         } catch (e: Exception) {
@@ -60,7 +61,7 @@ class FirestoreWellbeingRepository @Inject constructor(
                 }
 
                 if (snapshot != null) {
-                    val snapshots = snapshot.toObjects(WellbeingSnapshot::class.java)
+                    val snapshots = snapshot.documents.mapNotNull { it.toWellbeingSnapshot() }
                     trySend(RequestState.Success(snapshots))
                 } else {
                     trySend(RequestState.Success(emptyList()))
@@ -79,7 +80,7 @@ class FirestoreWellbeingRepository @Inject constructor(
                 .get()
                 .await()
 
-            val latest = snapshot.documents.firstOrNull()?.toObject(WellbeingSnapshot::class.java)
+            val latest = snapshot.documents.firstOrNull()?.toWellbeingSnapshot()
             RequestState.Success(latest)
         } catch (e: Exception) {
             RequestState.Error(e)
@@ -94,8 +95,8 @@ class FirestoreWellbeingRepository @Inject constructor(
 
         val listenerRegistration = collection
             .whereEqualTo("ownerId", currentUserId)
-            .whereGreaterThanOrEqualTo("timestamp", Date(startTimestamp))
-            .whereLessThanOrEqualTo("timestamp", Date(endTimestamp))
+            .whereGreaterThanOrEqualTo("timestamp", Timestamp(Date(startTimestamp)))
+            .whereLessThanOrEqualTo("timestamp", Timestamp(Date(endTimestamp)))
             .orderBy("timestamp", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
@@ -104,7 +105,7 @@ class FirestoreWellbeingRepository @Inject constructor(
                 }
 
                 if (snapshot != null) {
-                    val snapshots = snapshot.toObjects(WellbeingSnapshot::class.java)
+                    val snapshots = snapshot.documents.mapNotNull { it.toWellbeingSnapshot() }
                     trySend(RequestState.Success(snapshots))
                 } else {
                     trySend(RequestState.Success(emptyList()))

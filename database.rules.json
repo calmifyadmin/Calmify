@@ -1,0 +1,18 @@
+{
+  "rules": {
+    "presence": {
+      "$userId": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === $userId",
+        "online": {
+          ".validate": "newData.isBoolean()"
+        },
+        "lastSeen": {
+          ".validate": "newData.val() === now || newData.isNumber()"
+        }
+      }
+    },
+    ".read": false,
+    ".write": false
+  }
+}

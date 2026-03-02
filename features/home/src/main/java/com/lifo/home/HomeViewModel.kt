@@ -5,27 +5,25 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.storage.FirebaseStorage
+import com.lifo.util.auth.AuthProvider
 import com.lifo.home.domain.model.*
 import com.lifo.home.domain.usecase.*
-import com.lifo.mongo.database.dao.ImageToDeleteDao
-import com.lifo.mongo.database.entity.ImageToDelete
+import com.lifo.mongo.database.ImageToDeleteQueries
+import com.lifo.util.connectivity.ConnectivityObserver
+import com.lifo.util.model.*
+import com.lifo.util.mvi.MviContract
+import com.lifo.util.mvi.MviViewModel
 import com.lifo.util.repository.Diaries
 import com.lifo.util.repository.MongoRepository
 import com.lifo.util.repository.UnifiedContentRepository
-import com.lifo.util.connectivity.ConnectivityObserver
-import com.lifo.util.model.*
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.time.ZonedDateTime
-import javax.inject.Inject
 import kotlin.coroutines.resumeWithException
 
-// ViewModel state representation
+// ── Data classes used by callers (kept outside Contract) ──────────────────────
+
 data class HomeUiState(
     val diaries: Diaries = RequestState.Loading,
     val isLoading: Boolean = false,
@@ -35,7 +33,6 @@ data class HomeUiState(
     val error: String? = null
 )
 
-// New unified state for the home feed
 data class UnifiedHomeState(
     val items: List<HomeContentItem> = emptyList(),
     val isLoading: Boolean = true,
@@ -48,32 +45,104 @@ data class UnifiedHomeState(
     val isEmpty: Boolean = false
 )
 
-// Daily insight data for chart visualization (last 7 days)
 data class DailyInsightData(
     val date: ZonedDateTime,
-    val dayLabel: String,                // "M", "T", "W", etc.
-    val sentimentMagnitude: Float,       // Average sentiment magnitude for the day
-    val dominantEmotion: SentimentLabel, // Dominant sentiment for color
-    val diaryCount: Int                  // Number of diaries for that day
+    val dayLabel: String,
+    val sentimentMagnitude: Float,
+    val dominantEmotion: SentimentLabel,
+    val diaryCount: Int
 )
 
-@HiltViewModel
-internal class HomeViewModel @Inject constructor(
+// ── MVI Contract ──────────────────────────────────────────────────────────────
+
+object HomeContract {
+
+    sealed interface Intent : MviContract.Intent {
+        data object LoadDiaries : Intent
+        data object RefreshDiaries : Intent
+        data class GetDiaries(val zonedDateTime: ZonedDateTime? = null) : Intent
+        data object DeleteAllDiaries : Intent
+        data object SignOut : Intent
+        data class UpdateFilter(val filter: ContentFilter) : Intent
+        data class UpdateSearchQuery(val query: String) : Intent
+        data object ClearSearch : Intent
+        data object NavigateToPreviousWeek : Intent
+        data object NavigateToNextWeek : Intent
+        data object ResetToCurrentWeek : Intent
+        data class UpdateTimeRange(val timeRange: TimeRange) : Intent
+        data object RefreshRedesignData : Intent
+        data object LoadUnifiedContent : Intent
+        data object RefreshUnifiedContent : Intent
+        data object LoadDailyInsights : Intent
+    }
+
+    data class State(
+        // Legacy HomeUiState fields
+        val diariesState: Diaries = RequestState.Loading,
+        val isLoadingDiaries: Boolean = false,
+        val isRefreshingDiaries: Boolean = false,
+        val dateIsSelected: Boolean = false,
+        val selectedDate: ZonedDateTime? = null,
+        val diariesError: String? = null,
+
+        // Unified content state
+        val unifiedItems: List<HomeContentItem> = emptyList(),
+        val isLoadingUnified: Boolean = true,
+        val isRefreshingUnified: Boolean = false,
+        val selectedFilter: ContentFilter = ContentFilter.ALL,
+        val searchQuery: String = "",
+        val unifiedError: String? = null,
+        val isUnifiedEmpty: Boolean = false,
+
+        // Daily insights
+        val dailyInsights: List<DailyInsightData> = emptyList(),
+        val currentWeekOffset: Int = 0,
+
+        // Redesign state
+        val homeRedesignState: HomeRedesignState = HomeRedesignState(),
+        val todayPulse: TodayPulse? = null,
+        val moodDistribution: MoodDistribution? = null,
+        val dominantMood: DominantMood? = null,
+        val cognitivePatterns: List<CognitivePatternSummary> = emptyList(),
+        val topicsFrequency: List<TopicFrequency> = emptyList(),
+        val emergingTopic: TopicTrend? = null,
+        val achievementsState: AchievementsState? = null,
+        val selectedTimeRange: TimeRange = TimeRange.MONTH,
+        val quickActionState: QuickActionState = QuickActionState(),
+
+        // Network
+        val networkStatus: ConnectivityObserver.Status = ConnectivityObserver.Status.Unavailable,
+
+        // Global loading
+        val isLoading: Boolean = false
+    ) : MviContract.State
+
+    sealed interface Effect : MviContract.Effect {
+        data object DeleteAllDiariesSuccess : Effect
+        data class DeleteAllDiariesError(val error: Throwable) : Effect
+        data class ShowError(val message: String) : Effect
+    }
+}
+
+// ── ViewModel ─────────────────────────────────────────────────────────────────
+
+internal class HomeViewModel constructor(
     private val connectivity: ConnectivityObserver,
-    private val auth: FirebaseAuth,
+    private val authProvider: AuthProvider,
     private val storage: FirebaseStorage,
-    private val imageToDeleteDao: ImageToDeleteDao,
+    private val imageToDeleteQueries: ImageToDeleteQueries,
     private val unifiedContentRepository: UnifiedContentRepository,
     private val diaryRepository: MongoRepository,
     private val insightRepository: com.lifo.util.repository.InsightRepository,
     private val savedStateHandle: SavedStateHandle,
-    // New Use Cases for Home Redesign
     private val calculateMoodDistributionUseCase: CalculateMoodDistributionUseCase,
     private val aggregateCognitivePatternsUseCase: AggregateCognitivePatternsUseCase,
     private val calculateTopicsFrequencyUseCase: CalculateTopicsFrequencyUseCase,
     private val calculateTodayPulseUseCase: CalculateTodayPulseUseCase,
     private val getAchievementsUseCase: GetAchievementsUseCase
-) : ViewModel() {
+) : MviViewModel<HomeContract.Intent, HomeContract.State, HomeContract.Effect>(
+    initialState = HomeContract.State()
+) {
 
     companion object {
         private const val KEY_DATE_SELECTED = "date_is_selected"
@@ -82,78 +151,16 @@ internal class HomeViewModel @Inject constructor(
         private const val MAX_RETRIES = 3
     }
 
-    // Jobs management
+    // ── Jobs management ───────────────────────────────────────────────────
     private var diariesJob: Job? = null
     private var refreshJob: Job? = null
     private var deleteJob: Job? = null
 
-    // Network status
-    private val _networkStatus = MutableStateFlow(ConnectivityObserver.Status.Unavailable)
-    val networkStatus: StateFlow<ConnectivityObserver.Status> = _networkStatus.asStateFlow()
-
-    // UI State using StateFlow for better state management
-    private val _uiState = MutableStateFlow(HomeUiState())
-    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
-
-    // Unified content state
-    private val _unifiedState = MutableStateFlow(UnifiedHomeState())
-    val unifiedState: StateFlow<UnifiedHomeState> = _unifiedState.asStateFlow()
-
-    // Daily insights state (current week M-S)
-    private val _dailyInsights = MutableStateFlow<List<DailyInsightData>>(emptyList())
-    val dailyInsights: StateFlow<List<DailyInsightData>> = _dailyInsights.asStateFlow()
-
-    // Week navigation state
-    private val _currentWeekOffset = MutableStateFlow(0) // 0 = current week, -1 = last week, etc.
-    val currentWeekOffset: StateFlow<Int> = _currentWeekOffset.asStateFlow()
-
-    // ==================== NEW REDESIGN STATE ====================
-
-    // Home Redesign complete state
-    private val _homeRedesignState = MutableStateFlow(HomeRedesignState())
-    val homeRedesignState: StateFlow<HomeRedesignState> = _homeRedesignState.asStateFlow()
-
-    // Today's Pulse (Hero Section)
-    private val _todayPulse = MutableStateFlow<TodayPulse?>(null)
-    val todayPulse: StateFlow<TodayPulse?> = _todayPulse.asStateFlow()
-
-    // Mood Distribution (Donut Chart)
-    private val _moodDistribution = MutableStateFlow<MoodDistribution?>(null)
-    val moodDistribution: StateFlow<MoodDistribution?> = _moodDistribution.asStateFlow()
-
-    // Dominant Mood
-    private val _dominantMood = MutableStateFlow<DominantMood?>(null)
-    val dominantMood: StateFlow<DominantMood?> = _dominantMood.asStateFlow()
-
-    // Cognitive Patterns
-    private val _cognitivePatterns = MutableStateFlow<List<CognitivePatternSummary>>(emptyList())
-    val cognitivePatterns: StateFlow<List<CognitivePatternSummary>> = _cognitivePatterns.asStateFlow()
-
-    // Topics Frequency (Word Cloud)
-    private val _topicsFrequency = MutableStateFlow<List<TopicFrequency>>(emptyList())
-    val topicsFrequency: StateFlow<List<TopicFrequency>> = _topicsFrequency.asStateFlow()
-
-    // Emerging Topic
-    private val _emergingTopic = MutableStateFlow<TopicTrend?>(null)
-    val emergingTopic: StateFlow<TopicTrend?> = _emergingTopic.asStateFlow()
-
-    // Achievements State
-    private val _achievementsState = MutableStateFlow<AchievementsState?>(null)
-    val achievementsState: StateFlow<AchievementsState?> = _achievementsState.asStateFlow()
-
-    // Selected time range for insights
-    private val _selectedTimeRange = MutableStateFlow(TimeRange.MONTH)
-    val selectedTimeRange: StateFlow<TimeRange> = _selectedTimeRange.asStateFlow()
-
-    // Quick action state
-    private val _quickActionState = MutableStateFlow(QuickActionState())
-    val quickActionState: StateFlow<QuickActionState> = _quickActionState.asStateFlow()
-
-    // Cached insights and diaries for calculations
+    // ── Cached data for redesign calculations ─────────────────────────────
     private var cachedInsights: List<DiaryInsight> = emptyList()
     private var cachedDiaries: List<Diary> = emptyList()
 
-    // Legacy state holders for backward compatibility
+    // ── Legacy Compose state bridge (callers read these directly) ─────────
     var diaries: MutableState<Diaries> = mutableStateOf(RequestState.Loading)
         private set
 
@@ -162,51 +169,239 @@ internal class HomeViewModel @Inject constructor(
     )
         private set
 
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+    // ══════════════════════════════════════════════════════════════════════
+    // Backward-compatible StateFlow aliases derived from the single state
+    // ══════════════════════════════════════════════════════════════════════
+
+    val uiState: StateFlow<HomeUiState> = state.map { s ->
+        HomeUiState(
+            diaries = s.diariesState,
+            isLoading = s.isLoadingDiaries,
+            isRefreshing = s.isRefreshingDiaries,
+            dateIsSelected = s.dateIsSelected,
+            selectedDate = s.selectedDate,
+            error = s.diariesError
+        )
+    }.stateIn(scope, SharingStarted.Eagerly, HomeUiState())
+
+    val unifiedState: StateFlow<UnifiedHomeState> = state.map { s ->
+        UnifiedHomeState(
+            items = s.unifiedItems,
+            isLoading = s.isLoadingUnified,
+            isRefreshing = s.isRefreshingUnified,
+            selectedFilter = s.selectedFilter,
+            searchQuery = s.searchQuery,
+            selectedDate = s.selectedDate,
+            dateIsSelected = s.dateIsSelected,
+            error = s.unifiedError,
+            isEmpty = s.isUnifiedEmpty
+        )
+    }.stateIn(scope, SharingStarted.Eagerly, UnifiedHomeState())
+
+    val networkStatus: StateFlow<ConnectivityObserver.Status> = state.map { it.networkStatus }
+        .stateIn(scope, SharingStarted.Eagerly, ConnectivityObserver.Status.Unavailable)
+
+    val isLoading: StateFlow<Boolean> = state.map { it.isLoading }
+        .stateIn(scope, SharingStarted.Eagerly, false)
+
+    val dailyInsights: StateFlow<List<DailyInsightData>> = state.map { it.dailyInsights }
+        .stateIn(scope, SharingStarted.Eagerly, emptyList())
+
+    val currentWeekOffset: StateFlow<Int> = state.map { it.currentWeekOffset }
+        .stateIn(scope, SharingStarted.Eagerly, 0)
+
+    val homeRedesignState: StateFlow<HomeRedesignState> = state.map { it.homeRedesignState }
+        .stateIn(scope, SharingStarted.Eagerly, HomeRedesignState())
+
+    val todayPulse: StateFlow<TodayPulse?> = state.map { it.todayPulse }
+        .stateIn(scope, SharingStarted.Eagerly, null)
+
+    val moodDistribution: StateFlow<MoodDistribution?> = state.map { it.moodDistribution }
+        .stateIn(scope, SharingStarted.Eagerly, null)
+
+    val dominantMood: StateFlow<DominantMood?> = state.map { it.dominantMood }
+        .stateIn(scope, SharingStarted.Eagerly, null)
+
+    val cognitivePatterns: StateFlow<List<CognitivePatternSummary>> = state.map { it.cognitivePatterns }
+        .stateIn(scope, SharingStarted.Eagerly, emptyList())
+
+    val topicsFrequency: StateFlow<List<TopicFrequency>> = state.map { it.topicsFrequency }
+        .stateIn(scope, SharingStarted.Eagerly, emptyList())
+
+    val emergingTopic: StateFlow<TopicTrend?> = state.map { it.emergingTopic }
+        .stateIn(scope, SharingStarted.Eagerly, null)
+
+    val achievementsState: StateFlow<AchievementsState?> = state.map { it.achievementsState }
+        .stateIn(scope, SharingStarted.Eagerly, null)
+
+    val selectedTimeRange: StateFlow<TimeRange> = state.map { it.selectedTimeRange }
+        .stateIn(scope, SharingStarted.Eagerly, TimeRange.MONTH)
+
+    val quickActionState: StateFlow<QuickActionState> = state.map { it.quickActionState }
+        .stateIn(scope, SharingStarted.Eagerly, QuickActionState())
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Init
+    // ══════════════════════════════════════════════════════════════════════
 
     init {
-        // Restore state if available
         restoreState()
 
-        // Start observing network connectivity
-        viewModelScope.launch {
+        // Observe network connectivity
+        scope.launch {
             connectivity.observe()
                 .catch { e ->
                     println("[HomeViewModel] ERROR: Network observation error: ${e.message}")
                 }
                 .collect { status ->
-                    _networkStatus.value = status
+                    updateState { copy(networkStatus = status) }
                     // Retry loading if we regain connectivity and had an error
                     if (status == ConnectivityObserver.Status.Available &&
-                        _uiState.value.error != null) {
+                        currentState.diariesError != null
+                    ) {
                         retryLoading()
                     }
                 }
         }
 
-        // Initial load
-        loadDiaries()
-
-        // Load unified content
-        loadUnifiedContent()
-
-        // Load daily insights for chart
-        loadDailyInsights()
-
-        // Load redesign data (new components)
+        // Initial loads
+        loadDiariesInternal()
+        loadUnifiedContentInternal()
+        loadDailyInsightsInternal()
         loadRedesignData()
     }
 
+    // ══════════════════════════════════════════════════════════════════════
+    // MVI handleIntent
+    // ══════════════════════════════════════════════════════════════════════
+
+    override fun handleIntent(intent: HomeContract.Intent) {
+        when (intent) {
+            is HomeContract.Intent.LoadDiaries -> loadDiariesInternal()
+            is HomeContract.Intent.RefreshDiaries -> refreshDiariesInternal()
+            is HomeContract.Intent.GetDiaries -> getDiariesInternal(intent.zonedDateTime)
+            is HomeContract.Intent.DeleteAllDiaries -> deleteAllDiariesInternal()
+            is HomeContract.Intent.SignOut -> signOutInternal()
+            is HomeContract.Intent.UpdateFilter -> updateFilterInternal(intent.filter)
+            is HomeContract.Intent.UpdateSearchQuery -> updateSearchQueryInternal(intent.query)
+            is HomeContract.Intent.ClearSearch -> clearSearchInternal()
+            is HomeContract.Intent.NavigateToPreviousWeek -> navigateToPreviousWeekInternal()
+            is HomeContract.Intent.NavigateToNextWeek -> navigateToNextWeekInternal()
+            is HomeContract.Intent.ResetToCurrentWeek -> resetToCurrentWeekInternal()
+            is HomeContract.Intent.UpdateTimeRange -> updateTimeRangeInternal(intent.timeRange)
+            is HomeContract.Intent.RefreshRedesignData -> loadRedesignData()
+            is HomeContract.Intent.LoadUnifiedContent -> loadUnifiedContentInternal()
+            is HomeContract.Intent.RefreshUnifiedContent -> refreshUnifiedContentInternal()
+            is HomeContract.Intent.LoadDailyInsights -> loadDailyInsightsInternal()
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Backward-compatible public methods (delegate to intents or directly)
+    // ══════════════════════════════════════════════════════════════════════
+
+    fun loadDiaries() = onIntent(HomeContract.Intent.LoadDiaries)
+    fun refreshDiaries() = onIntent(HomeContract.Intent.RefreshDiaries)
+    fun getDiaries(zonedDateTime: ZonedDateTime? = null) = onIntent(HomeContract.Intent.GetDiaries(zonedDateTime))
+    fun signOut() = onIntent(HomeContract.Intent.SignOut)
+    fun updateFilter(filter: ContentFilter) = onIntent(HomeContract.Intent.UpdateFilter(filter))
+    fun updateSearchQuery(query: String) = onIntent(HomeContract.Intent.UpdateSearchQuery(query))
+    fun clearSearch() = onIntent(HomeContract.Intent.ClearSearch)
+    fun navigateToPreviousWeek() = onIntent(HomeContract.Intent.NavigateToPreviousWeek)
+    fun navigateToNextWeek() = onIntent(HomeContract.Intent.NavigateToNextWeek)
+    fun resetToCurrentWeek() = onIntent(HomeContract.Intent.ResetToCurrentWeek)
+    fun updateTimeRange(timeRange: TimeRange) = onIntent(HomeContract.Intent.UpdateTimeRange(timeRange))
+    fun refreshRedesignData() = onIntent(HomeContract.Intent.RefreshRedesignData)
+    fun loadUnifiedContent() = onIntent(HomeContract.Intent.LoadUnifiedContent)
+    fun refreshUnifiedContent() = onIntent(HomeContract.Intent.RefreshUnifiedContent)
+    fun loadDailyInsights() = onIntent(HomeContract.Intent.LoadDailyInsights)
+
+    // Aliases for backward compatibility
+    fun reloadDiaries() = loadDiaries()
+    fun fetchDiaries(zonedDateTime: ZonedDateTime? = null) = getDiaries(zonedDateTime)
+    fun loadStuff() = refreshDiaries()
+
+    /**
+     * Backward-compatible deleteAllDiaries with callbacks.
+     * Internally dispatches the intent and bridges effects to callbacks.
+     */
+    fun deleteAllDiaries(
+        onSuccess: () -> Unit,
+        onError: (Throwable) -> Unit
+    ) {
+        if (currentState.networkStatus != ConnectivityObserver.Status.Available) {
+            onError(Exception("No Internet Connection."))
+            return
+        }
+
+        // Launch a bridge that listens for the effect
+        scope.launch {
+            val effectJob = launch {
+                effects.collect { effect ->
+                    when (effect) {
+                        is HomeContract.Effect.DeleteAllDiariesSuccess -> {
+                            onSuccess()
+                            cancel() // Stop listening
+                        }
+                        is HomeContract.Effect.DeleteAllDiariesError -> {
+                            onError(effect.error)
+                            cancel() // Stop listening
+                        }
+                        else -> { /* ignore other effects */ }
+                    }
+                }
+            }
+
+            // Dispatch the intent
+            onIntent(HomeContract.Intent.DeleteAllDiaries)
+
+            // Timeout: stop listening after 60s to prevent leaks
+            delay(60_000)
+            effectJob.cancel()
+        }
+    }
+
+    // Synchronous value getters (not intents — they return values directly)
+
+    fun getUserPhotoUrl(): String? {
+        return try {
+            authProvider.currentUserPhotoUrl
+        } catch (e: Exception) {
+            println("[HomeViewModel] ERROR: Error getting user photo: ${e.message}")
+            null
+        }
+    }
+
+    fun getUserFirstName(): String {
+        return authProvider.currentUserDisplayName
+            ?.split(" ")?.firstOrNull()
+            ?: authProvider.currentUserEmail?.substringBefore("@")
+            ?: "Utente"
+    }
+
+    // Navigation methods (no state changes, purely informational)
+    fun onDiaryItemClicked(diaryItem: HomeContentItem.DiaryItem) {
+        println("[HomeViewModel] Diary item clicked: ${diaryItem.title}")
+    }
+
+    fun onChatItemClicked(chatItem: HomeContentItem.ChatItem) {
+        println("[HomeViewModel] Chat item clicked: ${chatItem.title}")
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Private implementation — all state mutations go through updateState
+    // ══════════════════════════════════════════════════════════════════════
+
     private fun restoreState() {
         savedStateHandle.get<Long>(KEY_SELECTED_DATE)?.let { millis ->
-            // Restore selected date if available
             try {
                 val selectedDate = ZonedDateTime.now().withNano(millis.toInt())
-                _uiState.update { it.copy(
-                    selectedDate = selectedDate,
-                    dateIsSelected = true
-                )}
+                updateState {
+                    copy(
+                        selectedDate = selectedDate,
+                        dateIsSelected = true
+                    )
+                }
                 dateIsSelected = true
             } catch (e: Exception) {
                 println("[HomeViewModel] ERROR: Error restoring date: ${e.message}")
@@ -215,89 +410,83 @@ internal class HomeViewModel @Inject constructor(
     }
 
     private fun saveState() {
-        savedStateHandle[KEY_DATE_SELECTED] = dateIsSelected
-        _uiState.value.selectedDate?.let {
+        savedStateHandle[KEY_DATE_SELECTED] = currentState.dateIsSelected
+        currentState.selectedDate?.let {
             savedStateHandle[KEY_SELECTED_DATE] = it.toEpochSecond()
         }
     }
 
-    fun loadDiaries() {
-        getDiaries(_uiState.value.selectedDate)
+    // ── Diaries ───────────────────────────────────────────────────────────
+
+    private fun loadDiariesInternal() {
+        getDiariesInternal(currentState.selectedDate)
     }
 
-    fun refreshDiaries() {
-        if (_uiState.value.isRefreshing) return
+    private fun refreshDiariesInternal() {
+        if (currentState.isRefreshingDiaries) return
 
         refreshJob?.cancel()
-        refreshJob = viewModelScope.launch {
-            _uiState.update { it.copy(isRefreshing = true) }
-            _isLoading.value = true
+        refreshJob = scope.launch {
+            updateState { copy(isRefreshingDiaries = true) }
+            updateState { copy(isLoading = true) }
 
             try {
-                // Add minimum refresh time for better UX
                 delay(500)
-                getDiaries(_uiState.value.selectedDate)
+                getDiariesInternal(currentState.selectedDate)
             } finally {
-                _uiState.update { it.copy(isRefreshing = false) }
-                _isLoading.value = false
+                updateState { copy(isRefreshingDiaries = false, isLoading = false) }
             }
         }
     }
 
-    fun getDiaries(zonedDateTime: ZonedDateTime? = null) {
-        dateIsSelected = zonedDateTime != null
-        _uiState.update { it.copy(
-            dateIsSelected = dateIsSelected,
-            selectedDate = zonedDateTime,
-            error = null
-        )}
+    private fun getDiariesInternal(zonedDateTime: ZonedDateTime? = null) {
+        val isDateSelected = zonedDateTime != null
+        dateIsSelected = isDateSelected
 
-        // Update unified state with selected date
-        _unifiedState.update { it.copy(
-            selectedDate = zonedDateTime,
-            dateIsSelected = zonedDateTime != null
-        )}
+        updateState {
+            copy(
+                dateIsSelected = isDateSelected,
+                selectedDate = zonedDateTime,
+                diariesError = null
+            )
+        }
 
-        // Save state
         saveState()
 
-        // Update legacy state
+        // Update legacy Compose state
         diaries.value = RequestState.Loading
 
-        // Cancel previous job gracefully
         diariesJob?.cancel()
 
-        diariesJob = viewModelScope.launch {
+        diariesJob = scope.launch {
             try {
-                if (dateIsSelected && zonedDateTime != null) {
+                if (isDateSelected && zonedDateTime != null) {
                     observeFilteredDiaries(zonedDateTime)
                 } else {
                     observeAllDiaries()
                 }
             } catch (e: CancellationException) {
-                // Expected cancellation when switching dates - don't log as error
                 println("[HomeViewModel] Diaries loading cancelled (switching filters)")
-                throw e // Re-throw to properly cancel the coroutine
+                throw e
             } catch (e: Exception) {
                 println("[HomeViewModel] ERROR: Error in getDiaries: ${e.message}")
-                handleError(e)
+                handleDiariesError(e)
             }
         }
 
         // Reload unified content with new date filter
-        loadUnifiedContent()
+        loadUnifiedContentInternal()
     }
 
     private suspend fun observeAllDiaries() {
         diaryRepository.getAllDiaries()
             .catch { e ->
-                // Don't log cancellation as error - it's expected when switching filters
                 if (e !is CancellationException) {
                     println("[HomeViewModel] ERROR: Error observing all diaries: ${e.message}")
-                    handleError(e)
+                    handleDiariesError(e)
                     emit(RequestState.Error(e as Exception))
                 } else {
-                    throw e // Re-throw cancellation to properly cancel flow
+                    throw e
                 }
             }
             .collect { result ->
@@ -306,15 +495,15 @@ internal class HomeViewModel @Inject constructor(
     }
 
     private suspend fun observeFilteredDiaries(zonedDateTime: ZonedDateTime) {
-        diaryRepository.getFilteredDiaries(zonedDateTime = zonedDateTime)
+        val dayKey = zonedDateTime.toLocalDate().toString() // "YYYY-MM-DD"
+        diaryRepository.getFilteredDiaries(dayKey = dayKey)
             .catch { e ->
-                // Don't log cancellation as error - it's expected when switching filters
                 if (e !is CancellationException) {
                     println("[HomeViewModel] ERROR: Error observing filtered diaries: ${e.message}")
-                    handleError(e)
+                    handleDiariesError(e)
                     emit(RequestState.Error(e as Exception))
                 } else {
-                    throw e // Re-throw cancellation to properly cancel flow
+                    throw e
                 }
             }
             .collect { result ->
@@ -323,84 +512,71 @@ internal class HomeViewModel @Inject constructor(
     }
 
     private fun updateDiariesState(result: Diaries) {
-        // Update new state
-        _uiState.update { currentState ->
-            currentState.copy(
-                diaries = result,
-                isLoading = result is RequestState.Loading,
-                error = if (result is RequestState.Error) {
-                    result.error.message ?: "Unknown error"
-                } else null
+        val isLoadingResult = result is RequestState.Loading
+        val errorMsg = if (result is RequestState.Error) {
+            result.error.message ?: "Unknown error"
+        } else null
+
+        updateState {
+            copy(
+                diariesState = result,
+                isLoadingDiaries = isLoadingResult,
+                isLoading = isLoadingResult,
+                diariesError = errorMsg
             )
         }
 
-        // Update legacy state
+        // Update legacy Compose state
         diaries.value = result
-        _isLoading.value = result is RequestState.Loading
     }
 
-    private fun handleError(error: Throwable) {
+    private fun handleDiariesError(error: Throwable) {
         println("[HomeViewModel] ERROR: Error loading diaries: ${error.message}")
         val errorMessage = when {
-            _networkStatus.value != ConnectivityObserver.Status.Available ->
+            currentState.networkStatus != ConnectivityObserver.Status.Available ->
                 "No internet connection"
             error.message?.contains("timeout", ignoreCase = true) == true ->
                 "Connection timeout. Please try again."
             else -> error.message ?: "Failed to load diaries"
         }
 
-        _uiState.update { it.copy(error = errorMessage) }
+        updateState { copy(diariesError = errorMessage) }
     }
 
     private fun retryLoading() {
-        if (_uiState.value.error != null && !_uiState.value.isLoading) {
-            getDiaries(_uiState.value.selectedDate)
+        if (currentState.diariesError != null && !currentState.isLoadingDiaries) {
+            getDiariesInternal(currentState.selectedDate)
         }
     }
 
-    fun getUserPhotoUrl(): String? {
-        return try {
-            auth.currentUser?.photoUrl?.toString()
-        } catch (e: Exception) {
-            println("[HomeViewModel] ERROR: Error getting user photo: ${e.message}")
-            null
-        }
-    }
+    // ── Delete All Diaries ────────────────────────────────────────────────
 
-    fun deleteAllDiaries(
-        onSuccess: () -> Unit,
-        onError: (Throwable) -> Unit
-    ) {
-        if (_networkStatus.value != ConnectivityObserver.Status.Available) {
-            onError(Exception("No Internet Connection."))
+    private fun deleteAllDiariesInternal() {
+        if (currentState.networkStatus != ConnectivityObserver.Status.Available) {
+            sendEffect(HomeContract.Effect.DeleteAllDiariesError(Exception("No Internet Connection.")))
             return
         }
 
-        // Cancel any existing delete job
         deleteJob?.cancel()
 
-        deleteJob = viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+        deleteJob = scope.launch {
+            updateState { copy(isLoadingDiaries = true, isLoading = true) }
 
             try {
-                val userId = auth.currentUser?.uid
+                val userId = authProvider.currentUserId
                     ?: throw Exception("User not authenticated")
 
-                deleteAllDiariesInternal(userId, onSuccess, onError)
+                performDeleteAllDiaries(userId)
             } catch (e: Exception) {
                 println("[HomeViewModel] ERROR: Error in deleteAllDiaries: ${e.message}")
-                onError(e)
+                sendEffect(HomeContract.Effect.DeleteAllDiariesError(e))
             } finally {
-                _uiState.update { it.copy(isLoading = false) }
+                updateState { copy(isLoadingDiaries = false, isLoading = false) }
             }
         }
     }
 
-    private suspend fun deleteAllDiariesInternal(
-        userId: String,
-        onSuccess: () -> Unit,
-        onError: (Throwable) -> Unit
-    ) {
+    private suspend fun performDeleteAllDiaries(userId: String) {
         val imagesDirectory = "images/$userId"
         val storageRef = storage.reference
 
@@ -408,34 +584,31 @@ internal class HomeViewModel @Inject constructor(
             // Delete images from Firebase Storage
             val listResult = storageRef.child(imagesDirectory).listAll().await()
 
-            // Delete each image
             listResult.items.forEach { ref ->
                 try {
                     ref.delete().await()
                 } catch (e: Exception) {
-                    // Queue for later deletion if fails
                     val imagePath = "images/$userId/${ref.name}"
                     withContext(Dispatchers.IO) {
-                        imageToDeleteDao.addImageToDelete(
-                            ImageToDelete(remoteImagePath = imagePath)
+                        imageToDeleteQueries.addImageToDelete(
+                            remoteImagePath = imagePath
                         )
                     }
                 }
             }
 
-            // Delete ALL user data from Firestore (diaries, insights, profiles, chat, profile_settings, etc.)
+            // Delete ALL user data from Firestore
             withContext(Dispatchers.IO) {
                 when (val result = diaryRepository.deleteAllUserData()) {
                     is RequestState.Success -> {
                         withContext(Dispatchers.Main) {
-                            onSuccess()
-                            // Refresh diaries after deletion
-                            getDiaries()
+                            sendEffect(HomeContract.Effect.DeleteAllDiariesSuccess)
+                            getDiariesInternal()
                         }
                     }
                     is RequestState.Error -> {
                         withContext(Dispatchers.Main) {
-                            onError(result.error)
+                            sendEffect(HomeContract.Effect.DeleteAllDiariesError(result.error))
                         }
                     }
                     else -> {
@@ -445,169 +618,147 @@ internal class HomeViewModel @Inject constructor(
             }
         } catch (e: Exception) {
             println("[HomeViewModel] ERROR: Error deleting all diaries: ${e.message}")
-            onError(e)
+            sendEffect(HomeContract.Effect.DeleteAllDiariesError(e))
         }
     }
 
-    // Aliases for backward compatibility
-    fun reloadDiaries() = loadDiaries()
-    fun fetchDiaries(zonedDateTime: ZonedDateTime? = null) = getDiaries(zonedDateTime)
-    fun loadStuff() = refreshDiaries()
+    // ── Sign Out ──────────────────────────────────────────────────────────
 
-    // UNIFIED CONTENT METHODS
-    
+    private fun signOutInternal() {
+        scope.launch { authProvider.signOut() }
+    }
+
+    // ── Unified Content ───────────────────────────────────────────────────
+
     private fun getCurrentUserId(): String {
-        return auth.currentUser?.uid
+        return authProvider.currentUserId
             ?: throw IllegalStateException("User not authenticated")
     }
 
-    fun loadUnifiedContent() {
-        viewModelScope.launch {
-            _unifiedState.update { it.copy(isLoading = true, error = null) }
+    private fun loadUnifiedContentInternal() {
+        scope.launch {
+            updateState { copy(isLoadingUnified = true, unifiedError = null) }
 
             try {
                 val userId = getCurrentUserId()
-                val currentState = _unifiedState.value
+                val s = currentState
 
-                // Choose appropriate filtering method based on whether date is selected
-                val contentFlow = if (currentState.dateIsSelected && currentState.selectedDate != null) {
-                    // Filter by date range (for the selected day)
-                    val selectedDate = currentState.selectedDate
+                val contentFlow = if (s.dateIsSelected && s.selectedDate != null) {
+                    val selectedDate = s.selectedDate
                     val startOfDay = selectedDate.toLocalDate().atStartOfDay(selectedDate.zone)
                     val endOfDay = startOfDay.plusDays(1).minusNanos(1)
 
                     unifiedContentRepository.filterByDateRange(
                         ownerId = userId,
-                        startDate = startOfDay.toEpochSecond() * 1000, // Convert to millis
+                        startDate = startOfDay.toEpochSecond() * 1000,
                         endDate = endOfDay.toEpochSecond() * 1000
                     )
                 } else {
-                    // Normal filtering (no date constraint)
                     unifiedContentRepository.applyFilter(
                         ownerId = userId,
-                        filter = currentState.selectedFilter,
-                        searchQuery = currentState.searchQuery
+                        filter = s.selectedFilter,
+                        searchQuery = s.searchQuery
                     )
                 }
 
                 contentFlow.collect { items ->
-                    _unifiedState.update { state ->
-                        state.copy(
-                            items = items,
-                            isLoading = false,
-                            isEmpty = items.isEmpty()
+                    updateState {
+                        copy(
+                            unifiedItems = items,
+                            isLoadingUnified = false,
+                            isUnifiedEmpty = items.isEmpty()
                         )
                     }
                 }
             } catch (e: Exception) {
                 println("[HomeViewModel] ERROR: Error loading unified content: ${e.message}")
-                _unifiedState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = e.message ?: "Unknown error occurred"
+                updateState {
+                    copy(
+                        isLoadingUnified = false,
+                        unifiedError = e.message ?: "Unknown error occurred"
                     )
                 }
             }
         }
     }
 
-    fun refreshUnifiedContent() {
-        if (_unifiedState.value.isRefreshing) return
-        
-        viewModelScope.launch {
-            _unifiedState.update { it.copy(isRefreshing = true) }
-            
+    private fun refreshUnifiedContentInternal() {
+        if (currentState.isRefreshingUnified) return
+
+        scope.launch {
+            updateState { copy(isRefreshingUnified = true) }
+
             try {
-                delay(500) // Minimum refresh time for better UX
+                delay(500)
                 val userId = getCurrentUserId()
                 unifiedContentRepository.getUnifiedContent(userId)
                     .collect { items ->
-                        _unifiedState.update { state ->
-                            state.copy(
-                                items = items,
-                                isRefreshing = false,
-                                isEmpty = items.isEmpty(),
-                                error = null
+                        updateState {
+                            copy(
+                                unifiedItems = items,
+                                isRefreshingUnified = false,
+                                isUnifiedEmpty = items.isEmpty(),
+                                unifiedError = null
                             )
                         }
                     }
             } catch (e: Exception) {
                 println("[HomeViewModel] ERROR: Error refreshing unified content: ${e.message}")
-                _unifiedState.update { 
-                    it.copy(
-                        isRefreshing = false,
-                        error = e.message ?: "Unknown error occurred"
-                    ) 
+                updateState {
+                    copy(
+                        isRefreshingUnified = false,
+                        unifiedError = e.message ?: "Unknown error occurred"
+                    )
                 }
             }
         }
     }
 
-    fun updateFilter(filter: ContentFilter) {
-        _unifiedState.update { it.copy(selectedFilter = filter) }
-        loadUnifiedContent()
+    private fun updateFilterInternal(filter: ContentFilter) {
+        updateState { copy(selectedFilter = filter) }
+        loadUnifiedContentInternal()
     }
 
-    fun updateSearchQuery(query: String) {
-        _unifiedState.update { it.copy(searchQuery = query) }
-        
+    private fun updateSearchQueryInternal(query: String) {
+        updateState { copy(searchQuery = query) }
+
         // Debounce search
-        viewModelScope.launch {
-            delay(300) // 300ms debounce
-            if (_unifiedState.value.searchQuery == query) {
-                loadUnifiedContent()
+        scope.launch {
+            delay(300)
+            if (currentState.searchQuery == query) {
+                loadUnifiedContentInternal()
             }
         }
     }
 
-    fun clearSearch() {
-        _unifiedState.update { it.copy(searchQuery = "") }
-        loadUnifiedContent()
+    private fun clearSearchInternal() {
+        updateState { copy(searchQuery = "") }
+        loadUnifiedContentInternal()
     }
 
-    // Navigation methods
-    fun onDiaryItemClicked(diaryItem: HomeContentItem.DiaryItem) {
-        // Will be handled by navigation in the UI layer
-        println("[HomeViewModel] Diary item clicked: ${diaryItem.title}")
+    // ── Week Navigation ───────────────────────────────────────────────────
+
+    private fun navigateToPreviousWeekInternal() {
+        updateState { copy(currentWeekOffset = currentWeekOffset - 1) }
+        loadDailyInsightsInternal()
     }
 
-    fun onChatItemClicked(chatItem: HomeContentItem.ChatItem) {
-        // Will be handled by navigation in the UI layer
-        println("[HomeViewModel] Chat item clicked: ${chatItem.title}")
+    private fun navigateToNextWeekInternal() {
+        updateState { copy(currentWeekOffset = currentWeekOffset + 1) }
+        loadDailyInsightsInternal()
     }
 
-    /**
-     * Navigate to previous week
-     */
-    fun navigateToPreviousWeek() {
-        _currentWeekOffset.value -= 1
-        loadDailyInsights()
+    private fun resetToCurrentWeekInternal() {
+        updateState { copy(currentWeekOffset = 0) }
+        loadDailyInsightsInternal()
     }
 
-    /**
-     * Navigate to next week
-     */
-    fun navigateToNextWeek() {
-        _currentWeekOffset.value += 1
-        loadDailyInsights()
-    }
+    // ── Daily Insights ────────────────────────────────────────────────────
 
-    /**
-     * Reset to current week
-     */
-    fun resetToCurrentWeek() {
-        _currentWeekOffset.value = 0
-        loadDailyInsights()
-    }
-
-    /**
-     * Load daily insights for the current week (M-S) for chart visualization
-     * Week starts on Monday and ends on Sunday
-     */
-    fun loadDailyInsights() {
-        viewModelScope.launch {
+    private fun loadDailyInsightsInternal() {
+        scope.launch {
             try {
-                println("[HomeViewModel] Loading daily insights for week offset: ${_currentWeekOffset.value}...")
+                println("[HomeViewModel] Loading daily insights for week offset: ${currentState.currentWeekOffset}...")
                 insightRepository.getAllInsights().collect { result ->
                     when (result) {
                         is RequestState.Success -> {
@@ -615,34 +766,27 @@ internal class HomeViewModel @Inject constructor(
                             println("[HomeViewModel] Loaded ${insights.size} insights from repository")
                             val now = ZonedDateTime.now()
 
-                            // Calculate Monday of the target week
-                            val currentDayOfWeek = now.dayOfWeek.value // 1 = Monday, 7 = Sunday
-                            val daysFromMonday = currentDayOfWeek - 1 // Days since last Monday
+                            val currentDayOfWeek = now.dayOfWeek.value
+                            val daysFromMonday = currentDayOfWeek - 1
                             val currentWeekMonday = now.minusDays(daysFromMonday.toLong())
+                            val targetWeekMonday = currentWeekMonday.plusWeeks(currentState.currentWeekOffset.toLong())
 
-                            // Apply week offset
-                            val targetWeekMonday = currentWeekMonday.plusWeeks(_currentWeekOffset.value.toLong())
-
-                            // Group insights by day (Monday to Sunday)
                             val dailyData = (0 until 7).map { dayIndex ->
                                 val targetDate = targetWeekMonday.plusDays(dayIndex.toLong())
-                                val targetDayKey = targetDate.toLocalDate().toString() // "YYYY-MM-DD"
+                                val targetDayKey = targetDate.toLocalDate().toString()
 
-                                // Filter insights for this day using dayKey - NO timezone conversion needed!
                                 val dayInsights = insights.filter { insight ->
                                     insight.dayKey == targetDayKey
                                 }
 
                                 println("[HomeViewModel] Day $dayIndex ($targetDayKey): ${dayInsights.size} insights")
 
-                                // Calculate average sentiment magnitude
                                 val avgMagnitude = if (dayInsights.isNotEmpty()) {
                                     dayInsights.map { it.sentimentMagnitude }.average().toFloat()
                                 } else {
                                     0f
                                 }
 
-                                // Find dominant emotion (most common sentiment label)
                                 val dominantEmotion = if (dayInsights.isNotEmpty()) {
                                     dayInsights
                                         .groupBy { it.getSentimentLabel() }
@@ -652,15 +796,14 @@ internal class HomeViewModel @Inject constructor(
                                     SentimentLabel.NEUTRAL
                                 }
 
-                                // Get day label (M, T, W, T, F, S, S)
                                 val dayLabel = when (targetDate.dayOfWeek.value) {
-                                    1 -> "M" // Monday
-                                    2 -> "T" // Tuesday
-                                    3 -> "W" // Wednesday
-                                    4 -> "T" // Thursday
-                                    5 -> "F" // Friday
-                                    6 -> "S" // Saturday
-                                    7 -> "S" // Sunday
+                                    1 -> "M"
+                                    2 -> "T"
+                                    3 -> "W"
+                                    4 -> "T"
+                                    5 -> "F"
+                                    6 -> "S"
+                                    7 -> "S"
                                     else -> "?"
                                 }
 
@@ -673,7 +816,8 @@ internal class HomeViewModel @Inject constructor(
                                 )
                             }
 
-                            _dailyInsights.value = dailyData
+                            updateState { copy(dailyInsights = dailyData) }
+
                             println("[HomeViewModel] Daily insights processed: ${dailyData.size} days (M-S)")
                             dailyData.forEachIndexed { index, data ->
                                 println("[HomeViewModel] Day $index: ${data.dayLabel}, magnitude: ${data.sentimentMagnitude}, emotion: ${data.dominantEmotion}, diaries: ${data.diaryCount}")
@@ -683,7 +827,6 @@ internal class HomeViewModel @Inject constructor(
                             println("[HomeViewModel] ERROR: Error loading daily insights: ${result.error.message}")
                         }
                         else -> {
-                            // Loading state
                             println("[HomeViewModel] Loading daily insights...")
                         }
                     }
@@ -694,50 +837,48 @@ internal class HomeViewModel @Inject constructor(
         }
     }
 
-    // ==================== REDESIGN DATA LOADING ====================
+    // ── Redesign Data ─────────────────────────────────────────────────────
 
-    /**
-     * Load all redesign data (hero, insights, achievements)
-     */
     private fun loadRedesignData() {
-        viewModelScope.launch {
+        scope.launch {
             try {
-                // Update hero loading state
-                _homeRedesignState.update {
-                    it.copy(heroLoadingState = SectionLoadingState(isLoading = true))
+                updateState {
+                    copy(
+                        homeRedesignState = homeRedesignState.copy(
+                            heroLoadingState = SectionLoadingState(isLoading = true)
+                        )
+                    )
                 }
 
-                // Load insights and diaries in parallel
                 val insightsDeferred = async { loadInsightsForRedesign() }
                 val diariesDeferred = async { loadDiariesForRedesign() }
 
                 cachedInsights = insightsDeferred.await()
                 cachedDiaries = diariesDeferred.await()
 
-                // Now calculate all aggregations
                 calculateTodayPulse()
                 calculateMoodDistribution()
                 calculateCognitivePatterns()
                 calculateTopicsFrequency()
                 calculateAchievements()
 
-                // Get user name
-                val userName = auth.currentUser?.displayName
-                    ?: auth.currentUser?.email?.substringBefore("@")
+                val userName = authProvider.currentUserDisplayName
+                    ?: authProvider.currentUserEmail?.substringBefore("@")
                     ?: "Utente"
 
-                // Update complete state
-                _homeRedesignState.update {
-                    it.copy(
-                        userName = userName,
-                        todayPulse = _todayPulse.value,
-                        moodDistribution = _moodDistribution.value,
-                        cognitivePatterns = _cognitivePatterns.value,
-                        topicsFrequency = _topicsFrequency.value,
-                        emergingTopic = _emergingTopic.value,
-                        heroLoadingState = SectionLoadingState(isLoading = false),
-                        insightsLoadingState = SectionLoadingState(isLoading = false),
-                        achievementsLoadingState = SectionLoadingState(isLoading = false)
+                updateState {
+                    copy(
+                        homeRedesignState = homeRedesignState.copy(
+                            userName = userName,
+                            todayPulse = todayPulse,
+                            moodDistribution = moodDistribution,
+                            cognitivePatterns = cognitivePatterns,
+                            topicsFrequency = topicsFrequency,
+                            emergingTopic = emergingTopic,
+                            heroLoadingState = SectionLoadingState(isLoading = false),
+                            insightsLoadingState = SectionLoadingState(isLoading = false),
+                            achievementsLoadingState = SectionLoadingState(isLoading = false)
+                        )
                     )
                 }
 
@@ -745,12 +886,14 @@ internal class HomeViewModel @Inject constructor(
 
             } catch (e: Exception) {
                 println("[HomeViewModel] ERROR: Error loading redesign data: ${e.message}")
-                _homeRedesignState.update {
-                    it.copy(
-                        heroLoadingState = SectionLoadingState(
-                            isLoading = false,
-                            hasError = true,
-                            errorMessage = e.message
+                updateState {
+                    copy(
+                        homeRedesignState = homeRedesignState.copy(
+                            heroLoadingState = SectionLoadingState(
+                                isLoading = false,
+                                hasError = true,
+                                errorMessage = e.message
+                            )
                         )
                     )
                 }
@@ -801,15 +944,15 @@ internal class HomeViewModel @Inject constructor(
     private fun calculateTodayPulse() {
         try {
             val result = calculateTodayPulseUseCase(cachedInsights)
-            _todayPulse.value = result.pulse
+            updateState { copy(todayPulse = result.pulse) }
 
-            // Update quick action state
-            _quickActionState.update {
-                it.copy(
-                    hasUnreadInsights = cachedInsights.any { insight ->
-                        // Check if insight is from today
-                        insight.dayKey == java.time.LocalDate.now().toString()
-                    }
+            updateState {
+                copy(
+                    quickActionState = quickActionState.copy(
+                        hasUnreadInsights = cachedInsights.any { insight ->
+                            insight.dayKey == java.time.LocalDate.now().toString()
+                        }
+                    )
                 )
             }
 
@@ -821,12 +964,16 @@ internal class HomeViewModel @Inject constructor(
 
     private fun calculateMoodDistribution() {
         try {
-            val timeRange = _selectedTimeRange.value
+            val timeRange = currentState.selectedTimeRange
             val distribution = calculateMoodDistributionUseCase(cachedInsights, timeRange)
             val dominant = calculateMoodDistributionUseCase.getDominantMood(distribution)
 
-            _moodDistribution.value = distribution
-            _dominantMood.value = dominant
+            updateState {
+                copy(
+                    moodDistribution = distribution,
+                    dominantMood = dominant
+                )
+            }
 
             println("[HomeViewModel] Mood distribution calculated: positive=${distribution.positive}, neutral=${distribution.neutral}, negative=${distribution.negative}")
         } catch (e: Exception) {
@@ -836,9 +983,9 @@ internal class HomeViewModel @Inject constructor(
 
     private fun calculateCognitivePatterns() {
         try {
-            val timeRange = _selectedTimeRange.value
+            val timeRange = currentState.selectedTimeRange
             val result = aggregateCognitivePatternsUseCase(cachedInsights, timeRange)
-            _cognitivePatterns.value = result.patterns
+            updateState { copy(cognitivePatterns = result.patterns) }
 
             println("[HomeViewModel] Cognitive patterns calculated: ${result.patterns.size} patterns found")
         } catch (e: Exception) {
@@ -848,10 +995,14 @@ internal class HomeViewModel @Inject constructor(
 
     private fun calculateTopicsFrequency() {
         try {
-            val timeRange = _selectedTimeRange.value
+            val timeRange = currentState.selectedTimeRange
             val result = calculateTopicsFrequencyUseCase(cachedInsights, timeRange)
-            _topicsFrequency.value = result.topics
-            _emergingTopic.value = result.emergingTopic
+            updateState {
+                copy(
+                    topicsFrequency = result.topics,
+                    emergingTopic = result.emergingTopic
+                )
+            }
 
             println("[HomeViewModel] Topics frequency calculated: ${result.topics.size} topics, emerging: ${result.emergingTopic?.topic}")
         } catch (e: Exception) {
@@ -861,14 +1012,13 @@ internal class HomeViewModel @Inject constructor(
 
     private fun calculateAchievements() {
         try {
-            // For now, we don't have earned badges stored - we'll calculate progress
             val result = getAchievementsUseCase(
                 diaries = cachedDiaries,
                 insights = cachedInsights,
-                earnedBadgeIds = emptySet(),  // TODO: Load from user preferences/Firestore
+                earnedBadgeIds = emptySet(),
                 badgeEarnedDates = emptyMap()
             )
-            _achievementsState.value = result
+            updateState { copy(achievementsState = result) }
 
             println("[HomeViewModel] Achievements calculated: streak=${result.streak.currentStreak}, badges=${result.earnedBadges.size}")
         } catch (e: Exception) {
@@ -876,45 +1026,27 @@ internal class HomeViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Change time range for insights aggregation
-     */
-    fun updateTimeRange(timeRange: TimeRange) {
-        _selectedTimeRange.value = timeRange
-        _homeRedesignState.update { it.copy(selectedTimeRange = timeRange) }
+    private fun updateTimeRangeInternal(timeRange: TimeRange) {
+        updateState {
+            copy(
+                selectedTimeRange = timeRange,
+                homeRedesignState = homeRedesignState.copy(selectedTimeRange = timeRange)
+            )
+        }
 
-        // Recalculate with new time range
-        viewModelScope.launch {
+        scope.launch {
             calculateMoodDistribution()
             calculateCognitivePatterns()
             calculateTopicsFrequency()
         }
     }
 
-    /**
-     * Refresh all redesign data
-     */
-    fun refreshRedesignData() {
-        loadRedesignData()
-    }
-
-    /**
-     * Get user's first name for greeting
-     */
-    fun getUserFirstName(): String {
-        return auth.currentUser?.displayName
-            ?.split(" ")?.firstOrNull()
-            ?: auth.currentUser?.email?.substringBefore("@")
-            ?: "Utente"
-    }
-
-    fun signOut() {
-        auth.signOut()
-    }
+    // ══════════════════════════════════════════════════════════════════════
+    // Lifecycle
+    // ══════════════════════════════════════════════════════════════════════
 
     override fun onCleared() {
         super.onCleared()
-        // Cancel all jobs
         diariesJob?.cancel()
         refreshJob?.cancel()
         deleteJob?.cancel()

@@ -10,12 +10,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URI
 import java.nio.ByteBuffer
-import javax.inject.Inject
-import javax.inject.Singleton
 import com.google.firebase.auth.FirebaseAuth
 
-@Singleton
-class GeminiLiveWebSocketClient @Inject constructor(
+class GeminiLiveWebSocketClient constructor(
     private val firebaseAuth: FirebaseAuth
 ) {
 

@@ -1,56 +1,43 @@
 plugins {
-    id 'com.android.library'
-    id 'org.jetbrains.kotlin.android'
+    id 'calmify.kmp.library'
 }
 
 android {
     namespace 'com.lifo.util'
-    compileSdk ProjectConfig.compileSdk
-
-    defaultConfig {
-        minSdk ProjectConfig.minSdk
-        targetSdk ProjectConfig.targetSdk
-
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles "consumer-rules.pro"
-    }
-
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
-    }
-
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
-
-    kotlinOptions {
-        jvmTarget = ProjectConfig.jvmTarget
-    }
-
-    packagingOptions {
-        resources.excludes.add("META-INF/*")
-    }
 }
 
-dependencies {
-    // Firebase BOM
-    implementation platform(libs.firebase.bom)
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            // Coroutines core already added by convention plugin
+            api libs.kotlinx.datetime
+        }
 
-    // Firebase (Firestore annotations for Diary, DiaryInsight, ProfileSettings models)
-    implementation libs.firebase.firestore
+        androidMain {
+            dependencies {
+                // Firebase Auth (for FirebaseAuthProvider)
+                implementation libs.firebase.auth.kmp
 
-    // Core
-    implementation libs.core.ktx
+                // Lifecycle ViewModel (PlatformViewModel actual typealias)
+                implementation libs.lifecycle.viewmodel
 
-    // Coroutines
-    implementation libs.coroutines.core
-    implementation libs.coroutines.android
+                // Core Android
+                implementation libs.core.ktx
 
-    // Testing
-    testImplementation libs.junit
-    androidTestImplementation libs.junit.ext
+                // Coroutines Android dispatcher
+                implementation libs.coroutines.android
+            }
+        }
+
+        commonTest.dependencies {
+            implementation kotlin('test')
+        }
+
+        androidUnitTest.dependencies {
+            implementation libs.junit
+            implementation libs.mockk
+            implementation libs.turbine
+            implementation libs.coroutines.test
+        }
+    }
 }

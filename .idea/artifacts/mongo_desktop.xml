@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="mongo-desktop">
+    <output-path>$PROJECT_DIR$/data/mongo/build/libs</output-path>
+    <root id="archive" name="mongo-desktop.jar">
+      <element id="module-output" name="Calmify.data.mongo.desktopMain" />
+    </root>
+  </artifact>
+</component>

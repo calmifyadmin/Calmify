@@ -1,0 +1,73 @@
+{
+  "parameterGroups": {
+    "Social Features": {
+      "description": "Controls for Nexus social platform features",
+      "parameters": {
+        "social_enabled": {
+          "defaultValue": { "value": "true" },
+          "description": "Master toggle for all social features (feed, threads, follows, DM)",
+          "valueType": "BOOLEAN"
+        },
+        "feed_enabled": {
+          "defaultValue": { "value": "true" },
+          "description": "Enable the Feed/Threads tab in the bottom navigation",
+          "valueType": "BOOLEAN"
+        },
+        "messaging_enabled": {
+          "defaultValue": { "value": "true" },
+          "description": "Enable Direct Messaging between users",
+          "valueType": "BOOLEAN"
+        },
+        "federation_enabled": {
+          "defaultValue": { "value": "false" },
+          "description": "Enable ActivityPub federation bridge (Mastodon interop)",
+          "valueType": "BOOLEAN"
+        },
+        "semantic_search_enabled": {
+          "defaultValue": { "value": "false" },
+          "description": "Enable Vertex AI Vector Search for semantic thread/user search",
+          "valueType": "BOOLEAN"
+        },
+        "media_pipeline_enabled": {
+          "defaultValue": { "value": "false" },
+          "description": "Enable Cloud Transcoder + CDN media pipeline for video uploads",
+          "valueType": "BOOLEAN"
+        }
+      }
+    },
+    "Monetization": {
+      "description": "Premium tier and billing controls",
+      "parameters": {
+        "premium_enabled": {
+          "defaultValue": { "value": "false" },
+          "description": "Enable premium subscription and paywall UI",
+          "valueType": "BOOLEAN"
+        },
+        "max_free_messages_per_day": {
+          "defaultValue": { "value": "50" },
+          "description": "Maximum AI chat messages per day for free tier users",
+          "valueType": "NUMBER"
+        }
+      }
+    },
+    "Experiments": {
+      "description": "A/B tests and gradual rollout flags",
+      "parameters": {
+        "ab_test_new_home": {
+          "defaultValue": { "value": "false" },
+          "description": "A/B test: show redesigned home screen with social integration",
+          "valueType": "BOOLEAN"
+        },
+        "maintenance_mode": {
+          "defaultValue": { "value": "false" },
+          "description": "Show maintenance banner and disable write operations",
+          "valueType": "BOOLEAN"
+        }
+      }
+    }
+  },
+  "conditions": [],
+  "version": {
+    "description": "Wave 9D: Initial feature flags for Nexus social platform rollout"
+  }
+}
