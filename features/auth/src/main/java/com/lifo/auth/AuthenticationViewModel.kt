@@ -1,20 +1,15 @@
 package com.lifo.auth
 
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.GoogleAuthProvider
+import com.lifo.auth.domain.SignInWithGoogleUseCase
+import com.lifo.auth.domain.SignOutUseCase
+import com.lifo.util.auth.AuthProvider
 import com.lifo.util.mvi.MviContract
 import com.lifo.util.mvi.MviViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
 
 /**
  * AuthenticationContract - MVI contract for the Authentication screen.
- *
- * Defines all possible user intents, the single immutable UI state,
- * and one-shot side effects (navigation, error display).
  */
 object AuthenticationContract {
 
@@ -37,18 +32,23 @@ object AuthenticationContract {
 }
 
 /**
- * AuthenticationViewModel - Migrated to MVI + Firebase Auth 2025
- *
- * Previously used MongoDB Atlas Device Sync (EOL) + MVVM.
- * Now uses Firebase Authentication with Google Sign-In + MVI pattern.
+ * AuthenticationViewModel - Delegates to UseCases, uses AuthProvider.
  */
 internal class AuthenticationViewModel constructor(
-    private val auth: FirebaseAuth
+    private val authProvider: AuthProvider,
+    private val signInWithGoogleUseCase: SignInWithGoogleUseCase,
+    private val signOutUseCase: SignOutUseCase,
 ) : MviViewModel<AuthenticationContract.Intent, AuthenticationContract.State, AuthenticationContract.Effect>(
     initialState = AuthenticationContract.State(
-        authenticated = FirebaseAuth.getInstance().currentUser != null
+        authenticated = false
     )
 ) {
+
+    init {
+        if (authProvider.currentUserId != null) {
+            updateState { copy(authenticated = true) }
+        }
+    }
 
     override fun handleIntent(intent: AuthenticationContract.Intent) {
         when (intent) {
@@ -64,51 +64,36 @@ internal class AuthenticationViewModel constructor(
         }
     }
 
-    /**
-     * Sign in with Google using Firebase Auth
-     *
-     * @param tokenId Google ID token from Google One Tap
-     */
     private fun signInWithGoogle(tokenId: String) {
         scope.launch {
             try {
-                val credential = GoogleAuthProvider.getCredential(tokenId, null)
-                val result = withContext(Dispatchers.IO) {
-                    auth.signInWithCredential(credential).await()
-                }
-                withContext(Dispatchers.Main) {
-                    if (result.user != null) {
-                        sendEffect(AuthenticationContract.Effect.ShowSuccess("Successfully Authenticated!"))
+                val result = signInWithGoogleUseCase(tokenId)
+                result.fold(
+                    onSuccess = {
+                        sendEffect(AuthenticationContract.Effect.ShowSuccess("Autenticazione riuscita!"))
                         updateState { copy(isLoading = false) }
                         delay(600)
                         updateState { copy(authenticated = true) }
                         sendEffect(AuthenticationContract.Effect.NavigateHome)
-                    } else {
-                        val error = Exception("User is not logged in.")
+                    },
+                    onFailure = { e ->
                         updateState { copy(isLoading = false) }
-                        sendEffect(AuthenticationContract.Effect.ShowError(error))
+                        sendEffect(AuthenticationContract.Effect.ShowError(e as Exception))
                     }
-                }
+                )
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    updateState { copy(isLoading = false) }
-                    sendEffect(AuthenticationContract.Effect.ShowError(e))
-                }
+                updateState { copy(isLoading = false) }
+                sendEffect(AuthenticationContract.Effect.ShowError(e))
             }
         }
     }
 
-    /**
-     * Sign out current user
-     */
     private fun signOut() {
-        auth.signOut()
-        updateState { copy(authenticated = false) }
+        scope.launch {
+            signOutUseCase()
+            updateState { copy(authenticated = false) }
+        }
     }
 
-    /**
-     * Get current user ID (for Firestore queries).
-     * This is a synchronous query — not an intent but a direct accessor.
-     */
-    fun getCurrentUserId(): String? = auth.currentUser?.uid
+    fun getCurrentUserId(): String? = authProvider.currentUserId
 }

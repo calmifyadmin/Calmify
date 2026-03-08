@@ -15,6 +15,7 @@ import com.lifo.util.speech.SpeechEmotion
 import com.lifo.util.speech.SpeechRequest
 import com.lifo.util.speech.SynchronizedSpeechController
 import com.lifo.util.repository.ChatRepository
+import com.lifo.util.repository.SubscriptionRepository
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
@@ -42,6 +43,7 @@ object ChatContract {
 
     sealed interface Effect : MviContract.Effect {
         data class ShowError(val message: String) : Effect
+        data object NavigateToPaywall : Effect
     }
 }
 
@@ -56,6 +58,7 @@ class ChatViewModel constructor(
     private val synchronizedSpeechController: SynchronizedSpeechController,
     private val apiConfigManager: ApiConfigManager,
     private val auth: FirebaseAuth,
+    private val subscriptionRepository: SubscriptionRepository,
     savedStateHandle: SavedStateHandle
 ) : MviViewModel<ChatContract.Intent, ChatContract.State, ChatContract.Effect>(
     initialState = ChatContract.State()
@@ -175,8 +178,29 @@ class ChatViewModel constructor(
 
     // ── Intent handlers (private business logic) ────────────────────────
 
+    companion object {
+        private const val FREE_MESSAGE_LIMIT = 5
+    }
+
     private fun handleSendMessage(content: String) {
         if (content.isBlank()) return
+
+        // Check free tier limit
+        val userMessages = currentState.chat.messages.count { it.isUser }
+        if (userMessages >= FREE_MESSAGE_LIMIT) {
+            val userId = auth.currentUser?.uid
+            if (userId != null) {
+                scope.launch {
+                    val result = subscriptionRepository.getSubscriptionState(userId)
+                    if (result is RequestState.Success &&
+                        result.data.tier == SubscriptionRepository.SubscriptionTier.FREE
+                    ) {
+                        updateState { copy(chat = chat.copy(showFreeLimitReached = true)) }
+                    }
+                }
+                return // Don't send the message until tier is checked
+            }
+        }
 
         // Stop any ongoing speech
         voiceSystem.stop()
@@ -352,7 +376,7 @@ class ChatViewModel constructor(
             var fullContent = ""
             val currentMessageId = "streaming_${System.currentTimeMillis()}"
 
-            repository.generateAiResponse(sessionId, userMessage, emptyList())
+            repository.generateAiResponse(sessionId, userMessage, currentState.chat.messages)
                 .collect { result ->
                     when (result) {
                         is RequestState.Success -> {

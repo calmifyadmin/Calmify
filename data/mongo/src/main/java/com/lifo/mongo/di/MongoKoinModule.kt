@@ -2,6 +2,7 @@ package com.lifo.mongo.di
 
 import com.google.firebase.Firebase
 import com.google.firebase.FirebaseApp
+import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -52,6 +53,10 @@ import com.lifo.util.repository.MediaUploadRepository
 import com.lifo.util.repository.ContentModerationRepository
 import com.lifo.util.repository.FeatureFlagRepository
 import com.lifo.util.repository.SubscriptionRepository
+import com.lifo.util.repository.ThreadHydrator
+import com.lifo.mongo.repository.FirestoreThreadHydrator
+import com.lifo.mongo.analytics.FirebaseAnalyticsTracker
+import com.lifo.util.analytics.AnalyticsTracker
 import com.lifo.util.auth.AuthProvider
 import com.lifo.util.auth.FirebaseAuthProvider
 import com.lifo.util.repository.WellbeingRepository
@@ -61,6 +66,8 @@ import org.koin.dsl.module
 val firebaseModule = module {
     single<FirebaseAuth> { Firebase.auth }
     single<AuthProvider> { FirebaseAuthProvider(get()) }
+    single<FirebaseAnalytics> { FirebaseAnalytics.getInstance(get()) }
+    single<AnalyticsTracker> { FirebaseAnalyticsTracker(get()) }
     single<FirebaseStorage> { Firebase.storage }
     single<FirebaseDatabase> { Firebase.database }
     single<FirebaseFunctions> { Firebase.functions }
@@ -115,8 +122,9 @@ val repositoryModule = module {
 
     // Social repositories (Wave 6F)
     single<ThreadRepository> { FirestoreThreadRepository(get(), get()) }
-    single<FeedRepository> { FirestoreFeedRepository(get(), get()) }
+    single<FeedRepository> { FirestoreFeedRepository(get(), get(), get()) }
     single<SocialGraphRepository> { FirestoreSocialGraphRepository(get(), get()) }
+    single<ThreadHydrator> { FirestoreThreadHydrator(get()) }
     single<SearchRepository> { FirestoreSearchRepository(get(), get()) }
     single<NotificationRepository> { FirestoreNotificationRepository(get(), get()) }
     single<SocialMessagingRepository> { FirestoreSocialMessagingRepository(get(), get()) }

@@ -3,18 +3,17 @@ package com.lifo.auth
 import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import com.lifo.util.Constants.CLIENT_ID
-import com.stevdzasan.messagebar.ContentWithMessageBar
-import com.stevdzasan.messagebar.MessageBarState
-import com.stevdzasan.onetap.OneTapSignInState
-import com.stevdzasan.onetap.OneTapSignInWithGoogle
 
 @ExperimentalMaterial3Api
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -22,12 +21,8 @@ import com.stevdzasan.onetap.OneTapSignInWithGoogle
 internal fun AuthenticationScreen(
     authenticated: Boolean,
     loadingState: Boolean,
-    oneTapState: OneTapSignInState,
-    messageBarState: MessageBarState,
+    snackbarHostState: SnackbarHostState,
     onButtonClicked: () -> Unit,
-    onSuccessfulFirebaseSignIn: (String) -> Unit,
-    onFailedFirebaseSignIn: (Exception) -> Unit,
-    onDialogDismissed: (String) -> Unit,
     navigateToHome: () -> Unit
 ) {
     Scaffold(
@@ -35,28 +30,22 @@ internal fun AuthenticationScreen(
             .background(MaterialTheme.colorScheme.surface)
             .statusBarsPadding()
             .navigationBarsPadding(),
-        content = {
-            ContentWithMessageBar(messageBarState = messageBarState) {
-                AuthenticationContent(
-                    loadingState = loadingState,
-                    onButtonClicked = onButtonClicked
-                )
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState) { data ->
+                Snackbar(snackbarData = data)
             }
-        }
-    )
-    OneTapSignInWithGoogle(
-        state = oneTapState,
-        clientId = CLIENT_ID,
-        onTokenIdReceived = { tokenId ->
-            onSuccessfulFirebaseSignIn(tokenId)
         },
-        onDialogDismissed = { message ->
-            onDialogDismissed(message)
+        content = { paddingValues ->
+            AuthenticationContent(
+                modifier = Modifier.padding(paddingValues),
+                loadingState = loadingState,
+                onButtonClicked = onButtonClicked
+            )
         }
     )
 
-    LaunchedEffect(key1 = authenticated){
-        if(authenticated){
+    LaunchedEffect(key1 = authenticated) {
+        if (authenticated) {
             navigateToHome()
         }
     }

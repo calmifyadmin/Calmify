@@ -69,8 +69,8 @@ val chatKoinModule = module {
 
     // === ViewModels ===
     // ChatViewModel(repository, context, voiceSystem, voiceAudioSource,
-    //   synchronizedSpeechController, apiConfigManager, auth, savedStateHandle)
-    viewModel { ChatViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
+    //   synchronizedSpeechController, apiConfigManager, auth, subscriptionRepository, savedStateHandle)
+    viewModel { ChatViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get()) }
 
     // LiveChatViewModel(context, apiConfigManager, geminiWebSocketClient, geminiAudioManager,
     //   geminiCameraManager, liveAudioSource, synchronizedSpeechController,

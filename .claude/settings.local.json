@@ -83,7 +83,11 @@
       "Bash(else echo \"NO commonMain/kotlin\")",
       "Bash(fi)",
       "Bash(do echo \"=== $module ===\" ls -la \"/c/Users/lifoe/AndroidStudioProjects/CalmifyAppAndroid/features/$module\")",
-      "Bash(git reset HEAD -- \"buildSrc/build/\" \".kotlin/\" \"features/chat/build/\" \"nul\")"
+      "Bash(git reset HEAD -- \"buildSrc/build/\" \".kotlin/\" \"features/chat/build/\" \"nul\")",
+      "Bash(kotlin -script -e 'println\\(\"\"test\"\"\\)')",
+      "Bash(kotlinc -version)",
+      "Bash(git rm -r --cached build-logic/convention/build/ buildSrc/build/)",
+      "Bash(git rm --cached nul)"
     ],
     "deny": []
   }

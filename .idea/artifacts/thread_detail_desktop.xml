@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="thread-detail-desktop">
+    <output-path>$PROJECT_DIR$/features/thread-detail/build/libs</output-path>
+    <root id="archive" name="thread-detail-desktop.jar">
+      <element id="module-output" name="Calmify.features.thread-detail.desktopMain" />
+    </root>
+  </artifact>
+</component>

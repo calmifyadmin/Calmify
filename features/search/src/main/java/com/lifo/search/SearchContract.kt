@@ -14,6 +14,7 @@ object SearchContract {
         data object Search : Intent
         data object ClearSearch : Intent
         data class SelectFilter(val filter: SearchFilter) : Intent
+        data class SelectMoodFilter(val mood: String?) : Intent
     }
 
     @Immutable
@@ -23,9 +24,17 @@ object SearchContract {
         val userResults: List<SocialGraphRepository.SocialUser> = emptyList(),
         val isSearching: Boolean = false,
         val selectedFilter: SearchFilter = SearchFilter.ALL,
+        val selectedMood: String? = null,
         val hasSearched: Boolean = false,
         val error: String? = null,
-    ) : MviContract.State
+    ) : MviContract.State {
+        val filteredThreadResults: List<ThreadRepository.Thread>
+            get() = if (selectedMood == null) threadResults
+            else threadResults.filter { it.moodTag?.equals(selectedMood, ignoreCase = true) == true }
+
+        val availableMoods: List<String>
+            get() = threadResults.mapNotNull { it.moodTag }.distinct().sorted()
+    }
 
     sealed interface Effect : MviContract.Effect {
         data class ShowError(val message: String) : Effect

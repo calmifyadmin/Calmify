@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -15,57 +16,64 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.lifo.ui.components.GoogleButton
 
 @Composable
 internal fun AuthenticationContent(
+    modifier: Modifier = Modifier,
     loadingState: Boolean,
     onButtonClicked: () -> Unit
 ) {
     Column(
-        verticalArrangement = Arrangement.Center,
+        modifier = modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Hero section — logo + tagline (centered, takes most space)
         Column(
             modifier = Modifier
-                .weight(9f)
+                .weight(1f)
                 .fillMaxWidth()
-                .padding(all = 40.dp),
+                .padding(horizontal = 40.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier.weight(weight = 10f),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Image(
-                    modifier = Modifier.size(120.dp),
-                    painter = painterResource(id = com.lifo.ui.R.drawable.google_logo_ic),
-                    contentDescription = "Google Logo"
-                )
-                Spacer(modifier = Modifier.height(20.dp))
-                Text(
-                    text = stringResource(id = R.string.auth_title),
-                    fontSize = MaterialTheme.typography.titleLarge.fontSize
-                )
-                Text(
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                    text = stringResource(id = R.string.auth_subtitle),
-                    fontSize = MaterialTheme.typography.bodyMedium.fontSize
-                )
-            }
-            Column(
-                modifier = Modifier.weight(weight = 2f),
-                verticalArrangement = Arrangement.Bottom
-            ) {
-                GoogleButton(
-                    iconPainter = painterResource(id = com.lifo.ui.R.drawable.google_logo_ic),
-                    loadingState = loadingState,
-                    onClick = onButtonClicked
-                )
-            }
+            Image(
+                modifier = Modifier.size(96.dp),
+                painter = painterResource(id = com.lifo.ui.R.drawable.logo_calmify),
+                contentDescription = "Calmify"
+            )
+            Spacer(modifier = Modifier.height(32.dp))
+            Text(
+                text = stringResource(id = R.string.auth_title),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = stringResource(id = R.string.auth_subtitle),
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        // Sign-in button — small, at bottom
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 40.dp, vertical = 48.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            GoogleButton(
+                iconPainter = painterResource(id = com.lifo.ui.R.drawable.google_logo_ic),
+                loadingState = loadingState,
+                onClick = onButtonClicked
+            )
         }
     }
 }

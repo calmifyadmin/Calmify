@@ -1,54 +1,44 @@
 package com.lifo.profile
 
-import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingFlat
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.koin.compose.viewmodel.koinViewModel
 import com.lifo.util.model.PsychologicalProfile
 import com.lifo.util.model.Trend
 import com.lifo.util.model.getWeekLabelFull
-import kotlin.math.abs
-import kotlin.math.pow
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
-/**
- * ProfileDashboard - Main screen for psychological profile visualization
- *
- * Week 7 - PSYCHOLOGICAL_INSIGHTS_PLAN.md Section 5 (Week 7)
- *
- * Features:
- * - 4-week rolling trend chart (stress & mood baselines)
- * - Resilience index card
- * - Mood trend indicators
- * - Data quality footer
- * - Empty state handling
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileDashboard(
@@ -60,7 +50,7 @@ fun ProfileDashboard(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
-                title = { Text("Il Tuo Profilo Psicologico") }
+                title = { Text("Il Mio Percorso") }
             )
         }
     ) { paddingValues ->
@@ -85,6 +75,10 @@ fun ProfileDashboard(
     }
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// States
+// ══════════════════════════════════════════════════════════════════════
+
 @Composable
 private fun LoadingState() {
     Box(
@@ -96,28 +90,33 @@ private fun LoadingState() {
 }
 
 @Composable
-private fun ErrorState(
-    message: String,
-    onRetry: () -> Unit
-) {
+private fun ErrorState(message: String, onRetry: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            imageVector = Icons.Default.ErrorOutline,
-            contentDescription = null,
-            modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.error
-        )
-        Spacer(modifier = Modifier.height(16.dp))
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.errorContainer,
+            modifier = Modifier.size(80.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Default.ErrorOutline,
+                    contentDescription = null,
+                    modifier = Modifier.size(40.dp),
+                    tint = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(24.dp))
         Text(
-            text = "Errore",
+            text = "Qualcosa e' andato storto",
             style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface
+            fontWeight = FontWeight.SemiBold
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
@@ -127,8 +126,8 @@ private fun ErrorState(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(24.dp))
-        Button(onClick = onRetry) {
-            Icon(Icons.Default.Refresh, contentDescription = null)
+        FilledTonalButton(onClick = onRetry) {
+            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text("Riprova")
         }
@@ -140,31 +139,45 @@ private fun EmptyState() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            imageVector = Icons.Default.Psychology,
-            contentDescription = null,
-            modifier = Modifier.size(80.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
-        Spacer(modifier = Modifier.height(24.dp))
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.primaryContainer,
+            modifier = Modifier.size(96.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Default.Psychology,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(28.dp))
         Text(
-            text = "Non hai ancora abbastanza dati",
-            style = MaterialTheme.typography.titleLarge,
+            text = "Il tuo percorso inizia qui",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "Scrivi almeno 3 diari questa settimana per vedere il tuo profilo psicologico",
-            style = MaterialTheme.typography.bodyMedium,
+            text = "Scrivi almeno 3 diari questa settimana per sbloccare il tuo profilo psicologico",
+            style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            lineHeight = 24.sp
         )
     }
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// Success State
+// ══════════════════════════════════════════════════════════════════════
 
 @Composable
 private fun SuccessState(
@@ -178,577 +191,710 @@ private fun SuccessState(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Material 3 Expressive Weekly Chart Card - Fitbit style
-        WeeklyExpressiveChart(chartData)
+        // 1. Hero Score Card
+        HeroScoreCard(latestProfile)
 
-        // Resilience card
-        ResilienceCard(latestProfile)
+        // 2. Weekly Reflection
+        WeeklyReflectionCard(latestProfile, chartData)
 
-        // Trend indicators
-        TrendIndicatorsRow(latestProfile)
+        // 3. Journey Chart
+        if (chartData.moodLine.size >= 2) {
+            JourneyLineCard(chartData)
+        }
 
-        // Data quality footer
+        // 4. Resilience Gauge
+        ResilienceGaugeCard(latestProfile)
+
+        // 5. Stats Grid
+        StatsGrid(latestProfile)
+
+        // 6. Data quality
         DataQualityFooter(latestProfile)
+
+        Spacer(Modifier.height(80.dp))
     }
 }
 
-/**
- * Weekly Expressive Chart - Material 3 Expressive Design
- * Ispirato al design Fitbit con pillole verticali arrotondate
- * Adattato per dati psicologici settimanali (stress & mood)
- */
+// ══════════════════════════════════════════════════════════════════════
+// Hero Score Card
+// ══════════════════════════════════════════════════════════════════════
+
 @Composable
-private fun WeeklyExpressiveChart(chartData: ChartData) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(
-                elevation = 2.dp,
-                shape = RoundedCornerShape(24.dp),
-                spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-            ),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        shape = RoundedCornerShape(24.dp)
+private fun HeroScoreCard(profile: PsychologicalProfile) {
+    val colorScheme = MaterialTheme.colorScheme
+    val moodColor = getMoodColor(profile.moodBaseline)
+    val trend = profile.getMoodTrendEnum()
+
+    val animatedMood = remember { Animatable(0f) }
+    LaunchedEffect(profile.moodBaseline) {
+        animatedMood.animateTo(
+            profile.moodBaseline,
+            tween(1200, easing = FastOutSlowInEasing)
+        )
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        color = colorScheme.surfaceContainerLow
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            moodColor.copy(alpha = 0.08f),
+                            Color.Transparent
+                        )
+                    )
+                )
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Umore medio",
+                style = MaterialTheme.typography.labelLarge,
+                color = colorScheme.onSurfaceVariant
+            )
+
+            // Big animated score
+            Row(
+                verticalAlignment = Alignment.Bottom
+            ) {
+                Text(
+                    text = String.format("%.1f", animatedMood.value),
+                    style = MaterialTheme.typography.displayLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 64.sp,
+                        letterSpacing = (-2).sp
+                    ),
+                    color = moodColor
+                )
+                Text(
+                    text = "/10",
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Light
+                    ),
+                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.padding(bottom = 10.dp)
+                )
+            }
+
+            // Mood label + trend
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val moodLabel = when {
+                    profile.moodBaseline >= 8f -> "Eccellente"
+                    profile.moodBaseline >= 6.5f -> "Buono"
+                    profile.moodBaseline >= 5f -> "Nella media"
+                    profile.moodBaseline >= 3f -> "Sotto la media"
+                    else -> "Difficile"
+                }
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = moodColor.copy(alpha = 0.15f)
+                ) {
+                    Text(
+                        text = moodLabel,
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.SemiBold
+                        ),
+                        color = moodColor,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                    )
+                }
+
+                val trendIcon = when (trend) {
+                    Trend.IMPROVING -> Icons.AutoMirrored.Filled.TrendingUp
+                    Trend.DECLINING -> Icons.AutoMirrored.Filled.TrendingDown
+                    else -> Icons.AutoMirrored.Filled.TrendingFlat
+                }
+                val trendColor = when (trend) {
+                    Trend.IMPROVING -> Color(0xFF4CAF50)
+                    Trend.DECLINING -> Color(0xFFEF5350)
+                    else -> colorScheme.onSurfaceVariant
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = trendColor.copy(alpha = 0.12f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = trendIcon,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = trendColor
+                        )
+                        Text(
+                            text = trend.displayName,
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.SemiBold
+                            ),
+                            color = trendColor
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
+
+            // Mood gradient bar
+            MoodGradientBar(
+                score = profile.moodBaseline,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+}
+
+@Composable
+private fun MoodGradientBar(score: Float, modifier: Modifier = Modifier) {
+    val animFraction = remember { Animatable(0f) }
+    LaunchedEffect(score) {
+        animFraction.animateTo(
+            (score / 10f).coerceIn(0f, 1f),
+            tween(1400, easing = FastOutSlowInEasing)
+        )
+    }
+
+    val colorScheme = MaterialTheme.colorScheme
+    val density = LocalDensity.current
+    val gradientColors = listOf(
+        Color(0xFFEF5350), Color(0xFFFF7043), Color(0xFFFFCA28),
+        Color(0xFF66BB6A), Color(0xFF4CAF50)
+    )
+
+    Box(modifier = modifier.height(16.dp)) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val r = CornerRadius(size.height / 2f)
+            drawRoundRect(
+                color = colorScheme.surfaceContainerHighest.copy(alpha = 0.5f),
+                cornerRadius = r
+            )
+            val fw = size.width * animFraction.value
+            if (fw > 0f) {
+                drawRoundRect(
+                    brush = Brush.horizontalGradient(gradientColors),
+                    cornerRadius = r,
+                    size = Size(fw, size.height)
+                )
+            }
+
+            // Indicator
+            val indicatorR = with(density) { 5.dp.toPx() }
+            val cx = (size.width - indicatorR * 2) * animFraction.value + indicatorR
+            drawCircle(Color.White, indicatorR + with(density) { 1.dp.toPx() }, Offset(cx, size.height / 2f))
+            drawCircle(
+                interpolateGradient(gradientColors, animFraction.value),
+                indicatorR,
+                Offset(cx, size.height / 2f)
+            )
+        }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Weekly Reflection Card
+// ══════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun WeeklyReflectionCard(profile: PsychologicalProfile, chartData: ChartData) {
+    val reflection = remember(profile) { buildWeeklyReflection(profile, chartData) }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Header: Title & Navigation
-            WeeklyChartHeader(chartData)
-
-            // Main Stats
-            WeeklyMainStats(chartData)
-
-            // The Chart with Vertical Rounded Pills
-            if (chartData.weekLabels.isNotEmpty() &&
-                chartData.stressLine.isNotEmpty() &&
-                chartData.moodLine.isNotEmpty()
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                VerticalPillsWeeklyChart(
-                    chartData = chartData,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(220.dp)
-                        .padding(vertical = 12.dp)
-                )
-            } else {
-                Text(
-                    text = "Dati insufficienti per il grafico",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 32.dp),
-                    textAlign = TextAlign.Center
-                )
-            }
-
-            // Secondary Stats Row
-            if (chartData.stressLine.isNotEmpty() && chartData.moodLine.isNotEmpty()) {
-                WeeklySecondaryStats(chartData)
-            }
-        }
-    }
-}
-
-/**
- * Header con titolo e navigazione settimana
- */
-@Composable
-private fun WeeklyChartHeader(chartData: ChartData) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = "Questa settimana",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(
-                onClick = { /* TODO: Previous week */ },
-                modifier = Modifier.size(32.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ChevronLeft,
-                    contentDescription = "Settimana precedente",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            IconButton(
-                onClick = { /* TODO: Calendar picker */ },
-                modifier = Modifier.size(32.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.CalendarToday,
-                    contentDescription = "Seleziona data",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            IconButton(
-                onClick = { /* TODO: Next week */ },
-                modifier = Modifier.size(32.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    contentDescription = "Prossima settimana",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-}
-
-/**
- * Statistiche principali in evidenza
- */
-@Composable
-private fun WeeklyMainStats(chartData: ChartData) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        // Calcola media settimanale combinata (mood - stress per benessere generale)
-        val weeklyAverage = if (chartData.moodLine.isNotEmpty() && chartData.stressLine.isNotEmpty()) {
-            val moodAvg = chartData.moodLine.average()
-            val stressAvg = chartData.stressLine.average()
-            // Benessere = mood alto + stress basso (normalizzato 0-10)
-            ((moodAvg + (10 - stressAvg)) / 2).toFloat()
-        } else 0f
-
-        Row(
-            verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = String.format("%.1f", weeklyAverage),
-                style = MaterialTheme.typography.displayLarge.copy(
-                    fontSize = 56.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = (-1.5).sp
-                ),
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = "benessere/giorno (avg)",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-        }
-
-        // Sotto-statistica
-        val totalDays = chartData.weekLabels.size
-        val totalScore = weeklyAverage * totalDays
-        Text(
-            text = "Hai totalizzato un punteggio di ${String.format("%.0f", totalScore)} su $totalDays giorni",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-/**
- * Statistiche secondarie in riga
- */
-@Composable
-private fun WeeklySecondaryStats(chartData: ChartData) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
-        // Peak indicators
-        val stressPeaks = chartData.peaks.size
-
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            Text(
-                text = "15k",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = "Obiettivo",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-/**
- * Vertical Pills Weekly Chart - Il grafico principale con pillole verticali
- * Ispirato al design Fitbit nell'immagine
- */
-@Composable
-private fun VerticalPillsWeeklyChart(
-    chartData: ChartData,
-    modifier: Modifier = Modifier
-) {
-    var selectedDayIndex by remember { mutableStateOf<Int?>(null) }
-
-    // Animazione per l'apparizione delle pillole
-    val animationProgress = remember { Animatable(0f) }
-
-    LaunchedEffect(chartData) {
-        animationProgress.snapTo(0f)
-        animationProgress.animateTo(
-            targetValue = 1f,
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessLow
-            )
-        )
-    }
-
-    // Colori Material 3 Expressive
-    val primaryPillColor = Color(0xFF6750A4) // Purple primary
-    val secondaryPillColor = Color(0xFF7BCFFF) // Light blue/cyan
-    val backgroundColor = MaterialTheme.colorScheme.surfaceContainerLow
-    val gridLineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-
-    Box(modifier = modifier) {
-        Canvas(
-            modifier = Modifier
-                .fillMaxSize()
-                .pointerInput(Unit) {
-                    detectTapGestures { offset ->
-                        val pillWidth = 32.dp.toPx()
-                        val spacing = (size.width - 40.dp.toPx()) / chartData.weekLabels.size
-                        val index = ((offset.x - 20.dp.toPx()) / spacing).toInt()
-                            .coerceIn(0, chartData.weekLabels.size - 1)
-                        selectedDayIndex = if (selectedDayIndex == index) null else index
-                    }
-                }
-        ) {
-            val canvasWidth = size.width
-            val canvasHeight = size.height
-            val horizontalPadding = 20.dp.toPx()
-            val bottomPadding = 40.dp.toPx()
-            val topPadding = 20.dp.toPx()
-
-            val chartHeight = canvasHeight - topPadding - bottomPadding
-            val dataPoints = chartData.weekLabels.size
-
-            if (dataPoints == 0) return@Canvas
-
-            val spacing = (canvasWidth - horizontalPadding * 2) / dataPoints
-            val pillWidth = 32.dp.toPx().coerceAtMost(spacing * 0.7f)
-
-            // Valori max per normalizzazione (scala 0-10)
-            val maxValue = 10f
-
-            // Disegna linee griglia orizzontali (5 linee per 0, 2.5, 5, 7.5, 10)
-            for (i in 0..4) {
-                val y = topPadding + (chartHeight / 4) * i
-                drawLine(
-                    color = gridLineColor,
-                    start = Offset(horizontalPadding, y),
-                    end = Offset(canvasWidth - horizontalPadding, y),
-                    strokeWidth = 1.dp.toPx(),
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(8.dp.toPx(), 8.dp.toPx()))
-                )
-            }
-
-            // Disegna le pillole per ogni giorno
-            chartData.weekLabels.forEachIndexed { index, _ ->
-                val centerX = horizontalPadding + spacing * index + spacing / 2
-
-                // Valori normalizzati 0-10
-                val stressValue = chartData.stressLine.getOrNull(index) ?: 0f
-                val moodValue = chartData.moodLine.getOrNull(index) ?: 0f
-
-                // Altezze animate
-                val animatedStress = stressValue * animationProgress.value
-                val animatedMood = moodValue * animationProgress.value
-
-                // Converti valori in altezze pixel
-                val stressHeight = (animatedStress / maxValue) * chartHeight
-                val moodHeight = (animatedMood / maxValue) * chartHeight
-
-                // Posizione Y baseline (bottom)
-                val baselineY = canvasHeight - bottomPadding
-
-                // Pillola PRIMARY (Mood - viola)
-                val moodPillTop = baselineY - moodHeight
-                val moodPillLeft = centerX - pillWidth - 2.dp.toPx()
-
-                drawRoundRect(
-                    color = primaryPillColor,
-                    topLeft = Offset(moodPillLeft, moodPillTop),
-                    size = Size(pillWidth, moodHeight),
-                    cornerRadius = CornerRadius(pillWidth / 2, pillWidth / 2),
-                    alpha = if (selectedDayIndex == index) 1f else 0.85f
-                )
-
-                // Pillola SECONDARY (Stress - cyan, invertito per visualizzazione)
-                // Stress alto = pillola più bassa (dato che stress alto è negativo)
-                val adjustedStressValue = (maxValue - stressValue) // Inverte la scala
-                val adjustedStressHeight = (adjustedStressValue / maxValue) * chartHeight
-                val stressPillTop = baselineY - adjustedStressHeight
-                val stressPillLeft = centerX + 2.dp.toPx()
-
-                drawRoundRect(
-                    color = secondaryPillColor,
-                    topLeft = Offset(stressPillLeft, stressPillTop),
-                    size = Size(pillWidth, adjustedStressHeight),
-                    cornerRadius = CornerRadius(pillWidth / 2, pillWidth / 2),
-                    alpha = if (selectedDayIndex == index) 1f else 0.85f
-                )
-
-                // Checkmark indicator per giorni con achievement (esempio: mood > 7)
-                if (moodValue > 7f) {
-                    val checkmarkSize = 16.dp.toPx()
-                    val checkmarkCenterX = centerX
-                    val checkmarkCenterY = moodPillTop - checkmarkSize
-
-                    // Cerchio verde con checkmark
-                    drawCircle(
-                        color = Color(0xFF4CAF50),
-                        radius = checkmarkSize / 2,
-                        center = Offset(checkmarkCenterX, checkmarkCenterY)
-                    )
-
-                    // Checkmark symbol (semplificato)
-                    val checkStroke = 2.dp.toPx()
-                    drawLine(
-                        color = Color.White,
-                        start = Offset(checkmarkCenterX - 4.dp.toPx(), checkmarkCenterY),
-                        end = Offset(checkmarkCenterX - 1.dp.toPx(), checkmarkCenterY + 3.dp.toPx()),
-                        strokeWidth = checkStroke,
-                        cap = StrokeCap.Round
-                    )
-                    drawLine(
-                        color = Color.White,
-                        start = Offset(checkmarkCenterX - 1.dp.toPx(), checkmarkCenterY + 3.dp.toPx()),
-                        end = Offset(checkmarkCenterX + 5.dp.toPx(), checkmarkCenterY - 3.dp.toPx()),
-                        strokeWidth = checkStroke,
-                        cap = StrokeCap.Round
-                    )
-                }
-            }
-        }
-
-        // Labels dei giorni in basso
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .padding(horizontal = 20.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            chartData.weekLabels.forEachIndexed { index, label ->
-                // Estrai solo la lettera del giorno (M, T, W, T, F, S, S)
-                val dayLetter = when {
-                    label.contains("Mon", ignoreCase = true) || label.startsWith("L") -> "M"
-                    label.contains("Tue", ignoreCase = true) || label.startsWith("M") -> "T"
-                    label.contains("Wed", ignoreCase = true) || label.contains("Mer") -> "W"
-                    label.contains("Thu", ignoreCase = true) || label.startsWith("G") -> "T"
-                    label.contains("Fri", ignoreCase = true) || label.startsWith("V") -> "F"
-                    label.contains("Sat", ignoreCase = true) || label.startsWith("S") -> "S"
-                    label.contains("Sun", ignoreCase = true) || label.startsWith("D") -> "S"
-                    else -> label.take(1)
-                }
-
-                Text(
-                    text = dayLetter,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = if (selectedDayIndex == index) FontWeight.Bold else FontWeight.Normal,
-                    color = if (selectedDayIndex == index) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                    modifier = Modifier.weight(1f),
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-
-        // Tooltip per giorno selezionato
-        selectedDayIndex?.let { index ->
-            if (index in chartData.weekLabels.indices) {
                 Surface(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 8.dp),
-                    color = MaterialTheme.colorScheme.inverseSurface,
-                    shape = RoundedCornerShape(12.dp),
-                    tonalElevation = 8.dp
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
+                    modifier = Modifier.size(32.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = chartData.weekLabels[index],
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.inverseOnSurface
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.secondary
                         )
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(10.dp)
-                                        .clip(CircleShape)
-                                        .background(primaryPillColor)
-                                )
-                                Text(
-                                    text = "Umore: ${String.format("%.1f", chartData.moodLine[index])}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.inverseOnSurface
-                                )
-                            }
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(10.dp)
-                                        .clip(CircleShape)
-                                        .background(secondaryPillColor)
-                                )
-                                Text(
-                                    text = "Stress: ${String.format("%.1f", chartData.stressLine[index])}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.inverseOnSurface
-                                )
-                            }
-                        }
                     }
                 }
+                Text(
+                    text = "La tua settimana",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
             }
+
+            Text(
+                text = reflection,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                lineHeight = 24.sp
+            )
         }
     }
 }
 
-@Composable
-private fun LegendItem(color: Color, label: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .size(12.dp)
-                .clip(CircleShape)
-                .background(color)
-        )
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+private fun buildWeeklyReflection(profile: PsychologicalProfile, chartData: ChartData): String {
+    val mood = profile.moodBaseline
+    val stress = profile.stressBaseline
+    val trend = profile.getMoodTrendEnum()
+    val resilience = profile.resilienceIndex
+    val diaryCount = profile.diaryCount
+
+    val sb = StringBuilder()
+
+    when {
+        mood >= 7f -> sb.append("Questa settimana hai mostrato un umore positivo e stabile. ")
+        mood >= 5f -> sb.append("Una settimana equilibrata, con alti e bassi. ")
+        else -> sb.append("Non e' stata una settimana facile — e va bene cosi'. ")
     }
+
+    when {
+        stress >= 7f -> sb.append("Lo stress e' stato alto. Prenditi cura di te. ")
+        stress >= 4f -> sb.append("Lo stress c'e' stato ma l'hai gestito. ")
+        else -> sb.append("I livelli di stress sono rimasti bassi — ottimo segnale. ")
+    }
+
+    when (trend) {
+        Trend.IMPROVING -> sb.append("Il trend e' in miglioramento rispetto alle settimane precedenti.")
+        Trend.DECLINING -> sb.append("Il trend mostra un calo — niente panico, e' informazione utile.")
+        Trend.STABLE -> sb.append("Il tuo percorso e' costante, e la costanza ha valore.")
+        Trend.INSUFFICIENT_DATA -> sb.append("Scrivi di piu' per avere un quadro completo.")
+    }
+
+    if (resilience >= 0.7f) {
+        sb.append(" La tua resilienza e' solida — ti riprendi bene dopo le difficolta'.")
+    }
+
+    if (diaryCount >= 5) {
+        sb.append(" $diaryCount diari questa settimana: stai costruendo un'abitudine importante.")
+    }
+
+    return sb.toString()
 }
 
-/**
- * Resilience Card
- * Shows resilience index and recovery speed
- */
+// ══════════════════════════════════════════════════════════════════════
+// Journey Line Card
+// ══════════════════════════════════════════════════════════════════════
+
 @Composable
-private fun ResilienceCard(profile: PsychologicalProfile) {
-    Card(
+private fun JourneyLineCard(chartData: ChartData) {
+    val animProgress = remember { Animatable(0f) }
+    LaunchedEffect(chartData) {
+        animProgress.snapTo(0f)
+        animProgress.animateTo(1f, tween(900, easing = FastOutSlowInEasing))
+    }
+
+    val lineColor = MaterialTheme.colorScheme.primary
+    val fillColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+    val gridColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        )
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Resilienza",
+                    text = "Il tuo percorso",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    fontWeight = FontWeight.SemiBold
                 )
-                IconButton(onClick = { /* TODO: Show info tooltip */ }) {
-                    Icon(
-                        Icons.Default.Info,
-                        contentDescription = "Info",
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
+                val latest = chartData.moodLine.lastOrNull()
+                if (latest != null) {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Text(
+                            text = String.format("%.1f", latest),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Resilience progress
-            LinearProgressIndicator(
-                progress = { profile.resilienceIndex },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(MaterialTheme.shapes.small),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = "${(profile.resilienceIndex * 100).toInt()}%",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-                if (profile.recoverySpeed > 0) {
-                    Text(
-                        text = "Recupero in ${profile.recoverySpeed.toInt()} giorni",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
+                Column(
+                    modifier = Modifier.height(140.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    listOf("10", "5", "0").forEach { label ->
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = labelColor,
+                            fontSize = 10.sp
+                        )
+                    }
+                }
+
+                val progress = animProgress.value
+                Canvas(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(140.dp)
+                ) {
+                    val points = chartData.moodLine
+                    if (points.size < 2) return@Canvas
+
+                    val w = size.width
+                    val h = size.height
+                    val pad = 8f
+                    val drawH = h - pad * 2
+                    val drawW = w - pad * 2
+                    val spacing = drawW / (points.size - 1)
+
+                    fun toY(v: Float) = pad + drawH * (1 - (v / 10f).coerceIn(0f, 1f))
+                    fun toX(i: Int) = pad + spacing * i
+
+                    // Grid
+                    for (gv in listOf(0f, 2.5f, 5f, 7.5f, 10f)) {
+                        val y = toY(gv)
+                        drawLine(
+                            gridColor, Offset(0f, y), Offset(w, y), 1f,
+                            pathEffect = if (gv == 5f) null else PathEffect.dashPathEffect(floatArrayOf(4f, 4f))
+                        )
+                    }
+
+                    val vc = (points.size * progress).toInt().coerceAtLeast(2)
+
+                    // Fill
+                    val fillPath = Path().apply {
+                        moveTo(toX(0), toY(points[0]))
+                        for (i in 1 until vc) lineTo(toX(i), toY(points[i]))
+                        lineTo(toX(vc - 1), h)
+                        lineTo(toX(0), h)
+                        close()
+                    }
+                    drawPath(fillPath, Brush.verticalGradient(listOf(fillColor, Color.Transparent)))
+
+                    // Line
+                    val linePath = Path().apply {
+                        moveTo(toX(0), toY(points[0]))
+                        for (i in 1 until vc) lineTo(toX(i), toY(points[i]))
+                    }
+                    drawPath(linePath, lineColor, style = Stroke(5f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+
+                    // Dots
+                    for (i in 0 until vc) {
+                        val cx = toX(i)
+                        val cy = toY(points[i])
+                        val isLast = i == vc - 1
+                        drawCircle(Color.White, if (isLast) 10f else 7f, Offset(cx, cy))
+                        drawCircle(lineColor, if (isLast) 7f else 5f, Offset(cx, cy))
+                    }
+                }
+            }
+
+            // Week labels
+            if (chartData.weekLabels.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(start = 28.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    chartData.weekLabels.forEach {
+                        Text(it, style = MaterialTheme.typography.labelSmall, color = labelColor)
+                    }
                 }
             }
         }
     }
 }
 
-/**
- * Trend Indicators Row
- * Shows mood trend with icon and color coding
- */
-@Composable
-private fun TrendIndicatorsRow(profile: PsychologicalProfile) {
-    val trend = profile.getMoodTrendEnum()
+// ══════════════════════════════════════════════════════════════════════
+// Resilience Gauge Card
+// ══════════════════════════════════════════════════════════════════════
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = when (trend) {
-                Trend.IMPROVING -> MaterialTheme.colorScheme.primaryContainer
-                Trend.DECLINING -> MaterialTheme.colorScheme.errorContainer
-                else -> MaterialTheme.colorScheme.surfaceVariant
-            }
+@Composable
+private fun ResilienceGaugeCard(profile: PsychologicalProfile) {
+    val colorScheme = MaterialTheme.colorScheme
+    val resiliencePercent = (profile.resilienceIndex * 100).toInt()
+
+    val animSweep = remember { Animatable(0f) }
+    LaunchedEffect(profile.resilienceIndex) {
+        animSweep.animateTo(
+            profile.resilienceIndex,
+            tween(1200, easing = FastOutSlowInEasing)
         )
+    }
+
+    val arcColor = when {
+        profile.resilienceIndex >= 0.7f -> Color(0xFF4CAF50)
+        profile.resilienceIndex >= 0.4f -> Color(0xFFFFCA28)
+        else -> Color(0xFFEF5350)
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = colorScheme.surfaceContainerLow
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Resilienza",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(4.dp))
+
+            // Semi-circle gauge
+            val density = LocalDensity.current
+            Box(
+                modifier = Modifier
+                    .size(160.dp, 90.dp),
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val strokeW = with(density) { 12.dp.toPx() }
+                    val arcSize = Size(size.width - strokeW, (size.height - strokeW / 2) * 2)
+                    val topLeft = Offset(strokeW / 2, strokeW / 2)
+
+                    // Track
+                    drawArc(
+                        color = colorScheme.surfaceContainerHighest,
+                        startAngle = 180f,
+                        sweepAngle = 180f,
+                        useCenter = false,
+                        topLeft = topLeft,
+                        size = arcSize,
+                        style = Stroke(strokeW, cap = StrokeCap.Round)
+                    )
+                    // Fill
+                    drawArc(
+                        color = arcColor,
+                        startAngle = 180f,
+                        sweepAngle = 180f * animSweep.value,
+                        useCenter = false,
+                        topLeft = topLeft,
+                        size = arcSize,
+                        style = Stroke(strokeW, cap = StrokeCap.Round)
+                    )
+                }
+
+                Text(
+                    text = "$resiliencePercent%",
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = arcColor,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+            }
+
+            val resLabel = when {
+                profile.resilienceIndex >= 0.7f -> "Ti riprendi bene dopo le difficolta'"
+                profile.resilienceIndex >= 0.4f -> "Hai margine di miglioramento"
+                else -> "Lavora sulla gestione dello stress"
+            }
+            Text(
+                text = resLabel,
+                style = MaterialTheme.typography.bodyMedium,
+                color = colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+
+            if (profile.recoverySpeed > 0) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = colorScheme.surfaceContainerHigh
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Timer,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "Recupero medio: ${profile.recoverySpeed.toInt()} giorni",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Stats Grid
+// ══════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun StatsGrid(profile: PsychologicalProfile) {
+    val colorScheme = MaterialTheme.colorScheme
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Stress card
+        StatCard(
+            modifier = Modifier.weight(1f),
+            label = "Stress",
+            value = String.format("%.1f", profile.stressBaseline),
+            subtitle = when {
+                profile.stressBaseline >= 7f -> "Alto"
+                profile.stressBaseline >= 4f -> "Medio"
+                else -> "Basso"
+            },
+            color = when {
+                profile.stressBaseline >= 7f -> Color(0xFFEF5350)
+                profile.stressBaseline >= 4f -> Color(0xFFFFCA28)
+                else -> Color(0xFF4CAF50)
+            },
+            icon = Icons.Default.Whatshot
+        )
+
+        // Volatility card
+        StatCard(
+            modifier = Modifier.weight(1f),
+            label = "Variabilita'",
+            value = if (profile.moodVolatility > 0) String.format("%.1f", profile.moodVolatility) else "—",
+            subtitle = when {
+                profile.moodVolatility >= 3f -> "Alta"
+                profile.moodVolatility >= 1.5f -> "Media"
+                profile.moodVolatility > 0f -> "Bassa"
+                else -> ""
+            },
+            color = colorScheme.tertiary,
+            icon = Icons.Default.ShowChart
+        )
+
+        // Diary count
+        StatCard(
+            modifier = Modifier.weight(1f),
+            label = "Diari",
+            value = "${profile.diaryCount}",
+            subtitle = "questa settimana",
+            color = colorScheme.primary,
+            icon = Icons.Default.EditNote
+        )
+    }
+}
+
+@Composable
+private fun StatCard(
+    modifier: Modifier = Modifier,
+    label: String,
+    value: String,
+    subtitle: String,
+    color: Color,
+    icon: androidx.compose.ui.graphics.vector.ImageVector
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = color.copy(alpha = 0.12f),
+                modifier = Modifier.size(32.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = color
+                    )
+                }
+            }
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.headlineSmall.copy(
+                    fontWeight = FontWeight.Bold
+                ),
+                color = color
+            )
+            if (subtitle.isNotBlank()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Data Quality Footer
+// ══════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun DataQualityFooter(profile: PsychologicalProfile) {
+    val colorScheme = MaterialTheme.colorScheme
+    val confColor = when {
+        profile.confidence >= 0.7f -> Color(0xFF4CAF50)
+        profile.confidence >= 0.4f -> colorScheme.onSurfaceVariant
+        else -> colorScheme.error
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = colorScheme.surfaceContainerLow
     ) {
         Row(
             modifier = Modifier
@@ -757,510 +903,66 @@ private fun TrendIndicatorsRow(profile: PsychologicalProfile) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Text(
-                    text = "Andamento Umore",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = trend.emoji,
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = trend.displayName,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-
-            // Volatility indicator (optional)
-            if (profile.moodVolatility > 0) {
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "Variabilità",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = String.format("%.1f", profile.moodVolatility),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
-    }
-}
-
-/**
- * Data Quality Footer
- * Shows data sources and confidence level
- */
-@Composable
-private fun DataQualityFooter(profile: PsychologicalProfile) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        border = CardDefaults.outlinedCardBorder()
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = profile.getWeekLabelFull(),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
-            )
-
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Basato su ${profile.diaryCount} diari",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                Icon(
+                    Icons.Default.CalendarMonth,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "Affidabilità: ${(profile.confidence * 100).toInt()}%",
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = if (profile.confidence >= 0.7f) FontWeight.Bold else FontWeight.Normal,
-                    color = when {
-                        profile.confidence >= 0.7f -> MaterialTheme.colorScheme.primary
-                        profile.confidence >= 0.4f -> MaterialTheme.colorScheme.onSurfaceVariant
-                        else -> MaterialTheme.colorScheme.error
-                    }
+                    text = profile.getWeekLabelFull(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = colorScheme.onSurfaceVariant
                 )
             }
-        }
-    }
-}
-
-/**
- * Material 3 Expressive Line Chart
- * Custom Canvas-based chart with smooth curves, gradients, and animations
- */
-@Composable
-private fun ExpressiveLineChart(
-    chartData: ChartData,
-    modifier: Modifier = Modifier
-) {
-    // Animation state for chart appearance
-    val animationProgress = remember { Animatable(0f) }
-
-    LaunchedEffect(chartData) {
-        animationProgress.animateTo(
-            targetValue = 1f,
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessLow
-            )
-        )
-    }
-
-    var selectedIndex by remember { mutableStateOf<Int?>(null) }
-
-    val stressColor = MaterialTheme.colorScheme.error
-    val moodColor = MaterialTheme.colorScheme.primary
-    val gridColor = MaterialTheme.colorScheme.outlineVariant
-    val textColor = MaterialTheme.colorScheme.onSurfaceVariant
-
-    Box(modifier = modifier) {
-        Canvas(
-            modifier = Modifier
-                .fillMaxSize()
-                .pointerInput(Unit) {
-                    detectTapGestures { offset ->
-                        val chartWidth = size.width
-                        val padding = 40f
-                        val dataPoints = chartData.weekLabels.size
-
-                        if (dataPoints > 1) {
-                            val pointSpacing = (chartWidth - padding * 2) / (dataPoints - 1)
-                            val index = ((offset.x - padding) / pointSpacing)
-                                .toInt()
-                                .coerceIn(0, dataPoints - 1)
-                            selectedIndex = if (selectedIndex == index) null else index
-                        }
-                    }
-                }
-        ) {
-            val chartWidth = size.width
-            val chartHeight = size.height
-            val padding = 40f
-            val topPadding = 20f
-            val bottomPadding = 30f
-
-            val dataPoints = chartData.stressLine.size
-            if (dataPoints < 1) return@Canvas
-
-            val drawWidth = chartWidth - padding * 2
-            val drawHeight = chartHeight - topPadding - bottomPadding
-            val pointSpacing = if (dataPoints > 1) {
-                drawWidth / (dataPoints - 1)
-            } else {
-                0f // Single point will be centered
-            }
-
-            // Normalize data to 0-10 scale
-            val maxValue = 10f
-            val minValue = 0f
-
-            // Draw horizontal grid lines
-            for (i in 0..5) {
-                val y = topPadding + (drawHeight / 5) * i
-                drawLine(
-                    color = gridColor.copy(alpha = 0.3f),
-                    start = Offset(padding, y),
-                    end = Offset(chartWidth - padding, y),
-                    strokeWidth = 1f,
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f))
-                )
-            }
-
-            // Helper function to convert data point to Y coordinate
-            fun valueToY(value: Float): Float {
-                val normalizedValue = (value - minValue) / (maxValue - minValue)
-                return topPadding + drawHeight * (1 - normalizedValue)
-            }
-
-            // Helper function to get X coordinate for a point
-            fun getPointX(index: Int): Float {
-                return if (dataPoints == 1) {
-                    chartWidth / 2 // Center single point
-                } else {
-                    padding + pointSpacing * index
-                }
-            }
-
-            // Helper function to create smooth Bezier curve path
-            fun createSmoothPath(dataLine: List<Float>): Path {
-                val path = Path()
-                val points = dataLine.mapIndexed { index, value ->
-                    Offset(
-                        x = getPointX(index),
-                        y = valueToY(value)
-                    )
-                }
-
-                if (points.isEmpty()) return path
-                if (points.size == 1) {
-                    // For single point, just move to it (no line to draw)
-                    path.moveTo(points[0].x, points[0].y)
-                    return path
-                }
-
-                path.moveTo(points[0].x, points[0].y)
-
-                for (i in 0 until points.size - 1) {
-                    val current = points[i]
-                    val next = points[i + 1]
-
-                    // Cubic Bezier control points for smooth curve
-                    val controlPoint1 = Offset(
-                        x = current.x + (next.x - current.x) / 3,
-                        y = current.y
-                    )
-                    val controlPoint2 = Offset(
-                        x = current.x + 2 * (next.x - current.x) / 3,
-                        y = next.y
-                    )
-
-                    path.cubicTo(
-                        controlPoint1.x, controlPoint1.y,
-                        controlPoint2.x, controlPoint2.y,
-                        next.x, next.y
-                    )
-                }
-
-                return path
-            }
-
-            // Animate data
-            val animatedStress = chartData.stressLine.map { it * animationProgress.value }
-            val animatedMood = chartData.moodLine.map { it * animationProgress.value }
-
-            // Only draw lines and gradients if we have multiple points
-            if (dataPoints > 1) {
-                // Draw stress line with gradient fill
-                val stressPath = createSmoothPath(animatedStress)
-                val stressGradientPath = Path().apply {
-                    addPath(stressPath)
-                    lineTo(chartWidth - padding, chartHeight - bottomPadding)
-                    lineTo(padding, chartHeight - bottomPadding)
-                    close()
-                }
-
-                drawPath(
-                    path = stressGradientPath,
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            stressColor.copy(alpha = 0.3f),
-                            stressColor.copy(alpha = 0.05f)
-                        ),
-                        startY = topPadding,
-                        endY = chartHeight - bottomPadding
-                    )
-                )
-
-                drawPath(
-                    path = stressPath,
-                    color = stressColor,
-                    style = Stroke(
-                        width = 4f,
-                        cap = StrokeCap.Round,
-                        join = StrokeJoin.Round
-                    )
-                )
-
-                // Draw mood line with gradient fill
-                val moodPath = createSmoothPath(animatedMood)
-                val moodGradientPath = Path().apply {
-                    addPath(moodPath)
-                    lineTo(chartWidth - padding, chartHeight - bottomPadding)
-                    lineTo(padding, chartHeight - bottomPadding)
-                    close()
-                }
-
-                drawPath(
-                    path = moodGradientPath,
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            moodColor.copy(alpha = 0.3f),
-                            moodColor.copy(alpha = 0.05f)
-                        ),
-                        startY = topPadding,
-                        endY = chartHeight - bottomPadding
-                    )
-                )
-
-                drawPath(
-                    path = moodPath,
-                    color = moodColor,
-                    style = Stroke(
-                        width = 4f,
-                        cap = StrokeCap.Round,
-                        join = StrokeJoin.Round
-                    )
-                )
-            }
-
-            // Draw data points
-            animatedStress.forEachIndexed { index, value ->
-                val x = getPointX(index)
-                val y = valueToY(value)
-
-                // Outer circle (glow effect)
-                drawCircle(
-                    color = stressColor.copy(alpha = 0.3f),
-                    radius = if (selectedIndex == index) 16f else if (dataPoints == 1) 14f else 8f,
-                    center = Offset(x, y)
-                )
-                // Inner circle
-                drawCircle(
-                    color = stressColor,
-                    radius = if (selectedIndex == index) 10f else if (dataPoints == 1) 8f else 5f,
-                    center = Offset(x, y)
-                )
-            }
-
-            animatedMood.forEachIndexed { index, value ->
-                val x = getPointX(index)
-                val y = valueToY(value)
-
-                // Outer circle (glow effect)
-                drawCircle(
-                    color = moodColor.copy(alpha = 0.3f),
-                    radius = if (selectedIndex == index) 16f else if (dataPoints == 1) 14f else 8f,
-                    center = Offset(x, y)
-                )
-                // Inner circle
-                drawCircle(
-                    color = moodColor,
-                    radius = if (selectedIndex == index) 10f else if (dataPoints == 1) 8f else 5f,
-                    center = Offset(x, y)
-                )
-            }
-
-            // Draw peak markers
-            chartData.peaks.forEach { peak ->
-                if (peak.weekIndex in 0 until dataPoints) {
-                    val x = getPointX(peak.weekIndex)
-                    val y = topPadding - 5f
-
-                    // Warning triangle marker
-                    drawCircle(
-                        color = stressColor.copy(alpha = 0.6f),
-                        radius = 6f,
-                        center = Offset(x, y)
-                    )
-                }
-            }
-        }
-
-        // Selected point tooltip
-        selectedIndex?.let { index ->
-            if (index in chartData.weekLabels.indices) {
-                Surface(
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
                     modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 8.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = MaterialTheme.shapes.small,
-                    tonalElevation = 4.dp
-                ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = chartData.weekLabels[index],
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .clip(CircleShape)
-                                        .background(stressColor)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = String.format("%.1f", chartData.stressLine[index]),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = stressColor
-                                )
-                            }
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .clip(CircleShape)
-                                        .background(moodColor)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = String.format("%.1f", chartData.moodLine[index]),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = moodColor
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Week labels at bottom
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .padding(horizontal = 40.dp),
-            horizontalArrangement = if (chartData.weekLabels.size == 1) {
-                Arrangement.Center
-            } else {
-                Arrangement.SpaceBetween
-            }
-        ) {
-            chartData.weekLabels.forEachIndexed { index, label ->
-                Text(
-                    text = if (chartData.weekLabels.size > 3 && index % 2 != 0 && selectedIndex != index) {
-                        "" // Hide alternate labels if too many
-                    } else {
-                        label.take(3) // Show first 3 chars (e.g., "W1-")
-                    },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (selectedIndex == index) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                    fontWeight = if (selectedIndex == index) FontWeight.Bold else FontWeight.Normal
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(confColor)
                 )
-            }
-        }
-
-        // Encouraging message for single data point
-        if (chartData.weekLabels.size == 1) {
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .padding(16.dp),
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f),
-                shape = MaterialTheme.shapes.medium,
-                tonalElevation = 2.dp
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "Ottimo inizio!",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Continua a scrivere diari per vedere l'andamento",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        textAlign = TextAlign.Center
-                    )
-                }
+                Text(
+                    text = "Affidabilita' ${(profile.confidence * 100).toInt()}%",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = confColor
+                )
             }
         }
     }
 }
 
-/**
- * Stat Card for displaying metrics
- */
-@Composable
-private fun StatCard(
-    label: String,
-    value: String,
-    color: Color,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier,
-        color = color.copy(alpha = 0.1f),
-        shape = MaterialTheme.shapes.small
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = color
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
+// ══════════════════════════════════════════════════════════════════════
+// Utils
+// ══════════════════════════════════════════════════════════════════════
+
+private fun getMoodColor(mood: Float): Color = when {
+    mood >= 8f -> Color(0xFF4CAF50)
+    mood >= 6f -> Color(0xFF66BB6A)
+    mood >= 4f -> Color(0xFFFFCA28)
+    mood >= 2f -> Color(0xFFFF7043)
+    else -> Color(0xFFEF5350)
+}
+
+private fun interpolateGradient(colors: List<Color>, fraction: Float): Color {
+    if (colors.isEmpty()) return Color.Gray
+    if (fraction <= 0f) return colors.first()
+    if (fraction >= 1f) return colors.last()
+    val sf = fraction * (colors.size - 1)
+    val i = sf.toInt().coerceIn(0, colors.size - 2)
+    val lf = sf - i
+    val a = colors[i]; val b = colors[i + 1]
+    return Color(
+        a.red + (b.red - a.red) * lf,
+        a.green + (b.green - a.green) * lf,
+        a.blue + (b.blue - a.blue) * lf
+    )
 }

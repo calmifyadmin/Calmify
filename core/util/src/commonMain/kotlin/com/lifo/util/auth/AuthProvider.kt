@@ -22,6 +22,9 @@ interface AuthProvider {
     /** Photo URL of the currently signed-in user, or null. */
     val currentUserPhotoUrl: String?
 
+    /** Observable auth state — emits the current user ID (or null) on every auth change. */
+    val authStateFlow: kotlinx.coroutines.flow.StateFlow<String?>
+
     /** Sign out the current user. */
     suspend fun signOut()
 }

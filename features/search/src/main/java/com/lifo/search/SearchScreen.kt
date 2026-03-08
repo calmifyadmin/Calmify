@@ -16,47 +16,45 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.PersonSearch
 import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material.icons.outlined.TravelExplore
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
+import com.lifo.socialui.avatar.UserAvatar
 import com.lifo.util.repository.SocialGraphRepository
 import com.lifo.util.repository.ThreadRepository
 import java.text.SimpleDateFormat
@@ -82,7 +80,7 @@ fun SearchScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = "Indietro"
                         )
                     }
                 },
@@ -97,14 +95,20 @@ fun SearchScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Search bar
-            OutlinedTextField(
+            // Filled-style search bar
+            TextField(
                 value = state.query,
                 onValueChange = { onIntent(SearchContract.Intent.UpdateQuery(it)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                placeholder = { Text("Cerca thread o utenti...") },
+                placeholder = {
+                    Text(
+                        "Cerca thread o utenti...",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Search,
@@ -117,18 +121,20 @@ fun SearchScreen(
                         IconButton(onClick = { onIntent(SearchContract.Intent.ClearSearch) }) {
                             Icon(
                                 imageVector = Icons.Default.Clear,
-                                contentDescription = "Clear"
+                                contentDescription = "Cancella"
                             )
                         }
                     }
                 },
                 singleLine = true,
-                shape = MaterialTheme.shapes.extraLarge,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                shape = RoundedCornerShape(28.dp),
+                colors = TextFieldDefaults.colors(
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    disabledIndicatorColor = Color.Transparent,
+                    cursorColor = MaterialTheme.colorScheme.primary
                 ),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(
@@ -141,11 +147,23 @@ fun SearchScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Filter chips row
+            // Rounded pill filter chips
             FilterChipsRow(
                 selectedFilter = state.selectedFilter,
                 onFilterSelected = { onIntent(SearchContract.Intent.SelectFilter(it)) }
             )
+
+            // Mood filter chips (shown when thread results have mood tags)
+            if (state.hasSearched && state.availableMoods.isNotEmpty()
+                && state.selectedFilter != SearchContract.SearchFilter.USERS
+            ) {
+                Spacer(modifier = Modifier.height(4.dp))
+                MoodFilterChips(
+                    moods = state.availableMoods,
+                    selectedMood = state.selectedMood,
+                    onMoodSelected = { onIntent(SearchContract.Intent.SelectMoodFilter(it)) }
+                )
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -180,6 +198,8 @@ private fun FilterChipsRow(
     selectedFilter: SearchContract.SearchFilter,
     onFilterSelected: (SearchContract.SearchFilter) -> Unit
 ) {
+    val chipShape = RoundedCornerShape(20.dp)
+
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -189,6 +209,11 @@ private fun FilterChipsRow(
                 selected = selectedFilter == SearchContract.SearchFilter.ALL,
                 onClick = { onFilterSelected(SearchContract.SearchFilter.ALL) },
                 label = { Text("Tutto") },
+                shape = chipShape,
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ),
                 leadingIcon = if (selectedFilter == SearchContract.SearchFilter.ALL) {
                     {
                         Icon(
@@ -205,6 +230,11 @@ private fun FilterChipsRow(
                 selected = selectedFilter == SearchContract.SearchFilter.THREADS,
                 onClick = { onFilterSelected(SearchContract.SearchFilter.THREADS) },
                 label = { Text("Thread") },
+                shape = chipShape,
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ),
                 leadingIcon = if (selectedFilter == SearchContract.SearchFilter.THREADS) {
                     {
                         Icon(
@@ -221,6 +251,11 @@ private fun FilterChipsRow(
                 selected = selectedFilter == SearchContract.SearchFilter.USERS,
                 onClick = { onFilterSelected(SearchContract.SearchFilter.USERS) },
                 label = { Text("Utenti") },
+                shape = chipShape,
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ),
                 leadingIcon = if (selectedFilter == SearchContract.SearchFilter.USERS) {
                     {
                         Icon(
@@ -242,8 +277,8 @@ private fun SearchResults(
     onUserClick: (String) -> Unit,
 ) {
     LazyColumn(
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        contentPadding = PaddingValues(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
         // Users section
         val showUsers = state.selectedFilter != SearchContract.SearchFilter.THREADS
@@ -256,7 +291,7 @@ private fun SearchResults(
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(vertical = 4.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
             }
             items(
@@ -273,13 +308,19 @@ private fun SearchResults(
             }
         }
 
-        // Threads section
+        // Threads section (filtered by mood if selected)
+        val threads = state.filteredThreadResults
         val showThreads = state.selectedFilter != SearchContract.SearchFilter.USERS
-                && state.threadResults.isNotEmpty()
+                && threads.isNotEmpty()
 
         if (showThreads) {
             if (showUsers) {
-                item { Spacer(modifier = Modifier.height(8.dp)) }
+                item {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                }
             }
             item {
                 Text(
@@ -287,17 +328,17 @@ private fun SearchResults(
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(vertical = 4.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
             }
             items(
-                items = state.threadResults,
+                items = threads,
                 key = { it.threadId }
             ) { thread ->
                 val onClickStable = remember(thread.threadId) {
                     { onThreadClick(thread.threadId) }
                 }
-                ThreadResultItem(
+                CompactThreadResultItem(
                     thread = thread,
                     onClick = onClickStable
                 )
@@ -311,193 +352,229 @@ private fun UserResultItem(
     user: SocialGraphRepository.SocialUser,
     onClick: () -> Unit,
 ) {
-    Card(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        ),
-        shape = MaterialTheme.shapes.medium
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Avatar
-            if (user.avatarUrl != null) {
-                AsyncImage(
-                    model = user.avatarUrl,
-                    contentDescription = user.displayName ?: "Avatar",
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape),
-                    contentScale = ContentScale.Crop
+        // Avatar using shared component
+        UserAvatar(
+            avatarUrl = user.avatarUrl,
+            displayName = user.displayName,
+            size = 48.dp,
+            showBorder = false
+        )
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = user.displayName ?: "Utente",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
+
+                if (user.isVerified) {
+                    Spacer(modifier = Modifier.width(4.dp))
                     Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = null,
-                        modifier = Modifier.size(28.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        imageVector = Icons.Default.Verified,
+                        contentDescription = "Verificato",
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            val userBio = user.bio
+            if (!userBio.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = userBio,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
 
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = user.displayName ?: "Utente",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+            Spacer(modifier = Modifier.height(4.dp))
 
-                val userBio = user.bio
-                if (!userBio.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = userBio,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+            Text(
+                text = "${formatCount(user.followerCount)} follower",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
 
-                Spacer(modifier = Modifier.height(4.dp))
+/**
+ * Compact thread result: text preview + stats row, no full ThreadPostCard.
+ * Keeps search results clean and scannable.
+ */
+@Composable
+private fun CompactThreadResultItem(
+    thread: ThreadRepository.Thread,
+    onClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp)
+    ) {
+        // Author row
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            UserAvatar(
+                avatarUrl = thread.authorAvatarUrl,
+                displayName = thread.authorDisplayName ?: thread.authorUsername ?: thread.authorId,
+                size = 24.dp,
+                showBorder = false
+            )
 
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = "${formatCount(user.followerCount)} follower",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "${formatCount(user.threadCount)} thread",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Text(
+                text = thread.authorDisplayName ?: thread.authorUsername ?: thread.authorId.take(12),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+
+            if (thread.createdAt > 0) {
+                Text(
+                    text = formatTimestamp(thread.createdAt),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // Thread text preview
+        Text(
+            text = thread.text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(start = 32.dp)
+        )
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // Stats row
+        Row(
+            modifier = Modifier.padding(start = 32.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Like count
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Favorite,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = formatCount(thread.likeCount),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Reply count
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.ChatBubbleOutline,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = formatCount(thread.replyCount),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Mood tag
+            val moodTag = thread.moodTag
+            if (!moodTag.isNullOrBlank()) {
+                Text(
+                    text = moodTag,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.tertiary
+                )
+            }
+        }
+
+        // Divider at bottom
+        Spacer(modifier = Modifier.height(10.dp))
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+        )
     }
 }
 
 @Composable
-private fun ThreadResultItem(
-    thread: ThreadRepository.Thread,
-    onClick: () -> Unit,
+private fun MoodFilterChips(
+    moods: List<String>,
+    selectedMood: String?,
+    onMoodSelected: (String?) -> Unit,
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        ),
-        shape = MaterialTheme.shapes.medium
+    val chipShape = RoundedCornerShape(16.dp)
+
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp)
-        ) {
-            // Thread text preview
-            Text(
-                text = thread.text,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis
+        item {
+            FilterChip(
+                selected = selectedMood == null,
+                onClick = { onMoodSelected(null) },
+                label = { Text("Tutti i mood", style = MaterialTheme.typography.labelSmall) },
+                shape = chipShape,
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    selectedLabelColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                ),
             )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Mood tag + metadata row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Like count
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Favorite,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = formatCount(thread.likeCount),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    // Reply count
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.ChatBubbleOutline,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = formatCount(thread.replyCount),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    // Mood tag
-                    val moodTag = thread.moodTag
-                    if (!moodTag.isNullOrBlank()) {
-                        Text(
-                            text = moodTag,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.tertiary
-                        )
-                    }
-                }
-
-                // Timestamp
-                if (thread.createdAt > 0) {
-                    Text(
-                        text = formatTimestamp(thread.createdAt),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+        }
+        items(moods) { mood ->
+            FilterChip(
+                selected = selectedMood == mood,
+                onClick = { onMoodSelected(if (selectedMood == mood) null else mood) },
+                label = { Text(mood, style = MaterialTheme.typography.labelSmall) },
+                shape = chipShape,
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    selectedLabelColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                ),
+            )
         }
     }
 }
 
-// ── State screens ────────────────────────────────────────────────────
+// -- State screens ----------------------------------------------------------------
 
 @Composable
 private fun InitialContent() {
@@ -509,10 +586,10 @@ private fun InitialContent() {
             Icon(
                 imageVector = Icons.Outlined.PersonSearch,
                 contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = "Cerca thread e utenti",
                 style = MaterialTheme.typography.titleMedium,
@@ -522,7 +599,7 @@ private fun InitialContent() {
             Text(
                 text = "Scrivi qualcosa nella barra di ricerca",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
             )
         }
     }
@@ -538,10 +615,10 @@ private fun EmptyResultsContent(query: String) {
             Icon(
                 imageVector = Icons.Outlined.SearchOff,
                 contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = "Nessun risultato",
                 style = MaterialTheme.typography.titleMedium,
@@ -551,7 +628,7 @@ private fun EmptyResultsContent(query: String) {
             Text(
                 text = "Nessun risultato per \"$query\"",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
             )
         }
     }
@@ -565,10 +642,11 @@ private fun LoadingContent() {
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             CircularProgressIndicator(
-                modifier = Modifier.size(48.dp),
-                color = MaterialTheme.colorScheme.primary
+                modifier = Modifier.size(40.dp),
+                color = MaterialTheme.colorScheme.primary,
+                strokeWidth = 3.dp
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = "Ricerca in corso...",
                 style = MaterialTheme.typography.bodyMedium,
@@ -588,10 +666,10 @@ private fun ErrorContent(message: String) {
             Icon(
                 imageVector = Icons.Outlined.SearchOff,
                 contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f)
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = "Errore nella ricerca",
                 style = MaterialTheme.typography.titleMedium,
@@ -607,7 +685,7 @@ private fun ErrorContent(message: String) {
     }
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────
+// -- Helpers ----------------------------------------------------------------------
 
 private fun formatCount(count: Long): String {
     return when {

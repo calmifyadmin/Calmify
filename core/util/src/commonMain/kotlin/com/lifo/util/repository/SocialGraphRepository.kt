@@ -20,14 +20,25 @@ interface SocialGraphRepository {
     fun getFollowing(userId: String, limit: Int = 50): Flow<RequestState<List<SocialUser>>>
     fun getSuggestions(userId: String, limit: Int = 20): Flow<RequestState<List<SocialUser>>>
 
+    fun getProfile(userId: String): Flow<RequestState<SocialUser>>
+    suspend fun updateProfile(userId: String, updates: Map<String, Any?>): RequestState<Boolean>
+    suspend fun isUsernameAvailable(username: String): RequestState<Boolean>
+    suspend fun resolveUsername(username: String): RequestState<String?>
+
     data class SocialUser(
         val userId: String = "",
+        val username: String? = null,
         val displayName: String? = null,
         val avatarUrl: String? = null,
+        val coverPhotoUrl: String? = null,
         val bio: String? = null,
         val isVerified: Boolean = false,
         val followerCount: Long = 0,
         val followingCount: Long = 0,
-        val threadCount: Long = 0
+        val threadCount: Long = 0,
+        val interests: List<String> = emptyList(),
+        val links: List<String> = emptyList(),
+        val followerPreviewAvatars: List<String> = emptyList(),
+        val profileViews30Days: Long = 0
     )
 }

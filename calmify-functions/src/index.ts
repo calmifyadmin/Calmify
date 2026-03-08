@@ -11,7 +11,7 @@ import {onDocumentCreated} from "firebase-functions/v2/firestore";
 import {setGlobalOptions, logger} from "firebase-functions/v2";
 import * as admin from "firebase-admin";
 import {genkit} from "genkit";
-import {googleAI, gemini20FlashExp} from "@genkit-ai/googleai";
+import {googleAI, gemini20Flash} from "@genkit-ai/googleai";
 import {defineSecret} from "firebase-functions/params";
 import {z} from "zod";
 import {sendFCM} from "./utils/fcm-helper";
@@ -241,7 +241,7 @@ Genera l'analisi in formato JSON strutturato seguendo lo schema fornito.
 
     try {
       const result = await ai.generate({
-        model: gemini20FlashExp,
+        model: gemini20Flash,
         prompt: prompt,
         output: {schema: InsightSchema},
         config: {
@@ -370,7 +370,7 @@ export const onDiaryCreated = onDocumentCreated(
 
         // Confidence & Metadata
         confidence: insight.confidence,
-        modelUsed: "gemini-2.0-flash-exp",
+        modelUsed: "gemini-2.0-flash",
         processingTimeMs: null,
 
         // User Feedback (inizialmente null)

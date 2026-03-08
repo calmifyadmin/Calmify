@@ -32,6 +32,7 @@ kotlin {
                 implementation libs.material3
                 implementation libs.core.ktx
                 implementation libs.coroutines.android
+                implementation libs.coroutines.play.services
 
                 // Navigation
                 implementation libs.navigation.compose

@@ -1,6 +1,12 @@
 package com.lifo.write
 
 import android.widget.Toast
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
@@ -11,21 +17,24 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Psychology
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -35,10 +44,26 @@ import com.lifo.ui.components.GalleryUploader
 import com.lifo.util.model.Diary
 import com.lifo.ui.providers.MoodUiProvider
 import com.lifo.util.model.Mood
-import com.lifo.write.wizard.PsychologicalMetrics
-import com.lifo.write.wizard.PsychologicalMetricsWizardDialog
-import kotlinx.coroutines.launch
+import com.lifo.write.wizard.BodySensationStep
+import com.lifo.write.wizard.CalmAnxietyStep
+import com.lifo.write.wizard.EmotionIntensityStep
+import com.lifo.write.wizard.EnergyLevelStep
+import com.lifo.write.wizard.StressLevelStep
+import com.lifo.write.wizard.TriggerSelectionStep
+import com.lifo.write.wizard.WizardColors
 
+
+private const val STEP_MOOD = 0
+private const val STEP_TITLE = 1
+private const val STEP_DESCRIPTION = 2
+private const val STEP_EMOTION = 3
+private const val STEP_STRESS = 4
+private const val STEP_ENERGY = 5
+private const val STEP_CALM = 6
+private const val STEP_TRIGGER = 7
+private const val STEP_BODY = 8
+private const val STEP_SAVE = 9
+private const val TOTAL_STEPS = 10
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -56,336 +81,581 @@ internal fun WriteContent(
     onImageClicked: (GalleryImage) -> Unit,
     viewModel: WriteViewModel
 ) {
-    val scrollState = rememberScrollState()
-    val scope = rememberCoroutineScope()
+    var currentStep by remember { mutableIntStateOf(STEP_MOOD) }
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
-    val areImagesUploaded = remember { derivedStateOf { viewModel.areAllImagesUploaded() } }
-    LaunchedEffect(key1 = scrollState.maxValue) {
-        scrollState.scrollTo(scrollState.maxValue)
-    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .imePadding()
-            .navigationBarsPadding()
             .padding(top = paddingValues.calculateTopPadding())
-            .padding(bottom = 24.dp)
-            .padding(horizontal = 24.dp),
-        verticalArrangement = Arrangement.SpaceBetween
+            .navigationBarsPadding()
+            .imePadding()
     ) {
-        Column(
+        // Progress bar
+        LinearProgressIndicator(
+            progress = { (currentStep + 1f) / TOTAL_STEPS },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(4.dp),
+            color = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+        )
+
+        // Step content
+        AnimatedContent(
+            targetState = currentStep,
             modifier = Modifier
                 .weight(1f)
-                .fillMaxWidth()
-                .verticalScroll(state = scrollState)
-        ) {
-            Spacer(modifier = Modifier.height(30.dp))
-            HorizontalPager(state = pagerState) { page ->
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center
+                .fillMaxWidth(),
+            transitionSpec = {
+                if (targetState > initialState) {
+                    (slideInHorizontally { it / 3 } + fadeIn()) togetherWith
+                            (slideOutHorizontally { -it / 3 } + fadeOut())
+                } else {
+                    (slideInHorizontally { -it / 3 } + fadeIn()) togetherWith
+                            (slideOutHorizontally { it / 3 } + fadeOut())
+                }
+            },
+            label = "wizardStep"
+        ) { step ->
+            when (step) {
+                STEP_MOOD -> MoodSelectionStep(pagerState = pagerState)
+                STEP_TITLE -> TitleInputStep(
+                    title = title,
+                    onTitleChanged = onTitleChanged,
+                    onNext = { currentStep = STEP_DESCRIPTION },
+                )
+                STEP_DESCRIPTION -> DescriptionInputStep(
+                    description = description,
+                    onDescriptionChanged = onDescriptionChanged,
+                    uiState = uiState,
+                    viewModel = viewModel,
+                )
+                STEP_EMOTION -> MetricStepWrapper(
+                    title = "Intensita' emotiva",
+                    description = "Quanto e' intensa l'emozione che provi?",
                 ) {
-                    AsyncImage(
-                        modifier = Modifier.size(120.dp),
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(MoodUiProvider.getIcon(Mood.values()[page]))
-                            .build(),
-
-                        contentDescription = "Mood Image"
+                    EmotionIntensityStep(
+                        value = uiState.emotionIntensity,
+                        onValueChange = { viewModel.setEmotionIntensity(it) },
+                        accentColor = WizardColors.getAccentColor(0),
                     )
                 }
-            }
-            Spacer(modifier = Modifier.height(30.dp))
-
-            // Psychological Metrics Card - Apre il wizard
-            MetricsWizardCard(
-                uiState = uiState,
-                onOpenWizard = { viewModel.openMetricsWizard() }
-            )
-
-            // Psychological Metrics Wizard Dialog
-            PsychologicalMetricsWizardDialog(
-                isVisible = uiState.showMetricsWizard,
-                currentMetrics = PsychologicalMetrics(
-                    emotionIntensity = uiState.emotionIntensity,
-                    stressLevel = uiState.stressLevel,
-                    energyLevel = uiState.energyLevel,
-                    calmAnxietyLevel = uiState.calmAnxietyLevel,
-                    primaryTrigger = uiState.primaryTrigger,
-                    dominantBodySensation = uiState.dominantBodySensation
-                ),
-                onMetricsChanged = { metrics ->
-                    viewModel.setEmotionIntensity(metrics.emotionIntensity)
-                    viewModel.setStressLevel(metrics.stressLevel)
-                    viewModel.setEnergyLevel(metrics.energyLevel)
-                    viewModel.setCalmAnxietyLevel(metrics.calmAnxietyLevel)
-                    viewModel.setPrimaryTrigger(metrics.primaryTrigger)
-                    viewModel.setDominantBodySensation(metrics.dominantBodySensation)
-                },
-                onDismiss = { viewModel.closeMetricsWizard() },
-                onComplete = { viewModel.completeMetricsWizard() }
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-            TextField(
-                modifier = Modifier.fillMaxWidth(),
-                value = title,
-                onValueChange = onTitleChanged,
-                placeholder = { Text(text = "Title") },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    disabledContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Color.Unspecified,
-                    unfocusedIndicatorColor = Color.Unspecified,
-                    disabledIndicatorColor = Color.Unspecified,
-                    focusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                    unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                ),
-                keyboardOptions = KeyboardOptions(
-                    imeAction = ImeAction.Next
-                ),
-                keyboardActions = KeyboardActions(
-                    onNext = {
-                        scope.launch {
-                            scrollState.animateScrollTo(Int.MAX_VALUE)
-                            focusManager.moveFocus(FocusDirection.Down)
-                        }
-                    }
-                ),
-                maxLines = 1,
-                singleLine = true
-            )
-            TextField(
-                modifier = Modifier.fillMaxWidth(),
-                value = description,
-                onValueChange = onDescriptionChanged,
-                placeholder = { Text(text = "Tell me about it.") },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    disabledContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Color.Unspecified,
-                    unfocusedIndicatorColor = Color.Unspecified,
-                    disabledIndicatorColor = Color.Unspecified,
-                    focusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                    unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                ),
-                keyboardOptions = KeyboardOptions(
-                    imeAction = ImeAction.Next
-                ),
-                keyboardActions = KeyboardActions(
-                    onNext = {
-                        focusManager.clearFocus()
-                    }
+                STEP_STRESS -> MetricStepWrapper(
+                    title = "Livello di stress",
+                    description = "Quanto ti senti stressato/a?",
+                ) {
+                    StressLevelStep(
+                        value = uiState.stressLevel,
+                        onValueChange = { viewModel.setStressLevel(it) },
+                        accentColor = WizardColors.getAccentColor(1),
+                    )
+                }
+                STEP_ENERGY -> MetricStepWrapper(
+                    title = "Livello di energia",
+                    description = "Quanta energia hai?",
+                ) {
+                    EnergyLevelStep(
+                        value = uiState.energyLevel,
+                        onValueChange = { viewModel.setEnergyLevel(it) },
+                        accentColor = WizardColors.getAccentColor(2),
+                    )
+                }
+                STEP_CALM -> MetricStepWrapper(
+                    title = "Calma / Ansia",
+                    description = "Quanto ti senti calmo/a o ansioso/a?",
+                ) {
+                    CalmAnxietyStep(
+                        value = uiState.calmAnxietyLevel,
+                        onValueChange = { viewModel.setCalmAnxietyLevel(it) },
+                        accentColor = WizardColors.getAccentColor(3),
+                    )
+                }
+                STEP_TRIGGER -> MetricStepWrapper(
+                    title = "Trigger principale",
+                    description = "Cosa ha influenzato il tuo stato d'animo?",
+                ) {
+                    TriggerSelectionStep(
+                        selectedTrigger = uiState.primaryTrigger,
+                        onTriggerSelected = { viewModel.setPrimaryTrigger(it) },
+                        accentColor = WizardColors.getAccentColor(4),
+                    )
+                }
+                STEP_BODY -> MetricStepWrapper(
+                    title = "Sensazione corporea",
+                    description = "Cosa senti nel corpo?",
+                ) {
+                    BodySensationStep(
+                        selectedSensation = uiState.dominantBodySensation,
+                        onSensationSelected = { viewModel.setDominantBodySensation(it) },
+                        accentColor = WizardColors.getAccentColor(5),
+                    )
+                }
+                STEP_SAVE -> SaveStep(
+                    uiState = uiState,
+                    galleryState = galleryState,
+                    viewModel = viewModel,
+                    onImageSelect = onImageSelect,
+                    onImageClicked = onImageClicked,
+                    onSaveClicked = onSaveClicked,
+                    pagerState = pagerState,
                 )
-            )
+            }
         }
 
-        Column(verticalArrangement = Arrangement.Bottom) {
-            Spacer(modifier = Modifier.height(12.dp))
-            GalleryUploader(
-                galleryState = galleryState,
-                onAddClicked = { focusManager.clearFocus() },
-                onImageSelect = onImageSelect,
-                onImageClicked = onImageClicked
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            // In the Button section, display the count correctly
-            Button(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp),
-                enabled = viewModel.areAllImagesUploaded(),
-                onClick = {
-                    // Use displayImageCount instead of direct size check
-                    if (viewModel.displayImageCount.value < 6) {
-                        if (uiState.title.isNotEmpty() && uiState.description.isNotEmpty()) {
-                            onSaveClicked(
-                                Diary().apply {
-                                    this.title = uiState.title
-                                    this.description = uiState.description
-                                    this.images = galleryState.images.map { it.remoteImagePath }
-                                    // Include psychological metrics
-                                    this.emotionIntensity = uiState.emotionIntensity
-                                    this.stressLevel = uiState.stressLevel
-                                    this.energyLevel = uiState.energyLevel
-                                    this.calmAnxietyLevel = uiState.calmAnxietyLevel
-                                    this.primaryTrigger = uiState.primaryTrigger.name
-                                    this.dominantBodySensation = uiState.dominantBodySensation.name
-                                }
-                            )
+        // Bottom navigation
+        StepNavigationBar(
+            currentStep = currentStep,
+            canAdvance = when (currentStep) {
+                STEP_TITLE -> title.isNotBlank()
+                STEP_DESCRIPTION -> description.isNotBlank()
+                else -> true
+            },
+            onBack = {
+                focusManager.clearFocus()
+                if (currentStep > 0) currentStep--
+            },
+            onNext = {
+                focusManager.clearFocus()
+                when (currentStep) {
+                    STEP_TITLE -> {
+                        if (title.isBlank()) {
+                            Toast.makeText(context, "Il titolo e' obbligatorio", Toast.LENGTH_SHORT).show()
                         } else {
-                            Toast.makeText(
-                                context,
-                                "Fields cannot be empty.",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            currentStep++
                         }
-                    } else {
-                        Toast.makeText(
-                            context,
-                            "MAX IMAGE 6.",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                    }
+                    STEP_DESCRIPTION -> {
+                        if (description.isBlank()) {
+                            Toast.makeText(context, "La descrizione e' obbligatoria", Toast.LENGTH_SHORT).show()
+                        } else {
+                            currentStep++
+                        }
+                    }
+                    else -> {
+                        if (currentStep < TOTAL_STEPS - 1) currentStep++
                     }
                 }
-            ) {
-                // Show the correct count here
-                Text(text = "Save (${viewModel.displayImageCount.value} images)")
-            }
-            if (viewModel.isUploadingImages.value) {
-                CircularProgressIndicator()
-            }
-        }
+            },
+        )
     }
 }
 
-/**
- * Card per aprire il wizard delle metriche psicologiche
- * Mostra un riepilogo se le metriche sono state completate
- */
+// ── Step: Mood Selection ─────────────────────────────────────────
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun MetricsWizardCard(
-    uiState: UiState,
-    onOpenWizard: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val hasModifiedMetrics = uiState.emotionIntensity != 5 ||
-            uiState.stressLevel != 5 ||
-            uiState.energyLevel != 5 ||
-            uiState.calmAnxietyLevel != 5 ||
-            uiState.primaryTrigger != com.lifo.util.model.Trigger.NONE ||
-            uiState.dominantBodySensation != com.lifo.util.model.BodySensation.NONE
-
-    ElevatedCard(
-        onClick = onOpenWizard,
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = if (uiState.metricsCompleted)
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-            else
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+private fun MoodSelectionStep(pagerState: PagerState) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = "Come ti senti?",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
         )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "Scorri per scegliere il tuo mood",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(32.dp))
+
+        HorizontalPager(state = pagerState) { page ->
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center,
+            ) {
+                AsyncImage(
+                    modifier = Modifier.size(160.dp),
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(MoodUiProvider.getIcon(Mood.values()[page]))
+                        .build(),
+                    contentDescription = "Mood Image",
+                )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+        Text(
+            text = Mood.values()[pagerState.currentPage].name,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
+}
+
+// ── Step: Title Input ─────────────────────────────────────────
+@Composable
+private fun TitleInputStep(
+    title: String,
+    onTitleChanged: (String) -> Unit,
+    onNext: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = "Dai un titolo",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "Un titolo breve per il tuo diario",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(32.dp))
+
+        OutlinedTextField(
+            value = title,
+            onValueChange = onTitleChanged,
+            placeholder = { Text("Il mio diario...") },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            singleLine = true,
+            textStyle = MaterialTheme.typography.titleLarge,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { onNext() }),
+        )
+    }
+}
+
+// ── Step: Description Input ─────────────────────────────────────
+@Composable
+private fun DescriptionInputStep(
+    description: String,
+    onDescriptionChanged: (String) -> Unit,
+    uiState: UiState,
+    viewModel: WriteViewModel,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Spacer(Modifier.height(32.dp))
+        Text(
+            text = "Racconta",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "Scrivi come ti senti, cosa e' successo",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(24.dp))
+
+        OutlinedTextField(
+            value = description,
+            onValueChange = onDescriptionChanged,
+            placeholder = { Text("Oggi mi sento...") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 180.dp),
+            shape = RoundedCornerShape(16.dp),
+            maxLines = 12,
+            textStyle = MaterialTheme.typography.bodyLarge,
+        )
+
+        // Smart Capture
+        SmartCaptureCard(
+            uiState = uiState,
+            onAnalyze = { viewModel.runSmartCapture() },
+        )
+        Spacer(Modifier.height(24.dp))
+    }
+}
+
+// ── Wrapper for metric steps ─────────────────────────────────────
+@Composable
+private fun MetricStepWrapper(
+    title: String,
+    description: String,
+    content: @Composable () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Spacer(Modifier.height(32.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = description,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(24.dp))
+
+        content()
+
+        Spacer(Modifier.height(24.dp))
+    }
+}
+
+// ── Step: Gallery + Save ─────────────────────────────────────────
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun SaveStep(
+    uiState: UiState,
+    galleryState: GalleryState,
+    viewModel: WriteViewModel,
+    onImageSelect: (String) -> Unit,
+    onImageClicked: (GalleryImage) -> Unit,
+    onSaveClicked: (Diary) -> Unit,
+    pagerState: PagerState,
+) {
+    val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
+    val areImagesUploaded = remember { derivedStateOf { viewModel.areAllImagesUploaded() } }
+    val pageNumber by remember { derivedStateOf { pagerState.currentPage } }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Spacer(Modifier.height(32.dp))
+        Text(
+            text = "Quasi fatto!",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "Aggiungi foto e salva il tuo diario",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(24.dp))
+
+        // Gallery
+        GalleryUploader(
+            galleryState = galleryState,
+            onAddClicked = { focusManager.clearFocus() },
+            onImageSelect = onImageSelect,
+            onImageClicked = onImageClicked,
+        )
+
+        Spacer(Modifier.height(24.dp))
+
+        // Save button
+        Button(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            enabled = areImagesUploaded.value,
+            shape = RoundedCornerShape(16.dp),
+            onClick = {
+                if (viewModel.displayImageCount.value < 6) {
+                    if (uiState.title.isNotEmpty() && uiState.description.isNotEmpty()) {
+                        onSaveClicked(
+                            Diary().apply {
+                                this.title = uiState.title
+                                this.description = uiState.description
+                                this.mood = Mood.values()[pageNumber].name
+                                this.images = galleryState.images.map { it.remoteImagePath }
+                                this.emotionIntensity = uiState.emotionIntensity
+                                this.stressLevel = uiState.stressLevel
+                                this.energyLevel = uiState.energyLevel
+                                this.calmAnxietyLevel = uiState.calmAnxietyLevel
+                                this.primaryTrigger = uiState.primaryTrigger.name
+                                this.dominantBodySensation = uiState.dominantBodySensation.name
+                            }
+                        )
+                    } else {
+                        Toast.makeText(context, "Titolo e descrizione sono obbligatori.", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    Toast.makeText(context, "Massimo 6 immagini.", Toast.LENGTH_SHORT).show()
+                }
+            },
+        ) {
+            if (viewModel.isUploadingImages.value) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                )
+            } else {
+                Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "Salva diario",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+
+        Spacer(Modifier.height(32.dp))
+    }
+}
+
+// ── Bottom Navigation Bar ─────────────────────────────────────────
+@Composable
+private fun StepNavigationBar(
+    currentStep: Int,
+    canAdvance: Boolean = true,
+    onBack: () -> Unit,
+    onNext: () -> Unit,
+) {
+    Surface(
+        tonalElevation = 2.dp,
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Psychology,
-                    contentDescription = null,
-                    tint = if (uiState.metricsCompleted)
-                        MaterialTheme.colorScheme.primary
-                    else
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Column {
-                    Text(
-                        text = if (uiState.metricsCompleted) "Metriche Completate" else "Metriche Psicologiche",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (uiState.metricsCompleted)
-                            MaterialTheme.colorScheme.primary
-                        else
-                            MaterialTheme.colorScheme.onSurface
+            // Back button
+            if (currentStep > 0) {
+                TextButton(onClick = onBack) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
                     )
-                    Text(
-                        text = if (uiState.metricsCompleted)
-                            "Tocca per modificare"
-                        else
-                            "Tocca per compilare (opzionale)",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text("Indietro")
                 }
+            } else {
+                Spacer(Modifier.width(1.dp))
             }
 
-            // Badge con stato
-            if (uiState.metricsCompleted || hasModifiedMetrics) {
-                Surface(
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text(
-                        text = "\u2713",
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-        }
-
-        // Riepilogo metriche se completate
-        if (hasModifiedMetrics) {
-            HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+            // Step counter
+            Text(
+                text = "${currentStep + 1} / $TOTAL_STEPS",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                MetricMiniChip(
-                    emoji = "\uD83D\uDCAB",
-                    value = uiState.emotionIntensity.toString()
-                )
-                MetricMiniChip(
-                    emoji = "\uD83D\uDE25",
-                    value = uiState.stressLevel.toString()
-                )
-                MetricMiniChip(
-                    emoji = "\u26A1",
-                    value = uiState.energyLevel.toString()
-                )
-                MetricMiniChip(
-                    emoji = "\uD83E\uDDD8",
-                    value = uiState.calmAnxietyLevel.toString()
-                )
+
+            // Next button (hidden on last step — save button is inline)
+            if (currentStep < TOTAL_STEPS - 1) {
+                FilledTonalButton(onClick = onNext) {
+                    Text("Avanti")
+                    Spacer(Modifier.width(4.dp))
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            } else {
+                Spacer(Modifier.width(1.dp))
             }
         }
     }
 }
 
+// ── Smart Capture Card ────────────────────────────────────────────
 @Composable
-private fun MetricMiniChip(
-    emoji: String,
-    value: String,
-    modifier: Modifier = Modifier
+private fun SmartCaptureCard(
+    uiState: UiState,
+    onAnalyze: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Surface(
-        modifier = modifier,
-        color = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(8.dp),
-        tonalElevation = 2.dp
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+    val hasEnoughText = uiState.description.length >= 30
+
+    if (uiState.smartCaptureComplete) {
+        Surface(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+            tonalElevation = 0.dp,
         ) {
-            Text(text = emoji, style = MaterialTheme.typography.bodySmall)
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Medium
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(
+                        text = "Smart Capture",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                Text(
+                    text = "Mood: ${TextAnalyzer.moodLabel(uiState.mood)} | " +
+                            "Stress: ${uiState.stressLevel}/10 | " +
+                            "Energia: ${uiState.energyLevel}/10",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+                TextButton(
+                    onClick = onAnalyze,
+                    contentPadding = PaddingValues(0.dp),
+                ) {
+                    Text(
+                        text = "Rianalizza",
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
+            }
+        }
+    } else if (hasEnoughText) {
+        OutlinedButton(
+            onClick = onAnalyze,
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            shape = RoundedCornerShape(16.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Default.AutoAwesome,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
             )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Analizza il tuo testo")
         }
     }
 }

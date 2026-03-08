@@ -17,7 +17,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.lifo.home.domain.model.MoodDistribution
-import com.lifo.home.util.EmotionAwareColors
 
 /**
  * Donut Chart - Material3 Expressive animated donut chart
@@ -30,13 +29,16 @@ fun DonutChart(
     size: Dp = 120.dp,
     strokeWidth: Dp = 16.dp,
     animationDurationMs: Int = 1000,
-    gapDegrees: Float =32f, // Spazio tra i segmenti (grande per le estremità arrotondate)
+    gapDegrees: Float = 32f,
+    positiveColor: Color = MaterialTheme.colorScheme.tertiary,
+    neutralColor: Color = MaterialTheme.colorScheme.secondary,
+    negativeColor: Color = MaterialTheme.colorScheme.error,
     centerContent: @Composable () -> Unit = {}
 ) {
     val segments = listOf(
-        DonutSegment(distribution.positive, EmotionAwareColors.ChartColors.positiveSegment),
-        DonutSegment(distribution.neutral, EmotionAwareColors.ChartColors.neutralSegment),
-        DonutSegment(distribution.negative, EmotionAwareColors.ChartColors.negativeSegment)
+        DonutSegment(distribution.positive, positiveColor),
+        DonutSegment(distribution.neutral, neutralColor),
+        DonutSegment(distribution.negative, negativeColor)
     ).filter { it.value > 0f }
 
     // Calcola il gap totale da sottrarre
@@ -179,7 +181,10 @@ fun MoodDistributionBar(
     distribution: MoodDistribution,
     modifier: Modifier = Modifier,
     height: Dp = 12.dp,
-    gapWidth: Dp = 4.dp
+    gapWidth: Dp = 4.dp,
+    positiveColor: Color = MaterialTheme.colorScheme.tertiary,
+    neutralColor: Color = MaterialTheme.colorScheme.secondary,
+    negativeColor: Color = MaterialTheme.colorScheme.error
 ) {
     // Animation
     var animatedPositive by remember { mutableFloatStateOf(0f) }
@@ -226,7 +231,7 @@ fun MoodDistributionBar(
 
         // Background
         drawRoundRect(
-            color = EmotionAwareColors.ChartColors.emptySegment,
+            color = Color(0xFFE0E0E0),
             cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadius)
         )
 
@@ -236,7 +241,7 @@ fun MoodDistributionBar(
         val positiveWidth = availableWidth * animatedPositive
         if (positiveWidth > 0f) {
             drawRoundRect(
-                color = EmotionAwareColors.ChartColors.positiveSegment,
+                color = positiveColor,
                 topLeft = Offset(xOffset, 0f),
                 size = Size(positiveWidth, barHeight),
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadius)
@@ -248,7 +253,7 @@ fun MoodDistributionBar(
         val neutralWidth = availableWidth * animatedNeutral
         if (neutralWidth > 0f) {
             drawRoundRect(
-                color = EmotionAwareColors.ChartColors.neutralSegment,
+                color = neutralColor,
                 topLeft = Offset(xOffset, 0f),
                 size = Size(neutralWidth, barHeight),
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadius)
@@ -260,7 +265,7 @@ fun MoodDistributionBar(
         val negativeWidth = availableWidth * animatedNegative
         if (negativeWidth > 0f) {
             drawRoundRect(
-                color = EmotionAwareColors.ChartColors.negativeSegment,
+                color = negativeColor,
                 topLeft = Offset(xOffset, 0f),
                 size = Size(negativeWidth, barHeight),
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadius)
@@ -282,17 +287,17 @@ fun DonutChartLegend(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         LegendItem(
-            color = EmotionAwareColors.ChartColors.positiveSegment,
+            color = MaterialTheme.colorScheme.tertiary,
             label = "Positivo",
             percentage = distribution.positive
         )
         LegendItem(
-            color = EmotionAwareColors.ChartColors.neutralSegment,
+            color = MaterialTheme.colorScheme.secondary,
             label = "Neutro",
             percentage = distribution.neutral
         )
         LegendItem(
-            color = EmotionAwareColors.ChartColors.negativeSegment,
+            color = MaterialTheme.colorScheme.error,
             label = "Negativo",
             percentage = distribution.negative
         )

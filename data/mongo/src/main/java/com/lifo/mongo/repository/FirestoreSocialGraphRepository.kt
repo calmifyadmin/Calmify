@@ -40,10 +40,12 @@ class FirestoreSocialGraphRepository @Inject constructor(
         private const val SUBCOLLECTION_FOLLOWING = "following"
         private const val SUBCOLLECTION_FOLLOWERS = "followers"
         private const val SUBCOLLECTION_BLOCKED = "blocked"
+        private const val COLLECTION_NOTIFICATIONS = "notifications"
     }
 
     private val socialGraphCollection by lazy { firestore.collection(COLLECTION_SOCIAL_GRAPH) }
     private val userProfilesCollection by lazy { firestore.collection(COLLECTION_USER_PROFILES) }
+    private val notificationsCollection by lazy { firestore.collection(COLLECTION_NOTIFICATIONS) }
 
     private val currentUserId: String
         get() = auth.currentUser?.uid ?: throw IllegalStateException("User not authenticated")
@@ -80,6 +82,21 @@ class FirestoreSocialGraphRepository @Inject constructor(
             batch.commit().await()
 
             println("[$TAG] $followerId now follows $followeeId")
+
+            // Send follow notification
+            try {
+                notificationsCollection.add(mapOf(
+                    "userId" to followeeId,
+                    "type" to "NEW_FOLLOWER",
+                    "actorId" to followerId,
+                    "message" to "started following you",
+                    "isRead" to false,
+                    "createdAt" to System.currentTimeMillis()
+                )).await()
+            } catch (e: Exception) {
+                println("[$TAG] WARN: Failed to create follow notification: ${e.message}")
+            }
+
             RequestState.Success(true)
         } catch (e: Exception) {
             println("[$TAG] ERROR: Error following: ${e.message}")
@@ -340,16 +357,87 @@ class FirestoreSocialGraphRepository @Inject constructor(
             }
     }
 
+    override fun getProfile(userId: String): Flow<RequestState<SocialUser>> = callbackFlow {
+        trySend(RequestState.Loading)
+
+        val listenerRegistration = userProfilesCollection.document(userId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(RequestState.Error(error))
+                    return@addSnapshotListener
+                }
+                if (snapshot != null && snapshot.exists()) {
+                    trySend(RequestState.Success(docToSocialUser(snapshot)))
+                } else {
+                    // Profile doesn't exist yet — return empty with userId
+                    trySend(RequestState.Success(SocialUser(userId = userId)))
+                }
+            }
+
+        awaitClose { listenerRegistration.remove() }
+    }
+
+    override suspend fun updateProfile(
+        userId: String,
+        updates: Map<String, Any?>
+    ): RequestState<Boolean> {
+        return try {
+            userProfilesCollection.document(userId)
+                .set(updates, com.google.firebase.firestore.SetOptions.merge())
+                .await()
+            println("[$TAG] Profile updated for $userId")
+            RequestState.Success(true)
+        } catch (e: Exception) {
+            println("[$TAG] ERROR: Error updating profile: ${e.message}")
+            RequestState.Error(e)
+        }
+    }
+
+    override suspend fun isUsernameAvailable(username: String): RequestState<Boolean> {
+        return try {
+            val snapshot = userProfilesCollection
+                .whereEqualTo("username", username)
+                .limit(1)
+                .get()
+                .await()
+            RequestState.Success(snapshot.isEmpty)
+        } catch (e: Exception) {
+            println("[$TAG] ERROR: Error checking username availability: ${e.message}")
+            RequestState.Error(e)
+        }
+    }
+
+    override suspend fun resolveUsername(username: String): RequestState<String?> {
+        return try {
+            val snapshot = userProfilesCollection
+                .whereEqualTo("username", username)
+                .limit(1)
+                .get()
+                .await()
+            val userId = snapshot.documents.firstOrNull()?.id
+            RequestState.Success(userId)
+        } catch (e: Exception) {
+            println("[$TAG] ERROR: Error resolving username: ${e.message}")
+            RequestState.Error(e)
+        }
+    }
+
     private fun docToSocialUser(doc: com.google.firebase.firestore.DocumentSnapshot): SocialUser {
         return SocialUser(
             userId = doc.id,
+            username = doc.getString("username"),
             displayName = doc.getString("displayName"),
             avatarUrl = doc.getString("avatarUrl"),
+            coverPhotoUrl = doc.getString("coverPhotoUrl"),
             bio = doc.getString("bio"),
             isVerified = doc.getBoolean("isVerified") ?: false,
             followerCount = doc.getLong("followerCount") ?: 0,
             followingCount = doc.getLong("followingCount") ?: 0,
-            threadCount = doc.getLong("threadCount") ?: 0
+            threadCount = doc.getLong("threadCount") ?: 0,
+            interests = (doc.get("interests") as? List<String>) ?: emptyList(),
+            links = (doc.get("links") as? List<String>) ?: emptyList(),
+            followerPreviewAvatars = (doc.get("followerPreviewAvatars") as? List<String>) ?: emptyList(),
+            profileViews30Days = doc.getLong("profileViews30Days") ?: 0
         )
     }
 }

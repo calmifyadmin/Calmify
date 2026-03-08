@@ -20,6 +20,8 @@ object HistoryContract {
         data object LoadHistory : Intent
         /** Refresh history data. */
         data object RefreshHistory : Intent
+        /** Set active filter. */
+        data class SetFilter(val filter: ContentFilter) : Intent
     }
 
     // State is the existing HistoryUiState data class (see below).
@@ -39,7 +41,8 @@ data class HistoryUiState(
     val isLoading: Boolean = true,
     val error: String? = null,
     val isChatsEmpty: Boolean = true,
-    val isDiariesEmpty: Boolean = true
+    val isDiariesEmpty: Boolean = true,
+    val activeFilter: ContentFilter = ContentFilter.ALL
 ) : MviContract.State
 
 class HistoryViewModel constructor(
@@ -70,6 +73,10 @@ class HistoryViewModel constructor(
         when (intent) {
             is HistoryContract.Intent.LoadHistory -> loadHistory()
             is HistoryContract.Intent.RefreshHistory -> loadHistory()
+            is HistoryContract.Intent.SetFilter -> {
+                updateState { copy(activeFilter = intent.filter) }
+                loadHistory()
+            }
         }
     }
 
@@ -89,9 +96,19 @@ class HistoryViewModel constructor(
 
             try {
                 val userId = getCurrentUserId()
+                val filter = currentState.activeFilter
 
-                // Observe unified content and separate into chat/diary sections
-                unifiedContentRepository.getUnifiedContent(userId)
+                val contentFlow = if (filter == ContentFilter.ALL) {
+                    unifiedContentRepository.getUnifiedContent(userId)
+                } else {
+                    unifiedContentRepository.applyFilter(
+                        ownerId = userId,
+                        filter = filter,
+                        searchQuery = ""
+                    )
+                }
+
+                contentFlow
                     .catch { e ->
                         println("[HistoryViewModel] ERROR: Error loading history: ${e.message}")
                         updateState {
@@ -102,14 +119,8 @@ class HistoryViewModel constructor(
                         }
                     }
                     .collect { allItems ->
-                        // Separate chats and diaries
-                        val chats = allItems
-                            .filterIsInstance<HomeContentItem.ChatItem>()
-                            .take(RECENT_ITEMS_LIMIT)
-
-                        val diaries = allItems
-                            .filterIsInstance<HomeContentItem.DiaryItem>()
-                            .take(RECENT_ITEMS_LIMIT)
+                        val chats = allItems.filterIsInstance<HomeContentItem.ChatItem>()
+                        val diaries = allItems.filterIsInstance<HomeContentItem.DiaryItem>()
 
                         updateState {
                             copy(

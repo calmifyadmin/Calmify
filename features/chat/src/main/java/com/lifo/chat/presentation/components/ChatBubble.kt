@@ -27,7 +27,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.sp
+import com.lifo.ui.R as UiR
 import com.lifo.util.model.ChatMessage
 
 /**
@@ -89,43 +91,18 @@ fun ChatBubble(
                 },
                 modifier = Modifier.widthIn(max = 280.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.Bottom
-                ) {
-                    Text(
-                        text = message.content,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (isAi) {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        } else {
-                            MaterialTheme.colorScheme.onPrimary
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    // Voice button for AI messages only
-                    if (isAi) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        CompactVoiceButton(
-                            isSpeaking = isSpeaking,
-                            onClick = {
-                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onSpeak()
-                            }
-                        )
-                    }
-                }
-            }
-
-            // Voice indicator below message
-            if (isAi && isSpeaking) {
-                Spacer(modifier = Modifier.height(4.dp))
-                CompactVoiceIndicator(
-                    emotion = voiceEmotion,
-                    latency = voiceLatency
+                Text(
+                    text = message.content,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (isAi) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.onPrimary
+                    },
+                    modifier = Modifier.padding(12.dp)
                 )
             }
+
         }
 
         // Context menu
@@ -187,52 +164,16 @@ private fun AiAvatarWithVoice(
     emotion: String
 ) {
     Box(
-        modifier = Modifier.size(32.dp),
+        modifier = Modifier.size(40.dp),
         contentAlignment = Alignment.Center
     ) {
-        // Speaking glow effect
-        AnimatedVisibility(
-            visible = isSpeaking,
-            enter = fadeIn(animationSpec = tween(200)) + scaleIn(),
-            exit = fadeOut(animationSpec = tween(300)) + scaleOut()
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .background(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                getEmotionColor(emotion).copy(alpha = 0.3f),
-                                Color.Transparent
-                            )
-                        ),
-                        shape = CircleShape
-                    )
-            )
-        }
-
-        // Avatar
-        Surface(
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.primaryContainer,
-            modifier = Modifier.size(28.dp)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text(
-                    text = "✨",
-                    fontSize = 16.sp
-                )
-            }
-        }
-
-        // Animated speaking dot
-        if (isSpeaking) {
-            SpeakingDot(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .offset(x = 2.dp, y = 2.dp)
-            )
-        }
+        androidx.compose.foundation.Image(
+            painter = painterResource(id = UiR.mipmap.calmify_logo_foreground),
+            contentDescription = "Calmify AI",
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+        )
     }
 }
 

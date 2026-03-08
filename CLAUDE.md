@@ -51,6 +51,12 @@ Come Jarvis di Iron Man, opero con questi principi fondamentali:
 
 2. **`.claude/refactor-status.md`** — Log cronologico dettagliato di tutte le operazioni passate (utile per capire PERCHE' qualcosa e' stato fatto in un certo modo).
 
+3. **`.claude/IMPROVEMENT_PROGRESS.md`** — Tracker del piano di miglioramento strategico. Contiene lo stato di ogni task (4 fasi, 30+ task). Leggere per sapere DOVE siamo e cosa fare dopo.
+
+4. **`FEATURE_IMPROVEMENT_ANALYSIS.md`** — Piano strategico completo con analisi di tutti i 15 moduli, problemi, improvement plan, roadmap. Riferimento per i dettagli di ogni task.
+
+**Slash command `/improve`** — Trigger per avviare/continuare il piano di miglioramento. Legge il tracker, identifica il prossimo task, propone approccio.
+
 **NON sovrascrivere MEMORY.md con informazioni non verificate.** Se una sessione finisce i token, la prossima sessione deve VERIFICARE lo stato dal codice prima di aggiornare la memoria.
 
 ---

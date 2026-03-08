@@ -43,6 +43,7 @@ fun SettingsScreen(
     onNavigateToHealthInfo: () -> Unit,
     onNavigateToLifestyle: () -> Unit,
     onNavigateToGoals: () -> Unit,
+    onNavigateToAiPreferences: () -> Unit = {},
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = koinViewModel()
@@ -124,12 +125,28 @@ fun SettingsScreen(
                     onNavigateToGoals = onNavigateToGoals
                 )
 
+                // AI Preferences Section
+                SettingsSectionHeader(title = "Preferenze AI")
+                SettingsNavigationItem(
+                    title = "Tono, promemoria e argomenti",
+                    subtitle = "Personalizza come Eve interagisce con te",
+                    icon = Icons.Default.Psychology,
+                    onClick = onNavigateToAiPreferences,
+                )
+
                 // Privacy Section
-                SettingsSectionHeader(title = "Privacy & Data")
+                SettingsSectionHeader(title = "Privacy & Dati")
                 PrivacySection(
                     profileSettings = uiState.profileSettings,
                     onUpdateSettings = viewModel::updatePrivacySettings,
                     isSaving = uiState.isSaving
+                )
+
+                SettingsActionButton(
+                    title = "Esporta i tuoi dati",
+                    icon = Icons.Default.Download,
+                    onClick = { viewModel.onIntent(SettingsContract.Intent.ExportUserData) },
+                    isLoading = uiState.isExporting,
                 )
 
                 // Account Actions Section
@@ -224,7 +241,7 @@ private fun ProfileOverviewCard(
                     .size(64.dp)
                     .scale(scale)
                     .clip(CircleShape),
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.onSurface
             ) {
                 Image(
                     painter = rememberAsyncImagePainter(

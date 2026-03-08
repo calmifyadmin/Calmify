@@ -199,6 +199,7 @@ dependencies {
     implementation(project(":features:notifications"))
     // Social Features (Wave 8)
     implementation(project(":features:messaging"))
+    implementation(project(":features:thread-detail"))
     // Monetization (Wave 9)
     implementation(project(":features:subscription"))
 

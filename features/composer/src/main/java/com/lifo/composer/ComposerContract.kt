@@ -1,18 +1,39 @@
 package com.lifo.composer
 
 import com.lifo.util.mvi.MviContract
+import com.lifo.util.repository.ThreadRepository
+
+data class ThreadDraft(val text: String = "", val mediaUris: List<String> = emptyList())
 
 object ComposerContract {
 
     enum class Visibility { PUBLIC, FOLLOWERS_ONLY, PRIVATE }
 
-    val MOOD_TAGS = listOf("Happy", "Calm", "Grateful", "Motivated", "Anxious", "Sad", "Angry", "Neutral")
+    enum class ReplyPermission { Everyone, Followers, Mentioned }
+
+    enum class PostCategory(val label: String, val emoji: String) {
+        SCOPERTA("Scoperta", "\uD83D\uDCA1"),
+        SFIDA("Sfida", "\uD83D\uDCAA"),
+        DOMANDA("Domanda", "\u2753"),
+    }
+
+    val MOOD_TAGS = listOf(
+        "Felice", "Sereno", "Grato", "Motivato",
+        "Ansioso", "Triste", "Arrabbiato", "Neutrale",
+    )
 
     sealed interface Intent : MviContract.Intent {
         data class UpdateContent(val content: String) : Intent
         data class SetVisibility(val visibility: Visibility) : Intent
         data class SetMoodTag(val moodTag: String?) : Intent
+        data class SetCategory(val category: PostCategory) : Intent
         data class SetShareFromJournal(val enabled: Boolean) : Intent
+        data class AddMedia(val uri: String) : Intent
+        data class RemoveMedia(val index: Int) : Intent
+        data class ChangeReplyPermission(val permission: ReplyPermission) : Intent
+        data object AddThreadPost : Intent
+        data class RemoveThreadPost(val index: Int) : Intent
+        data class UpdateThreadPost(val index: Int, val text: String) : Intent
         data object Submit : Intent
         data object Discard : Intent
     }
@@ -21,10 +42,20 @@ object ComposerContract {
         val content: String = "",
         val visibility: Visibility = Visibility.PUBLIC,
         val moodTag: String? = null,
+        val category: PostCategory? = null,
         val isFromJournal: Boolean = false,
         val isSubmitting: Boolean = false,
+        val isUploading: Boolean = false,
         val characterCount: Int = 0,
         val maxCharacters: Int = 500,
+        val mediaUris: List<String> = emptyList(),
+        val uploadProgress: Map<Int, Float> = emptyMap(),
+        val maxMedia: Int = 4,
+        val parentThreadId: String? = null,
+        val replyToAuthorName: String? = null,
+        val parentThread: ThreadRepository.Thread? = null,
+        val replyPermission: ReplyPermission = ReplyPermission.Everyone,
+        val threadDrafts: List<ThreadDraft> = emptyList(),
     ) : MviContract.State
 
     sealed interface Effect : MviContract.Effect {

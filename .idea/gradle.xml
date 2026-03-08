@@ -32,6 +32,7 @@
             <option value="$PROJECT_DIR$/build-logic/convention" />
             <option value="$PROJECT_DIR$/buildSrc" />
             <option value="$PROJECT_DIR$/core" />
+            <option value="$PROJECT_DIR$/core/social-ui" />
             <option value="$PROJECT_DIR$/core/ui" />
             <option value="$PROJECT_DIR$/core/util" />
             <option value="$PROJECT_DIR$/data" />
@@ -53,6 +54,7 @@
             <option value="$PROJECT_DIR$/features/settings" />
             <option value="$PROJECT_DIR$/features/social-profile" />
             <option value="$PROJECT_DIR$/features/subscription" />
+            <option value="$PROJECT_DIR$/features/thread-detail" />
             <option value="$PROJECT_DIR$/features/write" />
           </set>
         </option>

@@ -6,23 +6,33 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 import coil3.compose.rememberAsyncImagePainter
 import com.arkivanov.decompose.extensions.compose.stack.Children
 import com.arkivanov.decompose.extensions.compose.stack.animation.fade
+import com.arkivanov.decompose.extensions.compose.stack.animation.plus
+import com.arkivanov.decompose.extensions.compose.stack.animation.slide
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.google.firebase.auth.FirebaseAuth
@@ -36,11 +46,14 @@ import com.lifo.history.navigation.DiaryHistoryFullRouteContent
 import com.lifo.history.navigation.HistoryRouteContent
 import com.lifo.home.navigation.HomeRouteContent
 import com.lifo.humanoid.api.HumanoidAvatarView
+import com.lifo.humanoid.api.asHumanoidController
+import com.lifo.humanoid.lipsync.LipSyncController
 import com.lifo.humanoid.presentation.HumanoidScreen
 import com.lifo.humanoid.presentation.HumanoidViewModel
 import com.lifo.insight.InsightScreen
 import com.lifo.onboarding.OnboardingScreen
 import com.lifo.profile.ProfileDashboard
+import com.lifo.settings.navigation.SettingsAiPreferencesRouteContent
 import com.lifo.settings.navigation.SettingsGoalsRouteContent
 import com.lifo.settings.navigation.SettingsHealthInfoRouteContent
 import com.lifo.settings.navigation.SettingsLifestyleRouteContent
@@ -50,20 +63,25 @@ import com.lifo.ui.components.DisplayAlertDialog
 import com.lifo.ui.components.navigation.NavigationDestination
 import com.lifo.util.model.RequestState
 import com.lifo.util.repository.MongoRepository
+import com.lifo.write.navigation.JournalHomeRouteContent
 import com.lifo.write.navigation.WriteRouteContent
 import com.lifo.feed.FeedRouteContent
 import com.lifo.composer.ComposerRouteContent
+import com.lifo.socialprofile.EditProfileRouteContent
+import com.lifo.socialprofile.FollowListScreen
 import com.lifo.socialprofile.SocialProfileRouteContent
 import com.lifo.search.SearchRouteContent
 import com.lifo.notifications.NotificationsRouteContent
 import com.lifo.messaging.MessagingRouteContent
 import com.lifo.subscription.SubscriptionRouteContent
-import com.lifo.util.repository.FeatureFlagRepository
+import com.lifo.threaddetail.ThreadDetailRouteContent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import com.lifo.util.auth.AuthProvider
+import com.lifo.util.repository.ProfileSettingsRepository
 
 /**
  * Main Decompose-based app composable.
@@ -90,9 +108,17 @@ fun DecomposeApp(
     val activeChild = childStack.active.instance
     val activeDestination = childStack.active.configuration
 
-    // Feature flags for social features
-    val featureFlagRepository: FeatureFlagRepository = koinInject()
-    val featureFlags by featureFlagRepository.flags.collectAsState()
+    // ── Auth state observer — kickout on sign-out/token revocation ──
+    val authProvider: AuthProvider = koinInject()
+    val profileSettingsRepository: ProfileSettingsRepository = koinInject()
+    val authUserId by authProvider.authStateFlow.collectAsState()
+
+    LaunchedEffect(authUserId) {
+        // If user becomes null while NOT on Auth screen, force navigate to Auth
+        if (authUserId == null && activeDestination !is RootDestination.Auth) {
+            rootComponent.navigateToAuth()
+        }
+    }
 
     // Handle deep linking from FCM notifications
     LaunchedEffect(deepLinkRoute) {
@@ -114,11 +140,9 @@ fun DecomposeApp(
         derivedStateOf {
             when (childStack.active.configuration) {
                 is RootDestination.Home,
-                is RootDestination.History,
-                is RootDestination.ChatHistoryFull,
-                is RootDestination.DiaryHistoryFull,
-                is RootDestination.Profile,
-                is RootDestination.Feed -> true
+                is RootDestination.JournalHome,
+                is RootDestination.Feed,
+                is RootDestination.Profile -> true
                 else -> false
             }
         }
@@ -129,6 +153,24 @@ fun DecomposeApp(
             childStack.active.configuration is RootDestination.Home
         }
     }
+
+    // Scroll-based bottom bar hide (Instagram-style) — smooth offset animation
+    var bottomBarOffsetHeightPx by remember { mutableFloatStateOf(0f) }
+    val bottomBarScrollConnection = remember {
+        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+            override fun onPreScroll(
+                available: androidx.compose.ui.geometry.Offset,
+                source: androidx.compose.ui.input.nestedscroll.NestedScrollSource
+            ): androidx.compose.ui.geometry.Offset {
+                val delta = available.y
+                val newOffset = bottomBarOffsetHeightPx + delta
+                bottomBarOffsetHeightPx = newOffset.coerceIn(-300f, 0f)
+                return androidx.compose.ui.geometry.Offset.Zero
+            }
+        }
+    }
+    // Reset bar position when switching tabs
+    LaunchedEffect(activeDestination) { bottomBarOffsetHeightPx = 0f }
 
     // Drawer state
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -158,6 +200,14 @@ fun DecomposeApp(
                         scope.launch { drawerState.close() }
                         rootComponent.navigateToSettings()
                     },
+                    onHistoryClicked = {
+                        scope.launch { drawerState.close() }
+                        rootComponent.navigateToHistory()
+                    },
+                    onAvatarClicked = {
+                        scope.launch { drawerState.close() }
+                        rootComponent.navigateToHumanoid()
+                    },
                     onSignOutClicked = {
                         scope.launch { drawerState.close() }
                         signOutDialogOpened = true
@@ -170,102 +220,82 @@ fun DecomposeApp(
             }
         }
     ) {
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            containerColor = MaterialTheme.colorScheme.background,
-            bottomBar = {
-                AnimatedVisibility(
-                    visible = shouldShowBottomBar,
-                    enter = slideInVertically(
-                        initialOffsetY = { it },
-                        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
-                    ) + fadeIn(animationSpec = tween(300)),
-                    exit = slideOutVertically(
-                        targetOffsetY = { it },
-                        animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing)
-                    ) + fadeOut(animationSpec = tween(250))
-                ) {
-                    val onDestinationClickStable = remember(rootComponent) { { dest: NavigationDestination ->
-                        when (dest) {
-                            is NavigationDestination.Home -> rootComponent.replaceAll(RootDestination.Home)
-                            is NavigationDestination.Feed -> rootComponent.replaceAll(RootDestination.Feed)
-                            is NavigationDestination.Humanoid -> rootComponent.replaceAll(RootDestination.Humanoid)
-                            is NavigationDestination.History -> rootComponent.replaceAll(RootDestination.History)
-                            is NavigationDestination.Profile -> rootComponent.replaceAll(RootDestination.Profile)
-                            else -> {}
-                        }
-                    } }
-                    val destinations = remember(featureFlags.feedEnabled) {
-                        buildList {
-                            add(NavigationDestination.Home)
-                            if (featureFlags.feedEnabled) {
-                                add(NavigationDestination.Feed)
-                            }
-                            add(NavigationDestination.Humanoid)
-                            add(NavigationDestination.History)
-                            add(NavigationDestination.Profile)
-                        }
-                    }
-                    DecomposeBottomBar(
-                        activeDestination = activeDestination,
-                        onDestinationClick = onDestinationClickStable,
-                        destinations = destinations
-                    )
-                }
-            },
-            floatingActionButton = {
-                if (isHomeScreen && shouldShowBottomBar) {
-                    Column(
-                        horizontalAlignment = Alignment.End,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        // Chat FAB
-                        FloatingActionButton(
-                            onClick = { rootComponent.navigateToChat() },
-                            containerColor = MaterialTheme.colorScheme.secondary,
-                            contentColor = MaterialTheme.colorScheme.onSecondary,
-                            modifier = Modifier.size(48.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Chat,
-                                contentDescription = "Start Chat",
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
+        // Navbar + FAB as overlays outside Scaffold to avoid reserved padding
+        val density = LocalDensity.current
+        val navBarHeightDp = 80.dp
+        val navBarHeightPx = with(density) { navBarHeightDp.toPx() }
 
-                        // New Diary Extended FAB
-                        ExtendedFloatingActionButton(
-                            onClick = { rootComponent.navigateToWrite() },
-                            text = {
-                                Text(
-                                    text = "New Diary",
-                                    style = MaterialTheme.typography.labelLarge
-                                )
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = Icons.Default.Edit,
-                                    contentDescription = null
-                                )
-                            },
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
+        // Animated bottom bar offset: 0 = fully visible, navBarHeightPx = fully hidden
+        val animatedBarOffset by animateFloatAsState(
+            targetValue = if (bottomBarOffsetHeightPx < -navBarHeightPx / 2) navBarHeightPx else 0f,
+            animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
+            label = "barOffset"
+        )
+        val barVisible = animatedBarOffset < navBarHeightPx
+
+        // FAB configuration per destination
+        data class FabConfig(
+            val label: String,
+            val icon: androidx.compose.ui.graphics.vector.ImageVector,
+            val onClick: () -> Unit
+        )
+        val fabConfig: FabConfig? by remember {
+            derivedStateOf {
+                when (childStack.active.configuration) {
+                    is RootDestination.Home -> FabConfig(
+                        label = "Parla con Eve",
+                        icon = Icons.AutoMirrored.Filled.Chat,
+                        onClick = { rootComponent.navigateToChat() }
+                    )
+                    is RootDestination.Feed -> FabConfig(
+                        label = "Nuovo post",
+                        icon = Icons.Filled.Edit,
+                        onClick = { rootComponent.navigateToComposer() }
+                    )
+                    is RootDestination.JournalHome -> FabConfig(
+                        label = "Scrivi",
+                        icon = Icons.Filled.Edit,
+                        onClick = { rootComponent.navigateToWrite() }
+                    )
+                    is RootDestination.Profile -> FabConfig(
+                        label = "Parla con Eve",
+                        icon = Icons.AutoMirrored.Filled.Chat,
+                        onClick = { rootComponent.navigateToChat() }
+                    )
+                    else -> null
                 }
-            },
-            floatingActionButtonPosition = FabPosition.End
-        ) { paddingValues ->
-            // Decompose Children stack renderer
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clipToBounds()
+                .nestedScroll(bottomBarScrollConnection)
+        ) {
+            // Content fills entire screen
             Children(
                 stack = rootComponent.childStack,
-                animation = stackAnimation(fade()),
-                modifier = Modifier.padding(paddingValues)
+                animation = stackAnimation(fade() + slide()),
+                modifier = Modifier.fillMaxSize()
             ) { child ->
                 when (val instance = child.instance) {
                     is RootComponent.Child.Auth -> {
                         AuthenticationRouteContent(
-                            navigateToHome = { rootComponent.navigateToHome() },
+                            navigateToHome = {
+                                // After login, check onboarding status before going to Home
+                                scope.launch {
+                                    val onboardingResult = withContext(Dispatchers.IO) {
+                                        profileSettingsRepository.hasCompletedOnboarding()
+                                    }
+                                    val hasCompleted = (onboardingResult as? RequestState.Success)?.data ?: false
+                                    if (hasCompleted) {
+                                        rootComponent.navigateToHome()
+                                    } else {
+                                        rootComponent.replaceAll(RootDestination.Onboarding)
+                                    }
+                                }
+                            },
                             onDataLoaded = onDataLoaded
                         )
                     }
@@ -285,6 +315,13 @@ fun DecomposeApp(
                             navigateToExistingChat = { sessionId -> rootComponent.navigateToChat(sessionId) },
                             navigateToLiveScreen = { rootComponent.navigateToLiveChat() },
                             navigateToWellbeingSnapshot = { rootComponent.navigateToWellbeingSnapshot() },
+                            onNotificationsClick = { rootComponent.navigateToNotifications() },
+                            navigateToFeed = { rootComponent.navigateToFeed() },
+                            navigateToThreadDetail = { threadId -> rootComponent.navigateToThreadDetail(threadId) },
+                            navigateToSocialProfile = {
+                                val userId = auth.currentUser?.uid
+                                if (userId != null) rootComponent.navigateToUserProfile(userId)
+                            },
                             onDataLoaded = onDataLoaded,
                             drawerState = drawerState
                         )
@@ -322,6 +359,7 @@ fun DecomposeApp(
                             onNavigateToHealthInfo = { rootComponent.navigateToSettingsHealthInfo() },
                             onNavigateToLifestyle = { rootComponent.navigateToSettingsLifestyle() },
                             onNavigateToGoals = { rootComponent.navigateToSettingsGoals() },
+                            onNavigateToAiPreferences = { rootComponent.navigateToSettingsAiPreferences() },
                             onLogout = { rootComponent.navigateToAuth() }
                         )
                     }
@@ -350,6 +388,12 @@ fun DecomposeApp(
                         )
                     }
 
+                    is RootComponent.Child.SettingsAiPreferences -> {
+                        SettingsAiPreferencesRouteContent(
+                            onNavigateBack = { rootComponent.navigateBack() }
+                        )
+                    }
+
                     is RootComponent.Child.WellbeingSnapshot -> {
                         com.lifo.home.SnapshotScreen(
                             onBackPressed = { rootComponent.navigateBack() },
@@ -370,7 +414,14 @@ fun DecomposeApp(
                     is RootComponent.Child.Write -> {
                         WriteRouteContent(
                             diaryId = instance.diaryId,
-                            navigateBack = { rootComponent.navigateBack() }
+                            navigateBack = { rootComponent.navigateBack() },
+                            onShareToComposer = { prefilledContent ->
+                                rootComponent.navigateBack()
+                                rootComponent.navigateToComposer(prefilledContent = prefilledContent)
+                            },
+                            onNavigateToInsight = { id ->
+                                rootComponent.navigateToInsight(id)
+                            }
                         )
                     }
 
@@ -381,12 +432,17 @@ fun DecomposeApp(
                                 rootComponent.navigateToWrite()
                             },
                             navigateToLiveScreen = { rootComponent.navigateToLiveChat() },
+                            navigateToPaywall = { rootComponent.navigateToSubscription() },
                             sessionId = instance.sessionId
                         )
                     }
 
                     is RootComponent.Child.LiveChat -> {
                         val humanoidViewModel: HumanoidViewModel = koinViewModel()
+                        val lipSyncController: LipSyncController = koinInject()
+                        val humanoidController = remember {
+                            humanoidViewModel.asHumanoidController(lipSyncController)
+                        }
                         LiveScreen(
                             onClose = { rootComponent.navigateBack() },
                             showAvatar = true,
@@ -395,7 +451,24 @@ fun DecomposeApp(
                                     modifier = Modifier.fillMaxSize(),
                                     viewModel = humanoidViewModel
                                 )
-                            }
+                            },
+                            speechAnimationTarget = humanoidController
+                        )
+                    }
+
+                    is RootComponent.Child.JournalHome -> {
+                        JournalHomeRouteContent(
+                            onWriteClick = { rootComponent.navigateToWrite() },
+                            onDiaryClick = { diaryId -> rootComponent.navigateToWrite(diaryId) },
+                            onInsightClick = { diaryId -> rootComponent.navigateToInsight(diaryId) },
+                            onMenuClicked = {
+                                scope.launch {
+                                    if (!drawerState.isAnimationRunning && drawerState.isClosed) {
+                                        drawerState.open()
+                                    }
+                                }
+                            },
+                            onNotificationsClick = { rootComponent.navigateToNotifications() },
                         )
                     }
 
@@ -413,9 +486,15 @@ fun DecomposeApp(
 
                     is RootComponent.Child.Feed -> {
                         FeedRouteContent(
-                            onThreadClick = { /* TODO: ThreadDetail */ },
+                            onThreadClick = { threadId -> rootComponent.navigateToThreadDetail(threadId) },
                             onUserClick = { userId -> rootComponent.navigateToUserProfile(userId) },
                             onComposeClick = { rootComponent.navigateToComposer() },
+                            onReplyClick = { threadId, authorName ->
+                                rootComponent.navigateToComposer(
+                                    parentThreadId = threadId,
+                                    replyToAuthorName = authorName,
+                                )
+                            },
                             onSearchClick = { rootComponent.navigateToSearch() },
                             onNotificationsClick = { rootComponent.navigateToNotifications() },
                             onMessagingClick = { rootComponent.navigateToMessaging() },
@@ -426,7 +505,26 @@ fun DecomposeApp(
                         SocialProfileRouteContent(
                             userId = instance.userId,
                             onNavigateBack = { rootComponent.navigateBack() },
-                            onThreadClick = { /* TODO: ThreadDetail in Wave 8 */ },
+                            onThreadClick = { threadId -> rootComponent.navigateToThreadDetail(threadId) },
+                            onEditProfileClick = { userId -> rootComponent.navigateToEditProfile(userId) },
+                            onFollowersClick = { userId -> rootComponent.navigateToFollowList(userId, showFollowers = true) },
+                            onFollowingClick = { userId -> rootComponent.navigateToFollowList(userId, showFollowers = false) },
+                        )
+                    }
+
+                    is RootComponent.Child.EditProfile -> {
+                        EditProfileRouteContent(
+                            userId = instance.userId,
+                            onNavigateBack = { rootComponent.navigateBack() },
+                        )
+                    }
+
+                    is RootComponent.Child.FollowList -> {
+                        FollowListScreen(
+                            userId = instance.userId,
+                            showFollowers = instance.showFollowers,
+                            onNavigateBack = { rootComponent.navigateBack() },
+                            onUserClick = { userId -> rootComponent.navigateToUserProfile(userId) },
                         )
                     }
 
@@ -434,13 +532,16 @@ fun DecomposeApp(
                         ComposerRouteContent(
                             onNavigateBack = { rootComponent.navigateBack() },
                             onPostCreated = { rootComponent.navigateBack() },
+                            parentThreadId = instance.parentThreadId,
+                            replyToAuthorName = instance.replyToAuthorName,
+                            prefilledContent = instance.prefilledContent,
                         )
                     }
 
                     is RootComponent.Child.Search -> {
                         SearchRouteContent(
                             onNavigateBack = { rootComponent.navigateBack() },
-                            onThreadClick = { /* TODO: ThreadDetail in Wave 8 */ },
+                            onThreadClick = { threadId -> rootComponent.navigateToThreadDetail(threadId) },
                             onUserClick = { userId -> rootComponent.navigateToUserProfile(userId) },
                         )
                     }
@@ -448,12 +549,21 @@ fun DecomposeApp(
                     is RootComponent.Child.Notifications -> {
                         NotificationsRouteContent(
                             onNavigateBack = { rootComponent.navigateBack() },
-                            onThreadClick = { /* TODO: ThreadDetail */ },
+                            onThreadClick = { threadId -> rootComponent.navigateToThreadDetail(threadId) },
                             onUserClick = { userId -> rootComponent.navigateToUserProfile(userId) },
                         )
                     }
 
                     // === Social Features (Wave 8) ===
+
+                    is RootComponent.Child.ThreadDetail -> {
+                        ThreadDetailRouteContent(
+                            threadId = instance.threadId,
+                            onNavigateBack = { rootComponent.navigateBack() },
+                            onUserClick = { userId -> rootComponent.navigateToUserProfile(userId) },
+                            onThreadClick = { threadId -> rootComponent.navigateToThreadDetail(threadId) },
+                        )
+                    }
 
                     is RootComponent.Child.Messaging -> {
                         MessagingRouteContent(
@@ -471,6 +581,80 @@ fun DecomposeApp(
                         )
                     }
                 }
+            }
+
+            // ── Bottom Navigation Bar (overlay) ──
+            if (shouldShowBottomBar) {
+                val onDestinationClickStable = remember(rootComponent) { { dest: NavigationDestination ->
+                    when (dest) {
+                        is NavigationDestination.Home -> rootComponent.switchTab(RootDestination.Home)
+                        is NavigationDestination.Journal -> rootComponent.switchTab(RootDestination.JournalHome)
+                        is NavigationDestination.Community -> rootComponent.switchTab(RootDestination.Feed)
+                        is NavigationDestination.Journey -> rootComponent.switchTab(RootDestination.Profile)
+                        else -> {}
+                    }
+                } }
+                val destinations = remember {
+                    listOf(
+                        NavigationDestination.Home,
+                        NavigationDestination.Journal,
+                        NavigationDestination.Community,
+                        NavigationDestination.Journey,
+                    )
+                }
+                DecomposeBottomBar(
+                    activeDestination = activeDestination,
+                    onDestinationClick = onDestinationClickStable,
+                    destinations = destinations,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .offset { IntOffset(x = 0, y = animatedBarOffset.roundToInt()) }
+                )
+            }
+
+            // ── Contextual FAB (overlay) — offset synced with navbar animation ──
+            fabConfig?.let { config ->
+                val fabGapPx = with(density) { 24.dp.toPx() } // M3 standard gap above nav bar
+                val fabBottomOffset = navBarHeightPx - animatedBarOffset + fabGapPx
+
+                // Text appears for 1 second on first show, then collapses (one-shot)
+                var fabExpanded by remember { mutableStateOf(true) }
+                var fabTextShown by remember { mutableStateOf(false) }
+                LaunchedEffect(config.label) {
+                    if (!fabTextShown) {
+                        fabExpanded = true
+                        kotlinx.coroutines.delay(1500)
+                        fabExpanded = false
+                        fabTextShown = true
+                    }
+                }
+
+                val useLogo = config.label == "Parla con Eve"
+
+                ExtendedFloatingActionButton(
+                    onClick = config.onClick,
+                    expanded = fabExpanded,
+                    icon = {
+                        if (useLogo) {
+                            Image(
+                                painter = painterResource(id = com.lifo.ui.R.mipmap.calmify_logo_foreground),
+                                contentDescription = null,
+                                modifier = Modifier.size(52.dp)
+                            )
+                        } else {
+                            Icon(
+                                imageVector = config.icon,
+                                contentDescription = null
+                            )
+                        }
+                    },
+                    text = { Text(config.label) },
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    contentColor = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .offset { IntOffset(x = -(with(density) { 16.dp.toPx() }).roundToInt(), y = -fabBottomOffset.roundToInt()) }
+                )
             }
         }
     }
@@ -534,12 +718,15 @@ fun DecomposeApp(
                         withContext(Dispatchers.IO) {
                             when (val result = repository.deleteAllUserData()) {
                                 is RequestState.Success -> {
+                                    // Sign out after deleting all data
+                                    auth.signOut()
                                     withContext(Dispatchers.Main) {
                                         Toast.makeText(
                                             context,
-                                            "All data deleted successfully",
+                                            "Account eliminato. Tutti i dati sono stati cancellati.",
                                             Toast.LENGTH_SHORT
                                         ).show()
+                                        // AuthStateListener will auto-navigate to Auth
                                     }
                                 }
                                 is RequestState.Error -> {
@@ -588,6 +775,10 @@ private fun DecomposeBottomBar(
         destinations.forEach { destination ->
             val selected = when (destination) {
                 is NavigationDestination.Home -> activeDestination is RootDestination.Home
+                is NavigationDestination.Journal -> activeDestination is RootDestination.JournalHome
+                is NavigationDestination.AIChat -> activeDestination is RootDestination.Chat
+                is NavigationDestination.Journey -> activeDestination is RootDestination.Profile
+                is NavigationDestination.Community -> activeDestination is RootDestination.Feed
                 is NavigationDestination.Feed -> activeDestination is RootDestination.Feed
                 is NavigationDestination.Humanoid -> activeDestination is RootDestination.Humanoid
                 is NavigationDestination.History -> activeDestination is RootDestination.History ||
@@ -644,6 +835,8 @@ private fun DecomposeBottomBar(
 private fun DrawerContent(
     userProfileImageUrl: String?,
     onHeaderClicked: () -> Unit,
+    onHistoryClicked: () -> Unit,
+    onAvatarClicked: () -> Unit,
     onSignOutClicked: () -> Unit,
     onDeleteAllClicked: () -> Unit
 ) {
@@ -673,11 +866,10 @@ private fun DrawerContent(
                     modifier = Modifier.padding(bottom = 24.dp)
                 ) {
                     Image(
-                        painter = painterResource(id = com.lifo.ui.R.drawable.logo_calmify),
+                        painter = painterResource(id = com.lifo.ui.R.mipmap.calmify_logo_foreground),
                         contentDescription = "Calmify Logo",
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(48.dp)
                     )
-                    Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = "Calmify",
                         style = MaterialTheme.typography.headlineSmall
@@ -724,6 +916,34 @@ private fun DrawerContent(
                 }
             }
         }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+        NavigationDrawerItem(
+            icon = {
+                Icon(
+                    imageVector = Icons.Outlined.Schedule,
+                    contentDescription = null
+                )
+            },
+            label = { Text("Storico") },
+            selected = false,
+            onClick = onHistoryClicked,
+            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+        )
+
+        NavigationDrawerItem(
+            icon = {
+                Icon(
+                    imageVector = Icons.Filled.Person,
+                    contentDescription = null
+                )
+            },
+            label = { Text("Avatar") },
+            selected = false,
+            onClick = onAvatarClicked,
+            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+        )
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
@@ -791,14 +1011,19 @@ private fun parseDeepLinkRoute(route: String): RootDestination? {
             val diaryId = route.removePrefix("insight_screen?diaryId=")
             RootDestination.Insight(diaryId = diaryId)
         }
+        route == "journal_home_screen" -> RootDestination.JournalHome
         // Social deep links
         route == "feed_screen" -> RootDestination.Feed
-        route == "composer_screen" -> RootDestination.Composer
+        route == "composer_screen" -> RootDestination.Composer()
         route == "search_screen" -> RootDestination.Search
         route == "notifications_screen" -> RootDestination.Notifications
         route.startsWith("user_profile_screen?userId=") -> {
             val userId = route.removePrefix("user_profile_screen?userId=")
             RootDestination.UserProfile(userId = userId)
+        }
+        route.startsWith("thread_detail_screen?threadId=") -> {
+            val threadId = route.removePrefix("thread_detail_screen?threadId=")
+            RootDestination.ThreadDetail(threadId = threadId)
         }
         else -> {
             println("[DecomposeApp] Unknown deep link route: $route")

@@ -46,7 +46,10 @@ internal fun HistoryScreen(
             onDiaryClick = onDiaryClick,
             onChatHistoryHeaderClick = onChatHistoryHeaderClick,
             onDiaryHistoryHeaderClick = onDiaryHistoryHeaderClick,
-            onRefresh = { viewModel.refreshHistory() }
+            onRefresh = { viewModel.refreshHistory() },
+            onFilterSelected = { filter ->
+                viewModel.onIntent(HistoryContract.Intent.SetFilter(filter))
+            }
         )
     }
 }

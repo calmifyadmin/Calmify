@@ -14,7 +14,8 @@ data class ChatUiState(
     val sessionStarted: Boolean = false,
     val streamingMessage: StreamingMessage? = null,
     val isNavigating: Boolean = false,
-    val exportedContent: String? = null
+    val exportedContent: String? = null,
+    val showFreeLimitReached: Boolean = false,
 )
 
 data class StreamingMessage(

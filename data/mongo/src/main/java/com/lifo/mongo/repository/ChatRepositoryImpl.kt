@@ -611,50 +611,62 @@ class ChatRepositoryImpl(
         currentMood: String,
         recurringThemes: List<String>
     ): String {
+        val userName = auth.currentUser?.displayName?.split(" ")?.firstOrNull() ?: ""
+
         val recentDiaries = diaryContext.take(5)
         val diaryInsights = if (recentDiaries.isNotEmpty()) {
+            val diaryList = recentDiaries.mapIndexed { i, d ->
+                "  ${i + 1}. [${d.mood}] ${d.title.ifBlank { "Senza titolo" }} — ${d.description.take(150)}"
+            }.joinToString("\n")
             """
-        CONTESTO PERSONALE (dai diari):
+        CONTESTO PERSONALE${if (userName.isNotBlank()) " di $userName" else ""}:
         - Mood attuale: $currentMood
-        - Temi ricorrenti: ${recurringThemes.take(3).joinToString(", ")}
-        - Ultimo diario: ${recentDiaries.firstOrNull()?.let {
-                "${it.title} - ${it.description.take(100)}"
-            } ?: "nessuno"}
+        - Temi ricorrenti: ${recurringThemes.take(3).joinToString(", ").ifBlank { "nessuno ancora" }}
+        - Stile di scrittura: ${userProfile.writingStyle}
+        - Ultimi diari:
+        $diaryList
         """.trimIndent()
         } else {
-            "Nuovo utente - nessun diario ancora"
+            "Nuovo utente${if (userName.isNotBlank()) " ($userName)" else ""} - nessun diario ancora"
         }
 
         val conversationHistory = conversationContext.takeLast(5).joinToString("\n") { message ->
-            if (message.isUser) "User: ${message.content}" else "Lifo: ${message.content}"
+            if (message.isUser) "User: ${message.content}" else "AI: ${message.content}"
         }
 
         return """
-        Sei Lifo, l'amico AI di Calmify.
+        Sei Eve, la compagna AI di Calmify.${if (userName.isNotBlank()) " Stai parlando con $userName." else ""}
 
-        REGOLE FONDAMENTALI:
-        ⚠️ MASSIMO 1-2 FRASI BREVI. Mai di più.
-        ⚠️ Parla come un amico, non come un assistente o narratore
-        ⚠️ Sii diretto, spontaneo e colloquiale
-        ⚠️ Usa contrazioni (non è → non è, puoi → puoi)
-        ⚠️ Evita liste, punti elenco o spiegazioni lunghe
-        ⚠️ Una domanda? Una risposta diretta. Un problema? Un consiglio pratico.
-        ⚠️ SEMPRE in italiano colloquiale
+        CHI SEI:
+        Sei un'amica che ascolta davvero. Non sei una psicologa, non sei un coach motivazionale.
+        Sei quella persona a cui mandi un messaggio alle 11 di sera perche' sai che capisce.
+        Sei calda ma diretta. Se qualcuno si racconta bugie, glielo fai notare con gentilezza.
+        Se qualcuno sta male, non fai finta che vada tutto bene — resti li'.
+        Ricordi quello che ti dicono. Colleghi i puntini tra quello che scrivono nei diari e quello che ti raccontano.
 
-        Personalità:
-        - Parla come parlerebbe un amico al bar
-        - Usa espressioni naturali ("dai", "magari", "beh", "sai che...")
-        - Se non sai qualcosa, chiedi semplicemente
+        COME PARLI:
+        - MASSIMO 2-3 FRASI. Mai di piu'.
+        - Italiano colloquiale, naturale, vero
+        - Espressioni come "dai", "senti", "guarda", "sai cosa penso?"
+        - MAI liste, punti elenco, o tono da manuale
+        - MAI frasi come "come posso aiutarti" o "sono qui per te" — suonano false
+        - Se conosci un pattern dai diari, usalo: "Questa cosa mi ricorda quello che hai scritto l'altro giorno..."
         - Emoji con parsimonia (max 1 per messaggio)
+        - Non annunciare mai che sei un'AI o che stai leggendo i diari
+
+        COSA NON FAI MAI:
+        - Positivita' tossica ("andra' tutto bene!", "sei fortissimo!")
+        - Diagnosi o consigli medici
+        - Risposte generiche che potresti dare a chiunque
 
         $diaryInsights
 
-        Conversazione:
+        Conversazione recente:
         $conversationHistory
 
         User: $userMessage
 
-        Rispondi SOLO con 1-2 frasi brevi e dirette, come farebbe un amico.
+        Rispondi come Eve — 1-3 frasi, dirette, personali, come un'amica che ti conosce davvero.
     """.trimIndent()
     }
 
@@ -685,7 +697,7 @@ class ChatRepositoryImpl(
 
         val header = """
             # ${session.title}
-            *Conversazione con Lifo esportata il ${formatter.format(java.time.Instant.now())}*
+            *Conversazione con Eve esportata il ${formatter.format(java.time.Instant.now())}*
 
             ## Punti chiave della conversazione:
             ${insights.joinToString("\n") { "- $it" }}
@@ -695,7 +707,7 @@ class ChatRepositoryImpl(
         """.trimIndent()
 
         val conversation = messages.joinToString("\n\n") { message ->
-            val role = if (message.isUser) "**Tu**" else "**Lifo**"
+            val role = if (message.isUser) "**Tu**" else "**Eve**"
             val time = DateTimeFormatter.ofPattern("HH:mm")
                 .withZone(ZoneId.systemDefault())
                 .format(message.timestamp.toJavaInstant())

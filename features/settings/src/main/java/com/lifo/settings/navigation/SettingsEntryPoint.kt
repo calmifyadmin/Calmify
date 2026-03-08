@@ -1,12 +1,19 @@
 package com.lifo.settings.navigation
 
+import android.content.Intent
+import android.widget.Toast
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.FileProvider
 import org.koin.compose.viewmodel.koinViewModel
 import androidx.compose.runtime.collectAsState
+import com.lifo.settings.SettingsContract
 import com.lifo.settings.SettingsScreen
 import com.lifo.settings.SettingsViewModel
 import com.lifo.settings.subscreens.*
+import java.io.File
 
 /**
  * Shared ViewModel key for all Settings screens.
@@ -25,9 +32,43 @@ fun SettingsMainRouteContent(
     onNavigateToHealthInfo: () -> Unit,
     onNavigateToLifestyle: () -> Unit,
     onNavigateToGoals: () -> Unit,
+    onNavigateToAiPreferences: () -> Unit = {},
     onLogout: () -> Unit
 ) {
     val viewModel: SettingsViewModel = koinViewModel(key = SETTINGS_VM_KEY)
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                is SettingsContract.Effect.DataExported -> {
+                    try {
+                        val exportDir = File(context.cacheDir, "exports")
+                        exportDir.mkdirs()
+                        val file = File(exportDir, "calmify_data_export.json")
+                        file.writeText(effect.json)
+                        val uri = FileProvider.getUriForFile(
+                            context,
+                            "${context.packageName}.provider",
+                            file
+                        )
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "application/json"
+                            putExtra(Intent.EXTRA_STREAM, uri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        context.startActivity(Intent.createChooser(shareIntent, "Esporta dati Calmify"))
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Errore nell'export: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                is SettingsContract.Effect.ShowError -> {
+                    Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+                }
+                else -> { /* handled elsewhere */ }
+            }
+        }
+    }
 
     SettingsScreen(
         onNavigateBack = onNavigateBack,
@@ -35,6 +76,7 @@ fun SettingsMainRouteContent(
         onNavigateToHealthInfo = onNavigateToHealthInfo,
         onNavigateToLifestyle = onNavigateToLifestyle,
         onNavigateToGoals = onNavigateToGoals,
+        onNavigateToAiPreferences = onNavigateToAiPreferences,
         onLogout = onLogout,
         viewModel = viewModel
     )
@@ -161,5 +203,34 @@ fun SettingsGoalsRouteContent(
             onNavigateBack()
         },
         isSaving = uiState.isSaving
+    )
+}
+
+/**
+ * Public entry point for the AI Preferences settings sub-screen.
+ */
+@Composable
+fun SettingsAiPreferencesRouteContent(
+    onNavigateBack: () -> Unit,
+) {
+    val viewModel: SettingsViewModel = koinViewModel(key = SETTINGS_VM_KEY)
+    val uiState by viewModel.uiState.collectAsState()
+
+    AiPreferencesScreen(
+        currentTone = uiState.profileSettings.aiTone,
+        currentReminderFrequency = uiState.profileSettings.reminderFrequency,
+        currentTopicsToAvoid = uiState.profileSettings.topicsToAvoid,
+        onNavigateBack = onNavigateBack,
+        onSave = { tone, reminderFreq, topics ->
+            viewModel.updateProfileInfo(
+                uiState.profileSettings.copy(
+                    aiTone = tone,
+                    reminderFrequency = reminderFreq,
+                    topicsToAvoid = topics,
+                )
+            )
+            onNavigateBack()
+        },
+        isSaving = uiState.isSaving,
     )
 }

@@ -239,6 +239,7 @@ fun DocumentSnapshot.toProfileSettings(): ProfileSettings? {
             updatedAtMillis = getTimestamp("updatedAt")?.toDate()?.time
                 ?: Clock.System.now().toEpochMilliseconds(),
             isOnboardingCompleted = getBoolean("isOnboardingCompleted") ?: false,
+            displayName = getString("displayName") ?: "",
             fullName = getString("fullName") ?: "",
             dateOfBirth = getString("dateOfBirth") ?: "",
             gender = getString("gender") ?: "PREFER_NOT_TO_SAY",
@@ -269,6 +270,7 @@ fun ProfileSettings.toFirestoreMap(): Map<String, Any?> = mapOf(
     "createdAt" to Timestamp(Date(createdAtMillis)),
     "updatedAt" to Timestamp(Date(updatedAtMillis)),
     "isOnboardingCompleted" to isOnboardingCompleted,
+    "displayName" to displayName,
     "fullName" to fullName,
     "dateOfBirth" to dateOfBirth,
     "gender" to gender,

@@ -18,6 +18,8 @@ interface ThreadRepository {
     suspend fun likeThread(userId: String, threadId: String): RequestState<Boolean>
     suspend fun unlikeThread(userId: String, threadId: String): RequestState<Boolean>
     suspend fun isLikedByUser(userId: String, threadId: String): Boolean
+    suspend fun repostThread(userId: String, threadId: String): RequestState<Boolean>
+    suspend fun unrepostThread(userId: String, threadId: String): RequestState<Boolean>
 
     data class Thread(
         val threadId: String = "",
@@ -26,10 +28,22 @@ interface ThreadRepository {
         val text: String = "",
         val likeCount: Long = 0,
         val replyCount: Long = 0,
+        val repostCount: Long = 0,
         val visibility: String = "public",
         val moodTag: String? = null,
         val isFromJournal: Boolean = false,
         val createdAt: Long = 0,
-        val updatedAt: Long? = null
+        val updatedAt: Long? = null,
+        val authorDisplayName: String? = null,
+        val authorUsername: String? = null,
+        val authorAvatarUrl: String? = null,
+        val authorIsVerified: Boolean = false,
+        val mediaUrls: List<String> = emptyList(),
+        val isLikedByCurrentUser: Boolean = false,
+        val isRepostedByCurrentUser: Boolean = false,
+        val replyPreviewAvatars: List<String> = emptyList(),
+        val viewCount: Long = 0,
+        val shareCount: Long = 0,
+        val postCategory: String? = null,
     )
 }

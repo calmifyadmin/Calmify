@@ -21,6 +21,10 @@ fun SocialProfileRouteContent(
     userId: String,
     onNavigateBack: () -> Unit = {},
     onThreadClick: (String) -> Unit = {},
+    onUserClick: (String) -> Unit = {},
+    onEditProfileClick: (String) -> Unit = {},
+    onFollowersClick: (String) -> Unit = {},
+    onFollowingClick: (String) -> Unit = {},
 ) {
     val viewModel: SocialProfileViewModel = koinViewModel()
     val state by viewModel.state.collectAsState()
@@ -43,6 +47,15 @@ fun SocialProfileRouteContent(
                 is SocialProfileContract.Effect.ShowError -> {
                     // Error is already handled via state.error in the screen
                 }
+                is SocialProfileContract.Effect.LaunchImagePicker -> {
+                    // Image picker is handled at the screen level
+                }
+                is SocialProfileContract.Effect.ProfileSaved -> {
+                    // Profile saved successfully; UI already reflects changes
+                }
+                is SocialProfileContract.Effect.NavigateToEditProfile -> {
+                    onEditProfileClick(state.userId)
+                }
             }
         }
     }
@@ -51,6 +64,9 @@ fun SocialProfileRouteContent(
         state = state,
         onIntent = viewModel::onIntent,
         onNavigateBack = onNavigateBack,
-        onThreadClick = onThreadClick
+        onThreadClick = onThreadClick,
+        onUserClick = onUserClick,
+        onFollowersClick = onFollowersClick,
+        onFollowingClick = onFollowingClick,
     )
 }

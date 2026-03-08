@@ -67,8 +67,14 @@ fun LiveScreen(
     showAvatar: Boolean = false,
     avatarContent: (@Composable () -> Unit)? = null,
     onAvatarSetup: ((com.lifo.util.speech.SpeechAnimationTarget) -> Unit)? = null,
+    speechAnimationTarget: com.lifo.util.speech.SpeechAnimationTarget? = null,
     viewModel: LiveChatViewModel = koinViewModel()
 ) {
+    // Connect avatar lip-sync controller to the live chat audio pipeline
+    LaunchedEffect(speechAnimationTarget) {
+        speechAnimationTarget?.let { viewModel.attachHumanoidController(it) }
+    }
+
     val liveChatState by viewModel.uiState.collectAsStateWithLifecycle()
     val currentTranscript by viewModel.currentTranscript.collectAsStateWithLifecycle()
 

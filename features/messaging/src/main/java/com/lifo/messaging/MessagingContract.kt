@@ -2,6 +2,7 @@ package com.lifo.messaging
 
 import androidx.compose.runtime.Immutable
 import com.lifo.util.mvi.MviContract
+import com.lifo.util.repository.SocialGraphRepository
 import com.lifo.util.repository.SocialMessagingRepository
 
 object MessagingContract {
@@ -15,6 +16,9 @@ object MessagingContract {
         data class SetTyping(val isTyping: Boolean) : Intent
         data class CreateConversation(val participantId: String) : Intent
         data class MarkRead(val conversationId: String) : Intent
+        data object ShowUserPicker : Intent
+        data object HideUserPicker : Intent
+        data class SearchUsers(val query: String) : Intent
     }
 
     @Immutable
@@ -29,6 +33,10 @@ object MessagingContract {
         val isLoadingMessages: Boolean = false,
         val isSending: Boolean = false,
         val error: String? = null,
+        val isUserPickerOpen: Boolean = false,
+        val userPickerQuery: String = "",
+        val userPickerResults: List<SocialGraphRepository.SocialUser> = emptyList(),
+        val isSearchingUsers: Boolean = false,
     ) : MviContract.State {
         val isInChatRoom: Boolean get() = currentConversationId != null
     }

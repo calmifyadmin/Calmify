@@ -18,8 +18,8 @@ object SubscriptionContract {
         val availableProducts: List<SubscriptionRepository.ProductInfo> = emptyList(),
         val error: String? = null,
     ) : MviContract.State {
-        val isPremium: Boolean
-            get() = subscriptionTier != SubscriptionRepository.SubscriptionTier.FREE
+        val isPro: Boolean
+            get() = subscriptionTier == SubscriptionRepository.SubscriptionTier.PRO
     }
 
     sealed interface Effect : MviContract.Effect {
@@ -27,5 +27,6 @@ object SubscriptionContract {
         data class PurchaseSuccess(val tier: SubscriptionRepository.SubscriptionTier) : Effect
         data object NavigateBack : Effect
         data class ShowRestoreResult(val count: Int) : Effect
+        data class LaunchBillingFlow(val productId: String) : Effect
     }
 }

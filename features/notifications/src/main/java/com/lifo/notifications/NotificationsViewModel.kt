@@ -25,7 +25,12 @@ class NotificationsViewModel(
             is NotificationsContract.Intent.LoadNotifications -> loadNotifications()
             is NotificationsContract.Intent.MarkAsRead -> markAsRead(intent.notificationId)
             is NotificationsContract.Intent.MarkAllRead -> markAllRead()
+            is NotificationsContract.Intent.SelectFilter -> selectFilter(intent.filter)
         }
+    }
+
+    private fun selectFilter(filter: NotificationsContract.NotificationFilter) {
+        updateState { copy(selectedFilter = filter) }
     }
 
     private fun loadNotifications() {

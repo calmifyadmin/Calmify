@@ -1,0 +1,41 @@
+CREATE TABLE cached_threads (
+    threadId TEXT PRIMARY KEY NOT NULL,
+    authorId TEXT NOT NULL,
+    authorDisplayName TEXT,
+    authorAvatarUrl TEXT,
+    text TEXT NOT NULL,
+    moodTag TEXT,
+    postCategory TEXT,
+    likeCount INTEGER NOT NULL DEFAULT 0,
+    replyCount INTEGER NOT NULL DEFAULT 0,
+    repostCount INTEGER NOT NULL DEFAULT 0,
+    createdAt INTEGER NOT NULL DEFAULT 0,
+    cachedAt INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX index_cached_threads_createdAt ON cached_threads(createdAt DESC);
+
+getCachedThreads:
+SELECT *
+FROM cached_threads
+ORDER BY createdAt DESC
+LIMIT :limit;
+
+insertThread:
+INSERT OR REPLACE INTO cached_threads(
+    threadId, authorId, authorDisplayName, authorAvatarUrl,
+    text, moodTag, postCategory,
+    likeCount, replyCount, repostCount,
+    createdAt, cachedAt
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+deleteOldThreads:
+DELETE FROM cached_threads
+WHERE cachedAt < :olderThan;
+
+clearAll:
+DELETE FROM cached_threads;
+
+getThreadCount:
+SELECT COUNT(*) FROM cached_threads;

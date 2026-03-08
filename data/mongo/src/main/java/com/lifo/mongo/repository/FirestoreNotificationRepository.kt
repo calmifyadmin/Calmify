@@ -141,6 +141,35 @@ class FirestoreNotificationRepository @Inject constructor(
         }
     }
 
+    /**
+     * Create a notification document in Firestore.
+     */
+    override suspend fun createNotification(notification: Notification): RequestState<String> {
+        return try {
+            // Don't notify yourself
+            if (notification.actorId == notification.userId) {
+                return RequestState.Success("")
+            }
+
+            val data = mapOf(
+                "userId" to notification.userId,
+                "type" to notification.type.name,
+                "actorId" to notification.actorId,
+                "actorName" to notification.actorName,
+                "actorAvatarUrl" to notification.actorAvatarUrl,
+                "threadId" to notification.threadId,
+                "message" to notification.message,
+                "isRead" to false,
+                "createdAt" to System.currentTimeMillis()
+            )
+            val docRef = notificationsCollection.add(data).await()
+            RequestState.Success(docRef.id)
+        } catch (e: Exception) {
+            println("[$TAG] ERROR: Error creating notification: ${e.message}")
+            RequestState.Error(e)
+        }
+    }
+
     // -- Helpers --
 
     private fun docToNotification(doc: com.google.firebase.firestore.DocumentSnapshot): Notification {

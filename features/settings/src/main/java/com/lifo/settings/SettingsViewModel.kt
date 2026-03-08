@@ -5,8 +5,11 @@ import com.lifo.util.model.ProfileSettings
 import com.lifo.util.model.RequestState
 import com.lifo.util.mvi.MviContract
 import com.lifo.util.mvi.MviViewModel
+import com.lifo.util.repository.ChatRepository
+import com.lifo.util.repository.MongoRepository
 import com.lifo.util.repository.ProfileSettingsRepository
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -37,6 +40,7 @@ object SettingsContract {
         data object Logout : Intent
         data class ShowDeleteAccountDialog(val show: Boolean) : Intent
         data object DeleteAccount : Intent
+        data object ExportUserData : Intent
         data object ClearError : Intent
     }
 
@@ -47,6 +51,7 @@ object SettingsContract {
         data object AccountDeleted : Effect
         data class ShowError(val message: String) : Effect
         data object ProfileSaved : Effect
+        data class DataExported(val json: String) : Effect
     }
 }
 
@@ -65,7 +70,9 @@ object SettingsContract {
  */
 class SettingsViewModel constructor(
     private val profileSettingsRepository: ProfileSettingsRepository,
-    private val authProvider: AuthProvider
+    private val authProvider: AuthProvider,
+    private val diaryRepository: MongoRepository,
+    private val chatRepository: ChatRepository,
 ) : MviViewModel<SettingsContract.Intent, SettingsUiState, SettingsContract.Effect>(
     initialState = SettingsUiState()
 ) {
@@ -98,6 +105,7 @@ class SettingsViewModel constructor(
             is SettingsContract.Intent.Logout -> handleLogout()
             is SettingsContract.Intent.ShowDeleteAccountDialog -> handleShowDeleteAccountDialog(intent.show)
             is SettingsContract.Intent.DeleteAccount -> handleDeleteAccount()
+            is SettingsContract.Intent.ExportUserData -> handleExportUserData()
             is SettingsContract.Intent.ClearError -> updateState { copy(error = null) }
         }
     }
@@ -175,6 +183,7 @@ class SettingsViewModel constructor(
                         copy(
                             isLoading = false,
                             profileSettings = result.data ?: ProfileSettings(),
+                            userProfileImageUrl = authProvider.currentUserPhotoUrl,
                             error = null
                         )
                     }
@@ -307,6 +316,74 @@ class SettingsViewModel constructor(
         updateState { copy(showDeleteAccountDialog = show) }
     }
 
+    private fun handleExportUserData() {
+        val userId = authProvider.currentUserId ?: return
+
+        scope.launch {
+            updateState { copy(isExporting = true) }
+
+            try {
+                val sb = StringBuilder()
+                sb.appendLine("{")
+                sb.appendLine("  \"exportDate\": \"${System.currentTimeMillis()}\",")
+                sb.appendLine("  \"userId\": \"$userId\",")
+
+                // Profile
+                val ps = currentState.profileSettings
+                sb.appendLine("  \"profile\": {")
+                sb.appendLine("    \"fullName\": \"${ps.fullName.replace("\"", "\\\"")}\",")
+                sb.appendLine("    \"dateOfBirth\": \"${ps.dateOfBirth}\",")
+                sb.appendLine("    \"gender\": \"${ps.gender}\",")
+                sb.appendLine("    \"location\": \"${ps.location.replace("\"", "\\\"")}\"")
+                sb.appendLine("  },")
+
+                // Diaries
+                val diariesResult = diaryRepository.getAllDiaries().first { it !is RequestState.Loading }
+                sb.appendLine("  \"diaries\": [")
+                if (diariesResult is RequestState.Success) {
+                    val allDiaries = diariesResult.data.values.flatten()
+                    allDiaries.forEachIndexed { idx, diary ->
+                        sb.append("    {")
+                        sb.append("\"id\":\"${diary._id}\",")
+                        sb.append("\"title\":\"${diary.title.replace("\"", "\\\"")}\",")
+                        sb.append("\"description\":\"${diary.description.replace("\"", "\\\"").replace("\n", "\\n")}\",")
+                        sb.append("\"mood\":\"${diary.mood}\",")
+                        sb.append("\"date\":${diary.dateMillis},")
+                        sb.append("\"dayKey\":\"${diary.dayKey}\"")
+                        sb.append("}")
+                        if (idx < allDiaries.size - 1) sb.append(",")
+                        sb.appendLine()
+                    }
+                }
+                sb.appendLine("  ],")
+
+                // Chat sessions
+                val sessionsResult = chatRepository.getAllSessions().first { it !is RequestState.Loading }
+                sb.appendLine("  \"chatSessions\": [")
+                if (sessionsResult is RequestState.Success) {
+                    sessionsResult.data.forEachIndexed { idx, session ->
+                        sb.append("    {")
+                        sb.append("\"id\":\"${session.id}\",")
+                        sb.append("\"title\":\"${session.title.replace("\"", "\\\"")}\",")
+                        sb.append("\"createdAt\":${session.createdAt},")
+                        sb.append("\"messageCount\":${session.messageCount}")
+                        sb.append("}")
+                        if (idx < sessionsResult.data.size - 1) sb.append(",")
+                        sb.appendLine()
+                    }
+                }
+                sb.appendLine("  ]")
+                sb.appendLine("}")
+
+                updateState { copy(isExporting = false) }
+                sendEffect(SettingsContract.Effect.DataExported(sb.toString()))
+            } catch (e: Exception) {
+                updateState { copy(isExporting = false) }
+                sendEffect(SettingsContract.Effect.ShowError("Errore nell'export: ${e.message}"))
+            }
+        }
+    }
+
     private fun handleDeleteAccount() {
         scope.launch {
             updateState { copy(isDeleting = true, error = null) }
@@ -356,7 +433,8 @@ data class SettingsUiState(
     val appPreferences: AppPreferences = AppPreferences(),
     val userProfileImageUrl: String? = null,
     val showDeleteAccountDialog: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val isExporting: Boolean = false,
 ) : MviContract.State
 
 /**

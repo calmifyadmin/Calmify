@@ -27,6 +27,7 @@ firebase-bom = "34.7.0"
 firebase-auth-version = "23.2.0"       # Explicit version for KMP source sets (BOM platform() unsupported)
 firebase-firestore-version = "25.1.3"  # Explicit version for KMP source sets (BOM platform() unsupported)
 firebase-storage-version = "21.0.1"    # Explicit version for KMP source sets
+firebase-analytics-version = "22.1.2"  # Explicit version for KMP source sets
 firebase-database-version = "21.0.0"   # Explicit version for KMP source sets
 firebase-functions-version = "21.1.0"  # Explicit version for KMP source sets
 firebase-config-version = "22.0.1"     # Explicit version for KMP source sets
@@ -52,7 +53,10 @@ accompanist = "0.36.0"
 # UI Libraries
 date-time-picker = "1.0.2"
 message-bar-compose = "1.0.8"
-one-tap-compose = "1.0.8"
+
+# Credential Manager (Google Sign-In replacement for OneTap)
+credentials = "1.5.0-rc01"
+googleid = "1.1.1"
 
 # AI/ML - LATEST 2025
 generative-ai = "0.9.0"
@@ -140,6 +144,7 @@ firebase-firestore-kmp = { module = "com.google.firebase:firebase-firestore", ve
 firebase-storage-kmp = { module = "com.google.firebase:firebase-storage", version.ref = "firebase-storage-version" }
 firebase-storage = { module = "com.google.firebase:firebase-storage" }
 firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
+firebase-analytics-kmp = { module = "com.google.firebase:firebase-analytics", version.ref = "firebase-analytics-version" }
 firebase-functions = { module = "com.google.firebase:firebase-functions" }
 firebase-functions-kmp = { module = "com.google.firebase:firebase-functions", version.ref = "firebase-functions-version" }
 firebase-database = { module = "com.google.firebase:firebase-database" }
@@ -189,7 +194,11 @@ date-time-picker = { module = "com.maxkeppeler.sheets-compose-dialogs:core", ver
 date-dialog = { module = "com.maxkeppeler.sheets-compose-dialogs:calendar", version.ref = "date-time-picker" }
 time-dialog = { module = "com.maxkeppeler.sheets-compose-dialogs:clock", version.ref = "date-time-picker" }
 message-bar-compose = { module = "com.github.stevdza-san:MessageBarCompose", version.ref = "message-bar-compose" }
-one-tap-compose = { module = "com.github.stevdza-san:OneTapCompose", version.ref = "one-tap-compose" }
+
+# Credential Manager (replaces OneTapCompose)
+credentials = { module = "androidx.credentials:credentials", version.ref = "credentials" }
+credentials-play-services = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentials" }
+googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
 
 # AI/ML
 generative-ai = { module = "com.google.ai.client.generativeai:generativeai", version.ref = "generative-ai" }

@@ -18,6 +18,9 @@ data class ProfileSettings(
 
     var isOnboardingCompleted: Boolean = false,
 
+    // Identity — user-chosen name (Google name stored in fullName as fallback)
+    var displayName: String = "",
+
     // Personal Information
     var fullName: String = "",
     var dateOfBirth: String = "",
@@ -41,6 +44,11 @@ data class ProfileSettings(
     // Wellness Goals
     var primaryGoals: List<String> = emptyList(),
     var preferredCopingStrategies: List<String> = emptyList(),
+
+    // AI Preferences
+    var aiTone: String = AiTone.FRIENDLY.name,
+    var reminderFrequency: String = ReminderFrequency.DAILY.name,
+    var topicsToAvoid: List<String> = emptyList(),
 
     // Privacy Settings
     var shareDataForResearch: Boolean = false,
@@ -98,6 +106,27 @@ enum class SocialSupport(val displayName: String) {
     LIMITED("Limited support"),
     MODERATE("Moderate support"),
     STRONG("Strong support system")
+}
+
+enum class AiTone(val displayName: String) {
+    FORMAL("Formale"),
+    FRIENDLY("Amichevole"),
+    DIRECT("Diretto"),
+    EMPATHETIC("Empatico"),
+}
+
+enum class ReminderFrequency(val displayName: String) {
+    NEVER("Mai"),
+    DAILY("Giornaliero"),
+    WEEKLY("Settimanale"),
+    TWICE_DAILY("Due volte al giorno"),
+}
+
+object TopicsToAvoid {
+    val ALL = listOf(
+        "Famiglia", "Lavoro", "Relazioni sentimentali", "Salute fisica",
+        "Finanze", "Politica", "Religione", "Sessualita'",
+    )
 }
 
 object MentalHealthConcerns {

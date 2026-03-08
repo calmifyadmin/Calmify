@@ -32,6 +32,10 @@ fun HomeRouteContent(
     navigateToExistingChat: (String) -> Unit,
     navigateToLiveScreen: () -> Unit,
     navigateToWellbeingSnapshot: () -> Unit,
+    onNotificationsClick: () -> Unit = {},
+    navigateToFeed: () -> Unit = {},
+    navigateToThreadDetail: (String) -> Unit = {},
+    navigateToSocialProfile: () -> Unit = {},
     onDataLoaded: () -> Unit,
     drawerState: DrawerState
 ) {
@@ -94,7 +98,11 @@ fun HomeRouteContent(
         navigateToChat = navigateToChat,
         navigateToExistingChat = navigateToExistingChat,
         navigateToLiveScreen = navigateToLiveScreen,
-        navigateToWellbeingSnapshot = navigateToWellbeingSnapshot
+        navigateToWellbeingSnapshot = navigateToWellbeingSnapshot,
+        onNotificationsClick = onNotificationsClick,
+        navigateToFeed = navigateToFeed,
+        navigateToThreadDetail = navigateToThreadDetail,
+        navigateToSocialProfile = navigateToSocialProfile,
     )
 
     // Sign Out Dialog

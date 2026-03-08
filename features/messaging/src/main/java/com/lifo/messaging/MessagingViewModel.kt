@@ -3,6 +3,7 @@ package com.lifo.messaging
 import com.lifo.util.auth.AuthProvider
 import com.lifo.util.model.RequestState
 import com.lifo.util.mvi.MviViewModel
+import com.lifo.util.repository.SearchRepository
 import com.lifo.util.repository.SocialMessagingRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -18,7 +19,8 @@ import kotlinx.coroutines.launch
  */
 class MessagingViewModel(
     private val messagingRepository: SocialMessagingRepository,
-    private val authProvider: AuthProvider
+    private val authProvider: AuthProvider,
+    private val searchRepository: SearchRepository,
 ) : MviViewModel<MessagingContract.Intent, MessagingContract.State, MessagingContract.Effect>(
     initialState = MessagingContract.State()
 ) {
@@ -48,6 +50,9 @@ class MessagingViewModel(
             is MessagingContract.Intent.SetTyping -> setTyping(intent.isTyping)
             is MessagingContract.Intent.CreateConversation -> createConversation(intent.participantId)
             is MessagingContract.Intent.MarkRead -> markRead(intent.conversationId)
+            is MessagingContract.Intent.ShowUserPicker -> updateState { copy(isUserPickerOpen = true, userPickerQuery = "", userPickerResults = emptyList()) }
+            is MessagingContract.Intent.HideUserPicker -> updateState { copy(isUserPickerOpen = false, userPickerQuery = "", userPickerResults = emptyList()) }
+            is MessagingContract.Intent.SearchUsers -> searchUsersForPicker(intent.query)
         }
     }
 
@@ -280,6 +285,32 @@ class MessagingViewModel(
 
         scope.launch {
             messagingRepository.markConversationRead(conversationId, userId)
+        }
+    }
+
+    private var userSearchJob: Job? = null
+
+    private fun searchUsersForPicker(query: String) {
+        updateState { copy(userPickerQuery = query) }
+        if (query.isBlank()) {
+            updateState { copy(userPickerResults = emptyList(), isSearchingUsers = false) }
+            return
+        }
+        userSearchJob?.cancel()
+        userSearchJob = scope.launch {
+            delay(300) // debounce
+            updateState { copy(isSearchingUsers = true) }
+            searchRepository.searchUsers(query, limit = 15).collect { result ->
+                when (result) {
+                    is RequestState.Success -> {
+                        updateState { copy(userPickerResults = result.data, isSearchingUsers = false) }
+                    }
+                    is RequestState.Error -> {
+                        updateState { copy(isSearchingUsers = false) }
+                    }
+                    else -> {}
+                }
+            }
         }
     }
 

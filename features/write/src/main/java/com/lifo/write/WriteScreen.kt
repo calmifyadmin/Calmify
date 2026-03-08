@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import org.koin.compose.viewmodel.koinViewModel
+
 import coil3.compose.SubcomposeAsyncImage
 import coil3.request.ImageRequest
 import com.google.accompanist.pager.ExperimentalPagerApi
@@ -109,9 +109,6 @@ internal fun WriteScreen(
                 }
             }
 
-            // Get WriteViewModel
-            val writeViewModel: WriteViewModel = koinViewModel()
-
             // Update the Mood when selecting an existing Diary
             LaunchedEffect(key1 = uiState.mood) {
                 pagerState.scrollToPage(Mood.valueOf(uiState.mood.name).ordinal)
@@ -141,7 +138,7 @@ internal fun WriteScreen(
                         onSaveClicked = onSaveClicked,
                         onImageSelect = onImageSelect,
                         onImageClicked = { selectedGalleryImage = it },
-                        viewModel = writeViewModel
+                        viewModel = viewModel
                     )
 
                     // Show dialog for image preview/editing when an image is selected

@@ -1,10 +1,12 @@
 package com.lifo.mongo.repository
 
+import android.app.Activity
 import android.content.Context
 import android.util.Log
 import com.android.billingclient.api.AcknowledgePurchaseParams
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClientStateListener
+import com.android.billingclient.api.BillingFlowParams
 import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.Purchase
@@ -15,10 +17,13 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.lifo.util.model.RequestState
 import com.lifo.util.repository.SubscriptionRepository
 import com.lifo.util.repository.SubscriptionRepository.ProductInfo
+import com.lifo.util.repository.SubscriptionRepository.PurchaseResult
 import com.lifo.util.repository.SubscriptionRepository.SubscriptionState
 import com.lifo.util.repository.SubscriptionRepository.SubscriptionTier
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
@@ -38,17 +43,49 @@ class PlayBillingSubscriptionRepository(
     companion object {
         private const val TAG = "PlayBillingSubRepo"
         private const val SUBSCRIPTIONS_COLLECTION = "subscriptions"
-        private const val PRODUCT_PREMIUM = "calmify_premium"
         private const val PRODUCT_PRO = "calmify_pro"
     }
 
     private var billingClient: BillingClient? = null
 
+    /** Cached ProductDetails from the last successful query. */
+    private var cachedProductDetails: List<ProductDetails> = emptyList()
+
+    /** SharedFlow that emits purchase results from the billing flow. */
+    private val _purchaseUpdates = MutableSharedFlow<PurchaseResult>(extraBufferCapacity = 4)
+    override val purchaseUpdates: Flow<PurchaseResult> = _purchaseUpdates.asSharedFlow()
+
     private val purchasesUpdatedListener = PurchasesUpdatedListener { billingResult, purchases ->
-        if (billingResult.responseCode == BillingClient.BillingResponseCode.OK && purchases != null) {
-            Log.d(TAG, "Purchases updated: ${purchases.size} purchase(s)")
-        } else {
-            Log.w(TAG, "Purchases update failed: ${billingResult.debugMessage}")
+        when (billingResult.responseCode) {
+            BillingClient.BillingResponseCode.OK -> {
+                purchases?.forEach { purchase ->
+                    if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED) {
+                        val productId = purchase.products.firstOrNull() ?: ""
+                        _purchaseUpdates.tryEmit(
+                            PurchaseResult(
+                                productId = productId,
+                                purchaseToken = purchase.purchaseToken,
+                                isSuccess = true,
+                            )
+                        )
+                        Log.d(TAG, "Purchase successful: $productId")
+                    }
+                }
+            }
+            BillingClient.BillingResponseCode.USER_CANCELED -> {
+                Log.d(TAG, "User cancelled billing flow")
+            }
+            else -> {
+                _purchaseUpdates.tryEmit(
+                    PurchaseResult(
+                        productId = "",
+                        purchaseToken = "",
+                        isSuccess = false,
+                        errorMessage = billingResult.debugMessage,
+                    )
+                )
+                Log.w(TAG, "Billing flow failed: ${billingResult.debugMessage}")
+            }
         }
     }
 
@@ -88,10 +125,9 @@ class PlayBillingSubscriptionRepository(
                 val expiresAt = doc.getLong("expiresAt")
                 val isAutoRenewing = doc.getBoolean("isAutoRenewing") ?: false
 
-                val tier = try {
-                    SubscriptionTier.valueOf(tierStr)
-                } catch (e: IllegalArgumentException) {
-                    SubscriptionTier.FREE
+                val tier = when (tierStr) {
+                    "PRO", "PREMIUM" -> SubscriptionTier.PRO // PREMIUM → PRO backward compat
+                    else -> SubscriptionTier.FREE
                 }
 
                 val now = System.currentTimeMillis()
@@ -131,10 +167,6 @@ class PlayBillingSubscriptionRepository(
 
             val productList = listOf(
                 QueryProductDetailsParams.Product.newBuilder()
-                    .setProductId(PRODUCT_PREMIUM)
-                    .setProductType(BillingClient.ProductType.SUBS)
-                    .build(),
-                QueryProductDetailsParams.Product.newBuilder()
                     .setProductId(PRODUCT_PRO)
                     .setProductType(BillingClient.ProductType.SUBS)
                     .build(),
@@ -147,6 +179,9 @@ class PlayBillingSubscriptionRepository(
             val (billingResult, detailsList) = queryProductDetailsSuspend(client, params)
 
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                // Cache ProductDetails for launchBillingFlow
+                cachedProductDetails = detailsList ?: emptyList()
+
                 val products = detailsList?.map { details ->
                     val pricingPhase = details.subscriptionOfferDetails
                         ?.firstOrNull()
@@ -172,6 +207,50 @@ class PlayBillingSubscriptionRepository(
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to get available products", e)
+            RequestState.Error(e)
+        }
+    }
+
+    override suspend fun launchPurchaseFlow(
+        activityContext: Any,
+        productId: String,
+    ): RequestState<Unit> {
+        return try {
+            val activity = activityContext as? Activity
+                ?: return RequestState.Error(Exception("Invalid activity context"))
+
+            val client = ensureBillingClientConnected()
+            if (!client.isReady) {
+                return RequestState.Error(Exception("Billing service unavailable"))
+            }
+
+            val productDetails = cachedProductDetails.find { it.productId == productId }
+                ?: return RequestState.Error(Exception("Product not found. Please reload."))
+
+            val offerToken = productDetails.subscriptionOfferDetails
+                ?.firstOrNull()
+                ?.offerToken
+                ?: return RequestState.Error(Exception("No offer available for this product."))
+
+            val billingFlowParams = BillingFlowParams.newBuilder()
+                .setProductDetailsParamsList(
+                    listOf(
+                        BillingFlowParams.ProductDetailsParams.newBuilder()
+                            .setProductDetails(productDetails)
+                            .setOfferToken(offerToken)
+                            .build()
+                    )
+                )
+                .build()
+
+            val result = client.launchBillingFlow(activity, billingFlowParams)
+            if (result.responseCode == BillingClient.BillingResponseCode.OK) {
+                RequestState.Success(Unit)
+            } else {
+                RequestState.Error(Exception("Failed to launch billing: ${result.debugMessage}"))
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to launch purchase flow", e)
             RequestState.Error(e)
         }
     }
@@ -273,10 +352,9 @@ class PlayBillingSubscriptionRepository(
                     val expiresAt = snapshot.getLong("expiresAt")
                     val isAutoRenewing = snapshot.getBoolean("isAutoRenewing") ?: false
 
-                    val tier = try {
-                        SubscriptionTier.valueOf(tierStr)
-                    } catch (e: IllegalArgumentException) {
-                        SubscriptionTier.FREE
+                    val tier = when (tierStr) {
+                        "PRO", "PREMIUM" -> SubscriptionTier.PRO
+                        else -> SubscriptionTier.FREE
                     }
 
                     trySend(
@@ -368,10 +446,6 @@ class PlayBillingSubscriptionRepository(
             .filter { it.purchaseState == Purchase.PurchaseState.PURCHASED }
             .flatMap { it.products }
 
-        return when {
-            PRODUCT_PRO in activeProducts -> SubscriptionTier.PRO
-            PRODUCT_PREMIUM in activeProducts -> SubscriptionTier.PREMIUM
-            else -> SubscriptionTier.FREE
-        }
+        return if (PRODUCT_PRO in activeProducts) SubscriptionTier.PRO else SubscriptionTier.FREE
     }
 }

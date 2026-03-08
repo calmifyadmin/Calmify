@@ -70,6 +70,17 @@
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="calmify_reminders" />
 
+        <!-- FileProvider for GDPR data export sharing -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <!-- ARCore optional - enables AR features on supported devices -->
         <meta-data
             android:name="com.google.ar.core"

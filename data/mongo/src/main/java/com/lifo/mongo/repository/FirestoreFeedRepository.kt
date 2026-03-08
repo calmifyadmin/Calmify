@@ -3,6 +3,7 @@ package com.lifo.mongo.repository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.lifo.mongo.database.CachedThreadQueries
 import com.lifo.util.model.RequestState
 import com.lifo.util.repository.FeedRepository
 import com.lifo.util.repository.FeedRepository.FeedPage
@@ -29,7 +30,8 @@ import javax.inject.Singleton
 @Singleton
 class FirestoreFeedRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    private val cachedThreadQueries: CachedThreadQueries,
 ) : FeedRepository {
 
     companion object {
@@ -53,6 +55,32 @@ class FirestoreFeedRepository @Inject constructor(
         pageSize: Int,
         cursor: String?
     ): Flow<RequestState<FeedPage>> = callbackFlow {
+        // Emit cached data immediately for instant UI (first page only)
+        if (cursor == null) {
+            try {
+                val cached = cachedThreadQueries.getCachedThreads(pageSize.toLong())
+                    .executeAsList()
+                if (cached.isNotEmpty()) {
+                    val cachedThreads = cached.map { row ->
+                        Thread(
+                            threadId = row.threadId,
+                            authorId = row.authorId,
+                            authorDisplayName = row.authorDisplayName,
+                            authorAvatarUrl = row.authorAvatarUrl,
+                            text = row.text,
+                            moodTag = row.moodTag,
+                            postCategory = row.postCategory,
+                            likeCount = row.likeCount,
+                            replyCount = row.replyCount,
+                            repostCount = row.repostCount,
+                            createdAt = row.createdAt,
+                        )
+                    }
+                    trySend(RequestState.Success(FeedPage(items = cachedThreads, hasMore = true)))
+                }
+            } catch (_: Exception) { /* cache miss is fine */ }
+        }
+
         trySend(RequestState.Loading)
 
         var query = threadsCollection
@@ -96,6 +124,30 @@ class FirestoreFeedRepository @Inject constructor(
                     val hasMore = threads.size > pageSize
                     val pageItems = if (hasMore) threads.take(pageSize) else threads
                     val nextCursor = if (hasMore) pageItems.lastOrNull()?.createdAt?.toString() else null
+
+                    // Cache first page for offline/instant display
+                    if (cursor == null) {
+                        try {
+                            val now = System.currentTimeMillis()
+                            cachedThreadQueries.clearAll()
+                            pageItems.forEach { t ->
+                                cachedThreadQueries.insertThread(
+                                    threadId = t.threadId,
+                                    authorId = t.authorId,
+                                    authorDisplayName = t.authorDisplayName,
+                                    authorAvatarUrl = t.authorAvatarUrl,
+                                    text = t.text,
+                                    moodTag = t.moodTag,
+                                    postCategory = t.postCategory,
+                                    likeCount = t.likeCount,
+                                    replyCount = t.replyCount,
+                                    repostCount = t.repostCount,
+                                    createdAt = t.createdAt,
+                                    cachedAt = now,
+                                )
+                            }
+                        } catch (_: Exception) { /* cache write failure is non-fatal */ }
+                    }
 
                     trySend(RequestState.Success(FeedPage(
                         items = pageItems,
@@ -202,10 +254,8 @@ class FirestoreFeedRepository @Inject constructor(
      */
     override suspend fun refreshFeed(userId: String): RequestState<Boolean> {
         return try {
-            // MVP: No server-side feed cache to rebuild.
-            // In production, this would call a Cloud Function to regenerate
-            // the fan-out feed_cache for the user.
-            println("[$TAG] Feed refresh requested for $userId (no-op in MVP)")
+            // Clear local cache so next getForYouFeed will skip stale cached data
+            cachedThreadQueries.clearAll()
             RequestState.Success(true)
         } catch (e: Exception) {
             RequestState.Error(e)
@@ -214,6 +264,7 @@ class FirestoreFeedRepository @Inject constructor(
 
     // -- Helpers --
 
+    @Suppress("UNCHECKED_CAST")
     private fun snapshotToThread(doc: com.google.firebase.firestore.DocumentSnapshot): Thread {
         return Thread(
             threadId = doc.id,
@@ -222,9 +273,11 @@ class FirestoreFeedRepository @Inject constructor(
             text = doc.getString("text") ?: "",
             likeCount = doc.getLong("likeCount") ?: 0,
             replyCount = doc.getLong("replyCount") ?: 0,
+            repostCount = doc.getLong("repostCount") ?: 0,
             visibility = doc.getString("visibility") ?: "public",
             moodTag = doc.getString("moodTag"),
             isFromJournal = doc.getBoolean("isFromJournal") ?: false,
+            mediaUrls = (doc.get("mediaUrls") as? List<String>) ?: emptyList(),
             createdAt = doc.getLong("createdAt") ?: 0,
             updatedAt = doc.getLong("updatedAt")
         )

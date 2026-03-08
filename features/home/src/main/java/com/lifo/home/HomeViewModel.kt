@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import com.google.firebase.storage.FirebaseStorage
 import com.lifo.util.auth.AuthProvider
+import com.lifo.util.auth.UserIdentityResolver
 import com.lifo.home.domain.model.*
 import com.lifo.home.domain.usecase.*
 import com.lifo.mongo.database.ImageToDeleteQueries
@@ -15,10 +16,15 @@ import com.lifo.util.model.*
 import com.lifo.util.mvi.MviContract
 import com.lifo.util.mvi.MviViewModel
 import com.lifo.util.repository.Diaries
+import com.lifo.util.repository.FeedRepository
 import com.lifo.util.repository.MongoRepository
+import com.lifo.util.repository.ThreadHydrator
+import com.lifo.util.repository.ThreadRepository
+import com.lifo.util.repository.SocialGraphRepository
 import com.lifo.util.repository.UnifiedContentRepository
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.tasks.await
 import java.time.ZonedDateTime
 import kotlin.coroutines.resumeWithException
 
@@ -110,6 +116,12 @@ object HomeContract {
         val selectedTimeRange: TimeRange = TimeRange.MONTH,
         val quickActionState: QuickActionState = QuickActionState(),
 
+        // Community preview
+        val communityThreads: List<ThreadRepository.Thread> = emptyList(),
+
+        // Social profile avatar
+        val socialAvatarUrl: String? = null,
+
         // Network
         val networkStatus: ConnectivityObserver.Status = ConnectivityObserver.Status.Unavailable,
 
@@ -139,7 +151,10 @@ internal class HomeViewModel constructor(
     private val aggregateCognitivePatternsUseCase: AggregateCognitivePatternsUseCase,
     private val calculateTopicsFrequencyUseCase: CalculateTopicsFrequencyUseCase,
     private val calculateTodayPulseUseCase: CalculateTodayPulseUseCase,
-    private val getAchievementsUseCase: GetAchievementsUseCase
+    private val getAchievementsUseCase: GetAchievementsUseCase,
+    private val feedRepository: FeedRepository,
+    private val threadHydrator: ThreadHydrator,
+    private val socialGraphRepository: SocialGraphRepository
 ) : MviViewModel<HomeContract.Intent, HomeContract.State, HomeContract.Effect>(
     initialState = HomeContract.State()
 ) {
@@ -240,18 +255,24 @@ internal class HomeViewModel constructor(
     val quickActionState: StateFlow<QuickActionState> = state.map { it.quickActionState }
         .stateIn(scope, SharingStarted.Eagerly, QuickActionState())
 
+    val communityThreads: StateFlow<List<ThreadRepository.Thread>> = state.map { it.communityThreads }
+        .stateIn(scope, SharingStarted.Eagerly, emptyList())
+
+    val socialAvatarUrl: StateFlow<String?> = state.map { it.socialAvatarUrl }
+        .stateIn(scope, SharingStarted.Eagerly, null)
+
     // ══════════════════════════════════════════════════════════════════════
     // Init
     // ══════════════════════════════════════════════════════════════════════
 
     init {
         restoreState()
+        loadSocialAvatar()
 
         // Observe network connectivity
         scope.launch {
             connectivity.observe()
                 .catch { e ->
-                    println("[HomeViewModel] ERROR: Network observation error: ${e.message}")
                 }
                 .collect { status ->
                     updateState { copy(networkStatus = status) }
@@ -363,29 +384,41 @@ internal class HomeViewModel constructor(
 
     // Synchronous value getters (not intents — they return values directly)
 
+    private var cachedSocialProfile: SocialGraphRepository.SocialUser? = null
+
+    private fun loadSocialAvatar() {
+        val userId = authProvider.currentUserId ?: return
+        scope.launch {
+            socialGraphRepository.getProfile(userId).collect { result ->
+                if (result is RequestState.Success) {
+                    cachedSocialProfile = result.data
+                    updateState { copy(socialAvatarUrl = result.data.avatarUrl) }
+                }
+            }
+        }
+    }
+
     fun getUserPhotoUrl(): String? {
         return try {
             authProvider.currentUserPhotoUrl
         } catch (e: Exception) {
-            println("[HomeViewModel] ERROR: Error getting user photo: ${e.message}")
             null
         }
     }
 
     fun getUserFirstName(): String {
-        return authProvider.currentUserDisplayName
-            ?.split(" ")?.firstOrNull()
-            ?: authProvider.currentUserEmail?.substringBefore("@")
-            ?: "Utente"
+        return UserIdentityResolver.resolveFirstName(
+            socialProfile = cachedSocialProfile,
+            authDisplayName = authProvider.currentUserDisplayName,
+            authEmail = authProvider.currentUserEmail,
+        )
     }
 
     // Navigation methods (no state changes, purely informational)
     fun onDiaryItemClicked(diaryItem: HomeContentItem.DiaryItem) {
-        println("[HomeViewModel] Diary item clicked: ${diaryItem.title}")
     }
 
     fun onChatItemClicked(chatItem: HomeContentItem.ChatItem) {
-        println("[HomeViewModel] Chat item clicked: ${chatItem.title}")
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -404,7 +437,6 @@ internal class HomeViewModel constructor(
                 }
                 dateIsSelected = true
             } catch (e: Exception) {
-                println("[HomeViewModel] ERROR: Error restoring date: ${e.message}")
             }
         }
     }
@@ -466,10 +498,8 @@ internal class HomeViewModel constructor(
                     observeAllDiaries()
                 }
             } catch (e: CancellationException) {
-                println("[HomeViewModel] Diaries loading cancelled (switching filters)")
                 throw e
             } catch (e: Exception) {
-                println("[HomeViewModel] ERROR: Error in getDiaries: ${e.message}")
                 handleDiariesError(e)
             }
         }
@@ -482,7 +512,6 @@ internal class HomeViewModel constructor(
         diaryRepository.getAllDiaries()
             .catch { e ->
                 if (e !is CancellationException) {
-                    println("[HomeViewModel] ERROR: Error observing all diaries: ${e.message}")
                     handleDiariesError(e)
                     emit(RequestState.Error(e as Exception))
                 } else {
@@ -499,7 +528,6 @@ internal class HomeViewModel constructor(
         diaryRepository.getFilteredDiaries(dayKey = dayKey)
             .catch { e ->
                 if (e !is CancellationException) {
-                    println("[HomeViewModel] ERROR: Error observing filtered diaries: ${e.message}")
                     handleDiariesError(e)
                     emit(RequestState.Error(e as Exception))
                 } else {
@@ -531,7 +559,6 @@ internal class HomeViewModel constructor(
     }
 
     private fun handleDiariesError(error: Throwable) {
-        println("[HomeViewModel] ERROR: Error loading diaries: ${error.message}")
         val errorMessage = when {
             currentState.networkStatus != ConnectivityObserver.Status.Available ->
                 "No internet connection"
@@ -568,7 +595,6 @@ internal class HomeViewModel constructor(
 
                 performDeleteAllDiaries(userId)
             } catch (e: Exception) {
-                println("[HomeViewModel] ERROR: Error in deleteAllDiaries: ${e.message}")
                 sendEffect(HomeContract.Effect.DeleteAllDiariesError(e))
             } finally {
                 updateState { copy(isLoadingDiaries = false, isLoading = false) }
@@ -612,12 +638,10 @@ internal class HomeViewModel constructor(
                         }
                     }
                     else -> {
-                        println("[HomeViewModel] WARN: Unexpected state during deleteAllUserData")
                     }
                 }
             }
         } catch (e: Exception) {
-            println("[HomeViewModel] ERROR: Error deleting all diaries: ${e.message}")
             sendEffect(HomeContract.Effect.DeleteAllDiariesError(e))
         }
     }
@@ -671,7 +695,6 @@ internal class HomeViewModel constructor(
                     }
                 }
             } catch (e: Exception) {
-                println("[HomeViewModel] ERROR: Error loading unified content: ${e.message}")
                 updateState {
                     copy(
                         isLoadingUnified = false,
@@ -703,7 +726,6 @@ internal class HomeViewModel constructor(
                         }
                     }
             } catch (e: Exception) {
-                println("[HomeViewModel] ERROR: Error refreshing unified content: ${e.message}")
                 updateState {
                     copy(
                         isRefreshingUnified = false,
@@ -758,12 +780,10 @@ internal class HomeViewModel constructor(
     private fun loadDailyInsightsInternal() {
         scope.launch {
             try {
-                println("[HomeViewModel] Loading daily insights for week offset: ${currentState.currentWeekOffset}...")
                 insightRepository.getAllInsights().collect { result ->
                     when (result) {
                         is RequestState.Success -> {
                             val insights = result.data
-                            println("[HomeViewModel] Loaded ${insights.size} insights from repository")
                             val now = ZonedDateTime.now()
 
                             val currentDayOfWeek = now.dayOfWeek.value
@@ -779,7 +799,6 @@ internal class HomeViewModel constructor(
                                     insight.dayKey == targetDayKey
                                 }
 
-                                println("[HomeViewModel] Day $dayIndex ($targetDayKey): ${dayInsights.size} insights")
 
                                 val avgMagnitude = if (dayInsights.isNotEmpty()) {
                                     dayInsights.map { it.sentimentMagnitude }.average().toFloat()
@@ -818,21 +837,16 @@ internal class HomeViewModel constructor(
 
                             updateState { copy(dailyInsights = dailyData) }
 
-                            println("[HomeViewModel] Daily insights processed: ${dailyData.size} days (M-S)")
                             dailyData.forEachIndexed { index, data ->
-                                println("[HomeViewModel] Day $index: ${data.dayLabel}, magnitude: ${data.sentimentMagnitude}, emotion: ${data.dominantEmotion}, diaries: ${data.diaryCount}")
                             }
                         }
                         is RequestState.Error -> {
-                            println("[HomeViewModel] ERROR: Error loading daily insights: ${result.error.message}")
                         }
                         else -> {
-                            println("[HomeViewModel] Loading daily insights...")
                         }
                     }
                 }
             } catch (e: Exception) {
-                println("[HomeViewModel] ERROR: Error in loadDailyInsights: ${e.message}")
             }
         }
     }
@@ -852,9 +866,11 @@ internal class HomeViewModel constructor(
 
                 val insightsDeferred = async { loadInsightsForRedesign() }
                 val diariesDeferred = async { loadDiariesForRedesign() }
+                val communityDeferred = async { loadCommunityThreads() }
 
                 cachedInsights = insightsDeferred.await()
                 cachedDiaries = diariesDeferred.await()
+                communityDeferred.await()
 
                 calculateTodayPulse()
                 calculateMoodDistribution()
@@ -862,9 +878,11 @@ internal class HomeViewModel constructor(
                 calculateTopicsFrequency()
                 calculateAchievements()
 
-                val userName = authProvider.currentUserDisplayName
-                    ?: authProvider.currentUserEmail?.substringBefore("@")
-                    ?: "Utente"
+                val userName = UserIdentityResolver.resolveDisplayName(
+                    socialProfile = cachedSocialProfile,
+                    authDisplayName = authProvider.currentUserDisplayName,
+                    authEmail = authProvider.currentUserEmail,
+                )
 
                 updateState {
                     copy(
@@ -882,10 +900,8 @@ internal class HomeViewModel constructor(
                     )
                 }
 
-                println("[HomeViewModel] Redesign data loaded successfully")
 
             } catch (e: Exception) {
-                println("[HomeViewModel] ERROR: Error loading redesign data: ${e.message}")
                 updateState {
                     copy(
                         homeRedesignState = homeRedesignState.copy(
@@ -898,6 +914,25 @@ internal class HomeViewModel constructor(
                     )
                 }
             }
+        }
+    }
+
+    private suspend fun loadCommunityThreads() {
+        val userId = authProvider.currentUserId ?: return
+        try {
+            feedRepository.getForYouFeed(userId, pageSize = 3).first { requestState ->
+                when (requestState) {
+                    is RequestState.Success -> {
+                        val hydrated = threadHydrator.hydrate(requestState.data.items, userId)
+                        updateState { copy(communityThreads = hydrated.take(3)) }
+                        true
+                    }
+                    is RequestState.Error -> true
+                    else -> false
+                }
+            }
+        } catch (e: Exception) {
+            // Non-critical — silently ignore
         }
     }
 
@@ -916,7 +951,6 @@ internal class HomeViewModel constructor(
             }
             result
         } catch (e: Exception) {
-            println("[HomeViewModel] ERROR: Error loading insights for redesign: ${e.message}")
             emptyList()
         }
     }
@@ -936,7 +970,6 @@ internal class HomeViewModel constructor(
             }
             result
         } catch (e: Exception) {
-            println("[HomeViewModel] ERROR: Error loading diaries for redesign: ${e.message}")
             emptyList()
         }
     }
@@ -956,9 +989,7 @@ internal class HomeViewModel constructor(
                 )
             }
 
-            println("[HomeViewModel] Today's pulse calculated: ${result.pulse.score}")
         } catch (e: Exception) {
-            println("[HomeViewModel] ERROR: Error calculating today's pulse: ${e.message}")
         }
     }
 
@@ -975,9 +1006,7 @@ internal class HomeViewModel constructor(
                 )
             }
 
-            println("[HomeViewModel] Mood distribution calculated: positive=${distribution.positive}, neutral=${distribution.neutral}, negative=${distribution.negative}")
         } catch (e: Exception) {
-            println("[HomeViewModel] ERROR: Error calculating mood distribution: ${e.message}")
         }
     }
 
@@ -987,9 +1016,7 @@ internal class HomeViewModel constructor(
             val result = aggregateCognitivePatternsUseCase(cachedInsights, timeRange)
             updateState { copy(cognitivePatterns = result.patterns) }
 
-            println("[HomeViewModel] Cognitive patterns calculated: ${result.patterns.size} patterns found")
         } catch (e: Exception) {
-            println("[HomeViewModel] ERROR: Error calculating cognitive patterns: ${e.message}")
         }
     }
 
@@ -1004,9 +1031,7 @@ internal class HomeViewModel constructor(
                 )
             }
 
-            println("[HomeViewModel] Topics frequency calculated: ${result.topics.size} topics, emerging: ${result.emergingTopic?.topic}")
         } catch (e: Exception) {
-            println("[HomeViewModel] ERROR: Error calculating topics frequency: ${e.message}")
         }
     }
 
@@ -1020,9 +1045,7 @@ internal class HomeViewModel constructor(
             )
             updateState { copy(achievementsState = result) }
 
-            println("[HomeViewModel] Achievements calculated: streak=${result.streak.currentStreak}, badges=${result.earnedBadges.size}")
         } catch (e: Exception) {
-            println("[HomeViewModel] ERROR: Error calculating achievements: ${e.message}")
         }
     }
 
@@ -1053,14 +1076,3 @@ internal class HomeViewModel constructor(
     }
 }
 
-// Extension function to await Firebase tasks
-private suspend fun <T> com.google.android.gms.tasks.Task<T>.await(): T {
-    return suspendCancellableCoroutine { cont ->
-        addOnSuccessListener { result ->
-            cont.resume(result, null)
-        }
-        addOnFailureListener { exception ->
-            cont.resumeWithException(exception)
-        }
-    }
-}

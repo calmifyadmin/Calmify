@@ -1,6 +1,7 @@
 package com.lifo.calmifyapp.di
 
 import android.app.Application
+import app.cash.sqldelight.db.AfterVersion
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import com.lifo.calmifyapp.connectivity.NetworkConnectivityObserver
 import com.lifo.mongo.database.CalmifyDatabase
@@ -25,6 +26,7 @@ import com.lifo.search.di.searchKoinModule
 import com.lifo.notifications.di.notificationsKoinModule
 import com.lifo.messaging.di.messagingKoinModule
 import com.lifo.subscription.di.subscriptionKoinModule
+import com.lifo.threaddetail.di.threadDetailKoinModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
@@ -35,12 +37,17 @@ val databaseModule = module {
         val driver = AndroidSqliteDriver(
             schema = CalmifyDatabase.Schema,
             context = androidContext(),
-            name = DATABASE_NAME
+            name = DATABASE_NAME,
+            callback = AndroidSqliteDriver.Callback(
+                schema = CalmifyDatabase.Schema,
+                AfterVersion(1) { /* v1->v2: cached_threads table added via schema */ },
+            ),
         )
         CalmifyDatabase(driver)
     }
     single { get<CalmifyDatabase>().imageToUploadQueries }
     single { get<CalmifyDatabase>().imageToDeleteQueries }
+    single { get<CalmifyDatabase>().cachedThreadQueries }
     single<ConnectivityObserver> { NetworkConnectivityObserver(androidContext()) }
 }
 
@@ -79,6 +86,7 @@ val allKoinModules = listOf(
     notificationsKoinModule,
     // Social Features (Wave 8)
     messagingKoinModule,
+    threadDetailKoinModule,
     // Monetization (Wave 9)
     subscriptionKoinModule,
 )

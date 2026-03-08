@@ -31,9 +31,10 @@ kotlin {
                 implementation libs.core.ktx
                 implementation libs.coroutines.android
 
-                // Auth specific (Android-only)
-                implementation libs.one.tap.compose
-                implementation libs.message.bar.compose
+                // Auth specific (Android-only) — Credential Manager for Google Sign-In
+                implementation libs.credentials
+                implementation libs.credentials.play.services
+                implementation libs.googleid
 
                 // Firebase Auth (explicit version, BOM not supported in KMP source sets)
                 implementation libs.firebase.auth.kmp

@@ -16,12 +16,66 @@ class SubscriptionViewModel(
     private val currentUserId: String?
         get() = authProvider.currentUserId
 
+    init {
+        observePurchaseUpdates()
+    }
+
     override fun handleIntent(intent: SubscriptionContract.Intent) {
         when (intent) {
             is SubscriptionContract.Intent.LoadSubscriptionState -> loadSubscriptionState()
             is SubscriptionContract.Intent.PurchaseSubscription -> purchaseSubscription(intent.productId)
             is SubscriptionContract.Intent.RestorePurchases -> restorePurchases()
             is SubscriptionContract.Intent.DismissPaywall -> sendEffect(SubscriptionContract.Effect.NavigateBack)
+        }
+    }
+
+    /**
+     * Called by the UI after receiving LaunchBillingFlow effect.
+     * Passes the Activity context to the repository to launch Google Play's billing sheet.
+     */
+    fun launchBillingFlow(activityContext: Any, productId: String) {
+        scope.launch {
+            when (val result = subscriptionRepository.launchPurchaseFlow(activityContext, productId)) {
+                is RequestState.Error -> {
+                    updateState { copy(isLoading = false, error = result.message) }
+                    sendEffect(SubscriptionContract.Effect.ShowError(result.message))
+                }
+                else -> { /* Billing flow launched — result comes via purchaseUpdates */ }
+            }
+        }
+    }
+
+    private fun observePurchaseUpdates() {
+        scope.launch {
+            subscriptionRepository.purchaseUpdates.collect { purchaseResult ->
+                if (purchaseResult.isSuccess) {
+                    handlePurchaseCompleted(purchaseResult.purchaseToken)
+                } else if (purchaseResult.errorMessage != null) {
+                    updateState { copy(isLoading = false) }
+                    sendEffect(SubscriptionContract.Effect.ShowError(purchaseResult.errorMessage ?: "Purchase failed"))
+                }
+            }
+        }
+    }
+
+    private suspend fun handlePurchaseCompleted(purchaseToken: String) {
+        val userId = currentUserId ?: return
+
+        when (val result = subscriptionRepository.acknowledgePurchase(userId, purchaseToken)) {
+            is RequestState.Success -> {
+                updateState {
+                    copy(
+                        subscriptionTier = result.data.tier,
+                        isLoading = false,
+                    )
+                }
+                sendEffect(SubscriptionContract.Effect.PurchaseSuccess(result.data.tier))
+            }
+            is RequestState.Error -> {
+                updateState { copy(isLoading = false, error = result.message) }
+                sendEffect(SubscriptionContract.Effect.ShowError(result.message))
+            }
+            else -> {}
         }
     }
 
@@ -48,7 +102,7 @@ class SubscriptionViewModel(
                     updateState { copy(isLoading = false, error = result.message) }
                     sendEffect(SubscriptionContract.Effect.ShowError(result.message))
                 }
-                else -> { /* Loading/Idle — no-op */ }
+                else -> {}
             }
 
             // Load available products
@@ -65,42 +119,19 @@ class SubscriptionViewModel(
                     updateState { copy(isLoading = false) }
                     sendEffect(SubscriptionContract.Effect.ShowError(productsResult.message))
                 }
-                else -> { /* Loading/Idle — no-op */ }
+                else -> {}
             }
         }
     }
 
     private fun purchaseSubscription(productId: String) {
-        val userId = currentUserId ?: run {
+        currentUserId ?: run {
             sendEffect(SubscriptionContract.Effect.ShowError("User not authenticated"))
             return
         }
 
         updateState { copy(isLoading = true, error = null) }
-
-        scope.launch {
-            // The actual billing flow is launched by the Activity via BillingClient.launchBillingFlow().
-            // Here we acknowledge the purchase after the billing flow completes.
-            // For now, we query the subscription state to reflect any changes.
-            when (val result = subscriptionRepository.getSubscriptionState(userId)) {
-                is RequestState.Success -> {
-                    updateState {
-                        copy(
-                            subscriptionTier = result.data.tier,
-                            isLoading = false,
-                        )
-                    }
-                    if (result.data.tier != SubscriptionRepository.SubscriptionTier.FREE) {
-                        sendEffect(SubscriptionContract.Effect.PurchaseSuccess(result.data.tier))
-                    }
-                }
-                is RequestState.Error -> {
-                    updateState { copy(isLoading = false, error = result.message) }
-                    sendEffect(SubscriptionContract.Effect.ShowError(result.message))
-                }
-                else -> { /* Loading/Idle — no-op */ }
-            }
-        }
+        sendEffect(SubscriptionContract.Effect.LaunchBillingFlow(productId))
     }
 
     private fun restorePurchases() {
@@ -127,7 +158,7 @@ class SubscriptionViewModel(
                     updateState { copy(isLoading = false, error = result.message) }
                     sendEffect(SubscriptionContract.Effect.ShowError(result.message))
                 }
-                else -> { /* Loading/Idle — no-op */ }
+                else -> {}
             }
         }
     }

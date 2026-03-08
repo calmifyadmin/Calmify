@@ -20,7 +20,7 @@ interface SubscriptionRepository {
         val currencyCode: String,
     )
 
-    enum class SubscriptionTier { FREE, PREMIUM, PRO }
+    enum class SubscriptionTier { FREE, PRO }
 
     data class SubscriptionState(
         val tier: SubscriptionTier,
@@ -28,11 +28,29 @@ interface SubscriptionRepository {
         val isAutoRenewing: Boolean = false,
     )
 
+    /** Result of a completed purchase from the billing flow. */
+    data class PurchaseResult(
+        val productId: String,
+        val purchaseToken: String,
+        val isSuccess: Boolean,
+        val errorMessage: String? = null,
+    )
+
     /** Get current subscription state for the user. */
     suspend fun getSubscriptionState(userId: String): RequestState<SubscriptionState>
 
     /** Get available subscription products from Play Store. */
     suspend fun getAvailableProducts(): RequestState<List<ProductInfo>>
+
+    /**
+     * Launch the platform billing flow.
+     * @param activityContext The Activity (passed as Any for KMP compatibility).
+     * @param productId The product to purchase.
+     */
+    suspend fun launchPurchaseFlow(activityContext: Any, productId: String): RequestState<Unit>
+
+    /** Observe purchase results from the billing flow. */
+    val purchaseUpdates: Flow<PurchaseResult>
 
     /** Verify and acknowledge a purchase (should be called after billing flow completes). */
     suspend fun acknowledgePurchase(userId: String, purchaseToken: String): RequestState<SubscriptionState>

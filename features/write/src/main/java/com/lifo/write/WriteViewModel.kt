@@ -64,6 +64,12 @@ object WriteContract {
         data object CloseMetricsWizard : Intent
         data object CompleteMetricsWizard : Intent
 
+        // Smart Capture
+        data object RunSmartCapture : Intent
+
+        // View mode
+        data object SwitchToEditMode : Intent
+
         // Image management
         data class AddImage(val image: Uri, val imageType: String) : Intent
         data class OnImageSelected(val index: Int) : Intent
@@ -90,6 +96,10 @@ object WriteContract {
         // Wizard state
         val showMetricsWizard: Boolean = false,
         val metricsCompleted: Boolean = false,
+        // Smart Capture state
+        val smartCaptureComplete: Boolean = false,
+        // View mode (true when viewing existing diary, false when creating/editing)
+        val isViewMode: Boolean = false,
         // Image state
         val isUploadingImages: Boolean = false,
         val selectedImageIndex: Int? = null,
@@ -225,6 +235,12 @@ internal class WriteViewModel constructor(
             WriteContract.Intent.CloseMetricsWizard -> updateState { copy(showMetricsWizard = false) }
             WriteContract.Intent.CompleteMetricsWizard -> updateState { copy(showMetricsWizard = false, metricsCompleted = true) }
 
+            // Smart Capture
+            WriteContract.Intent.RunSmartCapture -> handleSmartCapture()
+
+            // View mode
+            WriteContract.Intent.SwitchToEditMode -> updateState { copy(isViewMode = false) }
+
             // Images
             is WriteContract.Intent.AddImage -> handleAddImage(intent.image, intent.imageType)
             is WriteContract.Intent.OnImageSelected -> updateState { copy(selectedImageIndex = intent.index) }
@@ -250,6 +266,8 @@ internal class WriteViewModel constructor(
     fun openMetricsWizard() = onIntent(WriteContract.Intent.OpenMetricsWizard)
     fun closeMetricsWizard() = onIntent(WriteContract.Intent.CloseMetricsWizard)
     fun completeMetricsWizard() = onIntent(WriteContract.Intent.CompleteMetricsWizard)
+    fun runSmartCapture() = onIntent(WriteContract.Intent.RunSmartCapture)
+    fun switchToEditMode() = onIntent(WriteContract.Intent.SwitchToEditMode)
     fun addImage(image: Uri, imageType: String) = onIntent(WriteContract.Intent.AddImage(image, imageType))
     fun onImageSelected(index: Int) = onIntent(WriteContract.Intent.OnImageSelected(index))
 
@@ -325,6 +343,25 @@ internal class WriteViewModel constructor(
         updateState { copy(updatedDateTimeMillis = zonedDateTime.toInstant().toEpochMilli()) }
     }
 
+    private fun handleSmartCapture() {
+        val s = currentState
+        if (s.title.isBlank() && s.description.isBlank()) return
+        val inferred = TextAnalyzer.analyze(s.title, s.description)
+        updateState {
+            copy(
+                mood = inferred.mood,
+                emotionIntensity = inferred.emotionIntensity,
+                stressLevel = inferred.stressLevel,
+                energyLevel = inferred.energyLevel,
+                calmAnxietyLevel = inferred.calmAnxietyLevel,
+                primaryTrigger = inferred.trigger,
+                dominantBodySensation = inferred.bodySensation,
+                smartCaptureComplete = true,
+                metricsCompleted = true
+            )
+        }
+    }
+
     private fun handleAddImage(image: Uri, imageType: String) {
         println("[WriteViewModel] Adding image: $image")
 
@@ -397,7 +434,7 @@ internal class WriteViewModel constructor(
      */
     internal fun setDiaryIdAndLoad(diaryId: String?) {
         if (diaryId != null && currentState.selectedDiaryId == null) {
-            updateState { copy(selectedDiaryId = diaryId) }
+            updateState { copy(selectedDiaryId = diaryId, isViewMode = true) }
             fetchSelectedDiary()
         }
     }
@@ -407,7 +444,7 @@ internal class WriteViewModel constructor(
     private fun getDiaryIdArgument() {
         val diaryId = savedStateHandle.get<String>(key = WRITE_SCREEN_ARGUMENT_KEY)
         println("[WriteViewModel] getDiaryIdArgument: diaryId = $diaryId")
-        updateState { copy(selectedDiaryId = diaryId) }
+        updateState { copy(selectedDiaryId = diaryId, isViewMode = diaryId != null) }
     }
 
     private fun fetchSelectedDiary() {

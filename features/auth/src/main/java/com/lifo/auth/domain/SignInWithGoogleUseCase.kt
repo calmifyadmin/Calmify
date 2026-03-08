@@ -6,13 +6,11 @@ import com.lifo.util.usecase.UseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
-
 /**
  * Authenticates user with Google credential via Firebase Auth.
  * Returns the user's UID on success.
  */
-class SignInWithGoogleUseCase @Inject constructor(
+class SignInWithGoogleUseCase(
     private val auth: FirebaseAuth
 ) : UseCase<String, Result<String>> {
 

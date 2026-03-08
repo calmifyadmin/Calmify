@@ -247,7 +247,7 @@ private fun SentimentCard(sentiment: SentimentLabel, polarity: Float, magnitude:
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Analisi Sentimento",
+                        text = "Come ti sentivi",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -267,7 +267,7 @@ private fun SentimentCard(sentiment: SentimentLabel, polarity: Float, magnitude:
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Polarità:",
+                    text = "Tono:",
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.width(80.dp)
                 )
@@ -290,7 +290,7 @@ private fun SentimentCard(sentiment: SentimentLabel, polarity: Float, magnitude:
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Intensità:",
+                    text = "Forza:",
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.width(80.dp)
                 )
@@ -319,7 +319,7 @@ private fun ContentAnalysisSection(topics: List<String>, keyPhrases: List<String
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "Analisi Contenuto",
+                text = "Di cosa hai parlato",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
@@ -327,7 +327,7 @@ private fun ContentAnalysisSection(topics: List<String>, keyPhrases: List<String
             if (topics.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "Temi:",
+                    text = "Argomenti:",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -355,7 +355,7 @@ private fun ContentAnalysisSection(topics: List<String>, keyPhrases: List<String
             if (keyPhrases.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "Frasi Chiave:",
+                    text = "Concetti importanti:",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -393,7 +393,7 @@ private fun CognitivePatternsCard(patterns: List<CognitivePattern>) {
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Pattern Cognitivi",
+                    text = "Schemi di pensiero",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -484,7 +484,7 @@ private fun AISummaryCard(
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
                         Text(
-                            text = "Riepilogo AI",
+                            text = "Cosa ho notato",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onTertiaryContainer
@@ -530,7 +530,7 @@ private fun SuggestedPromptsCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "Domande per Approfondire",
+                text = "Per riflettere ancora",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )

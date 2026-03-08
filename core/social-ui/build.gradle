@@ -1,0 +1,47 @@
+plugins {
+    id 'calmify.kmp.compose'
+}
+
+android {
+    namespace 'com.lifo.socialui'
+}
+
+// Force kotlin-stdlib to match our Kotlin version across all source sets.
+configurations.configureEach {
+    resolutionStrategy {
+        force "org.jetbrains.kotlin:kotlin-stdlib:2.1.0"
+        force "org.jetbrains.kotlin:kotlin-stdlib-common:2.1.0"
+    }
+}
+
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation project(':core:util')
+            implementation project(':core:ui')
+        }
+
+        androidMain {
+            kotlin.srcDirs('src/main/java')
+
+            dependencies {
+                // Material 3 Expressive (carousel)
+                implementation libs.compose.material3.expressive
+
+                // Material Icons Extended
+                implementation libs.compose.material.icons.extended
+
+                // Core Android
+                implementation libs.core.ktx
+
+                // Image loading (Coil)
+                implementation libs.coil
+                implementation libs.coil.network.okhttp
+            }
+        }
+
+        commonTest.dependencies {
+            implementation kotlin('test')
+        }
+    }
+}

@@ -1,5 +1,5 @@
 <resources>
     <string name="app_name">Calmify</string>
-    <string name="auth_title">Welcome back</string>
-    <string name="auth_subtitle">Please sign in to continue.</string>
+    <string name="auth_title">Conosci te stesso,\nun giorno alla volta</string>
+    <string name="auth_subtitle">Scrivi, parla, scopri chi sei davvero</string>
 </resources>

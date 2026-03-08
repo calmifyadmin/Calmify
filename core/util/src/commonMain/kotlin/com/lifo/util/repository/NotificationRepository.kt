@@ -14,6 +14,7 @@ interface NotificationRepository {
     fun getUnreadCount(userId: String): Flow<Int>
     suspend fun markAsRead(notificationId: String): RequestState<Boolean>
     suspend fun markAllAsRead(userId: String): RequestState<Boolean>
+    suspend fun createNotification(notification: Notification): RequestState<String>
 
     data class Notification(
         val id: String = "",

@@ -26,7 +26,10 @@ import com.lifo.util.repository.Diaries
 import com.lifo.ui.components.loading.*
 import com.lifo.util.model.RequestState
 import com.lifo.util.model.HomeContentItem
-import com.lifo.util.model.ContentFilter
+import com.lifo.util.auth.AuthProvider
+import com.lifo.util.repository.NotificationRepository
+import kotlinx.coroutines.flow.flowOf
+import org.koin.compose.koinInject
 import java.time.ZonedDateTime
 
 // Screen state management
@@ -57,9 +60,13 @@ internal fun HomeScreen(
     navigateToExistingChat: (String) -> Unit,
     navigateToLiveScreen: () -> Unit,
     navigateToWellbeingSnapshot: () -> Unit,
+    onNotificationsClick: () -> Unit = {},
+    navigateToFeed: () -> Unit = {},
+    navigateToThreadDetail: (String) -> Unit = {},
     // New unified content navigation parameters
     onDiaryClicked: (HomeContentItem.DiaryItem) -> Unit = { navigateToWriteWithArgs(it.id) },
-    onChatClicked: (HomeContentItem.ChatItem) -> Unit = { navigateToExistingChat(it.id) }
+    onChatClicked: (HomeContentItem.ChatItem) -> Unit = { navigateToExistingChat(it.id) },
+    navigateToSocialProfile: () -> Unit = {},
 ) {
     // Use enterAlwaysScrollBehavior for consistent appearance
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
@@ -75,6 +82,7 @@ internal fun HomeScreen(
             MinimalHomeTopBar(
                 scrollBehavior = scrollBehavior,
                 onMenuClicked = onMenuClicked,
+                onNotificationsClick = onNotificationsClick,
                 userProfileImageUrl = userProfileImageUrl
             )
         },
@@ -93,7 +101,10 @@ internal fun HomeScreen(
                         viewModel = viewModel,
                         navigateToWellbeingSnapshot = navigateToWellbeingSnapshot,
                         navigateToWrite = navigateToWrite,
-                        navigateToLive = navigateToLiveScreen
+                        navigateToLive = navigateToLiveScreen,
+                        navigateToFeed = navigateToFeed,
+                        navigateToThreadDetail = navigateToThreadDetail,
+                        navigateToSocialProfile = navigateToSocialProfile,
                     )
                 }
                 is RequestState.Error -> {
@@ -155,19 +166,28 @@ internal fun HomeScreen(
 }
 
 /**
- * Minimal TopBar for the new Home screen
+ * Minimal TopBar for the Home screen — with global notification bell + badge.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MinimalHomeTopBar(
     scrollBehavior: TopAppBarScrollBehavior,
     onMenuClicked: () -> Unit,
+    onNotificationsClick: () -> Unit,
     userProfileImageUrl: String?
 ) {
+    val notificationRepository: NotificationRepository = koinInject()
+    val authProvider: AuthProvider = koinInject()
+    val userId = authProvider.currentUserId
+    val unreadCount by remember(userId) {
+        if (userId != null) notificationRepository.getUnreadCount(userId)
+        else flowOf(0)
+    }.collectAsState(initial = 0)
+
     TopAppBar(
         title = {
             Text(
-                text = "Home",
+                text = "Calmify",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.SemiBold
             )
@@ -180,10 +200,31 @@ private fun MinimalHomeTopBar(
                 )
             }
         },
+        actions = {
+            IconButton(onClick = onNotificationsClick) {
+                BadgedBox(
+                    badge = {
+                        if (unreadCount > 0) {
+                            Badge {
+                                Text(
+                                    text = if (unreadCount > 99) "99+" else unreadCount.toString(),
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+                        }
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Notifications,
+                        contentDescription = "Notifiche"
+                    )
+                }
+            }
+        },
         scrollBehavior = scrollBehavior,
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            scrolledContainerColor = MaterialTheme.colorScheme.surface
+            containerColor = Color.Transparent,
+            scrolledContainerColor = Color.Transparent
         )
     )
 }

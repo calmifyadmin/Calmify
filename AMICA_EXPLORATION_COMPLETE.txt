@@ -1,0 +1,64 @@
+AMICA PROJECT EXPLORATION - COMPLETE
+================================================================================
+
+LOCATION: C:/Users/lifoe/amica/
+
+DOCUMENTATION CREATED:
+- AMICA_ARCHITECTURE.md (top-level)
+- amica-reference/ (6 detailed documents, 1273 lines)
+
+SYSTEMS DOCUMENTED:
+
+1. VIEWER (viewer.ts - 229 lines)
+   Three.js 3D rendering, WebGL, camera, lighting, animation loop
+
+2. MODEL (model.ts - 207 lines)
+   VRM loading, animation control, lip-sync, emote coordination
+
+3. EMOTIONS (emoteController/ - 189 lines)
+   14 emotions, auto-blink (120ms/5s), expression orchestration
+
+4. GAZE (VRMLookAtSmoother.ts - 174 lines)
+   Eye tracking, saccades, head rotation, blending
+
+5. LIP SYNC (lipSync.ts - 42 lines)
+   FFT audio analysis, volume detection, sigmoid smoothing
+
+6. ANIMATION (VRMAnimation/ - 354 lines)
+   VRMA loader, Mixamo converter, bone mapping, position adjustment
+
+KEY TECHNOLOGIES:
+- Three.js 0.154.0
+- @pixiv/three-vrm 2.0.7
+- Web Audio API
+- TypeScript/Next.js
+
+ANDROID EQUIVALENTS:
+- Filament/OpenGL for rendering
+- ExoPlayer for audio
+- TarsosDSP for FFT
+- Kotlin Coroutines
+
+CRITICAL PATTERNS:
+- State machine (blink)
+- Orchestration (expression)
+- Smooth damping (gaze)
+- Probability-based (saccades)
+- Weight-based blending (lip-sync)
+
+IMPLEMENTATION PHASES:
+Phase 1: 3D rendering setup
+Phase 2: Expression and blink systems
+Phase 3: Gaze and advanced features
+Phase 4: Optimization and integration
+
+FILES CREATED:
+- /AMICA_ARCHITECTURE.md
+- /amica-reference/01_VIEWER_SYSTEM.md
+- /amica-reference/02_MODEL_SYSTEM.md
+- /amica-reference/03_EMOTION_EXPRESSION_SYSTEM.md
+- /amica-reference/04_GAZE_SYSTEM.md
+- /amica-reference/IMPLEMENTATION_SUMMARY.md
+- /amica-reference/README.md
+
+All documentation ready for Android/Kotlin port.

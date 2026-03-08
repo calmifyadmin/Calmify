@@ -92,6 +92,34 @@ open class NavigationDestination(
         selectedIcon = Icons.Filled.DynamicFeed,
         unselectedIcon = Icons.Outlined.DynamicFeed
     )
+
+    object Journal : NavigationDestination(
+        route = "journal_home_screen",
+        label = "Journal",
+        selectedIcon = Icons.Filled.EditNote,
+        unselectedIcon = Icons.Outlined.EditNote
+    )
+
+    object AIChat : NavigationDestination(
+        route = "chat_screen",
+        label = "AI Chat",
+        selectedIcon = Icons.Filled.Chat,
+        unselectedIcon = Icons.Outlined.Chat
+    )
+
+    object Community : NavigationDestination(
+        route = "community_screen",
+        label = "Community",
+        selectedIcon = Icons.Filled.Groups,
+        unselectedIcon = Icons.Outlined.Groups
+    )
+
+    object Journey : NavigationDestination(
+        route = "profile_screen",
+        label = "Percorso",
+        selectedIcon = Icons.Filled.TrendingUp,
+        unselectedIcon = Icons.Outlined.TrendingUp
+    )
 }
 
 /**

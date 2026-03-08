@@ -33,6 +33,14 @@
       "collectionGroup": "threads",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "parentThreadId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "threads",
+      "queryScope": "COLLECTION",
+      "fields": [
         { "fieldPath": "authorId", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]

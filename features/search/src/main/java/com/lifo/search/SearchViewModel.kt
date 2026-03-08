@@ -22,6 +22,7 @@ class SearchViewModel(
             is SearchContract.Intent.Search -> performSearch()
             is SearchContract.Intent.ClearSearch -> clearSearch()
             is SearchContract.Intent.SelectFilter -> selectFilter(intent.filter)
+            is SearchContract.Intent.SelectMoodFilter -> updateState { copy(selectedMood = intent.mood) }
         }
     }
 

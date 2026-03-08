@@ -33,9 +33,12 @@ class FirestoreThreadRepository @Inject constructor(
         private const val TAG = "FirestoreThreadRepo"
         private const val COLLECTION_THREADS = "threads"
         private const val SUBCOLLECTION_LIKES = "likes"
+        private const val SUBCOLLECTION_REPOSTS = "reposts"
+        private const val COLLECTION_NOTIFICATIONS = "notifications"
     }
 
     private val threadsCollection by lazy { firestore.collection(COLLECTION_THREADS) }
+    private val notificationsCollection by lazy { firestore.collection(COLLECTION_NOTIFICATIONS) }
 
     private val currentUserId: String
         get() = auth.currentUser?.uid ?: throw IllegalStateException("User not authenticated")
@@ -143,12 +146,25 @@ class FirestoreThreadRepository @Inject constructor(
             val data = threadToMap(threadWithId)
             docRef.set(data).await()
 
-            // If this is a reply, increment parent's replyCount
+            // If this is a reply, increment parent's replyCount and notify parent author
             val parentId = thread.parentThreadId
             if (parentId != null) {
                 threadsCollection.document(parentId)
                     .update("replyCount", FieldValue.increment(1))
                     .await()
+
+                // Notify parent thread author
+                val parentDoc = threadsCollection.document(parentId).get().await()
+                val parentAuthorId = parentDoc.getString("authorId")
+                if (parentAuthorId != null) {
+                    sendNotification(
+                        targetUserId = parentAuthorId,
+                        type = "REPLY",
+                        actorId = userId,
+                        threadId = parentId,
+                        message = "replied to your post"
+                    )
+                }
             }
 
             println("[$TAG] Thread created: ${docRef.id}")
@@ -205,6 +221,20 @@ class FirestoreThreadRepository @Inject constructor(
             batch.commit().await()
 
             println("[$TAG] Thread $threadId liked by $userId")
+
+            // Send like notification to thread author
+            val threadDoc = threadsCollection.document(threadId).get().await()
+            val authorId = threadDoc.getString("authorId")
+            if (authorId != null) {
+                sendNotification(
+                    targetUserId = authorId,
+                    type = "LIKE",
+                    actorId = userId,
+                    threadId = threadId,
+                    message = "liked your post"
+                )
+            }
+
             RequestState.Success(true)
         } catch (e: Exception) {
             println("[$TAG] ERROR: Error liking thread: ${e.message}")
@@ -251,8 +281,80 @@ class FirestoreThreadRepository @Inject constructor(
         }
     }
 
+    override suspend fun repostThread(userId: String, threadId: String): RequestState<Boolean> {
+        return try {
+            val repostRef = threadsCollection.document(threadId)
+                .collection(SUBCOLLECTION_REPOSTS)
+                .document(userId)
+
+            val existing = repostRef.get().await()
+            if (existing.exists()) {
+                return RequestState.Success(true)
+            }
+
+            val batch = firestore.batch()
+            batch.set(repostRef, mapOf("userId" to userId, "createdAt" to System.currentTimeMillis()))
+            batch.update(threadsCollection.document(threadId), "repostCount", FieldValue.increment(1))
+            batch.commit().await()
+
+            RequestState.Success(true)
+        } catch (e: Exception) {
+            RequestState.Error(e)
+        }
+    }
+
+    override suspend fun unrepostThread(userId: String, threadId: String): RequestState<Boolean> {
+        return try {
+            val repostRef = threadsCollection.document(threadId)
+                .collection(SUBCOLLECTION_REPOSTS)
+                .document(userId)
+
+            val existing = repostRef.get().await()
+            if (!existing.exists()) {
+                return RequestState.Success(true)
+            }
+
+            val batch = firestore.batch()
+            batch.delete(repostRef)
+            batch.update(threadsCollection.document(threadId), "repostCount", FieldValue.increment(-1))
+            batch.commit().await()
+
+            RequestState.Success(true)
+        } catch (e: Exception) {
+            RequestState.Error(e)
+        }
+    }
+
+    // -- Notification Helpers --
+
+    private suspend fun sendNotification(
+        targetUserId: String,
+        type: String,
+        actorId: String,
+        threadId: String?,
+        message: String,
+    ) {
+        // Don't notify yourself
+        if (actorId == targetUserId) return
+        try {
+            val data = mapOf(
+                "userId" to targetUserId,
+                "type" to type,
+                "actorId" to actorId,
+                "threadId" to threadId,
+                "message" to message,
+                "isRead" to false,
+                "createdAt" to System.currentTimeMillis()
+            )
+            notificationsCollection.add(data).await()
+        } catch (e: Exception) {
+            println("[$TAG] WARN: Failed to create notification: ${e.message}")
+        }
+    }
+
     // -- Helpers --
 
+    @Suppress("UNCHECKED_CAST")
     private fun snapshotToThread(doc: com.google.firebase.firestore.DocumentSnapshot): Thread {
         return Thread(
             threadId = doc.id,
@@ -261,11 +363,16 @@ class FirestoreThreadRepository @Inject constructor(
             text = doc.getString("text") ?: "",
             likeCount = doc.getLong("likeCount") ?: 0,
             replyCount = doc.getLong("replyCount") ?: 0,
+            repostCount = doc.getLong("repostCount") ?: 0,
             visibility = doc.getString("visibility") ?: "public",
             moodTag = doc.getString("moodTag"),
             isFromJournal = doc.getBoolean("isFromJournal") ?: false,
+            mediaUrls = (doc.get("mediaUrls") as? List<String>) ?: emptyList(),
             createdAt = doc.getLong("createdAt") ?: 0,
-            updatedAt = doc.getLong("updatedAt")
+            updatedAt = doc.getLong("updatedAt"),
+            viewCount = doc.getLong("viewCount") ?: 0,
+            shareCount = doc.getLong("shareCount") ?: 0,
+            postCategory = doc.getString("postCategory")
         )
     }
 
@@ -279,8 +386,10 @@ class FirestoreThreadRepository @Inject constructor(
             "visibility" to thread.visibility,
             "moodTag" to thread.moodTag,
             "isFromJournal" to thread.isFromJournal,
+            "mediaUrls" to thread.mediaUrls,
             "createdAt" to thread.createdAt,
-            "updatedAt" to thread.updatedAt
+            "updatedAt" to thread.updatedAt,
+            "postCategory" to thread.postCategory
         )
     }
 }

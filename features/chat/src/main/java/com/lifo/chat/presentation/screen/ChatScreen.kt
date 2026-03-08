@@ -1,6 +1,11 @@
 package com.lifo.chat.presentation.screen
 
 import android.Manifest
+import androidx.compose.foundation.Image
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
+import com.lifo.ui.R as UiR
+import com.lifo.ui.components.InlinePaywallCard
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -68,6 +73,7 @@ fun ChatScreen(
     navigateBack: () -> Unit,
     navigateToWriteWithContent: (String) -> Unit,
     navigateToLiveScreen: () -> Unit = {},
+    navigateToPaywall: () -> Unit = {},
     modifier: Modifier = Modifier,
     sessionId: String? = null,
     viewModel: ChatViewModel = koinViewModel(),
@@ -274,29 +280,6 @@ fun ChatScreen(
                         }
                     }
 
-                    // Global voice indicator - appears above input when speaking
-                    AnimatedVisibility(
-                        visible = isVoiceActive && !isLiveChatMode,
-                        enter = slideInVertically { it } + fadeIn(),
-                        exit = slideOutVertically { it } + fadeOut()
-                    ) {
-                        FluidAudioIndicator(
-                            isSpeaking = isVoiceActive,
-                            emotion = voiceEmotion.name,
-                            latencyMs = voiceLatency,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(
-                                    brush = Brush.verticalGradient(
-                                        colors = listOf(
-                                            Color.Transparent,
-                                            MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
-                                        )
-                                    )
-                                )
-                        )
-                    }
-
                     // Conditional input: Mute/Unmute for live mode, regular input for normal mode
                     if (isLiveChatMode) {
                         LiveChatMuteUnmuteSection(
@@ -385,10 +368,23 @@ fun ChatScreen(
                             )
                         }
                     }
+
+                    // Inline paywall when free limit reached
+                    if (uiState.showFreeLimitReached) {
+                        item(key = "paywall_card") {
+                            InlinePaywallCard(
+                                title = "Hai raggiunto il limite giornaliero",
+                                message = "Con Calmify Pro hai conversazioni illimitate con Eve, insight avanzati e molto altro.",
+                                ctaText = "Scopri Pro",
+                                onUpgradeClick = { navigateToPaywall() },
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            )
+                        }
+                    }
                 }
 
                 // Empty state handling
-                if (uiState.messages.isEmpty() && uiState.streamingMessage == null && uiState.currentSession == null) {
+                if (uiState.messages.isEmpty() && uiState.streamingMessage == null) {
                     NaturalAnimatedEmptyState(
                         userName = userDisplayName,
                         modifier = Modifier.align(Alignment.Center)
@@ -448,34 +444,13 @@ private fun StreamingMessage(
             .padding(horizontal = 16.dp, vertical = 4.dp)
     ) {
         // AI Avatar
-        Box(modifier = Modifier.size(32.dp)) {
-            Surface(
-                shape = MaterialTheme.shapes.small,
-                color = MaterialTheme.colorScheme.primaryContainer,
-                modifier = Modifier.size(28.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = "✨",
-                        fontSize = 16.sp
-                    )
-                }
-            }
-
-            // Speaking indicator
-            if (isSpeaking) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .size(8.dp)
-                        .offset(x = 2.dp, y = 2.dp)
-                        .background(
-                            MaterialTheme.colorScheme.primary,
-                            shape = CircleShape
-                        )
-                )
-            }
-        }
+        Image(
+            painter = painterResource(id = UiR.mipmap.calmify_logo_foreground),
+            contentDescription = "Calmify AI",
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+        )
 
         Spacer(modifier = Modifier.width(8.dp))
 
@@ -507,15 +482,6 @@ private fun StreamingMessage(
                 }
             }
 
-            // Real-time voice indicator
-            if (isSpeaking && content.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                VoiceWaveform(
-                    audioLevel = 0.8f,
-                    isActive = true,
-                    modifier = Modifier.height(16.dp).padding(start = 40.dp)
-                )
-            }
         }
     }
 }

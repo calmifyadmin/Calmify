@@ -1,8 +1,20 @@
 package com.lifo.subscription
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -26,7 +38,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Diamond
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -44,15 +56,21 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.lifo.util.repository.SubscriptionRepository
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -71,7 +89,7 @@ fun PaywallScreen(
                     IconButton(onClick = { onIntent(SubscriptionContract.Intent.DismissPaywall) }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = "Indietro",
                         )
                     }
                 },
@@ -95,57 +113,40 @@ fun PaywallScreen(
             ) {
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Header section
                 PaywallHeader()
 
                 Spacer(modifier = Modifier.height(28.dp))
 
-                // Feature comparison
                 FeatureComparisonSection()
 
                 Spacer(modifier = Modifier.height(28.dp))
 
-                // Product cards
-                if (state.availableProducts.isNotEmpty()) {
-                    ProductCardsSection(
-                        products = state.availableProducts,
-                        currentTier = state.subscriptionTier,
-                        onPurchase = { productId ->
-                            onIntent(SubscriptionContract.Intent.PurchaseSubscription(productId))
-                        },
-                    )
-                } else {
-                    // Placeholder cards when products haven't loaded yet
-                    PlaceholderProductCards(
-                        onPurchase = { productId ->
-                            onIntent(SubscriptionContract.Intent.PurchaseSubscription(productId))
-                        },
-                    )
-                }
+                // Single Pro card
+                val proProduct = state.availableProducts.firstOrNull()
+                ProProductCard(
+                    product = proProduct,
+                    isCurrentTier = state.isPro,
+                    onPurchase = {
+                        val productId = proProduct?.productId ?: "calmify_pro"
+                        onIntent(SubscriptionContract.Intent.PurchaseSubscription(productId))
+                    },
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Restore purchases
                 TextButton(
                     onClick = { onIntent(SubscriptionContract.Intent.RestorePurchases) },
                 ) {
                     Text(
-                        text = "Restore Purchases",
+                        text = "Ripristina acquisti",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
 
-                // Error message
                 state.error?.let { errorMessage ->
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = errorMessage,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    ErrorCard(errorMessage)
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -154,8 +155,17 @@ fun PaywallScreen(
             // Loading overlay
             AnimatedVisibility(
                 visible = state.isLoading,
-                enter = fadeIn(),
-                exit = fadeOut(),
+                enter = fadeIn(tween(200)) + scaleIn(
+                    initialScale = 0.85f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMedium,
+                    ),
+                ),
+                exit = fadeOut(tween(150)) + scaleOut(
+                    targetScale = 0.85f,
+                    animationSpec = tween(150),
+                ),
                 modifier = Modifier.fillMaxSize(),
             ) {
                 Box(
@@ -178,7 +188,7 @@ fun PaywallScreen(
                             CircularProgressIndicator()
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                text = "Processing...",
+                                text = "Un momento...",
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                         }
@@ -189,54 +199,104 @@ fun PaywallScreen(
     }
 }
 
+// =====================================================================
+// Header
+// =====================================================================
+
 @Composable
 private fun PaywallHeader() {
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val tertiaryColor = MaterialTheme.colorScheme.tertiary
+    val onPrimaryColor = MaterialTheme.colorScheme.onPrimary
+
+    val breathingTransition = rememberInfiniteTransition(label = "headerBreathing")
+    val breathingScale by breathingTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.05f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "headerBreathingScale",
+    )
+
+    val shimmerTransition = rememberInfiniteTransition(label = "headerShimmer")
+    val shimmerOffset by shimmerTransition.animateFloat(
+        initialValue = -300f,
+        targetValue = 300f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "headerShimmerOffset",
+    )
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        // Crown icon with gradient background
         Box(
             modifier = Modifier
                 .size(80.dp)
+                .graphicsLayer {
+                    scaleX = breathingScale
+                    scaleY = breathingScale
+                }
                 .clip(CircleShape)
-                .background(
-                    brush = Brush.linearGradient(
+                .drawBehind {
+                    val brush = Brush.linearGradient(
+                        colors = listOf(primaryColor, tertiaryColor),
+                        start = Offset.Zero,
+                        end = Offset(size.width, size.height),
+                    )
+                    drawRect(brush = brush)
+
+                    val shimmerBrush = Brush.linearGradient(
                         colors = listOf(
-                            MaterialTheme.colorScheme.primary,
-                            MaterialTheme.colorScheme.tertiary,
+                            Color.White.copy(alpha = 0f),
+                            Color.White.copy(alpha = 0.25f),
+                            Color.White.copy(alpha = 0f),
                         ),
-                    ),
-                ),
+                        start = Offset(shimmerOffset, 0f),
+                        end = Offset(shimmerOffset + 160f, size.height),
+                    )
+                    drawRect(brush = shimmerBrush)
+                },
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = Icons.Default.WorkspacePremium,
                 contentDescription = null,
                 modifier = Modifier.size(44.dp),
-                tint = MaterialTheme.colorScheme.onPrimary,
+                tint = onPrimaryColor,
             )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Calmify Premium",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
+            text = "Calmify Pro",
+            style = MaterialTheme.typography.headlineMedium.copy(
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.5.sp,
+            ),
+            color = MaterialTheme.colorScheme.primary,
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Unlock the full power of your wellness journey",
+            text = "Sblocca il pieno potenziale del tuo percorso",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
     }
 }
+
+// =====================================================================
+// Feature comparison — 2 columns: Free vs Pro
+// =====================================================================
 
 @Composable
 private fun FeatureComparisonSection() {
@@ -252,7 +312,7 @@ private fun FeatureComparisonSection() {
             modifier = Modifier.padding(20.dp),
         ) {
             Text(
-                text = "Compare Plans",
+                text = "Confronta i piani",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -267,11 +327,11 @@ private fun FeatureComparisonSection() {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Feature",
+                    text = "Funzionalita'",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1.4f),
+                    modifier = Modifier.weight(1.5f),
                 )
                 Text(
                     text = "Free",
@@ -279,23 +339,19 @@ private fun FeatureComparisonSection() {
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.weight(0.7f),
-                )
-                Text(
-                    text = "Premium",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.weight(0.9f),
+                    modifier = Modifier.weight(0.8f),
                 )
                 Text(
                     text = "Pro",
                     style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.tertiary,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.weight(0.7f),
+                    modifier = Modifier
+                        .weight(0.8f)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
+                        .padding(vertical = 4.dp),
                 )
             }
 
@@ -303,17 +359,27 @@ private fun FeatureComparisonSection() {
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Feature rows
-            FeatureRow("Diary entries", "5/day", true, true)
-            FeatureRow("AI chat", "Basic", true, true)
-            FeatureRow("Mood tracking", true, true, true)
-            FeatureRow("Unlimited diaries", false, true, true)
-            FeatureRow("Advanced AI", false, true, true)
-            FeatureRow("Custom avatar", false, true, true)
-            FeatureRow("Themes", false, true, true)
-            FeatureRow("Social DM", false, false, true)
-            FeatureRow("Priority support", false, false, true)
-            FeatureRow("Early access", false, false, true)
+            val features = listOf(
+                Triple("Diario", "3 al giorno", true),
+                Triple("Chat AI", "5 messaggi", true),
+                Triple("Mood tracking", true, true),
+                Triple("Diari illimitati", false, true),
+                Triple("Chat AI illimitata", false, true),
+                Triple("Avatar personalizzato", false, true),
+                Triple("Insight avanzati", false, true),
+                Triple("Messaggi social", false, true),
+                Triple("Supporto prioritario", false, true),
+                Triple("Accesso anticipato", false, true),
+            )
+
+            features.forEachIndexed { index, (name, free, pro) ->
+                FeatureRow(
+                    feature = name,
+                    free = free,
+                    pro = pro,
+                    index = index,
+                )
+            }
         }
     }
 }
@@ -321,26 +387,64 @@ private fun FeatureComparisonSection() {
 @Composable
 private fun FeatureRow(
     feature: String,
-    free: Any, // Boolean or String
-    premium: Any,
+    free: Any,
     pro: Any,
+    index: Int,
 ) {
+    val enterAnim = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        enterAnim.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(
+                durationMillis = 300,
+                delayMillis = index * 50,
+                easing = FastOutSlowInEasing,
+            ),
+        )
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .graphicsLayer {
+                alpha = enterAnim.value
+                translationY = (1f - enterAnim.value) * 16f
+            }
             .padding(vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = feature,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1.4f),
+        val isProExclusive = free is Boolean && !free
+        Row(
+            modifier = Modifier.weight(1.5f),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (isProExclusive) {
+                Icon(
+                    imageVector = Icons.Default.AutoAwesome,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(14.dp)
+                        .padding(end = 2.dp),
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                )
+                Spacer(modifier = Modifier.width(2.dp))
+            }
+            Text(
+                text = feature,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        FeatureCell(value = free, modifier = Modifier.weight(0.8f))
+        FeatureCell(
+            value = pro,
+            modifier = Modifier
+                .weight(0.8f)
+                .clip(RoundedCornerShape(4.dp))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.04f)),
+            isPro = true,
         )
-        FeatureCell(value = free, modifier = Modifier.weight(0.7f))
-        FeatureCell(value = premium, modifier = Modifier.weight(0.9f), isPremium = true)
-        FeatureCell(value = pro, modifier = Modifier.weight(0.7f))
     }
 }
 
@@ -348,20 +452,35 @@ private fun FeatureRow(
 private fun FeatureCell(
     value: Any,
     modifier: Modifier = Modifier,
-    isPremium: Boolean = false,
+    isPro: Boolean = false,
 ) {
     Box(
-        modifier = modifier,
+        modifier = modifier.padding(vertical = 2.dp),
         contentAlignment = Alignment.Center,
     ) {
         when (value) {
             is Boolean -> {
                 if (value) {
+                    val checkScale = remember { Animatable(0f) }
+                    LaunchedEffect(Unit) {
+                        checkScale.animateTo(
+                            targetValue = 1f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessMedium,
+                            ),
+                        )
+                    }
                     Icon(
                         imageVector = Icons.Default.Check,
-                        contentDescription = "Included",
-                        modifier = Modifier.size(18.dp),
-                        tint = if (isPremium) {
+                        contentDescription = "Incluso",
+                        modifier = Modifier
+                            .size(18.dp)
+                            .graphicsLayer {
+                                scaleX = checkScale.value
+                                scaleY = checkScale.value
+                            },
+                        tint = if (isPro) {
                             MaterialTheme.colorScheme.primary
                         } else {
                             MaterialTheme.colorScheme.tertiary
@@ -370,7 +489,7 @@ private fun FeatureCell(
                 } else {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Not included",
+                        contentDescription = "Non incluso",
                         modifier = Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.outlineVariant,
                     )
@@ -388,124 +507,73 @@ private fun FeatureCell(
     }
 }
 
-@Composable
-private fun ProductCardsSection(
-    products: List<SubscriptionRepository.ProductInfo>,
-    currentTier: SubscriptionRepository.SubscriptionTier,
-    onPurchase: (String) -> Unit,
-) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        products.forEach { product ->
-            val isPremium = product.productId.contains("premium", ignoreCase = true)
-            val isPro = product.productId.contains("pro", ignoreCase = true)
-
-            val tierIcon: ImageVector
-            val tierLabel: String
-            val isHighlighted: Boolean
-
-            when {
-                isPro -> {
-                    tierIcon = Icons.Default.Diamond
-                    tierLabel = "Pro"
-                    isHighlighted = false
-                }
-                else -> {
-                    tierIcon = Icons.Default.Star
-                    tierLabel = "Premium"
-                    isHighlighted = true
-                }
-            }
-
-            ProductCard(
-                product = product,
-                icon = tierIcon,
-                tierLabel = tierLabel,
-                isHighlighted = isHighlighted,
-                isCurrentTier = (isPremium && currentTier == SubscriptionRepository.SubscriptionTier.PREMIUM)
-                        || (isPro && currentTier == SubscriptionRepository.SubscriptionTier.PRO),
-                onPurchase = { onPurchase(product.productId) },
-            )
-        }
-    }
-}
+// =====================================================================
+// Single Pro product card
+// =====================================================================
 
 @Composable
-private fun PlaceholderProductCards(
-    onPurchase: (String) -> Unit,
-) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        ProductCard(
-            product = SubscriptionRepository.ProductInfo(
-                productId = "calmify_premium",
-                title = "Calmify Premium",
-                description = "Unlimited diaries, advanced AI, and more",
-                price = "$4.99/mo",
-                priceMicros = 4_990_000,
-                currencyCode = "USD",
-            ),
-            icon = Icons.Default.Star,
-            tierLabel = "Premium",
-            isHighlighted = true,
-            isCurrentTier = false,
-            onPurchase = { onPurchase("calmify_premium") },
-        )
-
-        ProductCard(
-            product = SubscriptionRepository.ProductInfo(
-                productId = "calmify_pro",
-                title = "Calmify Pro",
-                description = "Everything in Premium plus social DM and priority support",
-                price = "$9.99/mo",
-                priceMicros = 9_990_000,
-                currencyCode = "USD",
-            ),
-            icon = Icons.Default.Diamond,
-            tierLabel = "Pro",
-            isHighlighted = false,
-            isCurrentTier = false,
-            onPurchase = { onPurchase("calmify_pro") },
-        )
-    }
-}
-
-@Composable
-private fun ProductCard(
-    product: SubscriptionRepository.ProductInfo,
-    icon: ImageVector,
-    tierLabel: String,
-    isHighlighted: Boolean,
+private fun ProProductCard(
+    product: SubscriptionRepository.ProductInfo?,
     isCurrentTier: Boolean,
     onPurchase: () -> Unit,
 ) {
-    val borderColor = if (isHighlighted) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        MaterialTheme.colorScheme.outlineVariant
-    }
+    val primaryColor = MaterialTheme.colorScheme.primary
+
+    val glowTransition = rememberInfiniteTransition(label = "cardGlow")
+    val glowAlpha by glowTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 0.9f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "cardGlowAlpha",
+    )
+
+    val pulseTransition = rememberInfiniteTransition(label = "subscribePulse")
+    val buttonScale by pulseTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.02f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "subscribeButtonScale",
+    )
+
+    val displayProduct = product ?: SubscriptionRepository.ProductInfo(
+        productId = "calmify_pro",
+        title = "Calmify Pro",
+        description = "Tutto illimitato: diari, chat AI, avatar, insight, social",
+        price = "$4.99/mese",
+        priceMicros = 4_990_000,
+        currencyCode = "USD",
+    )
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .drawBehind {
+                val glowBrush = Brush.radialGradient(
+                    colors = listOf(
+                        primaryColor.copy(alpha = glowAlpha * 0.15f),
+                        Color.Transparent,
+                    ),
+                    center = Offset(size.width / 2f, size.height / 2f),
+                    radius = size.width * 0.7f,
+                )
+                drawRect(brush = glowBrush)
+            }
             .border(
-                width = if (isHighlighted) 2.dp else 1.dp,
-                color = borderColor,
+                width = 2.dp,
+                color = primaryColor.copy(alpha = glowAlpha),
                 shape = RoundedCornerShape(16.dp),
             ),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isHighlighted) {
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
-            } else {
-                MaterialTheme.colorScheme.surfaceContainerLow
-            },
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
         ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isHighlighted) 4.dp else 1.dp,
-        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
     ) {
         Column(
             modifier = Modifier
@@ -516,63 +584,32 @@ private fun ProductCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Tier icon
                 Box(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(CircleShape)
-                        .background(
-                            if (isHighlighted) {
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                            } else {
-                                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
-                            },
-                        ),
+                        .background(primaryColor.copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        imageVector = icon,
+                        imageVector = Icons.Default.Diamond,
                         contentDescription = null,
                         modifier = Modifier.size(24.dp),
-                        tint = if (isHighlighted) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.tertiary
-                        },
+                        tint = primaryColor,
                     )
                 }
 
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = product.title,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        if (isHighlighted) {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(MaterialTheme.colorScheme.primary)
-                                    .padding(horizontal = 6.dp, vertical = 2.dp),
-                            ) {
-                                Text(
-                                    text = "POPULAR",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                )
-                            }
-                        }
-                    }
                     Text(
-                        text = product.description,
+                        text = displayProduct.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = displayProduct.description,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -587,14 +624,12 @@ private fun ProductCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = product.price,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isHighlighted) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    },
+                    text = displayProduct.price,
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = (-0.5).sp,
+                    ),
+                    color = primaryColor,
                 )
 
                 Button(
@@ -602,17 +637,24 @@ private fun ProductCard(
                     enabled = !isCurrentTier,
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isHighlighted) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.tertiary
-                        },
+                        containerColor = primaryColor,
                     ),
-                    modifier = Modifier.height(44.dp),
+                    modifier = Modifier
+                        .height(44.dp)
+                        .then(
+                            if (!isCurrentTier) {
+                                Modifier.graphicsLayer {
+                                    scaleX = buttonScale
+                                    scaleY = buttonScale
+                                }
+                            } else {
+                                Modifier
+                            },
+                        ),
                 ) {
                     if (isCurrentTier) {
                         Text(
-                            text = "Current Plan",
+                            text = "Piano attuale",
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold,
                         )
@@ -624,13 +666,46 @@ private fun ProductCard(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Subscribe",
+                            text = "Abbonati",
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold,
                         )
                     }
                 }
             }
+        }
+    }
+}
+
+// =====================================================================
+// Error card
+// =====================================================================
+
+@Composable
+private fun ErrorCard(message: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+        ),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Default.ErrorOutline,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.error,
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
         }
     }
 }

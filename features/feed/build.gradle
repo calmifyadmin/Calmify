@@ -29,6 +29,7 @@ kotlin {
             kotlin.srcDirs('src/main/java')
 
             dependencies {
+                implementation project(':core:social-ui')
                 implementation libs.compose.material.icons.extended
                 implementation libs.core.ktx
                 implementation libs.coroutines.android

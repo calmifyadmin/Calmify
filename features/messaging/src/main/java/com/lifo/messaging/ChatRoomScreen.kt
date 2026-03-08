@@ -32,6 +32,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.outlined.AttachFile
+import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -55,6 +57,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.lifo.socialui.avatar.UserAvatar
 import com.lifo.util.repository.SocialMessagingRepository
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -64,9 +67,8 @@ import java.util.Locale
 /**
  * Chat room screen for a specific conversation.
  *
- * Messages from the current user are right-aligned with primary colour bubbles;
- * messages from others are left-aligned with surface-variant bubbles. Includes
- * date separators, read indicators, a typing animation, and a bottom input bar.
+ * Features Threads-like message grouping, adaptive bubble corners,
+ * animated typing dots, attachment/camera icons, and compact read indicators.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -176,9 +178,9 @@ private fun MessageList(
     onUserClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Group messages with date separators
-    val messagesWithSeparators = remember(messages) {
-        buildMessageListItems(messages)
+    // Build grouped message list items (date separators + grouped messages)
+    val groupedItems = remember(messages) {
+        buildGroupedMessageListItems(messages, currentUserId)
     }
 
     LazyColumn(
@@ -186,40 +188,39 @@ private fun MessageList(
         state = listState,
         reverseLayout = true,
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        // Typing indicator at the top (which is bottom visually due to reverseLayout)
+        // Typing indicator at the top (bottom visually due to reverseLayout)
         if (typingUsers.isNotEmpty()) {
             item(key = "typing_indicator") {
-                TypingIndicator(
+                TypingDotsIndicator(
                     modifier = Modifier.padding(start = 8.dp, bottom = 4.dp)
                 )
             }
         }
 
         items(
-            items = messagesWithSeparators,
+            items = groupedItems,
             key = { item ->
                 when (item) {
-                    is MessageListItem.MessageItem -> item.message.id.ifEmpty {
+                    is GroupedMessageListItem.MessageItem -> item.message.id.ifEmpty {
                         "msg_${item.message.createdAt}_${item.message.senderId}"
                     }
-                    is MessageListItem.DateSeparator -> "sep_${item.dateLabel}"
+                    is GroupedMessageListItem.DateSeparator -> "sep_${item.dateLabel}"
                 }
             }
         ) { item ->
             when (item) {
-                is MessageListItem.DateSeparator -> {
+                is GroupedMessageListItem.DateSeparator -> {
                     DateSeparatorRow(label = item.dateLabel)
                 }
-                is MessageListItem.MessageItem -> {
-                    val isMine = item.message.senderId == currentUserId
+                is GroupedMessageListItem.MessageItem -> {
                     val onUserClickStable = remember(item.message.senderId) {
                         { onUserClick(item.message.senderId) }
                     }
-                    MessageBubble(
+                    GroupedMessageBubble(
                         message = item.message,
-                        isMine = isMine,
+                        isMine = item.isMine,
+                        groupPosition = item.groupPosition,
                         onUserClick = onUserClickStable
                     )
                 }
@@ -228,41 +229,74 @@ private fun MessageList(
     }
 }
 
+/**
+ * Position of a message within a consecutive sender group.
+ */
+enum class GroupPosition {
+    SOLO,  // Only message in group
+    FIRST, // First message in group (shows avatar)
+    MIDDLE,
+    LAST   // Last message in group (shows timestamp)
+}
+
 @Composable
-private fun MessageBubble(
+private fun GroupedMessageBubble(
     message: SocialMessagingRepository.Message,
     isMine: Boolean,
+    groupPosition: GroupPosition,
     onUserClick: () -> Unit,
 ) {
-    val bubbleShape = RoundedCornerShape(
-        topStart = 16.dp,
-        topEnd = 16.dp,
-        bottomStart = if (isMine) 16.dp else 4.dp,
-        bottomEnd = if (isMine) 4.dp else 16.dp
-    )
+    // Threads-like adaptive corners
+    val bubbleShape = when {
+        groupPosition == GroupPosition.SOLO -> RoundedCornerShape(16.dp)
+        isMine -> when (groupPosition) {
+            GroupPosition.FIRST -> RoundedCornerShape(16.dp, 16.dp, 4.dp, 16.dp)
+            GroupPosition.MIDDLE -> RoundedCornerShape(16.dp, 4.dp, 4.dp, 16.dp)
+            GroupPosition.LAST -> RoundedCornerShape(16.dp, 4.dp, 16.dp, 16.dp)
+            else -> RoundedCornerShape(16.dp)
+        }
+        else -> when (groupPosition) {
+            GroupPosition.FIRST -> RoundedCornerShape(16.dp, 16.dp, 16.dp, 4.dp)
+            GroupPosition.MIDDLE -> RoundedCornerShape(4.dp, 16.dp, 16.dp, 4.dp)
+            GroupPosition.LAST -> RoundedCornerShape(4.dp, 16.dp, 16.dp, 16.dp)
+            else -> RoundedCornerShape(16.dp)
+        }
+    }
+
+    // Spacing: tighter within groups, wider between groups
+    val topPadding = when (groupPosition) {
+        GroupPosition.FIRST, GroupPosition.SOLO -> 12.dp
+        else -> 2.dp // Tight 4dp total (2dp top + 2dp bottom of previous)
+    }
+    val bottomPadding = when (groupPosition) {
+        GroupPosition.LAST, GroupPosition.SOLO -> 0.dp // next item adds its own top padding
+        else -> 2.dp
+    }
+
+    val showAvatar = !isMine && (groupPosition == GroupPosition.FIRST || groupPosition == GroupPosition.SOLO)
+    val showTimestamp = groupPosition == GroupPosition.LAST || groupPosition == GroupPosition.SOLO
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = topPadding, bottom = bottomPadding),
         horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start
     ) {
         if (!isMine) {
-            // Avatar for received messages
-            val senderInitial = message.senderId.firstOrNull()?.uppercaseChar() ?: '?'
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondaryContainer)
-                    .clickable(onClick = onUserClick)
-                    .align(Alignment.Bottom),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = senderInitial.toString(),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
+            if (showAvatar) {
+                // Avatar for first message in group
+                UserAvatar(
+                    avatarUrl = null,
+                    displayName = message.senderId,
+                    size = 28.dp,
+                    showBorder = false,
+                    modifier = Modifier
+                        .align(Alignment.Bottom)
+                        .clickable(onClick = onUserClick)
                 )
+            } else {
+                // Placeholder spacer to keep alignment
+                Spacer(modifier = Modifier.width(28.dp))
             }
             Spacer(modifier = Modifier.width(6.dp))
         }
@@ -287,33 +321,36 @@ private fun MessageBubble(
                         MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Spacer(modifier = Modifier.height(2.dp))
+                // Only show timestamp on last message of group
+                if (showTimestamp) {
+                    Spacer(modifier = Modifier.height(2.dp))
 
-                Row(
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.align(Alignment.End)
-                ) {
-                    Text(
-                        text = formatMessageTimestamp(message.createdAt),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (isMine)
-                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
-                        else
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    )
-
-                    if (isMine) {
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Icon(
-                            imageVector = Icons.Default.DoneAll,
-                            contentDescription = if (message.isRead) "Read" else "Sent",
-                            modifier = Modifier.size(14.dp),
-                            tint = if (message.isRead)
-                                MaterialTheme.colorScheme.primary
+                    Row(
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Text(
+                            text = formatMessageTimestamp(message.createdAt),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (isMine)
+                                MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
                             else
-                                MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.4f)
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                         )
+
+                        if (isMine) {
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Icon(
+                                imageVector = Icons.Default.DoneAll,
+                                contentDescription = if (message.isRead) "Read" else "Sent",
+                                modifier = Modifier.size(12.dp),
+                                tint = if (message.isRead)
+                                    MaterialTheme.colorScheme.primary
+                                else
+                                    MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.4f)
+                            )
+                        }
                     }
                 }
             }
@@ -343,33 +380,75 @@ private fun DateSeparatorRow(label: String) {
     }
 }
 
+/**
+ * Animated three dots typing indicator (Threads-style).
+ */
 @Composable
-private fun TypingIndicator(modifier: Modifier = Modifier) {
-    val infiniteTransition = rememberInfiniteTransition(label = "typing")
-    val alpha = infiniteTransition.animateFloat(
+private fun TypingDotsIndicator(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "typing_dots")
+
+    // Three dots with staggered animations
+    val dot1Alpha = infiniteTransition.animateFloat(
         initialValue = 0.3f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 800, easing = LinearEasing),
+            animation = tween(durationMillis = 600, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "typing_alpha"
+        label = "dot1"
+    )
+    val dot2Alpha = infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 600, delayMillis = 200, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "dot2"
+    )
+    val dot3Alpha = infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 600, delayMillis = 400, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "dot3"
     )
 
     Row(
-        modifier = modifier,
+        modifier = modifier
+            .background(
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(16.dp)
+            )
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = "Someone is typing",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+        Box(
+            modifier = Modifier
+                .size(7.dp)
+                .clip(CircleShape)
+                .background(
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = dot1Alpha.value)
+                )
         )
-        Text(
-            text = "...",
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary.copy(alpha = alpha.value)
+        Box(
+            modifier = Modifier
+                .size(7.dp)
+                .clip(CircleShape)
+                .background(
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = dot2Alpha.value)
+                )
+        )
+        Box(
+            modifier = Modifier
+                .size(7.dp)
+                .clip(CircleShape)
+                .background(
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = dot3Alpha.value)
+                )
         )
     }
 }
@@ -388,6 +467,35 @@ private fun ChatInputBar(
             .padding(horizontal = 8.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Attachment icon
+        IconButton(
+            onClick = { /* TODO: attachment picker */ },
+            modifier = Modifier.size(40.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.AttachFile,
+                contentDescription = "Attach file",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+
+        // Camera icon
+        IconButton(
+            onClick = { /* TODO: camera capture */ },
+            modifier = Modifier.size(40.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.CameraAlt,
+                contentDescription = "Camera",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(4.dp))
+
+        // Text input
         TextField(
             value = draftText,
             onValueChange = onTextChange,
@@ -412,12 +520,13 @@ private fun ChatInputBar(
 
         Spacer(modifier = Modifier.width(8.dp))
 
+        // Send button
         val canSend = draftText.isNotBlank() && !isSending
         IconButton(
             onClick = onSend,
             enabled = canSend,
             modifier = Modifier
-                .size(48.dp)
+                .size(44.dp)
                 .clip(CircleShape)
                 .background(
                     if (canSend) MaterialTheme.colorScheme.primary
@@ -447,33 +556,97 @@ private fun ChatInputBar(
 // -- Helper models & formatters -----------------------------------------------
 
 /**
- * Represents an item in the message list: either a message or a date separator.
+ * Represents an item in the grouped message list.
  */
-private sealed interface MessageListItem {
-    data class MessageItem(val message: SocialMessagingRepository.Message) : MessageListItem
-    data class DateSeparator(val dateLabel: String) : MessageListItem
+private sealed interface GroupedMessageListItem {
+    data class MessageItem(
+        val message: SocialMessagingRepository.Message,
+        val isMine: Boolean,
+        val groupPosition: GroupPosition
+    ) : GroupedMessageListItem
+
+    data class DateSeparator(val dateLabel: String) : GroupedMessageListItem
 }
 
 /**
- * Builds a list interleaving [MessageListItem.DateSeparator] entries between
- * messages from different days. Because the LazyColumn uses `reverseLayout`,
- * messages are ordered newest-first.
+ * Builds a list of grouped message items with date separators.
+ * Messages from the same sender are grouped together with [GroupPosition] tags
+ * for adaptive corner rendering.
  */
-private fun buildMessageListItems(
-    messages: List<SocialMessagingRepository.Message>
-): List<MessageListItem> {
+private fun buildGroupedMessageListItems(
+    messages: List<SocialMessagingRepository.Message>,
+    currentUserId: String,
+): List<GroupedMessageListItem> {
     if (messages.isEmpty()) return emptyList()
 
     // Sort newest first (for reversed LazyColumn, item 0 = newest = bottom)
     val sorted = messages.sortedByDescending { it.createdAt }
-    val result = mutableListOf<MessageListItem>()
+    val result = mutableListOf<GroupedMessageListItem>()
     var lastDateLabel: String? = null
+
+    // First pass: create flat list with date separators
+    data class TaggedMessage(
+        val message: SocialMessagingRepository.Message,
+        val isMine: Boolean,
+    )
+
+    val taggedMessages = mutableListOf<Any>() // TaggedMessage | String (date separator)
 
     for (message in sorted) {
         val dateLabel = formatDateLabel(message.createdAt)
-        result.add(MessageListItem.MessageItem(message))
+        taggedMessages.add(TaggedMessage(message, message.senderId == currentUserId))
         if (dateLabel != lastDateLabel) {
-            result.add(MessageListItem.DateSeparator(dateLabel))
+            taggedMessages.add(dateLabel)
+            lastDateLabel = dateLabel
+        }
+    }
+
+    // Second pass: compute group positions
+    // In the reversed list, "next" in visual order is the previous index
+    val items = taggedMessages.filterIsInstance<TaggedMessage>()
+    val positionMap = mutableMapOf<SocialMessagingRepository.Message, GroupPosition>()
+
+    for (i in items.indices) {
+        val current = items[i]
+        val prev = items.getOrNull(i - 1) // visually below (newer)
+        val next = items.getOrNull(i + 1) // visually above (older)
+
+        val sameSenderAsPrev = prev != null && prev.message.senderId == current.message.senderId
+        val sameSenderAsNext = next != null && next.message.senderId == current.message.senderId
+
+        // Check date boundaries - don't group across date separators
+        val prevDateLabel = prev?.let { formatDateLabel(it.message.createdAt) }
+        val currentDateLabel = formatDateLabel(current.message.createdAt)
+        val nextDateLabel = next?.let { formatDateLabel(it.message.createdAt) }
+
+        val groupedWithPrev = sameSenderAsPrev && prevDateLabel == currentDateLabel
+        val groupedWithNext = sameSenderAsNext && nextDateLabel == currentDateLabel
+
+        val position = when {
+            groupedWithPrev && groupedWithNext -> GroupPosition.MIDDLE
+            groupedWithPrev && !groupedWithNext -> GroupPosition.LAST // visually, last going up
+            !groupedWithPrev && groupedWithNext -> GroupPosition.FIRST // visually, first going up
+            else -> GroupPosition.SOLO
+        }
+        positionMap[current.message] = position
+    }
+
+    // Final pass: build result list
+    lastDateLabel = null
+    for (message in sorted) {
+        val dateLabel = formatDateLabel(message.createdAt)
+        val isMine = message.senderId == currentUserId
+        val position = positionMap[message] ?: GroupPosition.SOLO
+
+        result.add(
+            GroupedMessageListItem.MessageItem(
+                message = message,
+                isMine = isMine,
+                groupPosition = position
+            )
+        )
+        if (dateLabel != lastDateLabel) {
+            result.add(GroupedMessageListItem.DateSeparator(dateLabel))
             lastDateLabel = dateLabel
         }
     }
