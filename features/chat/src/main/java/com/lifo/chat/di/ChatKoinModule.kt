@@ -75,6 +75,6 @@ val chatKoinModule = module {
     // LiveChatViewModel(context, apiConfigManager, geminiWebSocketClient, geminiAudioManager,
     //   geminiCameraManager, liveAudioSource, synchronizedSpeechController,
     //   audioQualityAnalyzer, conversationContextManager, chatRepository,
-    //   diaryRepository, firebaseAuth, savedStateHandle)
-    viewModel { LiveChatViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
+    //   diaryRepository, firebaseAuth, subscriptionRepository, savedStateHandle)
+    viewModel { LiveChatViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
 }

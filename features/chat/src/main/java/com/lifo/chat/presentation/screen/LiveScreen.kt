@@ -25,6 +25,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -153,44 +154,64 @@ fun LiveScreen(
         modifier = modifier.fillMaxSize()
     ) {
         // LAYER 1: Background - Avatar or Waveform Visualizer
-        if (showAvatar && displayAvatar && avatarContent != null) {
-            // Avatar Content (provided from outside)
-            avatarContent()
+        // When time limit reached, blur the entire background so avatar is visible but inaccessible
+        val blurModifier = if (liveChatState.showTimeLimitReached && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            Modifier.fillMaxSize().blur(32.dp)
         } else {
-            // Waveform visualizer - full screen with same style as ChatScreen
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                GeminiLiquidVisualizer(
-                    isSpeaking = liveChatState.aiEmotion == AIEmotion.Speaking ||
-                                liveChatState.turnState == TurnState.UserTurn,
-                    modifier = Modifier.fillMaxSize(),
-                    primaryColor = MaterialTheme.colorScheme.primary,
-                    secondaryColor = MaterialTheme.colorScheme.tertiary,
-                    backgroundColor = MaterialTheme.colorScheme.surface,
-                    userVoiceLevel = userVoiceLevel,
-                    aiVoiceLevel = aiVoiceLevel,
-                    emotionalIntensity = emotionalIntensity,
-                    conversationMode = conversationMode,
-                    isUserSpeaking = liveChatState.turnState == TurnState.UserTurn && !liveChatState.isMuted,
-                    isAiSpeaking = liveChatState.aiEmotion == AIEmotion.Speaking
-                )
+            Modifier.fillMaxSize()
+        }
+
+        Box(modifier = blurModifier) {
+            if (showAvatar && displayAvatar && avatarContent != null) {
+                avatarContent()
             } else {
-                // Fallback gradient background for older devices
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.surface,
-                                    MaterialTheme.colorScheme.surfaceVariant
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    GeminiLiquidVisualizer(
+                        isSpeaking = liveChatState.aiEmotion == AIEmotion.Speaking ||
+                                    liveChatState.turnState == TurnState.UserTurn,
+                        modifier = Modifier.fillMaxSize(),
+                        primaryColor = MaterialTheme.colorScheme.primary,
+                        secondaryColor = MaterialTheme.colorScheme.tertiary,
+                        backgroundColor = MaterialTheme.colorScheme.surface,
+                        userVoiceLevel = userVoiceLevel,
+                        aiVoiceLevel = aiVoiceLevel,
+                        emotionalIntensity = emotionalIntensity,
+                        conversationMode = conversationMode,
+                        isUserSpeaking = liveChatState.turnState == TurnState.UserTurn && !liveChatState.isMuted,
+                        isAiSpeaking = liveChatState.aiEmotion == AIEmotion.Speaking
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.surface,
+                                        MaterialTheme.colorScheme.surfaceVariant
+                                    )
                                 )
                             )
-                        )
-                )
+                    )
+                }
             }
         }
 
 
+
+        // LAYER 2: Dark scrim when time limit reached — avatar still animates underneath but inaccessible
+        if (liveChatState.showTimeLimitReached) {
+            val scrimAlpha by animateFloatAsState(
+                targetValue = 0.6f,
+                animationSpec = tween(800),
+                label = "scrimAlpha"
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = scrimAlpha))
+            )
+        }
 
         // LAYER 3: Top bar with close button, display toggle, AR toggle, and status
         LiveTopBar(
@@ -342,9 +363,57 @@ fun LiveScreen(
             )
         }
 
+        // Session time limit reached — paywall overlay
+        AnimatedVisibility(
+            visible = liveChatState.showTimeLimitReached,
+            enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 }),
+            exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 2 }),
+            modifier = Modifier
+                .align(Alignment.Center)
+                .padding(horizontal = 24.dp)
+        ) {
+            com.lifo.ui.components.InlinePaywallCard(
+                title = "Sessione terminata",
+                message = "Con Calmify Pro hai sessioni live fino a 15 minuti con Eve, " +
+                    "avatar 3D, insight avanzati e molto altro.",
+                ctaText = "Scopri Pro",
+                onUpgradeClick = { onClose() }, // Navigate back, then user can go to subscription
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        // Session timer display (top-right, shown when connected and there's a time limit)
+        if (liveChatState.connectionStatus == ConnectionStatus.Connected &&
+            liveChatState.sessionTimeLimitSeconds > 0 &&
+            !liveChatState.showTimeLimitReached
+        ) {
+            val elapsed = liveChatState.sessionElapsedSeconds
+            val limit = liveChatState.sessionTimeLimitSeconds
+            val remaining = (limit - elapsed).coerceAtLeast(0)
+            val minutes = remaining / 60
+            val seconds = remaining % 60
+            val isLow = remaining <= 30
+
+            Text(
+                text = "%d:%02d".format(minutes, seconds),
+                style = MaterialTheme.typography.labelMedium,
+                color = if (isLow) MaterialTheme.colorScheme.error
+                       else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(top = 16.dp, end = 16.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            )
+        }
+
         // Bottom controls - nascosti quando chat input è attiva
         AnimatedVisibility(
-            visible = !showChatInput,
+            visible = !showChatInput && !liveChatState.showTimeLimitReached,
             enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 }),
             exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 2 })
         ) {

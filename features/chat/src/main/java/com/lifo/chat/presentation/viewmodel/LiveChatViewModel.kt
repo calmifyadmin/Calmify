@@ -14,10 +14,12 @@ import com.lifo.chat.data.camera.GeminiLiveCameraManager
 import com.lifo.chat.domain.audio.AudioQualityAnalyzer
 import com.lifo.chat.domain.audio.ConversationContextManager
 import com.lifo.chat.domain.model.*
+import com.lifo.util.model.RequestState
 import com.lifo.util.mvi.MviContract
 import com.lifo.util.mvi.MviViewModel
 import com.lifo.util.repository.ChatRepository
 import com.lifo.util.repository.MongoRepository
+import com.lifo.util.repository.SubscriptionRepository
 import com.lifo.util.speech.InterruptionReason
 import com.lifo.util.speech.SpeechAnimationTarget
 import com.lifo.util.speech.SynchronizedSpeechController
@@ -81,6 +83,7 @@ class LiveChatViewModel constructor(
     private val chatRepository: ChatRepository,
     private val diaryRepository: MongoRepository,
     private val firebaseAuth: FirebaseAuth,
+    private val subscriptionRepository: SubscriptionRepository,
     private val savedStateHandle: SavedStateHandle
 ) : MviViewModel<LiveChatContract.Intent, LiveChatContract.State, LiveChatContract.Effect>(
     initialState = LiveChatContract.State(
@@ -134,10 +137,18 @@ class LiveChatViewModel constructor(
     // Private internal state (not suitable for MVI State)
     // -----------------------------------------------------------------------
 
+    companion object {
+        // Free tier: 3 minutes per session
+        // PRO tier: 15 minutes (Gemini Live API max without session resumption)
+        private const val FREE_SESSION_LIMIT_SECONDS = 180L  // 3 minutes
+        private const val PRO_SESSION_LIMIT_SECONDS = 900L   // 15 minutes
+    }
+
     private var aiSpeaking: Boolean = false
     private var isAudioChannelOpen = false
     private var currentLiveSessionId: String? = null
     private var onPlayGestureCallback: ((String) -> Unit)? = null
+    private var sessionTimerJob: Job? = null
 
     // Synchronized speech state for avatar integration (direct delegation)
     val isSynchronizedSpeaking = synchronizedSpeechController.isSpeaking
@@ -287,6 +298,9 @@ class LiveChatViewModel constructor(
                 currentLiveSessionId = "live-${System.currentTimeMillis()}"
                 println("[LiveChatViewModel] Generated Live session ID: $currentLiveSessionId")
                 conversationContextManager.resetContext()
+
+                // Start session timer for subscription gating
+                startSessionTimer()
             } catch (e: Exception) {
                 println("[LiveChatViewModel] ERROR: Connection failed: ${e.message}")
                 updateState {
@@ -334,6 +348,73 @@ class LiveChatViewModel constructor(
             }
 
             currentLiveSessionId = null
+
+            // Stop session timer
+            stopSessionTimer()
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Session time limit (subscription gating)
+    // -----------------------------------------------------------------------
+
+    private fun startSessionTimer() {
+        sessionTimerJob?.cancel()
+
+        scope.launch {
+            // Determine user's tier and set the time limit
+            val timeLimitSeconds = resolveSessionTimeLimit()
+            updateState {
+                copy(live = live.copy(
+                    sessionElapsedSeconds = 0L,
+                    sessionTimeLimitSeconds = timeLimitSeconds,
+                    showTimeLimitReached = false
+                ))
+            }
+
+            println("[LiveChatViewModel] Session timer started: limit=${timeLimitSeconds}s (${timeLimitSeconds / 60}min)")
+        }
+
+        // Tick every second
+        sessionTimerJob = scope.launch {
+            while (isActive) {
+                delay(1000L)
+                val elapsed = currentState.live.sessionElapsedSeconds + 1
+                val limit = currentState.live.sessionTimeLimitSeconds
+
+                updateState { copy(live = live.copy(sessionElapsedSeconds = elapsed)) }
+
+                // Check if time limit reached (limit > 0 means there IS a limit)
+                if (limit > 0 && elapsed >= limit && !currentState.live.showTimeLimitReached) {
+                    println("[LiveChatViewModel] Session time limit reached: ${elapsed}s / ${limit}s")
+                    updateState { copy(live = live.copy(showTimeLimitReached = true)) }
+                    // Disconnect gracefully
+                    disconnectFromRealtime()
+                }
+            }
+        }
+    }
+
+    private fun stopSessionTimer() {
+        sessionTimerJob?.cancel()
+        sessionTimerJob = null
+    }
+
+    private suspend fun resolveSessionTimeLimit(): Long {
+        val userId = firebaseAuth.currentUser?.uid ?: return FREE_SESSION_LIMIT_SECONDS
+
+        return try {
+            val result = subscriptionRepository.getSubscriptionState(userId)
+            if (result is RequestState.Success &&
+                result.data.tier == SubscriptionRepository.SubscriptionTier.PRO
+            ) {
+                PRO_SESSION_LIMIT_SECONDS
+            } else {
+                FREE_SESSION_LIMIT_SECONDS
+            }
+        } catch (e: Exception) {
+            println("[LiveChatViewModel] Error checking subscription: ${e.message}")
+            FREE_SESSION_LIMIT_SECONDS // Default to free tier on error
         }
     }
 

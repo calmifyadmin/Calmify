@@ -48,5 +48,9 @@ data class LiveChatUiState(
     val partialTranscript: String = "", // Partial transcript from server
     val error: String? = null,
     val isChannelOpen: Boolean = false, // Channel always open state
-    val isCameraActive: Boolean = false
+    val isCameraActive: Boolean = false,
+    // Session time limit (subscription gating)
+    val sessionElapsedSeconds: Long = 0L,
+    val sessionTimeLimitSeconds: Long = 0L, // 0 = no limit (PRO)
+    val showTimeLimitReached: Boolean = false
 )

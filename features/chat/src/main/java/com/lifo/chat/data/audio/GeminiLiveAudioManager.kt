@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.Collections
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 class GeminiLiveAudioManager constructor(
@@ -42,9 +43,9 @@ class GeminiLiveAudioManager constructor(
         // Increased buffer multiplier for better audio quality
         private const val BUFFER_SIZE_MULTIPLIER = 8
 
-        // Queue limits to prevent overflow
-        private const val MAX_QUEUE_SIZE = 500 // Increased for smoother playback
-        private const val MAX_QUEUE_BYTES = 5_000_000 // ~1MB max
+        // Queue limits to prevent memory overflow
+        private const val MAX_QUEUE_CHUNKS = 500
+        private const val MAX_QUEUE_BYTES = 5_000_000
 
         // Legacy threshold (now handled by SileroVadEngine)
         private const val SPEECH_THRESHOLD = 0.08f
@@ -94,9 +95,9 @@ class GeminiLiveAudioManager constructor(
     private var hotFrameCount = 0
     private var aiCurrentlySpeaking = false
 
-    // MIGLIORATO: Thread-safe queue con limite di dimensione
-    private val audioQueue = Collections.synchronizedList(mutableListOf<ByteArray>())
-    private var totalQueueBytes = AtomicInteger(0)
+    // ConcurrentLinkedQueue: O(1) add/poll, lock-free, no removeAt(0) O(n) penalty
+    private val audioQueue = ConcurrentLinkedQueue<ByteArray>()
+    private val totalQueueBytes = AtomicInteger(0)
 
     private var isPlaying = AtomicBoolean(false)
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -420,19 +421,24 @@ class GeminiLiveAudioManager constructor(
             try {
                 val arrayBuffer = Base64.decode(audioBase64, Base64.DEFAULT)
 
-                // IMPORTANTE: Controllo overflow della coda
-                val currentSize = totalQueueBytes.get()
-                if (audioQueue.size >= MAX_QUEUE_SIZE || currentSize >= MAX_QUEUE_BYTES) {
-                    Log.w(TAG, "⚠️ Audio queue full, dropping oldest chunks")
-                    // Rimuovi i chunks più vecchi
-                    while (audioQueue.size > MAX_QUEUE_SIZE / 2 && audioQueue.isNotEmpty()) {
-                        val removed = audioQueue.removeAt(0)
+                // Overflow protection: drop oldest chunks if queue is too large
+                val currentBytes = totalQueueBytes.get()
+                if (audioQueue.size >= MAX_QUEUE_CHUNKS || currentBytes >= MAX_QUEUE_BYTES) {
+                    Log.w(TAG, "⚠️ Audio queue overflow, dropping oldest chunks")
+                    while (audioQueue.size > MAX_QUEUE_CHUNKS / 2) {
+                        val removed = audioQueue.poll() ?: break
                         totalQueueBytes.addAndGet(-removed.size)
                     }
                 }
 
                 audioQueue.add(arrayBuffer)
                 totalQueueBytes.addAndGet(arrayBuffer.size)
+
+                // Calculate audio level & viseme HERE, not on the playback thread
+                val rawAiLevel = calculateAudioLevelFromBytes(arrayBuffer)
+                aiLevelSmoothing = aiLevelSmoothing * (1f - smoothingFactor) + rawAiLevel * smoothingFactor
+                _aiAudioLevel.value = aiLevelSmoothing
+                _aiVisemeWeights.value = visemeAnalyzer.analyze(arrayBuffer, OUTPUT_SAMPLE_RATE)
 
                 if (!isPlaying.get()) {
                     playNextAudioChunk()
@@ -447,29 +453,19 @@ class GeminiLiveAudioManager constructor(
 
     private fun playNextAudioChunk() {
         if (playbackJob?.isActive == true) {
-            return // Già in riproduzione
+            return
         }
 
         playbackJob = scope.launch {
-            while (audioQueue.isNotEmpty() && isActive) {
-                isPlaying.set(true)
-                _playbackState.value = true
+            isPlaying.set(true)
+            _playbackState.value = true
 
+            while (audioQueue.isNotEmpty() && isActive) {
                 try {
-                    // Prendi il prossimo chunk
-                    val chunk = audioQueue.removeAt(0)
+                    val chunk = audioQueue.poll() ?: break
                     totalQueueBytes.addAndGet(-chunk.size)
 
                     playAudio(chunk)
-
-                    // Calculate real-time AI audio level for visualizer with smoothing
-                    val rawAiLevel = calculateAudioLevelFromBytes(chunk)
-                    aiLevelSmoothing = aiLevelSmoothing * (1f - smoothingFactor) + rawAiLevel * smoothingFactor
-                    _aiAudioLevel.value = aiLevelSmoothing
-
-                    // FFT-based viseme analysis for lip-sync
-                    _aiVisemeWeights.value = visemeAnalyzer.analyze(chunk, OUTPUT_SAMPLE_RATE)
-
                 } catch (e: Exception) {
                     Log.e(TAG, "Error playing audio chunk", e)
                 }
@@ -478,12 +474,12 @@ class GeminiLiveAudioManager constructor(
             isPlaying.set(false)
             _playbackState.value = false
 
-            // SMOOTHING: Gradual fade-out for AI audio level
+            // Gradual fade-out for AI audio level visualization
             scope.launch {
                 while (aiLevelSmoothing > 0.01f) {
-                    aiLevelSmoothing *= 0.85f // Exponential decay
+                    aiLevelSmoothing *= 0.85f
                     _aiAudioLevel.value = aiLevelSmoothing
-                    delay(20) // 50fps smooth fade
+                    delay(20)
                 }
                 aiLevelSmoothing = 0f
                 _aiAudioLevel.value = 0f
@@ -494,20 +490,17 @@ class GeminiLiveAudioManager constructor(
     private suspend fun playAudio(byteArray: ByteArray) = withContext(Dispatchers.IO) {
         synchronized(audioTrackLock) {
             try {
-                // Verifica/inizializza AudioTrack
                 if (audioTrack?.state != AudioTrack.STATE_INITIALIZED) {
                     initializeAudioTrack()
                 }
 
-                // IMPORTANTE: Ricontrolla dopo l'inizializzazione
                 val track = audioTrack
                 if (track == null || track.state != AudioTrack.STATE_INITIALIZED) {
                     Log.e(TAG, "AudioTrack not initialized properly")
                     return@withContext
                 }
 
-                // BARGE-IN: Feed AI audio to reference signal detector for echo cancellation
-                // Convert PCM bytes to short array (24kHz, mono, 16-bit)
+                // Feed reference signal for AEC
                 val shortBuffer = ShortArray(byteArray.size / 2)
                 val byteBuffer = ByteBuffer.wrap(byteArray).order(ByteOrder.LITTLE_ENDIAN)
                 for (i in shortBuffer.indices) {
@@ -521,32 +514,24 @@ class GeminiLiveAudioManager constructor(
                 val processedData = if (currentPlaybackVolume < 1.0f && currentPlaybackVolume > 0f) {
                     applyVolumeFade(byteArray, currentPlaybackVolume)
                 } else if (currentPlaybackVolume <= 0f) {
-                    // Volume is zero during fade-out completion - skip playing
-                    Log.v(TAG, "🔇 Skipping audio chunk during fade-out (volume=0)")
                     return@withContext
                 } else {
                     byteArray
                 }
 
-                // Scrivi audio
+                // Write entire chunk to AudioTrack — AudioTrack internal buffer absorbs it
                 var offset = 0
-                val chunkSize = 1920 // 40ms a 24kHz
-
                 while (offset < processedData.size && isActive) {
-                    val bytesToWrite = minOf(chunkSize, processedData.size - offset)
+                    val bytesToWrite = minOf(1920, processedData.size - offset) // 40ms sub-chunks
                     val bytesWritten = track.write(processedData, offset, bytesToWrite)
-
                     if (bytesWritten < 0) {
                         Log.e(TAG, "AudioTrack write error: $bytesWritten")
                         break
                     }
-
                     offset += bytesWritten
                 }
-
             } catch (e: Exception) {
                 Log.e(TAG, "Error in playAudio", e)
-                // Reset AudioTrack in caso di errore
                 releaseAudioTrack()
             }
         }
@@ -660,7 +645,6 @@ class GeminiLiveAudioManager constructor(
         playbackJob?.cancel()
         playbackJob = null
 
-        // Pulisci la coda
         audioQueue.clear()
         totalQueueBytes.set(0)
 
@@ -714,7 +698,7 @@ class GeminiLiveAudioManager constructor(
                 playbackJob?.cancel()
                 playbackJob = null
 
-                // Pulisci coda audio
+                // Clear circular buffer
                 audioQueue.clear()
                 totalQueueBytes.set(0)
 
@@ -885,4 +869,5 @@ class GeminiLiveAudioManager constructor(
             _userAudioLevel.value > SPEECH_THRESHOLD
         }
     }
+
 }

@@ -88,7 +88,8 @@
       "Bash(kotlinc -version)",
       "Bash(git rm -r --cached build-logic/convention/build/ buildSrc/build/)",
       "Bash(git rm --cached nul)",
-      "Bash(git push --force origin master)"
+      "Bash(git push --force origin master)",
+      "Bash(find /c/Users/lifoe/AndroidStudioProjects/CalmifyAppAndroid/features/chat/src/main/java -type f \\\\\\(-name *.kt -o -name *.java \\\\\\))"
     ],
     "deny": []
   }
