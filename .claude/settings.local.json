@@ -87,7 +87,8 @@
       "Bash(kotlin -script -e 'println\\(\"\"test\"\"\\)')",
       "Bash(kotlinc -version)",
       "Bash(git rm -r --cached build-logic/convention/build/ buildSrc/build/)",
-      "Bash(git rm --cached nul)"
+      "Bash(git rm --cached nul)",
+      "Bash(git push --force origin master)"
     ],
     "deny": []
   }

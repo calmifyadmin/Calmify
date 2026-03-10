@@ -69,6 +69,8 @@ import coil3.compose.SubcomposeAsyncImage
 import coil3.request.ImageRequest
 import com.google.firebase.storage.FirebaseStorage
 import com.lifo.ui.components.DisplayAlertDialog
+import com.lifo.ui.emotion.MiniMoodShape
+import com.lifo.ui.emotion.MoodShapeIndicator
 import com.lifo.ui.providers.MoodUiProvider
 import com.lifo.util.model.BodySensation
 import com.lifo.util.model.Diary
@@ -547,29 +549,13 @@ private fun CollapsingHeroOverlay(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
             ) {
-                // Orb + icon
-                Box(contentAlignment = Alignment.Center) {
-                    Box(
-                        modifier = Modifier
-                            .size(orbSize)
-                            .clip(CircleShape)
-                            .background(
-                                Brush.radialGradient(
-                                    colorStops = arrayOf(
-                                        0.00f to moodColor.copy(alpha = 0.30f),
-                                        0.50f to moodColor.copy(alpha = 0.10f),
-                                        1.00f to Color.Transparent,
-                                    ),
-                                )
-                            ),
-                    )
-                    coil3.compose.AsyncImage(
-                        model              = ImageRequest.Builder(LocalContext.current)
-                            .data(MoodUiProvider.getIcon(mood)).build(),
-                        contentDescription = mood.name,
-                        modifier           = Modifier.size(iconSize),
-                    )
-                }
+                // Orb + mood shape
+                MoodShapeIndicator(
+                    mood = mood,
+                    modifier = Modifier.size(iconSize),
+                    animated = true,
+                    showGlow = true,
+                )
 
                 // Chip + Title on same row
                 Row(
@@ -631,11 +617,9 @@ private fun CollapsingHeroOverlay(
                         .graphicsLayer { alpha = collapsedAlpha },
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    coil3.compose.AsyncImage(
-                        model              = ImageRequest.Builder(LocalContext.current)
-                            .data(MoodUiProvider.getIcon(mood)).build(),
-                        contentDescription = mood.name,
-                        modifier           = Modifier.size(IconCollapsedSize),
+                    MiniMoodShape(
+                        mood = mood,
+                        modifier = Modifier.size(IconCollapsedSize),
                     )
                     Column(modifier = Modifier.padding(start = 8.dp)) {
                         Text(

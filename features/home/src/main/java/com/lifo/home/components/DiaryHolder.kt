@@ -29,6 +29,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.lifo.ui.theme.Elevation
+import com.lifo.ui.emotion.MiniMoodShape
 import com.lifo.ui.providers.MoodUiProvider
 import com.lifo.util.model.Diary
 import com.lifo.util.model.Mood
@@ -146,10 +147,9 @@ fun DiaryHeader(moodName: String, time: Instant?) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Image(
+            MiniMoodShape(
+                mood = mood,
                 modifier = Modifier.size(18.dp),
-                painter = painterResource(id = MoodUiProvider.getIcon(mood)),
-                contentDescription = "Mood Icon",
             )
             Spacer(modifier = Modifier.width(7.dp))
             Text(

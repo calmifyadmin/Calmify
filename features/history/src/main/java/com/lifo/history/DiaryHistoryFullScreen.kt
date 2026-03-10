@@ -20,7 +20,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import org.koin.compose.viewmodel.koinViewModel
-import com.lifo.ui.providers.MoodUiProvider
+import com.lifo.ui.emotion.MiniMoodShape
 import com.lifo.util.model.HomeContentItem
 import java.time.Instant
 import java.time.ZoneId
@@ -152,11 +152,10 @@ private fun DiaryHistoryFullItem(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Mood icon
-            Image(
-                painter = painterResource(id = MoodUiProvider.getIcon(diary.mood)),
-                contentDescription = diary.mood.name,
-                modifier = Modifier.size(24.dp)
+            // Mood shape
+            MiniMoodShape(
+                mood = diary.mood,
+                modifier = Modifier.size(24.dp),
             )
 
             Column(

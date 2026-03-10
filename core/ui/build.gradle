@@ -34,6 +34,9 @@ kotlin {
                 // Material Icons Extended (Android-specific until CMP provides it)
                 implementation libs.compose.material.icons.extended
 
+                // Graphics Shapes - M3 Expressive RoundedPolygon + Morph animations
+                implementation libs.graphics.shapes
+
                 // Core Android
                 implementation libs.core.ktx
 

@@ -42,7 +42,7 @@ import com.lifo.ui.GalleryImage
 import com.lifo.ui.GalleryState
 import com.lifo.ui.components.GalleryUploader
 import com.lifo.util.model.Diary
-import com.lifo.ui.providers.MoodUiProvider
+import com.lifo.ui.emotion.LargeMoodShape
 import com.lifo.util.model.Mood
 import com.lifo.write.wizard.BodySensationStep
 import com.lifo.write.wizard.CalmAnxietyStep
@@ -273,12 +273,9 @@ private fun MoodSelectionStep(pagerState: PagerState) {
                 modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.Center,
             ) {
-                AsyncImage(
+                LargeMoodShape(
+                    mood = Mood.values()[page],
                     modifier = Modifier.size(160.dp),
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(MoodUiProvider.getIcon(Mood.values()[page]))
-                        .build(),
-                    contentDescription = "Mood Image",
                 )
             }
         }

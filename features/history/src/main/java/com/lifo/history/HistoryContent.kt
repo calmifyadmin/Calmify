@@ -21,7 +21,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.lifo.ui.providers.MoodUiProvider
+import com.lifo.ui.emotion.MiniMoodShape
 import com.lifo.util.model.ContentFilter
 import com.lifo.util.model.HomeContentItem
 import java.time.Instant
@@ -232,10 +232,9 @@ private fun DiaryHistoryItem(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Image(
-                painter = painterResource(id = MoodUiProvider.getIcon(diary.mood)),
-                contentDescription = diary.mood.name,
-                modifier = Modifier.size(24.dp)
+            MiniMoodShape(
+                mood = diary.mood,
+                modifier = Modifier.size(24.dp),
             )
 
             Column(

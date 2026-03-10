@@ -92,6 +92,9 @@ media3-transformer = "1.8.0"
 # AAA VAD System - Enterprise-grade Voice Activity Detection
 android-vad = "2.0.10"
 
+# Graphics Shapes - M3 Expressive shape morphing
+graphics-shapes = "1.0.1"
+
 # === KMP ACTIVE ===
 compose-multiplatform = "1.7.1"
 sqldelight = "2.0.2"
@@ -250,6 +253,9 @@ media3-transformer = { group = "androidx.media3", name = "media3-transformer", v
 # AAA VAD System - Enterprise-grade Voice Activity Detection
 vad-silero = { module = "com.github.gkonovalov.android-vad:silero", version.ref = "android-vad" }
 vad-webrtc = { module = "com.github.gkonovalov.android-vad:webrtc", version.ref = "android-vad" }
+
+# Graphics Shapes - M3 Expressive shape morphing & RoundedPolygon
+graphics-shapes = { module = "androidx.graphics:graphics-shapes", version.ref = "graphics-shapes" }
 
 # === KMP LIBRARIES (ACTIVE) ===
 # SQLDelight (Room replacement for KMP)

@@ -34,7 +34,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import com.google.firebase.storage.FirebaseStorage
-import com.lifo.ui.providers.MoodUiProvider
+import com.lifo.ui.emotion.MiniMoodShape
 import com.lifo.util.auth.AuthProvider
 import com.lifo.util.auth.UserIdentityResolver
 import com.lifo.util.model.Diary
@@ -314,11 +314,10 @@ private fun JournalDiaryItem(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Mood icon
-            Image(
-                painter = painterResource(id = MoodUiProvider.getIcon(mood)),
-                contentDescription = mood.name,
-                modifier = Modifier.size(28.dp)
+            // Mood shape
+            MiniMoodShape(
+                mood = mood,
+                modifier = Modifier.size(28.dp),
             )
 
             Column(
