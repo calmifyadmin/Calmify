@@ -202,6 +202,8 @@ dependencies {
     implementation(project(":features:thread-detail"))
     // Monetization (Wave 9)
     implementation(project(":features:subscription"))
+    // Avatar System (Wave 10)
+    implementation(project(":features:avatar-creator"))
 
     // Decompose Navigation (KMP lifecycle-aware) — Shell for future migration
     implementation libs.decompose

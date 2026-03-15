@@ -53,3 +53,6 @@ include ':features:notifications'
 include ':features:messaging'
 include ':features:thread-detail'
 include ':features:subscription'
+
+// Avatar System (Wave 10)
+include ':features:avatar-creator'

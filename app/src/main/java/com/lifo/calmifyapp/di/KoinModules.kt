@@ -27,6 +27,7 @@ import com.lifo.notifications.di.notificationsKoinModule
 import com.lifo.messaging.di.messagingKoinModule
 import com.lifo.subscription.di.subscriptionKoinModule
 import com.lifo.threaddetail.di.threadDetailKoinModule
+import com.lifo.avatarcreator.di.avatarCreatorKoinModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
@@ -89,4 +90,6 @@ val allKoinModules = listOf(
     threadDetailKoinModule,
     // Monetization (Wave 9)
     subscriptionKoinModule,
+    // Avatar System (Wave 10)
+    avatarCreatorKoinModule,
 )

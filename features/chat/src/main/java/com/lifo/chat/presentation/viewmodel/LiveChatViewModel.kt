@@ -17,6 +17,8 @@ import com.lifo.chat.domain.model.*
 import com.lifo.util.model.RequestState
 import com.lifo.util.mvi.MviContract
 import com.lifo.util.mvi.MviViewModel
+import com.lifo.util.model.AvatarStatus
+import com.lifo.util.repository.AvatarRepository
 import com.lifo.util.repository.ChatRepository
 import com.lifo.util.repository.MongoRepository
 import com.lifo.util.repository.SubscriptionRepository
@@ -84,6 +86,7 @@ class LiveChatViewModel constructor(
     private val diaryRepository: MongoRepository,
     private val firebaseAuth: FirebaseAuth,
     private val subscriptionRepository: SubscriptionRepository,
+    private val avatarRepository: AvatarRepository?,
     private val savedStateHandle: SavedStateHandle
 ) : MviViewModel<LiveChatContract.Intent, LiveChatContract.State, LiveChatContract.Effect>(
     initialState = LiveChatContract.State(
@@ -290,6 +293,9 @@ class LiveChatViewModel constructor(
                     throw IllegalStateException("Gemini API key not configured")
                 }
 
+                // Carica personalita' avatar attivo (se esiste)
+                loadActiveAvatarPersonality()
+
                 println("[LiveChatViewModel] Using API key: ${apiKey.take(10)}...")
                 geminiWebSocketClient.connect(apiKey)
 
@@ -313,6 +319,41 @@ class LiveChatViewModel constructor(
                 }
                 sendEffect(LiveChatContract.Effect.ConnectionError("Connection failed: ${e.message ?: "Unknown error"}"))
             }
+        }
+    }
+
+    /**
+     * Carica l'avatar READY piu' recente dell'utente e imposta la sua personalita'
+     * sul WebSocket client. Se non c'e' un avatar, usa il default (Karen).
+     */
+    private suspend fun loadActiveAvatarPersonality() {
+        val repo = avatarRepository ?: run {
+            println("[LiveChatViewModel] No AvatarRepository available, using default personality")
+            return
+        }
+        val userId = firebaseAuth.currentUser?.uid ?: run {
+            println("[LiveChatViewModel] No user logged in, using default personality")
+            return
+        }
+
+        try {
+            // Prendi l'avatar READY piu' recente
+            val avatars = repo.getUserAvatars(userId)
+            val activeAvatar = avatars.firstOrNull { it.status == AvatarStatus.READY }
+
+            if (activeAvatar != null && activeAvatar.systemPrompt.raw.isNotBlank()) {
+                println("[LiveChatViewModel] Loading avatar personality: ${activeAvatar.name} (voice=${activeAvatar.voiceId})")
+                geminiWebSocketClient.setAvatarPersonality(
+                    name = activeAvatar.name,
+                    systemPrompt = activeAvatar.systemPrompt.raw,
+                    voiceId = activeAvatar.voiceId,
+                    speakingRate = activeAvatar.voiceConfig.speakingRate,
+                )
+            } else {
+                println("[LiveChatViewModel] No READY avatar with system prompt found, using default Karen personality")
+            }
+        } catch (e: Exception) {
+            println("[LiveChatViewModel] Error loading avatar personality: ${e.message}, using default")
         }
     }
 

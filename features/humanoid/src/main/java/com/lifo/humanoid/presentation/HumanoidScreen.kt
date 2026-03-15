@@ -20,12 +20,21 @@ import com.lifo.humanoid.presentation.components.FilamentView
 @Composable
 fun HumanoidScreen(
     navigateBack: () -> Unit,
+    onCreateAvatar: () -> Unit = {},
+    avatarId: String? = null,
     viewModel: HumanoidViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val vrmModelData by viewModel.vrmModelData.collectAsStateWithLifecycle()
     val vrmExtensions by viewModel.vrmExtensions.collectAsStateWithLifecycle()
     val blendShapeWeights by viewModel.blendShapeWeights.collectAsStateWithLifecycle()
+
+    // Load specific avatar if ID provided (overrides default loaded in init)
+    LaunchedEffect(avatarId) {
+        if (avatarId != null) {
+            viewModel.loadAvatarById(avatarId)
+        }
+    }
 
     // Update blend shapes every frame
     LaunchedEffect(Unit) {
@@ -122,8 +131,11 @@ fun HumanoidScreen(
                                 text = "Nessun avatar caricato",
                                 style = MaterialTheme.typography.titleMedium
                             )
-                            Button(onClick = { viewModel.loadDefaultAvatar() }) {
-                                Text("Carica avatar")
+                            Button(onClick = onCreateAvatar) {
+                                Text("Crea Avatar")
+                            }
+                            OutlinedButton(onClick = { viewModel.loadDefaultAvatar() }) {
+                                Text("Carica avatar demo")
                             }
                         }
                     }

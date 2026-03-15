@@ -1,0 +1,49 @@
+plugins {
+    id 'calmify.kmp.compose'
+}
+
+android {
+    namespace 'com.lifo.avatarcreator'
+}
+
+configurations.configureEach {
+    resolutionStrategy {
+        force "org.jetbrains.kotlin:kotlin-stdlib:2.1.0"
+        force "org.jetbrains.kotlin:kotlin-stdlib-common:2.1.0"
+    }
+}
+
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation project(':core:util')
+            implementation project(':core:ui')
+
+            // Koin DI
+            implementation libs.koin.core
+            implementation libs.koin.compose
+            implementation libs.koin.compose.viewmodel
+        }
+
+        androidMain {
+            kotlin.srcDirs('src/main/java')
+
+            dependencies {
+                implementation libs.compose.material.icons.extended
+                implementation libs.core.ktx
+                implementation libs.coroutines.android
+            }
+        }
+
+        commonTest.dependencies {
+            implementation kotlin('test')
+        }
+
+        androidUnitTest.dependencies {
+            implementation libs.junit
+            implementation libs.mockk
+            implementation libs.turbine
+            implementation libs.coroutines.test
+        }
+    }
+}

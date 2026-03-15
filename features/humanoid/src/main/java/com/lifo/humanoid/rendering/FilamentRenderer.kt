@@ -798,19 +798,31 @@ class FilamentRenderer(
             if (asset != null) {
                 println("[FilamentRenderer] Asset created successfully! Entities: ${asset.entities.size}")
 
-                resLoader.loadResources(asset)
+                // Use async loading pipeline (NOT loadResources which conflicts with async)
                 resLoader.asyncBeginLoad(asset)
 
-                var pumpIterations = 0
-                while (pumpIterations < 50 && !isDestroyed.get()) {
+                // Pump async loader until complete or timeout (up to 5 seconds)
+                var elapsed = 0
+                val maxWaitMs = 5000
+                while (elapsed < maxWaitMs && !isDestroyed.get()) {
                     resLoader.asyncUpdateLoad()
-                    Thread.sleep(1)
-                    pumpIterations++
+                    val progress = resLoader.asyncGetLoadProgress()
+                    if (progress >= 1.0f) {
+                        println("[FilamentRenderer] Async resource loading complete (${elapsed}ms)")
+                        break
+                    }
+                    Thread.sleep(16) // ~60fps pump rate
+                    elapsed += 16
                 }
 
                 if (isDestroyed.get()) {
                     loader.destroyAsset(asset)
                     return null
+                }
+
+                val finalProgress = resLoader.asyncGetLoadProgress()
+                if (finalProgress < 1.0f) {
+                    println("[FilamentRenderer] WARNING: Resource loading incomplete: ${(finalProgress * 100).toInt()}% after ${maxWaitMs}ms")
                 }
 
                 scn.addEntities(asset.entities)

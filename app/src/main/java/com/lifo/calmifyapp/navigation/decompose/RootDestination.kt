@@ -19,7 +19,7 @@ sealed interface RootDestination {
     @Serializable data object History : RootDestination
     @Serializable data object ChatHistoryFull : RootDestination
     @Serializable data object DiaryHistoryFull : RootDestination
-    @Serializable data object Humanoid : RootDestination
+    @Serializable data class Humanoid(val avatarId: String? = null) : RootDestination
     @Serializable data object Settings : RootDestination
     @Serializable data object SettingsPersonalInfo : RootDestination
     @Serializable data object SettingsHealthInfo : RootDestination
@@ -50,4 +50,7 @@ sealed interface RootDestination {
     @Serializable data class FollowList(val userId: String, val showFollowers: Boolean = true) : RootDestination
     // === Monetization (Wave 9) ===
     @Serializable data object Subscription : RootDestination
+    // === Avatar System (Wave 10) ===
+    @Serializable data object AvatarCreator : RootDestination
+    @Serializable data object AvatarList : RootDestination
 }

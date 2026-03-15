@@ -1,0 +1,22 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // VRM avatar files — only owner can read
+    match /vrm/{userId}/{avatarFile} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false; // Only Cloud Run service account writes
+    }
+
+    // Thumbnails — only owner can read
+    match /thumbnails/{userId}/{thumbFile} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false; // Only Cloud Run service account writes
+    }
+
+    // Base assets — readable by service accounts only (no client access)
+    match /assets/{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

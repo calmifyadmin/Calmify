@@ -47,7 +47,7 @@ class RootComponent(
         is RootDestination.History -> Child.History(context)
         is RootDestination.ChatHistoryFull -> Child.ChatHistoryFull(context)
         is RootDestination.DiaryHistoryFull -> Child.DiaryHistoryFull(context)
-        is RootDestination.Humanoid -> Child.Humanoid(context)
+        is RootDestination.Humanoid -> Child.Humanoid(context, destination.avatarId)
         is RootDestination.Settings -> Child.Settings(context)
         is RootDestination.SettingsPersonalInfo -> Child.SettingsPersonalInfo(context)
         is RootDestination.SettingsHealthInfo -> Child.SettingsHealthInfo(context)
@@ -72,6 +72,9 @@ class RootComponent(
         is RootDestination.FollowList -> Child.FollowList(context, destination.userId, destination.showFollowers)
         // Monetization (Wave 9)
         is RootDestination.Subscription -> Child.Subscription(context)
+        // Avatar System (Wave 10)
+        is RootDestination.AvatarCreator -> Child.AvatarCreator(context)
+        is RootDestination.AvatarList -> Child.AvatarList(context)
     }
 
     // ===== Navigation Helpers =====
@@ -142,8 +145,8 @@ class RootComponent(
     }
 
     @OptIn(DelicateDecomposeApi::class)
-    fun navigateToHumanoid() {
-        navigation.push(RootDestination.Humanoid)
+    fun navigateToHumanoid(avatarId: String? = null) {
+        navigation.push(RootDestination.Humanoid(avatarId = avatarId))
     }
 
     @OptIn(DelicateDecomposeApi::class)
@@ -252,6 +255,18 @@ class RootComponent(
         navigation.push(RootDestination.FollowList(userId = userId, showFollowers = showFollowers))
     }
 
+    // ----- Avatar System navigation methods (Wave 10) -----
+
+    @OptIn(DelicateDecomposeApi::class)
+    fun navigateToAvatarCreator() {
+        navigation.push(RootDestination.AvatarCreator)
+    }
+
+    @OptIn(DelicateDecomposeApi::class)
+    fun navigateToAvatarList() {
+        navigation.push(RootDestination.AvatarList)
+    }
+
     /**
      * Returns the current active destination by inspecting the top of the stack.
      */
@@ -274,7 +289,7 @@ class RootComponent(
         data class History(override val componentContext: ComponentContext) : Child
         data class ChatHistoryFull(override val componentContext: ComponentContext) : Child
         data class DiaryHistoryFull(override val componentContext: ComponentContext) : Child
-        data class Humanoid(override val componentContext: ComponentContext) : Child
+        data class Humanoid(override val componentContext: ComponentContext, val avatarId: String? = null) : Child
         data class Settings(override val componentContext: ComponentContext) : Child
         data class SettingsPersonalInfo(override val componentContext: ComponentContext) : Child
         data class SettingsHealthInfo(override val componentContext: ComponentContext) : Child
@@ -299,5 +314,8 @@ class RootComponent(
         data class FollowList(override val componentContext: ComponentContext, val userId: String, val showFollowers: Boolean) : Child
         // Monetization (Wave 9)
         data class Subscription(override val componentContext: ComponentContext) : Child
+        // Avatar System (Wave 10)
+        data class AvatarCreator(override val componentContext: ComponentContext) : Child
+        data class AvatarList(override val componentContext: ComponentContext) : Child
     }
 }

@@ -93,6 +93,58 @@ class VrmLoader(private val context: Context) {
     }
 
     /**
+     * Load a VRM file from a URL (e.g., Firebase Storage public URL).
+     * Downloads the file, then parses it the same way as assets.
+     */
+    suspend fun loadVrmFromUrl(
+        url: String,
+        optimizeBones: Boolean = true
+    ): Pair<ByteBuffer, VrmExtensions>? {
+        return try {
+            println("[VrmLoader] Downloading VRM from URL: $url")
+
+            val bytes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                java.net.URL(url).openStream().use { it.readBytes() }
+            }
+
+            println("[VrmLoader] Downloaded ${bytes.size} bytes from URL")
+
+            val originalBuffer = ByteBuffer.allocateDirect(bytes.size).apply {
+                order(ByteOrder.LITTLE_ENDIAN)
+                put(bytes)
+                rewind()
+            }
+
+            // Optimize bones if requested
+            val buffer = if (optimizeBones) {
+                println("[VrmLoader] Optimizing bones for URL-loaded VRM...")
+                val optimizer = GltfBoneOptimizer(context)
+                val result = optimizer.optimize(originalBuffer, maxBonesPerSkin = 256)
+                if (result.bonesSaved > 0) {
+                    println("[VrmLoader] Bone optimization: ${result.originalBoneCount} -> ${result.optimizedBoneCount}")
+                    result.optimizedBuffer
+                } else {
+                    originalBuffer
+                }
+            } else {
+                originalBuffer
+            }
+
+            // Parse VRM extensions
+            originalBuffer.position(0)
+            val vrmExtensions = parseVrmExtensions(originalBuffer)
+            println("[VrmLoader] URL VRM parsed: ${vrmExtensions.blendShapes.size} blend shapes")
+
+            buffer.position(0)
+            Pair(buffer, vrmExtensions)
+        } catch (e: Exception) {
+            println("[VrmLoader] ERROR: Failed to load VRM from URL: $url: ${e.message}")
+            e.printStackTrace()
+            null
+        }
+    }
+
+    /**
      * Parse VRM extension data from glTF JSON.
      *
      * VRM extensions are stored in the glTF JSON under "extensions.VRM"
@@ -135,16 +187,20 @@ class VrmLoader(private val context: Context) {
             // Parse JSON
             val rootObject = gson.fromJson(jsonString, JsonObject::class.java)
 
-            // Extract VRM extension
+            // Extract VRM extension (try VRM 0.x first, then VRM 1.0)
             val extensionsObject = rootObject.getAsJsonObject("extensions")
-            val vrmObject = extensionsObject?.getAsJsonObject("VRM")
+            val vrm0Object = extensionsObject?.getAsJsonObject("VRM")
+            val vrm1Object = extensionsObject?.getAsJsonObject("VRMC_vrm")
 
-            if (vrmObject != null) {
-                println("[VrmLoader] Found VRM extension in glTF file")
-                parseVrmObject(vrmObject, rootObject)
+            if (vrm0Object != null) {
+                println("[VrmLoader] Found VRM 0.x extension in glTF file")
+                parseVrmObject(vrm0Object, rootObject)
+            } else if (vrm1Object != null) {
+                println("[VrmLoader] Found VRM 1.0 (VRMC_vrm) extension in glTF file")
+                parseVrm1Object(vrm1Object, rootObject)
             } else {
-                println("[VrmLoader] WARNING: No VRM extension found - this is a standard glTF file")
-                // Not a VRM file, return empty extensions
+                val extKeys = extensionsObject?.keySet()?.joinToString(", ") ?: "none"
+                println("[VrmLoader] WARNING: No VRM extension found (available: $extKeys)")
                 VrmExtensions()
             }
 
@@ -218,6 +274,88 @@ class VrmLoader(private val context: Context) {
             metadata = metadata,
             blendShapes = blendShapes,
             springBones = springBones,
+            humanoidBoneNodeIndices = humanoidBoneNodeIndices,
+            leftEyeNodeName = leftEyeNodeName,
+            rightEyeNodeName = rightEyeNodeName,
+            lookAtTypeName = lookAtTypeName
+        )
+    }
+
+    /**
+     * Parse VRM 1.0 (VRMC_vrm) extension
+     */
+    private fun parseVrm1Object(vrm1Object: JsonObject, rootObject: JsonObject): VrmExtensions {
+        // Parse metadata
+        val meta = vrm1Object.getAsJsonObject("meta")
+        val metadata = VrmMetadata(
+            title = meta?.get("name")?.asString ?: "Unknown",
+            author = meta?.getAsJsonArray("authors")?.firstOrNull()?.asString ?: "Unknown",
+            version = meta?.get("version")?.asString ?: "1.0"
+        )
+
+        // Parse humanoid bone mapping (VRM 1.0 format: humanoid.humanBones.{boneName}.node)
+        val humanoidBoneNodeIndices = mutableMapOf<String, Int>()
+        val humanBones = vrm1Object.getAsJsonObject("humanoid")?.getAsJsonObject("humanBones")
+        humanBones?.entrySet()?.forEach { (boneName, boneData) ->
+            try {
+                val nodeIndex = boneData.asJsonObject.get("node")?.asInt
+                if (nodeIndex != null) {
+                    humanoidBoneNodeIndices[boneName] = nodeIndex
+                }
+            } catch (e: Exception) {
+                // skip invalid entries
+            }
+        }
+
+        // Resolve eye bone names
+        val nodesArray = rootObject.getAsJsonArray("nodes")
+        var leftEyeNodeName: String? = null
+        var rightEyeNodeName: String? = null
+        humanoidBoneNodeIndices["leftEye"]?.let { idx ->
+            leftEyeNodeName = nodesArray?.get(idx)?.asJsonObject?.get("name")?.asString
+        }
+        humanoidBoneNodeIndices["rightEye"]?.let { idx ->
+            rightEyeNodeName = nodesArray?.get(idx)?.asJsonObject?.get("name")?.asString
+        }
+
+        // Parse VRM 1.0 expressions (equivalent to VRM 0.x blendShapeMaster)
+        val blendShapes = mutableListOf<VrmBlendShape>()
+        val expressions = vrm1Object.getAsJsonObject("expressions")
+        val presetExpressions = expressions?.getAsJsonObject("preset")
+        presetExpressions?.entrySet()?.forEach { (presetName, exprData) ->
+            try {
+                val expr = exprData.asJsonObject
+                val morphTargetBinds = expr.getAsJsonArray("morphTargetBinds")
+                val bindings = morphTargetBinds?.map { bindEl ->
+                    val bind = bindEl.asJsonObject
+                    BlendShapeBinding(
+                        meshIndex = bind.get("node")?.asInt ?: 0,
+                        morphTargetIndex = bind.get("index")?.asInt ?: 0,
+                        weight = bind.get("weight")?.asFloat ?: 1.0f
+                    )
+                } ?: emptyList()
+
+                val preset = try {
+                    VrmBlendShape.BlendShapePreset.valueOf(presetName.uppercase())
+                } catch (e: Exception) {
+                    VrmBlendShape.BlendShapePreset.UNKNOWN
+                }
+
+                blendShapes.add(VrmBlendShape(presetName, preset, bindings))
+            } catch (e: Exception) {
+                println("[VrmLoader] WARNING: Failed to parse VRM 1.0 expression '$presetName': ${e.message}")
+            }
+        }
+
+        // Parse lookAt type
+        val lookAtTypeName = vrm1Object.getAsJsonObject("lookAt")?.get("type")?.asString ?: "bone"
+
+        println("[VrmLoader] VRM 1.0 parsed: ${humanoidBoneNodeIndices.size} bones, ${blendShapes.size} expressions, lookAt=$lookAtTypeName")
+
+        return VrmExtensions(
+            metadata = metadata,
+            blendShapes = blendShapes,
+            springBones = emptyList(), // VRM 1.0 spring bones are in VRMC_springBone extension
             humanoidBoneNodeIndices = humanoidBoneNodeIndices,
             leftEyeNodeName = leftEyeNodeName,
             rightEyeNodeName = rightEyeNodeName,

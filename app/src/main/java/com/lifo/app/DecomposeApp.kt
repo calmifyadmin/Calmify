@@ -10,6 +10,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Person
@@ -206,7 +207,11 @@ fun DecomposeApp(
                     },
                     onAvatarClicked = {
                         scope.launch { drawerState.close() }
-                        rootComponent.navigateToHumanoid()
+                        rootComponent.navigateToAvatarList()
+                    },
+                    onCreateAvatarClicked = {
+                        scope.launch { drawerState.close() }
+                        rootComponent.navigateToAvatarCreator()
                     },
                     onSignOutClicked = {
                         scope.launch { drawerState.close() }
@@ -478,7 +483,9 @@ fun DecomposeApp(
 
                     is RootComponent.Child.Humanoid -> {
                         HumanoidScreen(
-                            navigateBack = { rootComponent.navigateBack() }
+                            navigateBack = { rootComponent.navigateBack() },
+                            onCreateAvatar = { rootComponent.navigateToAvatarCreator() },
+                            avatarId = instance.avatarId,
                         )
                     }
 
@@ -578,6 +585,31 @@ fun DecomposeApp(
                     is RootComponent.Child.Subscription -> {
                         SubscriptionRouteContent(
                             onNavigateBack = { rootComponent.navigateBack() },
+                        )
+                    }
+
+                    // === Avatar System (Wave 10) ===
+
+                    is RootComponent.Child.AvatarCreator -> {
+                        val avatarCreatorViewModel: com.lifo.avatarcreator.presentation.AvatarCreatorViewModel = koinViewModel()
+                        com.lifo.avatarcreator.presentation.AvatarCreatorScreen(
+                            viewModel = avatarCreatorViewModel,
+                            onNavigateBack = { rootComponent.navigateBack() },
+                            onAvatarCreated = { avatarId ->
+                                rootComponent.navigateBack()
+                            },
+                        )
+                    }
+
+                    is RootComponent.Child.AvatarList -> {
+                        val avatarListViewModel: com.lifo.avatarcreator.presentation.AvatarListViewModel = koinViewModel()
+                        com.lifo.avatarcreator.presentation.AvatarListScreen(
+                            viewModel = avatarListViewModel,
+                            onNavigateBack = { rootComponent.navigateBack() },
+                            onCreateAvatar = { rootComponent.navigateToAvatarCreator() },
+                            onAvatarSelected = { avatarId ->
+                                rootComponent.navigateToHumanoid(avatarId = avatarId)
+                            },
                         )
                     }
                 }
@@ -837,6 +869,7 @@ private fun DrawerContent(
     onHeaderClicked: () -> Unit,
     onHistoryClicked: () -> Unit,
     onAvatarClicked: () -> Unit,
+    onCreateAvatarClicked: () -> Unit,
     onSignOutClicked: () -> Unit,
     onDeleteAllClicked: () -> Unit
 ) {
@@ -945,6 +978,19 @@ private fun DrawerContent(
             modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
         )
 
+        NavigationDrawerItem(
+            icon = {
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = null
+                )
+            },
+            label = { Text("Crea Avatar") },
+            selected = false,
+            onClick = onCreateAvatarClicked,
+            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+        )
+
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
         NavigationDrawerItem(
@@ -1005,7 +1051,7 @@ private fun parseDeepLinkRoute(route: String): RootDestination? {
         route == "profile_screen" -> RootDestination.Profile
         route == "settings_screen" -> RootDestination.Settings
         route == "live_chat_screen" -> RootDestination.LiveChat
-        route == "humanoid_screen" -> RootDestination.Humanoid
+        route == "humanoid_screen" -> RootDestination.Humanoid()
         route == "wellbeing_snapshot_screen" -> RootDestination.WellbeingSnapshot
         route.startsWith("insight_screen?diaryId=") -> {
             val diaryId = route.removePrefix("insight_screen?diaryId=")

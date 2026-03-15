@@ -59,7 +59,9 @@ import com.lifo.mongo.analytics.FirebaseAnalyticsTracker
 import com.lifo.util.analytics.AnalyticsTracker
 import com.lifo.util.auth.AuthProvider
 import com.lifo.util.auth.FirebaseAuthProvider
+import com.lifo.util.repository.AvatarRepository
 import com.lifo.util.repository.WellbeingRepository
+import com.lifo.mongo.repository.FirebaseAvatarRepository
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
@@ -70,7 +72,7 @@ val firebaseModule = module {
     single<AnalyticsTracker> { FirebaseAnalyticsTracker(get()) }
     single<FirebaseStorage> { Firebase.storage }
     single<FirebaseDatabase> { Firebase.database }
-    single<FirebaseFunctions> { Firebase.functions }
+    single<FirebaseFunctions> { Firebase.functions("europe-west1") }
     single<FirebaseRemoteConfig> {
         val config = FirebaseRemoteConfig.getInstance()
         val settings = FirebaseRemoteConfigSettings.Builder()
@@ -139,4 +141,7 @@ val repositoryModule = module {
 
     // Wave 9C: Subscription/Billing
     single<SubscriptionRepository> { PlayBillingSubscriptionRepository(androidContext(), get()) }
+
+    // Avatar System (Wave 10)
+    single<AvatarRepository> { FirebaseAvatarRepository(get(), get()) }
 }

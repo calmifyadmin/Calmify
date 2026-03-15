@@ -17,8 +17,10 @@ import com.lifo.humanoid.domain.model.Emotion
 import com.lifo.humanoid.lipsync.LipSyncController
 // ArFilamentRenderer replaced by SceneView -- see onSceneViewArModelLoaded()
 import com.lifo.humanoid.rendering.FilamentRenderer
+import com.lifo.util.auth.AuthProvider
 import com.lifo.util.mvi.MviContract
 import com.lifo.util.mvi.MviViewModel
+import com.lifo.util.repository.AvatarRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.nio.ByteBuffer
@@ -144,7 +146,9 @@ class HumanoidViewModel constructor(
     private val blinkController: BlinkController,
     private val lipSyncController: LipSyncController,
     private val vrmaAnimationLoader: VrmaAnimationLoader,
-    private val vrmaAnimationPlayerFactory: VrmaAnimationPlayerFactory
+    private val vrmaAnimationPlayerFactory: VrmaAnimationPlayerFactory,
+    private val avatarRepository: AvatarRepository? = null,
+    private val authProvider: AuthProvider? = null
 ) : MviViewModel<HumanoidContract.Intent, HumanoidContract.State, HumanoidContract.Effect>(
     initialState = HumanoidContract.State()
 ) {
@@ -244,7 +248,7 @@ class HumanoidViewModel constructor(
         // Load available animations
         updateState { copy(availableAnimations = vrmaAnimationLoader.getAvailableAnimations()) }
 
-        // Auto-load default avatar on initialization
+        // Auto-load default avatar (LiveChat and other callers depend on this)
         onIntent(HumanoidContract.Intent.LoadDefaultAvatar)
 
         // Start blink controller
@@ -342,6 +346,58 @@ class HumanoidViewModel constructor(
                     )
                 }
                 sendEffect(HumanoidContract.Effect.AvatarLoadError("Error loading avatar: ${e.message}"))
+            }
+        }
+    }
+
+    /**
+     * Load an avatar by ID from Firestore, then download and display its VRM.
+     */
+    fun loadAvatarById(avatarId: String) {
+        val repo = avatarRepository ?: run {
+            println("[HumanoidViewModel] AvatarRepository not available, falling back to default")
+            return
+        }
+        val userId = authProvider?.currentUserId ?: run {
+            println("[HumanoidViewModel] No authenticated user, falling back to default")
+            return
+        }
+
+        scope.launch {
+            updateState { copy(isLoading = true, error = null, avatarLoaded = false) }
+
+            try {
+                val avatar = repo.getAvatar(userId, avatarId)
+                if (avatar == null || avatar.vrmUrl.isBlank()) {
+                    println("[HumanoidViewModel] Avatar not found or no VRM URL, loading default")
+                    handleLoadDefaultAvatar()
+                    return@launch
+                }
+
+                println("[HumanoidViewModel] Loading VRM from URL: ${avatar.vrmUrl}")
+                val modelData = vrmLoader.loadVrmFromUrl(avatar.vrmUrl)
+
+                if (modelData != null) {
+                    val presetNames = modelData.second.blendShapes.map { it.name }.toSet()
+                    blendShapeController.setAvailablePresets(presetNames)
+
+                    updateState {
+                        copy(
+                            isLoading = false,
+                            avatarLoaded = true,
+                            vrmModelData = modelData,
+                            vrmExtensions = modelData.second
+                        )
+                    }
+                    println("[HumanoidViewModel] Avatar '$avatarId' loaded with ${presetNames.size} blend shape presets")
+                } else {
+                    updateState { copy(isLoading = false, error = "Failed to load VRM from URL") }
+                    sendEffect(HumanoidContract.Effect.AvatarLoadError("Failed to load VRM"))
+                }
+            } catch (e: Exception) {
+                println("[HumanoidViewModel] ERROR loading avatar by ID: ${e.message}")
+                updateState { copy(isLoading = false, error = "Error: ${e.message}") }
+                sendEffect(HumanoidContract.Effect.AvatarLoadError("Error: ${e.message}"))
             }
         }
     }

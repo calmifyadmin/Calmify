@@ -30,5 +30,5 @@ val humanoidKoinModule = module {
     // ViewModel
     // HumanoidViewModel(vrmLoader, blendShapeController, boneMapper, blinkController,
     //   lipSyncController, vrmaAnimationLoader, vrmaAnimationPlayerFactory)
-    viewModel { HumanoidViewModel(get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { HumanoidViewModel(get(), get(), get(), get(), get(), get(), get(), getOrNull(), getOrNull()) }
 }
