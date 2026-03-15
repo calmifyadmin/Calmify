@@ -73,9 +73,24 @@ class GltfBoneOptimizer(private val context: android.content.Context) {
         "leftUpperLeg", "leftLowerLeg", "leftFoot",
         "rightUpperLeg", "rightLowerLeg", "rightFoot",
 
-        // Optional but common in VRMA
+        // Toes + face
         "leftToes", "rightToes",
-        "leftEye", "rightEye", "jaw"
+        "leftEye", "rightEye", "jaw",
+
+        // ALL finger bones — VRM 1.0 names
+        "leftThumbMetacarpal", "leftThumbProximal", "leftThumbDistal",
+        "leftIndexProximal", "leftIndexIntermediate", "leftIndexDistal",
+        "leftMiddleProximal", "leftMiddleIntermediate", "leftMiddleDistal",
+        "leftRingProximal", "leftRingIntermediate", "leftRingDistal",
+        "leftLittleProximal", "leftLittleIntermediate", "leftLittleDistal",
+        "rightThumbMetacarpal", "rightThumbProximal", "rightThumbDistal",
+        "rightIndexProximal", "rightIndexIntermediate", "rightIndexDistal",
+        "rightMiddleProximal", "rightMiddleIntermediate", "rightMiddleDistal",
+        "rightRingProximal", "rightRingIntermediate", "rightRingDistal",
+        "rightLittleProximal", "rightLittleIntermediate", "rightLittleDistal",
+        // VRM 0.x alternate finger names
+        "leftThumbIntermediate",
+        "rightThumbIntermediate"
     )
 
     /**
@@ -147,7 +162,7 @@ class GltfBoneOptimizer(private val context: android.content.Context) {
         println("[GltfBoneOptimizer] Starting bone optimization...")
 
         // For each skin, analyze bone usage
-        val skinOptimizations = analyzeSkinBoneUsage(rootJson, glbData)
+        val skinOptimizations = analyzeSkinBoneUsage(rootJson, glbData, maxBonesPerSkin)
 
         skinOptimizations.forEach { (skinIndex, optimization) ->
             println("[GltfBoneOptimizer] Skin $skinIndex: ${optimization.originalJointCount} -> ${optimization.compactedJointCount} bones (saved ${optimization.bonesSaved})")
@@ -232,7 +247,8 @@ class GltfBoneOptimizer(private val context: android.content.Context) {
      */
     private fun analyzeSkinBoneUsage(
         rootJson: JsonObject,
-        glbData: GlbData
+        glbData: GlbData,
+        maxBonesPerSkin: Int
     ): Map<Int, SkinOptimization> {
         val skins = rootJson.getAsJsonArray("skins")
         val nodes = rootJson.getAsJsonArray("nodes")
@@ -243,6 +259,10 @@ class GltfBoneOptimizer(private val context: android.content.Context) {
         // Extract VRM humanoid bone mappings
         val humanoidBoneNodeIndices = extractVrmHumanoidBones(rootJson)
         println("[GltfBoneOptimizer] Found ${humanoidBoneNodeIndices.size} VRM humanoid bones to protect")
+
+        // Extract spring bone nodes (hair/clothes physics — useless in Filament, safe to remove)
+        val springBoneNodeIndices = extractSpringBoneNodes(rootJson)
+        println("[GltfBoneOptimizer] Found ${springBoneNodeIndices.size} spring bone nodes to deprioritize")
 
         val skinOptimizations = mutableMapOf<Int, SkinOptimization>()
 
@@ -290,6 +310,74 @@ class GltfBoneOptimizer(private val context: android.content.Context) {
             }
 
             println("[GltfBoneOptimizer] Total bones to keep (including humanoid): ${usedJointIndices.size}")
+
+            // HARD CAP: If still > maxBonesPerSkin, drop least-weighted non-humanoid bones
+            if (usedJointIndices.size > maxBonesPerSkin) {
+                println("[GltfBoneOptimizer] WARNING: ${usedJointIndices.size} bones exceeds limit $maxBonesPerSkin — trimming lowest-weight bones")
+
+                // Compute per-joint total weight to rank importance
+                val jointWeightMap = mutableMapOf<Int, Float>()
+                usedJointIndices.forEach { jointWeightMap[it] = 0f }
+
+                primitivesUsingSkin.forEach { primitive ->
+                    val jointsAccIdx = primitive.getAsJsonObject("attributes")?.get("JOINTS_0")?.asInt
+                    val weightsAccIdx = primitive.getAsJsonObject("attributes")?.get("WEIGHTS_0")?.asInt
+                    if (jointsAccIdx != null && weightsAccIdx != null) {
+                        val jointsAcc = accessors.get(jointsAccIdx).asJsonObject
+                        val weightsAcc = accessors.get(weightsAccIdx).asJsonObject
+                        val vCount = jointsAcc.get("count").asInt
+                        val jData = readAccessorData(jointsAcc, bufferViews, glbData.binData)
+                        val wData = readAccessorData(weightsAcc, bufferViews, glbData.binData)
+                        val compType = jointsAcc.get("componentType").asInt
+                        for (v in 0 until vCount) {
+                            for (s in 0 until 4) {
+                                val off = v * 4 + s
+                                val w = wData.getFloat(off * 4)
+                                if (w > 0.001f) {
+                                    val jIdx = when (compType) {
+                                        5121 -> jData.get(off).toInt() and 0xFF
+                                        else -> jData.getShort(off * 2).toInt() and 0xFFFF
+                                    }
+                                    jointWeightMap[jIdx] = (jointWeightMap[jIdx] ?: 0f) + w
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Identify protected palette indices (humanoid bones — must keep)
+                val humanoidPaletteIndices = mutableSetOf<Int>()
+                joints.forEachIndexed { paletteIndex, jointElement ->
+                    if (humanoidBoneNodeIndices.contains(jointElement.asInt)) {
+                        humanoidPaletteIndices.add(paletteIndex)
+                    }
+                }
+
+                // Identify spring bone palette indices (hair/clothes physics — drop first)
+                val springBonePaletteIndices = mutableSetOf<Int>()
+                joints.forEachIndexed { paletteIndex, jointElement ->
+                    val nodeIndex = jointElement.asInt
+                    if (springBoneNodeIndices.contains(nodeIndex) && !humanoidPaletteIndices.contains(paletteIndex)) {
+                        springBonePaletteIndices.add(paletteIndex)
+                    }
+                }
+                println("[GltfBoneOptimizer] Spring bones in this skin: ${springBonePaletteIndices.size}")
+
+                // Drop spring bones first, then lowest-weight non-humanoid bones
+                val droppableSpring = usedJointIndices
+                    .filter { it in springBonePaletteIndices }
+                    .sortedBy { jointWeightMap[it] ?: 0f }
+                val droppableOther = usedJointIndices
+                    .filter { it !in humanoidPaletteIndices && it !in springBonePaletteIndices }
+                    .sortedBy { jointWeightMap[it] ?: 0f }
+                val droppable = droppableSpring + droppableOther
+
+                val toDrop = usedJointIndices.size - maxBonesPerSkin
+                val dropped = droppable.take(toDrop).toSet()
+                usedJointIndices.removeAll(dropped)
+
+                println("[GltfBoneOptimizer] Dropped $toDrop lowest-weight bones, now ${usedJointIndices.size}")
+            }
 
             // Create compaction mapping
             val sortedUsedIndices = usedJointIndices.sorted()
@@ -356,6 +444,76 @@ class GltfBoneOptimizer(private val context: android.content.Context) {
         }
 
         return nodeIndices
+    }
+
+    /**
+     * Extract spring bone node indices from VRM extensions.
+     * These are physics-driven bones (hair, clothes, accessories) that Filament cannot animate.
+     * Safe to remove to free up bone slots.
+     */
+    private fun extractSpringBoneNodes(rootJson: JsonObject): Set<Int> {
+        val springNodes = mutableSetOf<Int>()
+        val nodes = rootJson.getAsJsonArray("nodes")
+
+        try {
+            // VRM 1.0: VRMC_springBone extension
+            val vrmcSpring = rootJson.getAsJsonObject("extensions")
+                ?.getAsJsonObject("VRMC_springBone")
+
+            if (vrmcSpring != null) {
+                val springs = vrmcSpring.getAsJsonArray("springs")
+                springs?.forEach { springElement ->
+                    val spring = springElement.asJsonObject
+                    val springJoints = spring.getAsJsonArray("joints")
+                    springJoints?.forEach { jointElement ->
+                        val joint = jointElement.asJsonObject
+                        val nodeIndex = joint.get("node")?.asInt
+                        if (nodeIndex != null) {
+                            springNodes.add(nodeIndex)
+                            // Also add all children recursively (spring chains)
+                            addChildrenRecursive(nodeIndex, nodes, springNodes)
+                        }
+                    }
+                }
+                println("[GltfBoneOptimizer] VRM 1.0 spring bones: ${springNodes.size}")
+            } else {
+                // VRM 0.x: secondaryAnimation.boneGroups
+                val vrm = rootJson.getAsJsonObject("extensions")?.getAsJsonObject("VRM")
+                val secondary = vrm?.getAsJsonObject("secondaryAnimation")
+                val boneGroups = secondary?.getAsJsonArray("boneGroups")
+
+                boneGroups?.forEach { groupElement ->
+                    val group = groupElement.asJsonObject
+                    val groupBones = group.getAsJsonArray("bones")
+                    groupBones?.forEach { boneElement ->
+                        val nodeIndex = boneElement.asInt
+                        springNodes.add(nodeIndex)
+                        // Add children recursively (spring bone chains)
+                        addChildrenRecursive(nodeIndex, nodes, springNodes)
+                    }
+                }
+                println("[GltfBoneOptimizer] VRM 0.x spring bones: ${springNodes.size}")
+            }
+        } catch (e: Exception) {
+            println("[GltfBoneOptimizer] WARNING: Failed to extract spring bones: ${e.message}")
+        }
+
+        return springNodes
+    }
+
+    /**
+     * Recursively add all child node indices (spring bone chains extend through children)
+     */
+    private fun addChildrenRecursive(nodeIndex: Int, nodes: JsonArray, result: MutableSet<Int>) {
+        if (nodeIndex >= nodes.size()) return
+        val node = nodes.get(nodeIndex).asJsonObject
+        val children = node.getAsJsonArray("children") ?: return
+        children.forEach { childElement ->
+            val childIndex = childElement.asInt
+            if (result.add(childIndex)) {
+                addChildrenRecursive(childIndex, nodes, result)
+            }
+        }
     }
 
     /**

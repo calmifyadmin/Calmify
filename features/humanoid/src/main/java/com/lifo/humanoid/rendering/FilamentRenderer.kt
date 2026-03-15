@@ -237,7 +237,11 @@ class FilamentRenderer(
         try {
             FilamentNativeLoader.ensureLoaded()
 
-            val newEngine = Engine.create()
+            val newEngine = Engine.Builder()
+                .config(Engine.Config().apply {
+                    minCommandBufferSizeMB = 16  // Default ~7MB too small for complex VRM models
+                })
+                .build()
             engine = newEngine
             renderer = newEngine.createRenderer()
             scene = newEngine.createScene()
@@ -755,6 +759,40 @@ class FilamentRenderer(
     }
 
     /**
+     * Pre-validate glTF bone count. Returns false if any skin exceeds 256 bones.
+     * This prevents a native SIGABRT in Filament.
+     */
+    private fun validateBoneCount(buffer: ByteBuffer): Boolean {
+        return try {
+            buffer.position(0)
+            buffer.order(java.nio.ByteOrder.LITTLE_ENDIAN)
+            val magic = buffer.int
+            if (magic != 0x46546C67) return true // Not glTF, let Filament handle it
+            buffer.int // version
+            buffer.int // total length
+            val jsonLength = buffer.int
+            val jsonType = buffer.int
+            if (jsonType != 0x4E4F534A) return true
+            val jsonBytes = ByteArray(jsonLength)
+            buffer.get(jsonBytes)
+            val json = org.json.JSONObject(String(jsonBytes, Charsets.UTF_8))
+            val skins = json.optJSONArray("skins") ?: return true
+            for (i in 0 until skins.length()) {
+                val skin = skins.getJSONObject(i)
+                val joints = skin.optJSONArray("joints") ?: continue
+                if (joints.length() > 256) {
+                    println("[FilamentRenderer] REJECTED: skin $i has ${joints.length()} bones (max 256)")
+                    return false
+                }
+            }
+            true
+        } catch (e: Exception) {
+            println("[FilamentRenderer] Bone validation error: ${e.message}")
+            true // If we can't validate, let Filament try
+        }
+    }
+
+    /**
      * Load a VRM/glTF model into the scene.
      */
     fun loadModel(
@@ -791,6 +829,13 @@ class FilamentRenderer(
             rightEyeEntity = 0
             originalLeftEyeTransform = null
             originalRightEyeTransform = null
+            buffer.position(0)
+
+            // Pre-validate: check bone count before passing to Filament (native SIGABRT if >256)
+            if (!validateBoneCount(buffer)) {
+                println("[FilamentRenderer] ERROR: Model exceeds Filament 256 bone limit — skipping load")
+                return null
+            }
             buffer.position(0)
 
             val asset = loader.createAsset(buffer)
