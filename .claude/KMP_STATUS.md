@@ -1,11 +1,11 @@
 # Calmify — Stato Progetto e Guida per Nuove Sessioni
 
 > **LEGGERE SEMPRE all'inizio di ogni sessione.**
-> Ultimo aggiornamento: 2026-03-02
+> Ultimo aggiornamento: 2026-03-16
 
 ## TL;DR — Stato Attuale
 
-**Migrazione KMP completata al 100%.** L'app compila e funziona.
+**Infrastruttura build KMP completata. Codice ancora prevalentemente Android-only.**
 
 - **17/18 moduli** usano convention plugin KMP (`calmify.kmp.library` o `calmify.kmp.compose`)
 - **Solo `app`** resta Android-only (`com.android.application`)
@@ -14,6 +14,13 @@
 - **Database**: SQLDelight 2.0.2 (Room completamente rimosso)
 - **Navigation**: Decompose 3.4.0 (Navigation Compose rimosso)
 - **MVI**: Tutti i 18+ ViewModel usano `MviViewModel<Intent, State, Effect>`
+
+### ⚠️ Stato Reale del Codice (analisi 2026-03-16)
+- **commonMain**: 55 file (15%) — solo core/util (43) + core/ui (12)
+- **Android-only**: 307 file (84%) — tutti i feature modules + data/mongo in `src/main/java`
+- **Tutti i 20 feature modules**: 0 file in commonMain
+- I file sono mappati via `kotlin.srcDirs('src/main/java')` nel blocco androidMain
+- **Piano migrazione completa**: `.claude/KMP_FULL_MIGRATION_PLAN.md` (6 fasi, ~20 giorni, target 87% commonMain)
 
 ---
 

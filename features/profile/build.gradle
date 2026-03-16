@@ -18,23 +18,18 @@ kotlin {
         commonMain.dependencies {
             implementation project(':core:util')
             implementation project(':core:ui')
+            implementation project(':data:mongo')
+
+            implementation compose.materialIconsExtended
 
             implementation libs.koin.core
             implementation libs.koin.compose
             implementation libs.koin.compose.viewmodel
         }
 
-        androidMain {
-            kotlin.srcDirs('src/main/java')
-
-            dependencies {
-                implementation libs.compose.material.icons.extended
-                implementation libs.core.ktx
-                implementation libs.coroutines.android
-
-                // Internal modules
-                implementation project(':data:mongo')
-            }
+        androidMain.dependencies {
+            implementation libs.core.ktx
+            implementation libs.coroutines.android
         }
 
         commonTest.dependencies {

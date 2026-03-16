@@ -19,25 +19,23 @@ kotlin {
         commonMain.dependencies {
             implementation project(':core:util')
             implementation project(':core:ui')
+
+            // Material Icons Extended (KMP-compatible via Compose MP)
+            implementation compose.materialIconsExtended
+
+            // Image loading (Coil 3.x — KMP-compatible)
+            implementation libs.coil
+
+            // DateTime (KMP)
+            implementation libs.kotlinx.datetime
         }
 
-        androidMain {
-            kotlin.srcDirs('src/main/java')
+        androidMain.dependencies {
+            // Core Android
+            implementation libs.core.ktx
 
-            dependencies {
-                // Material 3 Expressive (carousel)
-                implementation libs.compose.material3.expressive
-
-                // Material Icons Extended
-                implementation libs.compose.material.icons.extended
-
-                // Core Android
-                implementation libs.core.ktx
-
-                // Image loading (Coil)
-                implementation libs.coil
-                implementation libs.coil.network.okhttp
-            }
+            // Coil network backend (Android-specific OkHttp)
+            implementation libs.coil.network.okhttp
         }
 
         commonTest.dependencies {

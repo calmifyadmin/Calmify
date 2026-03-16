@@ -44,8 +44,8 @@ hilt-navigation-compose = "1.2.0"
 # Coroutines - LATEST 2025
 kotlin-coroutines = "1.9.0"
 
-# Image Loading - COIL 3.3 MAJOR UPDATE
-coil = "3.3.0"
+# Image Loading - Coil 3.x KMP (pinned to Kotlin 2.1.0 compat)
+coil = "3.1.0"
 
 # Accompanist - LATEST 2025
 accompanist = "0.36.0"

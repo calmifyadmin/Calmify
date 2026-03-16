@@ -19,22 +19,19 @@ kotlin {
             implementation project(':core:util')
             implementation project(':core:ui')
 
+            implementation compose.materialIconsExtended
+
             implementation libs.koin.core
             implementation libs.koin.compose
             implementation libs.koin.compose.viewmodel
         }
 
-        androidMain {
-            kotlin.srcDirs('src/main/java')
+        androidMain.dependencies {
+            implementation libs.core.ktx
+            implementation libs.coroutines.android
 
-            dependencies {
-                implementation libs.compose.material.icons.extended
-                implementation libs.core.ktx
-                implementation libs.coroutines.android
-
-                // Google Play Billing (Android-only)
-                implementation libs.billing.ktx
-            }
+            // Google Play Billing (Android-only)
+            implementation libs.billing.ktx
         }
 
         commonTest.dependencies {

@@ -22,18 +22,14 @@ kotlin {
             // Compose Multiplatform deps already provided by convention plugin
             // (runtime, foundation, material3, ui, components.resources)
 
+            // Material Icons Extended (KMP-compatible via Compose MP)
+            implementation compose.materialIconsExtended
+
             // Core module
             implementation project(':core:util')
         }
 
-        androidMain {
-            // Map to existing source directory — avoids moving files
-            kotlin.srcDirs('src/main/java')
-
-            dependencies {
-                // Material Icons Extended (Android-specific until CMP provides it)
-                implementation libs.compose.material.icons.extended
-
+        androidMain.dependencies {
                 // Graphics Shapes - M3 Expressive RoundedPolygon + Morph animations
                 implementation libs.graphics.shapes
 
@@ -54,7 +50,6 @@ kotlin {
                 // Note: explicit versions because platform() BOM unsupported in KMP source sets
                 implementation libs.firebase.firestore.kmp
                 implementation libs.firebase.storage.kmp
-            }
         }
 
         commonTest.dependencies {

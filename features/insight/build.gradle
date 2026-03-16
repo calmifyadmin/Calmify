@@ -18,27 +18,22 @@ kotlin {
         commonMain.dependencies {
             implementation project(':core:util')
             implementation project(':core:ui')
+            implementation project(':data:mongo')
+
+            implementation compose.materialIconsExtended
 
             implementation libs.koin.core
             implementation libs.koin.compose
             implementation libs.koin.compose.viewmodel
         }
 
-        androidMain {
-            kotlin.srcDirs('src/main/java')
+        androidMain.dependencies {
+            implementation libs.core.ktx
+            implementation libs.coroutines.android
 
-            dependencies {
-                implementation libs.compose.material.icons.extended
-                implementation libs.core.ktx
-                implementation libs.coroutines.android
-
-                // Vico charting library
-                implementation "com.patrykandpatrick.vico:compose:1.13.1"
-                implementation "com.patrykandpatrick.vico:compose-m3:1.13.1"
-
-                // Internal modules
-                implementation project(':data:mongo')
-            }
+            // Vico charting library
+            implementation "com.patrykandpatrick.vico:compose:1.13.1"
+            implementation "com.patrykandpatrick.vico:compose-m3:1.13.1"
         }
 
         commonTest.dependencies {
