@@ -5,22 +5,23 @@
 
 ## TL;DR — Stato Attuale
 
-**Infrastruttura build KMP completata. Codice ancora prevalentemente Android-only.**
+**Migrazione KMP source set COMPLETATA. Zero file legacy.**
 
 - **17/18 moduli** usano convention plugin KMP (`calmify.kmp.library` o `calmify.kmp.compose`)
 - **Solo `app`** resta Android-only (`com.android.application`)
-- **assembleDebug OK**: 746 tasks, 0 errori
-- **DI**: Koin 4.1.1 (Hilt completamente rimosso, javax.inject rimosso)
+- **assembleDebug OK**: 851 tasks, 0 errori
+- **DI**: Koin 4.1.1 (Hilt completamente rimosso)
 - **Database**: SQLDelight 2.0.2 (Room completamente rimosso)
 - **Navigation**: Decompose 3.4.0 (Navigation Compose rimosso)
 - **MVI**: Tutti i 18+ ViewModel usano `MviViewModel<Intent, State, Effect>`
 
-### ⚠️ Stato Reale del Codice (analisi 2026-03-16)
-- **commonMain**: 55 file (15%) — solo core/util (43) + core/ui (12)
-- **Android-only**: 307 file (84%) — tutti i feature modules + data/mongo in `src/main/java`
-- **Tutti i 20 feature modules**: 0 file in commonMain
-- I file sono mappati via `kotlin.srcDirs('src/main/java')` nel blocco androidMain
-- **Piano migrazione completa**: `.claude/KMP_FULL_MIGRATION_PLAN.md` (6 fasi, ~20 giorni, target 87% commonMain)
+### Stato Codice (aggiornamento 2026-03-16)
+- **commonMain**: 218 file (62%) — UI, ViewModel, domain, contracts, utility
+- **androidMain**: 135 file (38%) — Firebase, Filament, Camera, Audio, Platform-specific UI
+- **Legacy src/main/java**: 0 file (eliminati tutti i `kotlin.srcDirs` mapping)
+- **app module**: 13 file (Android-only entry point, non KMP)
+- Repository interfaces in `core/util` commonMain, implementations Firebase in `data/mongo` androidMain
+- Firebase AI, Functions, RemoteConfig, Realtime DB, Play Billing → restano androidMain (no KMP SDK)
 
 ---
 
