@@ -83,8 +83,6 @@ kotlin {
         }
 
         androidMain {
-            kotlin.srcDirs('src/main/java')
-
             dependencies {
                 // Compose extras
                 implementation libs.compose.material.icons.extended

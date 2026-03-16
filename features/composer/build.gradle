@@ -25,7 +25,6 @@ kotlin {
         }
 
         androidMain {
-            kotlin.srcDirs('src/main/java')
 
             dependencies {
                 implementation project(':core:social-ui')

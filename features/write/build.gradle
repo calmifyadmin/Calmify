@@ -26,8 +26,6 @@ kotlin {
         }
 
         androidMain {
-            kotlin.srcDirs('src/main/java')
-
             dependencies {
                 implementation libs.compose.material3.expressive
                 implementation libs.compose.material.icons.extended
