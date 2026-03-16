@@ -7,7 +7,7 @@ import androidx.compose.runtime.Stable
  */
 enum class ConnectionStatus {
     Disconnected,
-    Connecting, 
+    Connecting,
     Connected,
     Error
 }
@@ -32,6 +32,25 @@ enum class AIEmotion {
 }
 
 /**
+ * Represents an available audio output device for the user to select.
+ */
+@Stable
+data class AudioDevice(
+    val id: Int,           // AudioDeviceInfo.id
+    val name: String,      // Display name (e.g., "AirPods Pro", "Speaker")
+    val type: AudioDeviceType,
+    val isActive: Boolean = false
+)
+
+enum class AudioDeviceType {
+    SPEAKER,
+    WIRED_HEADSET,
+    BLUETOOTH,
+    USB,
+    EARPIECE
+}
+
+/**
  * Main UI state for LiveChatScreen
  */
 @Stable
@@ -49,6 +68,9 @@ data class LiveChatUiState(
     val error: String? = null,
     val isChannelOpen: Boolean = false, // Channel always open state
     val isCameraActive: Boolean = false,
+    // Audio device selection
+    val availableDevices: List<AudioDevice> = emptyList(),
+    val activeDevice: AudioDevice? = null,
     // Session time limit (subscription gating)
     val sessionElapsedSeconds: Long = 0L,
     val sessionTimeLimitSeconds: Long = 0L, // 0 = no limit (PRO)

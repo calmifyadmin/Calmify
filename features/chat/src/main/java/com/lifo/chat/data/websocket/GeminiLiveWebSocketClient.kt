@@ -102,8 +102,11 @@ class GeminiLiveWebSocketClient constructor(
 
         webSocket = object : WebSocketClient(URI(url), Draft_6455(), headers) {
             override fun onOpen(handshakedata: ServerHandshake?) {
-                println("[GeminiLiveWebSocket] Connected. Server handshake: ${handshakedata?.httpStatus}")
-                _connectionState.value = ConnectionState.CONNECTED
+                println("[GeminiLiveWebSocket] WebSocket open. Server handshake: ${handshakedata?.httpStatus}")
+                // DON'T set CONNECTED yet — wait for setupComplete from server.
+                // This prevents the ViewModel from starting the mic before setup is done,
+                // which caused the server to receive audio before the session config,
+                // leading to duplicate AI greetings.
 
                 currentLiveSessionId = "live-${System.currentTimeMillis()}"
                 println("[GeminiLiveWebSocket] Created Live session ID: $currentLiveSessionId")
@@ -485,7 +488,10 @@ class GeminiLiveWebSocketClient constructor(
             println("[GeminiLiveWebSocket] Message keys: ${messageData.keys().asSequence().joinToString()}")
 
             if (messageData.has("setupComplete")) {
-                println("[GeminiLiveWebSocket] Setup complete - full-duplex VAD active")
+                println("[GeminiLiveWebSocket] Setup complete - session configured, now CONNECTED")
+                // NOW set CONNECTED — mic recording starts only after server confirms setup.
+                // This eliminates the race condition where audio was sent before session config.
+                _connectionState.value = ConnectionState.CONNECTED
                 onTurnCompleted?.invoke()
             }
 
@@ -497,10 +503,16 @@ class GeminiLiveWebSocketClient constructor(
                     saveMessageToChat(text, true)
                 }
             }
+            // outputTranscription = real-time text transcription of what the AI is saying
+            // Used ONLY for live transcript display (subtitles). NOT for chat message storage.
+            // The actual response text comes via serverContent.modelTurn.parts[].text
             if (messageData.has("outputTranscription")) {
                 val t = messageData.getJSONObject("outputTranscription")
                 val text = t.optString("text", "")
-                if (text.isNotEmpty()) onTextReceived?.invoke(text)
+                if (text.isNotEmpty()) {
+                    println("[GeminiLiveWebSocket] outputTranscription: $text")
+                    onTextReceived?.invoke(text)
+                }
             }
 
             if (messageData.has("serverContent")) {
@@ -534,8 +546,9 @@ class GeminiLiveWebSocketClient constructor(
 
                             if (part.has("text")) {
                                 val text = part.getString("text")
-                                println("[GeminiLiveWebSocket] GEMINI: $text")
-                                onTextReceived?.invoke(text)
+                                println("[GeminiLiveWebSocket] GEMINI (modelTurn): $text")
+                                // Don't fire onTextReceived here — outputTranscription already handles it.
+                                // Only save to chat history (persistent storage).
                                 saveMessageToChat(text, false)
                             }
 

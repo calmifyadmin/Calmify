@@ -13,6 +13,7 @@ import com.lifo.chat.data.audio.GeminiLiveAudioManager
 import com.lifo.chat.data.camera.GeminiLiveCameraManager
 import com.lifo.chat.domain.audio.AudioQualityAnalyzer
 import com.lifo.chat.domain.audio.ConversationContextManager
+import com.lifo.chat.domain.audio.HeadphoneDetector
 import com.lifo.chat.domain.model.*
 import com.lifo.util.model.RequestState
 import com.lifo.util.mvi.MviContract
@@ -51,6 +52,7 @@ object LiveChatContract {
         data class SendTextMessage(val text: String) : Intent
         data object ClearError : Intent
         data object RetryConnection : Intent
+        data class SelectAudioDevice(val deviceId: Int) : Intent
     }
 
     data class State(
@@ -87,6 +89,7 @@ class LiveChatViewModel constructor(
     private val firebaseAuth: FirebaseAuth,
     private val subscriptionRepository: SubscriptionRepository,
     private val avatarRepository: AvatarRepository?,
+    private val headphoneDetector: HeadphoneDetector,
     private val savedStateHandle: SavedStateHandle
 ) : MviViewModel<LiveChatContract.Intent, LiveChatContract.State, LiveChatContract.Effect>(
     initialState = LiveChatContract.State(
@@ -179,6 +182,7 @@ class LiveChatViewModel constructor(
         setupIntelligentSystems()
         setupFunctionCalling()
         initializeSynchronizedSpeech()
+        observeAudioDevices()
     }
 
     // -----------------------------------------------------------------------
@@ -199,6 +203,7 @@ class LiveChatViewModel constructor(
             is LiveChatContract.Intent.SendTextMessage -> sendTextMessage(intent.text)
             is LiveChatContract.Intent.ClearError -> clearError()
             is LiveChatContract.Intent.RetryConnection -> retryConnection()
+            is LiveChatContract.Intent.SelectAudioDevice -> selectAudioDevice(intent.deviceId)
         }
     }
 
@@ -946,6 +951,80 @@ class LiveChatViewModel constructor(
     }
 
     // -----------------------------------------------------------------------
+    // Private: Audio device detection & selection
+    // -----------------------------------------------------------------------
+
+    private fun observeAudioDevices() {
+        headphoneDetector.startMonitoring()
+
+        scope.launch {
+            headphoneDetector.availableDevices.collectLatest { devices ->
+                updateState { copy(live = live.copy(
+                    availableDevices = devices,
+                    activeDevice = devices.firstOrNull { it.isActive }
+                )) }
+
+                // Auto-configure audio mode based on route
+                val isHeadphone = headphoneDetector.isHeadphoneConnected
+                geminiAudioManager.configureAudioMode(isHeadphone = isHeadphone)
+            }
+        }
+    }
+
+    fun selectAudioDevice(deviceId: Int) {
+        val device = currentState.live.availableDevices.find { it.id == deviceId } ?: return
+        println("[LiveChatViewModel] Selecting audio device: ${device.name} (type=${device.type})")
+
+        val am = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            // API 31+: Use setCommunicationDevice for explicit routing
+            val audioDevices = am.availableCommunicationDevices
+            val targetDevice = audioDevices.firstOrNull { it.id == deviceId }
+
+            if (targetDevice != null) {
+                val success = am.setCommunicationDevice(targetDevice)
+                println("[LiveChatViewModel] setCommunicationDevice(${device.name}): $success")
+            } else {
+                // Fallback: match by type
+                val targetType = when (device.type) {
+                    com.lifo.chat.domain.model.AudioDeviceType.SPEAKER -> android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
+                    com.lifo.chat.domain.model.AudioDeviceType.EARPIECE -> android.media.AudioDeviceInfo.TYPE_BUILTIN_EARPIECE
+                    com.lifo.chat.domain.model.AudioDeviceType.BLUETOOTH -> android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO
+                    com.lifo.chat.domain.model.AudioDeviceType.WIRED_HEADSET -> android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET
+                    com.lifo.chat.domain.model.AudioDeviceType.USB -> android.media.AudioDeviceInfo.TYPE_USB_HEADSET
+                }
+                val fallbackDevice = audioDevices.firstOrNull { it.type == targetType }
+                if (fallbackDevice != null) {
+                    am.setCommunicationDevice(fallbackDevice)
+                    println("[LiveChatViewModel] setCommunicationDevice by type: ${device.type}")
+                } else if (device.type == com.lifo.chat.domain.model.AudioDeviceType.SPEAKER) {
+                    am.clearCommunicationDevice()
+                    println("[LiveChatViewModel] Cleared communication device → default speaker")
+                }
+            }
+        } else {
+            // API <31: Limited control via speakerphone toggle
+            @Suppress("DEPRECATION")
+            am.isSpeakerphoneOn = (device.type == com.lifo.chat.domain.model.AudioDeviceType.SPEAKER)
+        }
+
+        // Update AEC mode based on device type
+        val isHeadphone = device.type != com.lifo.chat.domain.model.AudioDeviceType.SPEAKER
+                && device.type != com.lifo.chat.domain.model.AudioDeviceType.EARPIECE
+        geminiAudioManager.configureAudioMode(isHeadphone = isHeadphone)
+
+        // Update UI state — mark selected device as active
+        val updatedDevices = currentState.live.availableDevices.map {
+            it.copy(isActive = it.id == deviceId)
+        }
+        updateState { copy(live = live.copy(
+            availableDevices = updatedDevices,
+            activeDevice = updatedDevices.firstOrNull { it.isActive }
+        )) }
+    }
+
+    // -----------------------------------------------------------------------
     // Private: Function calling (diary access)
     // -----------------------------------------------------------------------
 
@@ -1148,6 +1227,7 @@ class LiveChatViewModel constructor(
 
     override fun onCleared() {
         super.onCleared()
+        headphoneDetector.stopMonitoring()
         scope.launch {
             disconnectFromRealtime()
             synchronizedSpeechController.release()

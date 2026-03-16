@@ -47,6 +47,14 @@ class GeminiLiveAudioManager constructor(
         private const val MAX_QUEUE_CHUNKS = 500
         private const val MAX_QUEUE_BYTES = 5_000_000
 
+        // Jitter buffer: accumulate N chunks before starting playback
+        // Absorbs network micro-fluctuations that cause clicks/glitches
+        private const val JITTER_BUFFER_CHUNKS = 3 // ~120ms @ typical chunk size
+
+        // Continuous playback loop: max wait before declaring stream ended
+        private const val PLAYBACK_DRAIN_WAIT_MS = 5L
+        private const val MAX_EMPTY_POLLS = 60 // ~300ms of silence before stopping loop
+
         // Legacy threshold (now handled by SileroVadEngine)
         private const val SPEECH_THRESHOLD = 0.08f
         private const val HOT_FRAMES_TO_BARGE = 3 // ~96ms with 32ms frames
@@ -103,6 +111,9 @@ class GeminiLiveAudioManager constructor(
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private var isMuted = false
+
+    // Jitter buffer state: wait for N chunks before starting playback
+    private val jitterBufferReady = AtomicBoolean(false)
 
     var onAudioChunkReady: ((String) -> Unit)? = null
     var onBargeInDetected: (() -> Unit)? = null
@@ -440,8 +451,20 @@ class GeminiLiveAudioManager constructor(
                 _aiAudioLevel.value = aiLevelSmoothing
                 _aiVisemeWeights.value = visemeAnalyzer.analyze(arrayBuffer, OUTPUT_SAMPLE_RATE)
 
+                // Jitter Buffer: wait for N chunks before starting playback
+                // This absorbs network micro-fluctuations that cause clicks/pops
+                if (!jitterBufferReady.get()) {
+                    if (audioQueue.size >= JITTER_BUFFER_CHUNKS) {
+                        jitterBufferReady.set(true)
+                        Log.d(TAG, "🎵 Jitter buffer ready (${audioQueue.size} chunks buffered)")
+                    } else {
+                        Log.v(TAG, "⏳ Jitter buffering: ${audioQueue.size}/$JITTER_BUFFER_CHUNKS chunks")
+                        return@launch // Don't start playback yet
+                    }
+                }
+
                 if (!isPlaying.get()) {
-                    playNextAudioChunk()
+                    startContinuousPlayback()
                 }
 
                 Log.v(TAG, "✅ Queued audio: ${arrayBuffer.size} bytes (queue: ${audioQueue.size} chunks)")
@@ -451,7 +474,16 @@ class GeminiLiveAudioManager constructor(
         }
     }
 
-    private fun playNextAudioChunk() {
+    /**
+     * Continuous playback loop — stays alive even when queue is momentarily empty.
+     * This eliminates micro-gaps between chunks that cause clicks/pops.
+     * The loop only exits after MAX_EMPTY_POLLS consecutive empty reads (~300ms of silence),
+     * which means the AI has genuinely finished speaking.
+     *
+     * CRITICAL: Primes the AudioTrack buffer BEFORE calling play().
+     * Per Android docs, writing data before play() prevents initial underrun glitches.
+     */
+    private fun startContinuousPlayback() {
         if (playbackJob?.isActive == true) {
             return
         }
@@ -460,12 +492,34 @@ class GeminiLiveAudioManager constructor(
             isPlaying.set(true)
             _playbackState.value = true
 
-            while (audioQueue.isNotEmpty() && isActive) {
-                try {
-                    val chunk = audioQueue.poll() ?: break
-                    totalQueueBytes.addAndGet(-chunk.size)
+            // === PRIME THE AUDIOTRACK BUFFER ===
+            // Write all jitter-buffered chunks to AudioTrack BEFORE calling play().
+            // This fills the hardware buffer so playback starts without underrun.
+            primeAudioTrackBuffer()
 
-                    playAudio(chunk)
+            var emptyPolls = 0
+
+            while (isActive) {
+                try {
+                    val chunk = audioQueue.poll()
+
+                    if (chunk != null) {
+                        totalQueueBytes.addAndGet(-chunk.size)
+                        emptyPolls = 0 // Reset — data is flowing
+
+                        playAudio(chunk)
+                    } else {
+                        // Queue momentarily empty — wait briefly for next chunk
+                        emptyPolls++
+                        if (emptyPolls >= MAX_EMPTY_POLLS) {
+                            // Stream genuinely ended (~300ms of silence)
+                            Log.d(TAG, "🔇 Stream ended (no data for ${emptyPolls * PLAYBACK_DRAIN_WAIT_MS}ms)")
+                            break
+                        }
+                        delay(PLAYBACK_DRAIN_WAIT_MS)
+                    }
+                } catch (e: CancellationException) {
+                    break
                 } catch (e: Exception) {
                     Log.e(TAG, "Error playing audio chunk", e)
                 }
@@ -473,6 +527,7 @@ class GeminiLiveAudioManager constructor(
 
             isPlaying.set(false)
             _playbackState.value = false
+            jitterBufferReady.set(false) // Reset for next AI turn
 
             // Gradual fade-out for AI audio level visualization
             scope.launch {
@@ -484,6 +539,50 @@ class GeminiLiveAudioManager constructor(
                 aiLevelSmoothing = 0f
                 _aiAudioLevel.value = 0f
             }
+        }
+    }
+
+    /**
+     * Prime the AudioTrack buffer with accumulated jitter buffer data,
+     * then call play(). This prevents initial underrun.
+     */
+    private suspend fun primeAudioTrackBuffer() = withContext(Dispatchers.IO) {
+        synchronized(audioTrackLock) {
+            val track = audioTrack
+            if (track == null || track.state != AudioTrack.STATE_INITIALIZED) {
+                initializeAudioTrack()
+            }
+
+            val t = audioTrack ?: return@withContext
+            if (t.state != AudioTrack.STATE_INITIALIZED) return@withContext
+
+            // Write all buffered chunks to AudioTrack before play()
+            var primedBytes = 0
+            while (audioQueue.isNotEmpty()) {
+                val chunk = audioQueue.poll() ?: break
+                totalQueueBytes.addAndGet(-chunk.size)
+
+                // Feed AEC reference
+                val shortBuf = ShortArray(chunk.size / 2)
+                val bb = ByteBuffer.wrap(chunk).order(ByteOrder.LITTLE_ENDIAN)
+                for (i in shortBuf.indices) {
+                    if (bb.remaining() >= 2) shortBuf[i] = bb.short
+                }
+                referenceSignalDetector.feedReferenceSignal(shortBuf)
+
+                // Write directly (AudioTrack accepts data before play)
+                var offset = 0
+                while (offset < chunk.size) {
+                    val written = t.write(chunk, offset, chunk.size - offset)
+                    if (written <= 0) break
+                    offset += written
+                    primedBytes += written
+                }
+            }
+
+            // NOW start playback — buffer is pre-filled, no underrun
+            t.play()
+            Log.d(TAG, "🔊 AudioTrack primed with ${primedBytes} bytes, now playing")
         }
     }
 
@@ -500,7 +599,7 @@ class GeminiLiveAudioManager constructor(
                     return@withContext
                 }
 
-                // Feed reference signal for AEC
+                // Feed reference signal for AEC (always at original 24kHz)
                 val shortBuffer = ShortArray(byteArray.size / 2)
                 val byteBuffer = ByteBuffer.wrap(byteArray).order(ByteOrder.LITTLE_ENDIAN)
                 for (i in shortBuffer.indices) {
@@ -519,10 +618,10 @@ class GeminiLiveAudioManager constructor(
                     byteArray
                 }
 
-                // Write entire chunk to AudioTrack — AudioTrack internal buffer absorbs it
+                // Write to AudioTrack in 40ms sub-chunks (1920 bytes @ 24kHz, 16-bit)
                 var offset = 0
                 while (offset < processedData.size && isActive) {
-                    val bytesToWrite = minOf(1920, processedData.size - offset) // 40ms sub-chunks
+                    val bytesToWrite = minOf(1920, processedData.size - offset)
                     val bytesWritten = track.write(processedData, offset, bytesToWrite)
                     if (bytesWritten < 0) {
                         Log.e(TAG, "AudioTrack write error: $bytesWritten")
@@ -536,6 +635,7 @@ class GeminiLiveAudioManager constructor(
             }
         }
     }
+
 
     /**
      * Applica fade di volume ai dati PCM 16-bit per smooth barge-in.
@@ -578,10 +678,10 @@ class GeminiLiveAudioManager constructor(
                     return
                 }
 
-                // Buffer aumentato per audio più fluido: almeno 8x min o 1 secondo
+                // Buffer: at least 8x min or 1 second for smooth playback
                 val bufferSize = maxOf(
                     minBufferSize * BUFFER_SIZE_MULTIPLIER,
-                    OUTPUT_SAMPLE_RATE * 2 // Almeno 1 secondo di buffer
+                    OUTPUT_SAMPLE_RATE * 2 // 1 second buffer (16-bit = 2 bytes/sample)
                 )
 
                 // USAGE_MEDIA for high-quality audio output (full bandwidth, no telephonic DSP).
@@ -613,8 +713,11 @@ class GeminiLiveAudioManager constructor(
 
                 audioTrack = trackBuilder.build()
 
-                audioTrack?.play()
-                Log.d(TAG, "🔊 AudioTrack initialized - buffer: $bufferSize, sessionId: ${audioTrack?.audioSessionId}")
+                // DON'T call play() here — the AudioTrack buffer is empty.
+                // Per Android docs: writing data BEFORE play() primes the buffer
+                // and prevents initial underrun glitches.
+                // play() is called in startContinuousPlayback() after priming.
+                Log.d(TAG, "🔊 AudioTrack created (NOT playing yet — will prime buffer first) - rate: ${OUTPUT_SAMPLE_RATE}Hz, buffer: $bufferSize, sessionId: ${audioTrack?.audioSessionId}")
 
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to initialize AudioTrack", e)
@@ -641,6 +744,7 @@ class GeminiLiveAudioManager constructor(
 
         isPlaying.set(false)
         _playbackState.value = false
+        jitterBufferReady.set(false)
 
         playbackJob?.cancel()
         playbackJob = null
@@ -698,13 +802,14 @@ class GeminiLiveAudioManager constructor(
                 playbackJob?.cancel()
                 playbackJob = null
 
-                // Clear circular buffer
+                // Clear queue
                 audioQueue.clear()
                 totalQueueBytes.set(0)
 
                 // Reset stato
                 isPlaying.set(false)
                 _playbackState.value = false
+                jitterBufferReady.set(false)
 
                 // Reset AI audio level
                 aiLevelSmoothing = 0f
@@ -736,6 +841,7 @@ class GeminiLiveAudioManager constructor(
 
         isPlaying.set(false)
         _playbackState.value = false
+        jitterBufferReady.set(false)
 
         aiLevelSmoothing = 0f
         _aiAudioLevel.value = 0f
@@ -821,7 +927,13 @@ class GeminiLiveAudioManager constructor(
         return calculateAudioLevel(buffer, buffer.size)
     }
 
-    // Audio mode reset delegated to FullDuplexAudioSession
+    /**
+     * Configure audio mode for headphone/speaker routing.
+     * Delegates to FullDuplexAudioSession for AEC management.
+     */
+    fun configureAudioMode(isHeadphone: Boolean) {
+        fullDuplexSession.configureAudioMode(isHeadphone = isHeadphone)
+    }
 
     fun release() {
         Log.i(TAG, "Releasing audio manager...")

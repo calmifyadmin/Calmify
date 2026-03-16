@@ -11,10 +11,16 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.BluetoothAudio
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PhoneInTalk
+import androidx.compose.material.icons.filled.Usb
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.VolumeOff
@@ -40,6 +46,8 @@ import androidx.compose.ui.unit.sp
 import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lifo.chat.domain.model.AIEmotion
+import com.lifo.chat.domain.model.AudioDevice
+import com.lifo.chat.domain.model.AudioDeviceType
 import com.lifo.chat.domain.model.ConnectionStatus
 import com.lifo.chat.domain.model.TurnState
 import com.lifo.chat.presentation.components.GeminiLiquidVisualizer
@@ -96,6 +104,9 @@ fun LiveScreen(
     // Chat input visibility toggle
     var showChatInput by remember { mutableStateOf(false) }
     var chatInputText by remember { mutableStateOf("") }
+
+    // Audio device selector
+    var showDeviceSelector by remember { mutableStateOf(false) }
 
     // Permission handling
     val audioPermissionLauncher = rememberLauncherForActivityResult(
@@ -423,7 +434,7 @@ fun LiveScreen(
                 turnState = liveChatState.turnState,
                 isChannelOpen = liveChatState.isChannelOpen,
                 partialTranscript = liveChatState.partialTranscript,
-                transcript = liveChatState.transcript,  // NEW: pass final transcript
+                transcript = liveChatState.transcript,
                 error = liveChatState.error,
                 onToggleMute = {
                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -435,14 +446,11 @@ fun LiveScreen(
                 onToggleCamera = {
                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     if (!liveChatState.hasCameraPermission) {
-                        // Request permission first
                         wantsCameraOn = true
                         cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                     } else {
-                        // Toggle camera on/off
                         wantsCameraOn = !wantsCameraOn
                         if (!wantsCameraOn && liveChatState.isCameraActive) {
-                            // Stop camera if turning off
                             viewModel.stopCameraPreview()
                         }
                     }
@@ -452,11 +460,28 @@ fun LiveScreen(
                     showChatInput = !showChatInput
                 },
                 showChatInput = showChatInput,
+                activeDevice = liveChatState.activeDevice,
+                onOpenDeviceSelector = {
+                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    showDeviceSelector = true
+                },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
             )
         }
+    }
+
+    // Audio device selector bottom sheet
+    if (showDeviceSelector) {
+        AudioDeviceSelectorSheet(
+            devices = liveChatState.availableDevices,
+            onDeviceSelected = { device ->
+                viewModel.selectAudioDevice(device.id)
+                showDeviceSelector = false
+            },
+            onDismiss = { showDeviceSelector = false }
+        )
     }
 }
 
@@ -645,7 +670,7 @@ private fun LiveBottomControls(
     turnState: TurnState,
     isChannelOpen: Boolean,
     partialTranscript: String,
-    transcript: String = "",  // NEW: final transcript
+    transcript: String = "",
     error: String?,
     onToggleMute: () -> Unit,
     isCameraActive: Boolean,
@@ -654,6 +679,8 @@ private fun LiveBottomControls(
     onToggleCamera: () -> Unit,
     onToggleChatInput: (() -> Unit)? = null,
     showChatInput: Boolean = false,
+    activeDevice: AudioDevice? = null,
+    onOpenDeviceSelector: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -753,6 +780,28 @@ private fun LiveBottomControls(
                 }
             }
 
+            // Audio device selector button
+            if (onOpenDeviceSelector != null) {
+                FloatingActionButton(
+                    onClick = onOpenDeviceSelector,
+                    modifier = Modifier.size(52.dp),
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ) {
+                    Icon(
+                        imageVector = when (activeDevice?.type) {
+                            AudioDeviceType.BLUETOOTH -> Icons.Default.BluetoothAudio
+                            AudioDeviceType.WIRED_HEADSET -> Icons.Default.Headphones
+                            AudioDeviceType.USB -> Icons.Default.Usb
+                            AudioDeviceType.EARPIECE -> Icons.Default.PhoneInTalk
+                            else -> Icons.Default.VolumeUp
+                        },
+                        contentDescription = "Audio device: ${activeDevice?.name ?: "Speaker"}",
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+
             // Mute/Unmute button - large, prominent
             val micScale by animateFloatAsState(
                 targetValue = if (turnState == TurnState.UserTurn && !isMuted) 1.1f else 1f,
@@ -804,6 +853,100 @@ private fun LiveBottomControls(
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center
             )
+        }
+    }
+}
+
+/**
+ * Bottom sheet showing available audio output devices.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AudioDeviceSelectorSheet(
+    devices: List<AudioDevice>,
+    onDeviceSelected: (AudioDevice) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState()
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface,
+        dragHandle = { BottomSheetDefaults.DragHandle() }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 32.dp)
+        ) {
+            Text(
+                text = "Audio Output",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+            )
+
+            if (devices.isEmpty()) {
+                Text(
+                    text = "No devices available",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
+                )
+            }
+
+            devices.forEach { device ->
+                val icon = when (device.type) {
+                    AudioDeviceType.SPEAKER -> Icons.Default.VolumeUp
+                    AudioDeviceType.EARPIECE -> Icons.Default.PhoneInTalk
+                    AudioDeviceType.BLUETOOTH -> Icons.Default.BluetoothAudio
+                    AudioDeviceType.WIRED_HEADSET -> Icons.Default.Headphones
+                    AudioDeviceType.USB -> Icons.Default.Usb
+                }
+
+                Surface(
+                    onClick = { onDeviceSelected(device) },
+                    color = if (device.isActive)
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                    else Color.Transparent,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = if (device.isActive)
+                                MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Text(
+                            text = device.name,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (device.isActive)
+                                MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface,
+                            fontWeight = if (device.isActive) FontWeight.SemiBold else FontWeight.Normal,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (device.isActive) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Active",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
