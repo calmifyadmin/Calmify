@@ -35,8 +35,6 @@ kotlin {
         }
 
         androidMain {
-            kotlin.srcDirs('src/main/java')
-
             dependencies {
                 // SQLDelight Android driver
                 implementation libs.sqldelight.android
