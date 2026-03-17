@@ -14,10 +14,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 
-@ExperimentalMaterial3Api
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun AuthenticationScreen(
+fun AuthenticationScreen(
     authenticated: Boolean,
     loadingState: Boolean,
     snackbarHostState: SnackbarHostState,

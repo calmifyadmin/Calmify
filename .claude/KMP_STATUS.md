@@ -1,66 +1,66 @@
 # Calmify — Stato Progetto e Guida per Nuove Sessioni
 
 > **LEGGERE SEMPRE all'inizio di ogni sessione.**
-> Ultimo aggiornamento: 2026-03-16
+> Ultimo aggiornamento: 2026-03-18
 
 ## TL;DR — Stato Attuale
 
-**Migrazione KMP source set COMPLETATA. Zero file legacy.**
+**Migrazione KMP source set COMPLETATA. Zero file legacy. Zero `kotlin.srcDirs` mapping.**
 
 - **17/18 moduli** usano convention plugin KMP (`calmify.kmp.library` o `calmify.kmp.compose`)
 - **Solo `app`** resta Android-only (`com.android.application`)
-- **assembleDebug OK**: 851 tasks, 0 errori
+- **assembleDebug OK**: 562 tasks, 0 errori
 - **DI**: Koin 4.1.1 (Hilt completamente rimosso)
 - **Database**: SQLDelight 2.0.2 (Room completamente rimosso)
 - **Navigation**: Decompose 3.4.0 (Navigation Compose rimosso)
 - **MVI**: Tutti i 18+ ViewModel usano `MviViewModel<Intent, State, Effect>`
+- **Production Plan**: `PRODUCTION_READY_PLAN.md` — PRO Switch, Play Store, compliance, i18n
 
-### Stato Codice (aggiornamento 2026-03-16)
-- **commonMain**: 218 file (62%) — UI, ViewModel, domain, contracts, utility
-- **androidMain**: 135 file (38%) — Firebase, Filament, Camera, Audio, Platform-specific UI
+### Stato Codice (verificato 2026-03-18)
+- **commonMain**: 200 file (60%) — UI, ViewModel, domain, contracts, utility
+- **androidMain**: 135 file (40%) — Firebase, Filament, Camera, Audio, Platform-specific UI
 - **Legacy src/main/java**: 0 file (eliminati tutti i `kotlin.srcDirs` mapping)
 - **app module**: 13 file (Android-only entry point, non KMP)
 - Repository interfaces in `core/util` commonMain, implementations Firebase in `data/mongo` androidMain
 - Firebase AI, Functions, RemoteConfig, Realtime DB, Play Billing → restano androidMain (no KMP SDK)
+- Feature Flags: 10 flag in Firebase Remote Config (incl. `premium_enabled` per PRO Switch)
 
 ---
 
 ## Architettura Moduli (18 totali)
 
 ```
-app/                          Android-only (MainActivity, DecomposeApp, RootComponent, Koin setup)
+app/                          Android-only (MainActivity, DecomposeApp, RootComponent, Koin setup) — 13 file
 │
-├── core/util/                KMP Library — commonMain: 38 file (modelli, repository interfaces, MVI, AuthProvider)
-│                                          androidMain: 2 file (FirebaseAuthProvider, PlatformViewModel)
+├── core/util/                KMP Library — commonMain: 44 file | androidMain: 2 file
+├── core/ui/                  KMP Compose — commonMain: 12 file | androidMain: 6 file
+├── data/mongo/               KMP Library + SQLDelight — commonMain: 4 .sq | androidMain: 24 file
 │
-├── core/ui/                  KMP Compose — commonMain: 11 file (Theme, componenti, providers)
-│                                          androidMain: 1 file (Theme.android.kt) + 3 legacy in src/main/java
-│
-├── data/mongo/               KMP Library + SQLDelight — commonMain: 4 .sq files (schema database)
-│                                                        androidMain: 21 file Firestore repos (src/main/java)
-│
-├── features/auth/            KMP Compose — tutto in androidMain (src/main/java) — 7 file
-├── features/home/            KMP Compose — tutto in androidMain (src/main/java) — 49 file
-├── features/write/           KMP Compose — tutto in androidMain (src/main/java) — 17 file
-├── features/chat/            KMP Compose — tutto in androidMain (src/main/java) — 40 file + NDK/CMake
-├── features/humanoid/        KMP Compose — tutto in androidMain (src/main/java) — 31 file + Filament
-├── features/history/         KMP Compose — tutto in androidMain (src/main/java) — 8 file
-├── features/insight/         KMP Compose — tutto in androidMain (src/main/java) — 4 file
-├── features/profile/         KMP Compose — tutto in androidMain (src/main/java) — 3 file
-├── features/settings/        KMP Compose — tutto in androidMain (src/main/java) — 10 file
-├── features/onboarding/      KMP Compose — tutto in androidMain (src/main/java) — 8 file
-├── features/feed/            KMP Compose — tutto in androidMain (src/main/java) — 5 file
-├── features/composer/        KMP Compose — tutto in androidMain (src/main/java) — 5 file
-├── features/social-profile/  KMP Compose — tutto in androidMain (src/main/java) — 5 file
-├── features/search/          KMP Compose — tutto in androidMain (src/main/java) — 5 file
-├── features/notifications/   KMP Compose — tutto in androidMain (src/main/java) — 5 file
-├── features/messaging/       KMP Compose — tutto in androidMain (src/main/java) — 7 file
-└── features/subscription/    KMP Compose — tutto in androidMain (src/main/java) — 5 file
+├── features/auth/            commonMain: 2 | androidMain: 5
+├── features/home/            commonMain: 32 | androidMain: 23
+├── features/write/           commonMain: 12 | androidMain: 9
+├── features/chat/            commonMain: 13 | androidMain: 27 (+ NDK/CMake)
+├── features/humanoid/        commonMain: 10 | androidMain: 21 (Filament)
+├── features/history/         commonMain: 3 | androidMain: 5
+├── features/insight/         commonMain: 4 | androidMain: 0
+├── features/profile/         commonMain: 3 | androidMain: 0
+├── features/settings/        commonMain: 10 | androidMain: 1
+├── features/onboarding/      commonMain: 3 | androidMain: 0
+├── features/feed/            commonMain: 3 | androidMain: 2
+├── features/composer/        commonMain: 1 | androidMain: 4
+├── features/social-profile/  commonMain: 4 | androidMain: 3
+├── features/search/          commonMain: 5 | androidMain: 0
+├── features/notifications/   commonMain: 5 | androidMain: 0
+├── features/messaging/       commonMain: 8 | androidMain: 0
+├── features/subscription/    commonMain: 4 | androidMain: 1
+├── features/thread-detail/   commonMain: 3 | androidMain: 2
+└── features/avatar-creator/  commonMain: 19 | androidMain: 0
 ```
 
-### Pattern Source Set
-
-I moduli feature e data/mongo usano `kotlin.srcDirs('src/main/java')` nel blocco `androidMain` del build.gradle. Questo mappa il codice legacy alla source set KMP senza spostare fisicamente i file. Quando si vorrà supportare iOS/Desktop, i file puri Kotlin andranno spostati in `src/commonMain/kotlin/`.
+### Source Set Status
+- **Zero** `kotlin.srcDirs('src/main/java')` in qualsiasi build.gradle
+- **Zero** file .kt in `src/main/java` (solo 2 .md/README residui in chat e humanoid)
+- Tutti i file sono fisicamente in `src/commonMain/kotlin/` o `src/androidMain/kotlin/`
 
 ---
 
@@ -334,18 +334,19 @@ val databaseModule = module {
 
 ---
 
-## Prossimi Passi (Opzionali)
+## Prossimi Passi
 
-### Per supportare iOS/Desktop
-1. Spostare file puri da `src/main/java/` → `src/commonMain/kotlin/` nei moduli feature
-2. Creare `iosApp/` con SwiftUI che consuma i moduli commonMain
-3. Implementare `actual` per: Theme, AuthProvider (già fatto), SqlDriver (iOS = NativeSqliteDriver)
-4. I moduli chat e humanoid sono "KMP parziale" (~60% spostabile in commonMain)
+### Production Launch (vedi `PRODUCTION_READY_PLAN.md`)
+1. Fase 0: Fix signing, ProGuard, Crashlytics, Privacy Policy, Prominent Disclosure
+2. Implementare WaitlistSubscriptionRepository + WaitlistDialog (PRO Switch)
+3. Compilare Play Console: Data Safety, Health Apps Declaration, IARC
+4. Alpha → Beta → Production (roadmap 20 settimane)
 
-### Cleanup Opzionale
-- Eliminare `ProfileScreen.kt` dal modulo app (dead code)
-- Rimuovere `kotlin.srcDirs('src/main/java')` quando i file vengono effettivamente spostati
-- Spostare `Gallery.kt`, `MoodUiProvider.kt`, `FirebaseImageHelper.kt` da `core/ui/src/main/java` a `androidMain/kotlin`
+### Per supportare iOS/Desktop (futuro)
+1. Creare `iosApp/` con SwiftUI che consuma i moduli commonMain (200 file pronti)
+2. Implementare `actual` per: Theme, AuthProvider, SqlDriver (iOS = NativeSqliteDriver)
+3. Firebase repos: GitLive per Firestore/Auth/Storage, alternative per AI/Functions/Billing
+4. Filament: iOS wrapper C++/Swift, Desktop wrapper Metal/OpenGL
 
 ---
 
@@ -373,3 +374,8 @@ val databaseModule = module {
 | 2026-03-01 | Wave 6C-F: 6 social feature modules + Firestore repos |
 | 2026-03-01 | KMP Onde 1-8: core/util, core/ui, social, Firebase, features, SQLDelight, chat |
 | 2026-03-02 | KMP Onde 9-10: humanoid, integrazione finale — **BUILD OK 746 tasks** |
+| 2026-03-17 | KMP source set migration: 200 commonMain / 135 androidMain / 0 legacy |
+| 2026-03-17 | Rimossi TUTTI i `kotlin.srcDirs('src/main/java')` mapping |
+| 2026-03-17 | Fix: java.time→kotlinx.datetime, System.currentTimeMillis→KMP, String.format→KMP |
+| 2026-03-17 | Coil downgrade 3.3.0→3.1.0 (Kotlin 2.1.0 ABI compatibility) |
+| 2026-03-18 | PRODUCTION_READY_PLAN.md: Play Store, business model, compliance, PRO Switch |

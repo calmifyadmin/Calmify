@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.lifo.ui.components.GoogleButton
 
 @Composable
-internal fun AuthenticationContent(
+fun AuthenticationContent(
     modifier: Modifier = Modifier,
     loadingState: Boolean,
     onButtonClicked: () -> Unit
