@@ -119,7 +119,7 @@ premium_enabled = true (flip in Firebase Console)
 
 ## 2. PLAY STORE PREPARATION
 
-### 2.1 Blockers Critici (MUST-FIX)
+### 2.1 Blockers Critici (MUST-FIX — senza questi Play Store RIFIUTA l'app)
 
 #### 2.1.1 Signing Configuration
 ```
@@ -131,6 +131,7 @@ STATO: Release usa debug key → BLOCCO PLAY STORE
 - [ ] Salvare keystore in luogo sicuro (NON nel repo) + backup su Google Cloud KMS o 1Password
 - [ ] Iscriversi a Google Play App Signing (gestione chiave da Google)
 - [ ] Documentare recovery procedure per keystore persa
+- [ ] Build AAB firmato (`.aab`, NON `.apk` — Google non accetta APK per nuove app dal 2021)
 
 #### 2.1.2 ProGuard Rules
 ```
@@ -170,16 +171,139 @@ STATO: Inesistenti → BLOCCO PLAY STORE
 - [ ] Consenso esplicito durante onboarding (checkbox GDPR)
 - [ ] Meccanismo di revoca consenso
 
+#### 2.1.5 Data Safety Section (Play Console)
+```
+STATO: Non compilata → BLOCCO PLAY STORE
+```
+La Data Safety Section è **distinta** dalla Privacy Policy. È un form nel Play Console
+che dichiara esattamente quali dati l'app raccoglie e come li usa.
+
+**Dati da dichiarare per Calmify:**
+
+| Tipo dato (Play Console category) | Raccolta? | Condivisa? | Scopo |
+|------------------------------------|-----------|------------|-------|
+| Name | Si | No | Account functionality |
+| Email address | Si | No | Account functionality |
+| Health info (mood, profilo psicologico) | Si | No | App functionality |
+| Other user-generated content (diary, chat) | Si | No | App functionality |
+| Photos (avatar, cover) | Si | Si (visible to other users in social) | App functionality |
+| App interactions | Si | No | Analytics |
+| Crash logs | Si | No | App diagnostics |
+| Device or other IDs | Si | No | Analytics, app functionality |
+
+**Azioni:**
+- [ ] Compilare Data Safety form in Play Console → Policy → App content → Data safety
+- [ ] Verificare coerenza con Privacy Policy (devono corrispondere)
+- [ ] Dichiarare che i dati health NON vengono condivisi con terzi
+- [ ] Dichiarare che i dati sono crittografati in transit (HTTPS/TLS)
+- [ ] Dichiarare che l'utente può richiedere cancellazione dei dati
+
+#### 2.1.6 Health Apps Declaration Form
+```
+STATO: Non compilato → BLOCCO AGGIORNAMENTI FUTURI
+```
+**Obbligatorio** per tutte le app su Play Store. Chi ha app health deve dichiararlo;
+chi non ha app health deve dichiarare di non averle. In entrambi i casi, va compilato.
+
+**Dove**: Play Console → Policy → App content → Health Apps → Start
+
+**Per Calmify:**
+- Categorie da selezionare: **Mental Wellness** + **Fitness & Wellness**
+- Dichiarare benefici: miglioramento benessere, tracking umore, crescita personale
+- Indicare target users: adulti 25-40 interessati a crescita personale
+
+**Disclaimer OBBLIGATORIO** (da inserire in ENTRAMBI i posti):
+1. **Descrizione Play Store** (in fondo)
+2. **Dentro l'app** (onboarding + Settings → About)
+
+```
+"Calmify non è un dispositivo medico e non è destinata a diagnosticare,
+trattare, curare o prevenire alcuna condizione medica. Le informazioni
+fornite hanno scopo puramente informativo e di benessere generale.
+Per consigli medici, consultare un professionista sanitario qualificato."
+```
+
+**Rischio se mancante**: blocco totale agli aggiornamenti finché non compilato.
+
+#### 2.1.7 Prominent Disclosure & Consenso Dati Sensibili (in-app)
+```
+STATO: Non implementato → RIFIUTO REVIEW
+```
+**Questo NON è il consenso GDPR generico.** È un requisito specifico di Google Play:
+prima di raccogliere dati "personal and sensitive" (dati sanitari inclusi), l'app deve
+mostrare una disclosure prominente, visibile durante il normale utilizzo, che:
+
+1. Descrive **quali dati** vengono raccolti
+2. Spiega **come** vengono usati e/o condivisi
+3. NON è nascosta in Privacy Policy o Terms of Service
+4. NON è combinata con disclosure non correlate alla raccolta dati
+5. Richiede **azione affermativa** dell'utente (tap, checkbox NON pre-spuntata)
+6. NON interpreta "navigazione via" come consenso
+7. NON usa messaggi con auto-dismiss o scadenza
+
+**Quando mostrare la disclosure in Calmify:**
+
+| Momento | Dato raccolto | Tipo disclosure |
+|---------|---------------|-----------------|
+| Onboarding (step dedicato) | Tutti i dati sensibili | Disclosure aggregata |
+| Prima voce nel diario | Contenuto emotivo/psicologico | Micro-disclosure contestuale (opzionale) |
+| Prima sessione chat | Messaggi sensibili | Micro-disclosure contestuale (opzionale) |
+| Prima registrazione mood | Dati salute mentale | Micro-disclosure contestuale (opzionale) |
+| Abilitazione microfono | Audio + trascrizione | Runtime permission (obbligatorio Android) |
+| Generazione profilo psicologico | Inferenze su salute mentale | Micro-disclosure contestuale (consigliata) |
+
+**Implementazione consigliata (doppia copertura):**
+
+1. **Onboarding step dedicato** (OBBLIGATORIO):
+   ```
+   Step "I tuoi dati" nell'onboarding (DOPO nome, PRIMA di iniziare a usare l'app):
+
+   "Per offrirti un'esperienza personalizzata, Calmify raccoglie:
+    • I tuoi diari e riflessioni
+    • Il tuo umore giornaliero
+    • Le conversazioni con Eve (AI)
+    • Un profilo di benessere psicologico settimanale
+
+   Questi dati sono usati SOLO per migliorare la tua esperienza.
+   Non vengono venduti né condivisi con terzi.
+   Puoi esportarli o cancellarli in qualsiasi momento da Impostazioni."
+
+   [Checkbox] Ho letto e accetto
+   [Link] Leggi la Privacy Policy completa
+   [Bottone] Continua (attivo solo con checkbox)
+   ```
+
+2. **Micro-disclosure contestuali** (CONSIGLIATO per safety):
+   Card/banner la prima volta che l'utente accede a diary, chat, mood.
+   Es: "I tuoi messaggi con Eve restano privati e non vengono condivisi."
+
+#### 2.1.8 Cancellazione Account
+```
+STATO: Non implementato → BLOCCO PLAY STORE
+```
+Google richiede che le app con account utente offrano un meccanismo per richiedere
+cancellazione account E dati. La disattivazione temporanea NON è sufficiente.
+
+**Azioni:**
+- [ ] Aggiungere "Elimina account" in Settings
+- [ ] Implementare cancellazione completa: Firestore + Storage + SQLDelight + Auth
+- [ ] Mostrare conferma con spiegazione ("Tutti i tuoi dati verranno eliminati permanentemente")
+- [ ] Aggiungere link web per cancellazione (richiesto da Play Store per utenti senza accesso all'app)
+- [ ] Completare cancellazione entro un tempo ragionevole (Play Store suggerisce < 3 giorni)
+
 ### 2.2 Configurazione Play Store
 
 #### 2.2.1 Store Listing
-- **App name**: Calmify — Journaling & AI Wellness
-- **Short description** (80 char): "Scrivi, parla con l'AI, scopri te stesso. Il tuo percorso di crescita personale."
-- **Full description**: Feature breakdown + value prop + social proof
+- **App name (launcher)**: "Calmify" (7 char — limite Play Store: **30 caratteri**)
+- **App title (Play Store)**: "Calmify: Journaling & AI" (24 char — sotto il limite di 30)
+- **Short description** (80 char max): "Scrivi, parla con l'AI, scopri te stesso. Il tuo percorso di crescita."
+- **Full description**: Feature breakdown + value prop + health disclaimer in fondo
 - **Category**: Health & Fitness → Mental Wellness
-- **Content rating**: PEGI 3 / Everyone (no violenza, no contenuti espliciti)
-- **Screenshots**: 8 screenshot (telefono) + 2 tablet + 1 feature graphic
-- **Video**: 30-60s promo (journaling → chat vocale → avatar → insight)
+- **Content rating**: compilare questionario IARC nel Play Console (target: Everyone/PEGI 3)
+- **Screenshots**: 8 telefono + 2 tablet — dimensioni min 320px, max 3840px, ratio 16:9 o 9:16
+- **Feature graphic**: 1024×500px, JPEG/PNG 24-bit **senza alpha**, max 1MB
+- **App icon**: 512×512px, PNG 32-bit **con alpha**, max 1MB
+- **Video** (opzionale): 30-60s YouTube link (non unlisted, non private)
 
 #### 2.2.2 Release Strategy
 - **Internal Testing** → 5-10 tester (team + amici fidati)
@@ -187,8 +311,11 @@ STATO: Inesistenti → BLOCCO PLAY STORE
 - **Open Beta** → 500-1000 utenti (link pubblico, feedback form)
 - **Production** → Rilascio graduale (20% → 50% → 100%)
 
+**NOTA**: Health Apps Declaration Form va compilato PRIMA di pubblicare anche in internal testing.
+Content Rating (IARC) va completato PRIMA della prima pubblicazione.
+
 #### 2.2.3 App Bundle & Optimization
-- [ ] Passare da APK a AAB (Android App Bundle) — Play Store lo richiede
+- [ ] Build AAB (`./gradlew bundleRelease`) — Play Store NON accetta APK per nuove app
 - [ ] Verificare APK split per ABI funzioni con AAB
 - [ ] Baseline Profile per startup performance
 - [ ] App Startup library per lazy initialization
@@ -593,20 +720,42 @@ paywall_view → paywall_cta_click → purchase_start → purchase_complete
 ### ============================================================
 
 ### Fase 0: Pre-Alpha (Settimana 1-2)
-- [ ] Fix signing config produzione
-- [ ] Fix ProGuard rules (test release build su device)
-- [ ] Abilitare Crashlytics
-- [ ] Rimuovere `usesCleartextTraffic="true"`
-- [ ] Verificare Firestore security rules
-- [ ] Estrarre stringhe in `strings.xml` (IT + EN)
-- [ ] Implementare "Elimina account" completo (GDPR Art. 17)
+
+**Build:**
+- [ ] Fix signing config produzione (release keystore + AAB)
+- [ ] Fix ProGuard rules (test release build su device fisico)
+- [ ] Abilitare Crashlytics (decommentare plugin, aggiungere dependency)
+
+**Legal & Privacy:**
 - [ ] Scrivere Privacy Policy + Terms of Service
+- [ ] Hostare su URL pubblico (GitHub Pages, Netlify, o calmify.app)
+- [ ] Implementare Prominent Disclosure in-app (step dedicato nell'onboarding)
+- [ ] Implementare "Elimina account" completo (GDPR Art. 17 + Play Store requirement)
+- [ ] Aggiungere link web cancellazione account
+- [ ] Aggiungere health disclaimer in-app (Settings → About + onboarding)
+
+**Sicurezza:**
+- [ ] Rimuovere `usesCleartextTraffic="true"` → Network Security Config
+- [ ] Verificare Firestore security rules
+
+**i18n:**
+- [ ] Estrarre stringhe in `strings.xml` (IT + EN)
+
+**PRO Switch:**
 - [ ] Implementare `WaitlistSubscriptionRepository`
 - [ ] Implementare `WaitlistDialog` (email capture)
 - [ ] Configurare Koin switch basato su `premium_enabled` flag
 - [ ] Verificare `premium_enabled = false` in Firebase Remote Config
 
 ### Fase 1: Alpha Chiusa (Settimana 3-4)
+
+**Play Console (compilare PRIMA di pubblicare anche in internal testing):**
+- [ ] Compilare Data Safety Section (Play Console → App content → Data safety)
+- [ ] Compilare Health Apps Declaration Form (Play Console → App content → Health Apps)
+- [ ] Compilare Content Rating IARC (Play Console → App content → Content rating)
+- [ ] Verificare app name ≤ 30 char
+
+**Testing:**
 - [ ] Deploy su Google Play Internal Testing
 - [ ] 10 tester interni: test funzionale completo
 - [ ] Fix bug critici trovati
@@ -667,18 +816,32 @@ paywall_view → paywall_cta_click → purchase_start → purchase_complete
 ## 11. CHECKLIST FINALE PRE-LANCIO
 
 ### Must Have — Validazione (Parte A, senza P.IVA)
-- [ ] Signing config produzione
+
+**Build & Signing:**
+- [ ] Signing config produzione (release keystore)
 - [ ] ProGuard rules complete + test release su device
-- [ ] Crashlytics attivo
-- [ ] Privacy Policy online + in-app
-- [ ] Terms of Service online + in-app
-- [ ] Consenso GDPR nell'onboarding
-- [ ] "Elimina account" funzionante
+- [ ] AAB build (`.aab`) firmato e testato su device fisico
+- [ ] Crashlytics attivo e funzionante
+
+**Legal & Privacy (BLOCKERS Play Store):**
+- [ ] Privacy Policy online su URL pubblico + link in-app
+- [ ] Terms of Service online su URL pubblico + link in-app
+- [ ] Consenso GDPR nell'onboarding (checkbox, non pre-spuntato)
+- [ ] **Prominent Disclosure in-app** (step dedicato onboarding per dati sensibili)
+- [ ] **"Elimina account"** funzionante (Firestore + Storage + SQLDelight + Auth)
+- [ ] Link web per cancellazione account (per utenti senza accesso all'app)
+
+**Play Console (BLOCKERS pubblicazione):**
+- [ ] **Data Safety Section** compilata (tutti i dati dichiarati, coerente con Privacy Policy)
+- [ ] **Health Apps Declaration Form** compilato (Mental Wellness + disclaimer)
+- [ ] **Content Rating IARC** questionario completato
+- [ ] Health disclaimer nella descrizione Play Store + dentro l'app (Settings → About)
+- [ ] Store listing completo (icon 512x512, feature graphic 1024x500, 8 screenshot)
+- [ ] App name ≤ 30 caratteri ("Calmify: Journaling & AI")
+- [ ] Network Security Config (no cleartext traffic)
 - [ ] Firestore security rules verificate
-- [ ] Network Security Config (no cleartext)
-- [ ] Store listing completo (screenshot, descrizione, icona)
-- [ ] Content rating questionnaire compilato
-- [ ] AAB build testato su device fisico
+
+**PRO Switch (waitlist):**
 - [ ] `WaitlistSubscriptionRepository` implementato
 - [ ] `WaitlistDialog` con email capture implementato
 - [ ] `premium_enabled = false` verificato in Firebase Remote Config
