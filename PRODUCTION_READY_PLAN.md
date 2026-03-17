@@ -54,7 +54,53 @@ Calmify è una piattaforma wellness + social per self-improver 25-40 che combina
 | CAC (customer acquisition cost) | <€3 | <€5 |
 | Payback period | <2 mesi | <2 mesi |
 
-### 1.5 Paywall Strategy
+### 1.5 PRO Switch — Strategia di Validazione senza P.IVA
+
+> **Principio**: Sviluppare TUTTO (paywall, gating, CTA, billing), ma controllare
+> l'attivazione dei pagamenti tramite Firebase Remote Config flag `premium_enabled`.
+> Questo permette di validare il prodotto SENZA P.IVA, raccogliendo dati reali
+> sulla domanda, e attivare la monetizzazione con un click quando pronti.
+
+#### Fase 1: VALIDAZIONE (senza P.IVA)
+
+```
+premium_enabled = false (Firebase Remote Config)
+```
+
+- App pubblicata su Play Store **GRATUITA**
+- Utente vive esperienza **FREE con limiti reali** (3 diary/giorno, 5 chat/sessione)
+- Paywall UI **SI MOSTRA** quando l'utente raggiunge il limite
+- Bottone "Abbonati" → **mostra WaitlistDialog** invece di aprire billing
+- WaitlistDialog raccoglie email: "PRO arriva presto! Iscriviti per accesso prioritario"
+- Analytics traccia: paywall_viewed, waitlist_signup, waitlist_source_screen
+
+**Metriche di validazione:**
+| Metrica | Soglia per attivare PRO | Significato |
+|---------|------------------------|-------------|
+| Waitlist signups | > 100 | Domanda reale confermata |
+| Paywall view rate | > 20% degli utenti | Il limite FREE è calibrato bene |
+| Waitlist conversion | > 30% di chi vede paywall | Value prop convincente |
+| D7 retention | > 25% | Il prodotto tiene gli utenti |
+
+**Implementazione tecnica:**
+- Flag `premium_enabled` in Firebase Remote Config (GIA' ESISTENTE nel codebase)
+- `WaitlistSubscriptionRepository` che restituisce sempre `FREE` e cattura email
+- Koin module switch basato su `featureFlagRepository.getBoolean("premium_enabled")`
+- Zero codice da riscrivere quando si attiva — solo flip del flag
+
+#### Fase 2: MONETIZZAZIONE (con P.IVA)
+
+```
+premium_enabled = true (flip in Firebase Console)
+```
+
+- Aprire P.IVA forfettaria (vedi sezione 3.4)
+- Flip `premium_enabled` → il Koin module inietta `PlayBillingSubscriptionRepository`
+- Bottone "Abbonati" → apre Google Play Billing reale
+- Email a tutti gli iscritti waitlist: "Pro è disponibile! Primo mese gratis per te."
+- **Nessun utente si sente ingannato** — ha sempre visto i limiti FREE
+
+#### Paywall Trigger (identici in entrambe le fasi)
 
 **Trigger contestuali (non aggressivi):**
 - Chat: dopo 5 messaggi → inline paywall card
@@ -63,7 +109,7 @@ Calmify è una piattaforma wellness + social per self-improver 25-40 che combina
 - Avatar: "Crea il tuo avatar" → paywall se FREE
 - Social: "Invia messaggio" → paywall se FREE
 
-**A/B test da implementare:**
+**A/B test da implementare (Fase 2):**
 - Prezzo: €4.99 vs €5.99 vs €6.99
 - Trial: 7 giorni vs 14 giorni vs no trial
 - Annual discount: 30% vs 40% vs 50%
@@ -199,20 +245,55 @@ Se Calmify ha funzionalità social (feed, messaging, user-generated content):
 
 ### 3.4 Fatturazione & Fiscalità
 
+#### Fase Validazione (SENZA P.IVA)
+
+**Nessun obbligo fiscale se:**
+- App è gratuita su Play Store (no IAP, no abbonamenti attivi)
+- Nessun ricavo generato (donazioni occasionali via Ko-fi sono zona grigia ma tollerabili)
+- `premium_enabled = false` in Remote Config → nessun pagamento processato
+- Costi: solo €25 account Google Play Developer (una tantum)
+
+**Attenzione**: la soglia dei €5.000 NON esonera dalla P.IVA. L'obbligo dipende dalla
+natura dell'attività (abituale vs occasionale), non dall'importo. Un'app con abbonamenti
+attivi 24/7 è per definizione attività continuativa → P.IVA obbligatoria.
+
+#### Fase Monetizzazione (CON P.IVA) — solo quando `premium_enabled = true`
+
 **Scenario: vendita tramite Google Play Store**
 - Google agisce come **Merchant of Record** per le vendite consumer
 - Google gestisce IVA, fatturazione, e rimborsi per te
-- Tu ricevi il 85% (primo anno) o 70% del prezzo netto (dopo)
+- Tu ricevi il 85% (primo anno con < 1M di ricavi) o 70% del prezzo netto (dopo)
 - **Non serve** fattura elettronica per vendite consumer tramite Play Store
 - **Serve** contabilizzare i ricavi da Google Play nella tua dichiarazione
 
-**Obblighi fiscali Italia:**
-- [ ] Aprire Partita IVA (se non già aperta) — regime forfettario se <85K/anno
+**Obblighi fiscali Italia (lavoratore dipendente + P.IVA):**
+- [ ] Verificare contratto di lavoro per clausole di non concorrenza/esclusiva
+- [ ] Comunicare al datore di lavoro (se richiesto dal CCNL)
+- [ ] Aprire P.IVA — regime forfettario se reddito da dipendente < €35.000 lordi/anno
 - [ ] Codice ATECO: 62.01.00 (produzione software) o 63.11.00 (hosting/SaaS)
-- [ ] Iscriversi alla Gestione Separata INPS (se attività prevalente)
-- [ ] Dichiarazione redditi: quadro RR per contributi, quadro RE/RL per redditi
-- [ ] Se ricavi > €85K: passaggio a regime ordinario + IVA mensile/trimestrale
+- [ ] Iscriversi alla Gestione Separata INPS (~26% solo sul reddito da P.IVA)
+- [ ] Dichiarazione redditi: Modello Redditi PF (non più 730)
+- [ ] Se ricavi P.IVA > €85K/anno: passaggio obbligatorio a regime ordinario
 - [ ] Conservazione digitale fatture per 10 anni
+
+**Regime forfettario da dipendente — numeri reali:**
+```
+Reddito da P.IVA (es. anno 1): €5.000
+Coefficiente redditività ATECO 62.01: 67%
+Reddito imponibile: €5.000 × 67% = €3.350
+
+Tasse (5% startup, primi 5 anni): €167
+INPS Gestione Separata (26.07%): €873
+Commercialista: ~€600/anno
+
+Totale costo annuo: ~€1.640
+Nota: i redditi da P.IVA NON si sommano allo stipendio nel forfettario
+```
+
+**Se reddito da dipendente SUPERA €35.000 lordi:**
+- Forfettario NON accessibile → regime ordinario obbligatorio
+- I redditi si cumulano per IRPEF (aliquota marginale 35-43%)
+- Valutare attentamente se conviene (con commercialista)
 
 **Per vendite B2B dirette (future, fuori Play Store):**
 - [ ] Sistema di fatturazione elettronica (SdI) — Fattura PA / Fatture in Cloud / simili
@@ -507,6 +588,10 @@ paywall_view → paywall_cta_click → purchase_start → purchase_complete
 
 ## 10. ROADMAP LANCIO
 
+### ============================================================
+### PARTE A: VALIDAZIONE (senza P.IVA, premium_enabled = false)
+### ============================================================
+
 ### Fase 0: Pre-Alpha (Settimana 1-2)
 - [ ] Fix signing config produzione
 - [ ] Fix ProGuard rules (test release build su device)
@@ -516,41 +601,62 @@ paywall_view → paywall_cta_click → purchase_start → purchase_complete
 - [ ] Estrarre stringhe in `strings.xml` (IT + EN)
 - [ ] Implementare "Elimina account" completo (GDPR Art. 17)
 - [ ] Scrivere Privacy Policy + Terms of Service
+- [ ] Implementare `WaitlistSubscriptionRepository`
+- [ ] Implementare `WaitlistDialog` (email capture)
+- [ ] Configurare Koin switch basato su `premium_enabled` flag
+- [ ] Verificare `premium_enabled = false` in Firebase Remote Config
 
 ### Fase 1: Alpha Chiusa (Settimana 3-4)
 - [ ] Deploy su Google Play Internal Testing
 - [ ] 10 tester interni: test funzionale completo
 - [ ] Fix bug critici trovati
-- [ ] Implementare analytics events (funnel completo)
-- [ ] Implementare purchase verification server-side (Cloud Function)
-- [ ] Test billing flow end-to-end (test products)
+- [ ] Implementare analytics events (funnel completo incl. waitlist)
+- [ ] Verificare che il billing NON si attivi con `premium_enabled = false`
+- [ ] Test paywall flow end-to-end (utente vede limite → paywall → waitlist)
 
 ### Fase 2: Beta Chiusa (Settimana 5-8)
 - [ ] Google Play Closed Alpha: 50-100 utenti
 - [ ] Form feedback strutturato (Google Form + in-app)
 - [ ] Monitorare crash rate, ANR rate, retention D1/D7/D30
-- [ ] A/B test paywall (prezzo + design)
+- [ ] Monitorare paywall views + waitlist signups
 - [ ] Ottimizzare onboarding basato su drop-off data
 - [ ] Preparare store listing (screenshot, video, descrizione)
 
-### Fase 3: Beta Aperta (Settimana 9-12)
+### Fase 3: Beta Aperta + Validazione (Settimana 9-16)
 - [ ] Google Play Open Beta: 500-1000 utenti
-- [ ] Monitorare metriche business (conversion, churn, ARPU)
+- [ ] Monitorare metriche di validazione (vedi soglie in sezione 1.5)
 - [ ] Iterare su feedback (top 5 richieste utenti)
 - [ ] Preparare landing page web (calmify.app)
-- [ ] Preparare materiali PR/marketing
 - [ ] Audit sicurezza finale
 - [ ] Audit GDPR finale
+- [ ] **DECISIONE**: le metriche giustificano la monetizzazione?
+  - waitlist > 100 signups → SI, procedi a Parte B
+  - waitlist < 30 signups → pivota product, migliora value prop
+  - D7 retention < 15% → fix engagement prima di monetizzare
 
-### Fase 4: Lancio Produzione (Settimana 13-14)
+### ============================================================
+### PARTE B: MONETIZZAZIONE (con P.IVA, premium_enabled = true)
+### ============================================================
+
+### Fase 4: Preparazione Monetizzazione (Settimana 17-18)
+- [ ] Aprire P.IVA forfettaria (consultare commercialista)
+- [ ] Verificare contratto di lavoro per clausole non concorrenza
+- [ ] Configurare Google Play Billing prodotti reali (€5.99/mese, €49.99/anno)
+- [ ] Implementare purchase verification server-side (Cloud Function)
+- [ ] Test billing flow end-to-end con test products
+- [ ] Preparare email per iscritti waitlist ("Pro è qui! Primo mese gratis per te")
+
+### Fase 5: Lancio PRO (Settimana 19-20)
+- [ ] Flip `premium_enabled = true` in Firebase Console
+- [ ] Inviare email waitlist con codice promo primo mese gratis
 - [ ] Rilascio graduale: 20% → 50% → 100%
-- [ ] Monitorare metriche real-time (Crashlytics, Analytics, Firestore)
+- [ ] Monitorare conversion rate, MRR, churn in real-time
 - [ ] Supporto utenti attivo (email, in-app feedback)
 - [ ] Post su social media, PR outreach
-- [ ] Celebrare 🎉
 
-### Post-Lancio (Mese 2-6)
+### Post-Lancio (Mese 6-12)
 - [ ] Iterazione settimanale basata su dati
+- [ ] A/B test paywall (prezzo + design + trial length)
 - [ ] Aggiungere lingue (ES, FR, DE)
 - [ ] Implementare referral program
 - [ ] Valutare iOS launch (il codice KMP è pronto)
@@ -560,7 +666,7 @@ paywall_view → paywall_cta_click → purchase_start → purchase_complete
 
 ## 11. CHECKLIST FINALE PRE-LANCIO
 
-### Must Have (Blockers)
+### Must Have — Validazione (Parte A, senza P.IVA)
 - [ ] Signing config produzione
 - [ ] ProGuard rules complete + test release su device
 - [ ] Crashlytics attivo
@@ -569,11 +675,22 @@ paywall_view → paywall_cta_click → purchase_start → purchase_complete
 - [ ] Consenso GDPR nell'onboarding
 - [ ] "Elimina account" funzionante
 - [ ] Firestore security rules verificate
-- [ ] Purchase verification server-side
 - [ ] Network Security Config (no cleartext)
 - [ ] Store listing completo (screenshot, descrizione, icona)
 - [ ] Content rating questionnaire compilato
 - [ ] AAB build testato su device fisico
+- [ ] `WaitlistSubscriptionRepository` implementato
+- [ ] `WaitlistDialog` con email capture implementato
+- [ ] `premium_enabled = false` verificato in Firebase Remote Config
+- [ ] Analytics: paywall_viewed + waitlist_signup eventi configurati
+
+### Must Have — Monetizzazione (Parte B, con P.IVA)
+- [ ] P.IVA aperta (regime forfettario)
+- [ ] Contratto di lavoro verificato (no clausole bloccanti)
+- [ ] Purchase verification server-side (Cloud Function)
+- [ ] Google Play Billing test products verificati
+- [ ] Email template waitlist pronto
+- [ ] `premium_enabled = true` testato in staging
 
 ### Should Have
 - [ ] Baseline Profile per performance
@@ -581,7 +698,6 @@ paywall_view → paywall_cta_click → purchase_start → purchase_complete
 - [ ] Localizzazione IT + EN completa
 - [ ] Backup Firestore automatico
 - [ ] Rate limiting su API
-- [ ] A/B test paywall configurato
 
 ### Nice to Have
 - [ ] LeakCanary test completato
@@ -592,6 +708,60 @@ paywall_view → paywall_cta_click → purchase_start → purchase_complete
 
 ---
 
-> *"Sir, il piano è completo. Come sempre, l'eccellenza richiede attenzione ai dettagli.
-> Suggerisco di iniziare dalla Fase 0 — i blockers critici. Il resto seguirà naturalmente."*
+## 12. ARCHITETTURA PRO SWITCH — Dettaglio Tecnico
+
+### Componenti coinvolti
+
+```
+Firebase Remote Config
+  └── premium_enabled: Boolean (default: false)
+
+Koin DI Module (app/di/KoinModules.kt)
+  └── if (featureFlagRepo.getBoolean("premium_enabled"))
+        → PlayBillingSubscriptionRepository    // billing reale
+      else
+        → WaitlistSubscriptionRepository       // cattura email, no billing
+
+WaitlistSubscriptionRepository (core/util o data/mongo)
+  └── getUserTier() → always FREE
+  └── purchaseSubscription() → Result.failure(WaitlistException)
+  └── saveWaitlistEmail(email) → Firestore waitlist collection
+
+SubscriptionViewModel (features/subscription)
+  └── onPurchaseError:
+        is WaitlistException → sendEffect(ShowWaitlistDialog)
+        else → sendEffect(ShowError)
+
+WaitlistDialog (features/subscription UI)
+  └── TextField email + "Iscriviti" button
+  └── Salva su Firestore: waitlist/{email} { source, timestamp, userId }
+  └── Analytics: waitlist_signup { source_screen }
+
+PaywallScreen (features/subscription)
+  └── Invariato — mostra sempre feature matrix
+  └── Bottone "Abbonati" chiama purchaseSubscription()
+  └── Il risultato dipende dal repository iniettato
+```
+
+### Flag già esistenti in Firebase Remote Config
+
+| Flag | Tipo | Default | Uso |
+|------|------|---------|-----|
+| `premium_enabled` | Boolean | false | Master switch per billing reale |
+| `max_free_messages_per_day` | Long | 50 | Limite chat FREE (tuning) |
+| `social_enabled` | Boolean | false | Abilita features social |
+| `feed_enabled` | Boolean | false | Abilita feed/threads |
+| `messaging_enabled` | Boolean | false | Abilita DM |
+| `maintenance_mode` | Boolean | false | Blocca operazioni di scrittura |
+| `ab_test_new_home` | Boolean | false | A/B test redesign home |
+
+> Tutti i flag sono definiti in `FeatureFlagRepository` (commonMain) e implementati
+> in `FirebaseFeatureFlagRepository` (androidMain). Template importabile:
+> `remoteconfig.template.json` nella root del progetto.
+
+---
+
+> *"Sir, il piano è aggiornato con la strategia PRO Switch. Sviluppiamo tutto ora,
+> validiamo gratis, e quando i numeri parlano — un click e si monetizza.
+> Elegante, pragmatico, e senza rischi fiscali inutili."*
 > — Jarvis
