@@ -32,6 +32,11 @@ kotlin {
             implementation libs.sqldelight.coroutines
             implementation libs.kotlinx.serialization.json
             implementation libs.kotlinx.datetime
+
+            // Ktor HTTP client (KMP) — for Cloud Functions calls
+            implementation libs.ktor.client.core
+            implementation libs.ktor.client.content.negotiation
+            implementation libs.ktor.serialization.kotlinx.json
         }
 
         androidMain {
@@ -58,6 +63,9 @@ kotlin {
                 implementation libs.firebase.functions.kmp
                 implementation libs.firebase.config.kmp
                 implementation libs.firebase.analytics.kmp
+
+                // Ktor engine (Android)
+                implementation libs.ktor.client.okhttp
 
                 // Google Play Billing
                 implementation libs.billing.ktx
