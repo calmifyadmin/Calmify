@@ -29,56 +29,6 @@ import com.lifo.ui.R
 import com.lifo.ui.theme.Elevation
 import kotlin.math.max
 
-@Composable
-fun Gallery(
-    modifier: Modifier = Modifier,
-    images: List<String>,
-    imageSize: Dp = 40.dp,
-    spaceBetween: Dp = 10.dp,
-    imageShape: CornerBasedShape = Shapes().small
-) {
-    BoxWithConstraints(modifier = modifier) {
-        val numberOfVisibleImages = remember {
-            derivedStateOf {
-                max(
-                    a = 0,
-                    b = this.maxWidth.div(spaceBetween + imageSize).toInt().minus(1)
-                )
-            }
-        }
-
-        val remainingImages = remember {
-            derivedStateOf {
-                images.size - numberOfVisibleImages.value
-            }
-        }
-
-        Row {
-            images.take(numberOfVisibleImages.value).forEach { image ->
-                SubcomposeAsyncImage(
-                    modifier = Modifier
-                        .clip(imageShape)
-                        .size(imageSize),
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(image)
-                        .build(),
-                    loading = { CircularProgressIndicator(modifier = Modifier.fillMaxSize().align(Alignment.Center).padding(8.dp)) },
-                    contentScale = ContentScale.Crop,
-                    contentDescription = "Gallery Image"
-                )
-                Spacer(modifier = Modifier.width(spaceBetween))
-            }
-            if (remainingImages.value > 0) {
-                LastImageOverlay(
-                    imageSize = imageSize,
-                    imageShape = imageShape,
-                    remainingImages = remainingImages.value
-                )
-            }
-        }
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GalleryUploader(

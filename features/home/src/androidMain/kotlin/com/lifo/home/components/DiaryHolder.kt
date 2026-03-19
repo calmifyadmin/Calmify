@@ -1,10 +1,10 @@
 package com.lifo.home.components
 
-import com.lifo.ui.util.fetchImagesFromFirebase
-import com.lifo.ui.components.Gallery
+import com.lifo.socialui.media.MediaCarousel
+import com.lifo.util.repository.MediaUploadRepository
+import org.koin.compose.koinInject
 
 import android.annotation.SuppressLint
-import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -39,36 +39,27 @@ import java.util.*
 import kotlinx.datetime.Instant
 
 @Composable
-fun DiaryHolder(diary: Diary, onClick: (String) -> Unit) {
+fun DiaryHolder(
+    diary: Diary,
+    onClick: (String) -> Unit,
+    mediaRepository: MediaUploadRepository = koinInject(),
+) {
     val localDensity = LocalDensity.current
-    val context = LocalContext.current
     var componentHeight by remember { mutableStateOf(0.dp) }
     var galleryOpened by remember { mutableStateOf(false) }
     var galleryLoading by remember { mutableStateOf(false) }
-    val downloadedImages = remember{ mutableStateListOf<String>() }
+    val downloadedImages = remember { mutableStateListOf<String>() }
 
-    LaunchedEffect(key1 = galleryOpened){
+    LaunchedEffect(key1 = galleryOpened) {
         if (galleryOpened && downloadedImages.isEmpty()) {
             galleryLoading = true
-            fetchImagesFromFirebase(
-                remoteImagePaths = diary.images,
-                onImageDownload = { image ->
-                    downloadedImages.add(image)
-                },
-                onImageDownloadFailed = {
-                    Toast.makeText(
-                        context,
-                        "Images not uploaded yet." +
-                                "Wait a little bit, or try uploading again.",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    galleryLoading = false
-                    galleryOpened = false
-                }
-            ) {
-                galleryLoading = false
-                galleryOpened = true
+            try {
+                val urlMap = mediaRepository.resolveImageUrls(diary.images)
+                downloadedImages.addAll(urlMap.values)
+            } catch (_: Exception) {
+                galleryOpened = false
             }
+            galleryLoading = false
         }
     }
     Row(modifier = Modifier
@@ -122,7 +113,10 @@ fun DiaryHolder(diary: Diary, onClick: (String) -> Unit) {
                     )
                 ) {
                     Column(modifier = Modifier.padding(all = 14.dp)) {
-                        Gallery(images = downloadedImages)
+                        MediaCarousel(
+                            mediaUrls = downloadedImages,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
             }

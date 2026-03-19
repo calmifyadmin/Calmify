@@ -17,13 +17,59 @@
 - **Production Plan**: `PRODUCTION_READY_PLAN.md` — PRO Switch, Play Store, compliance, i18n
 
 ### Stato Codice (verificato 2026-03-18)
-- **commonMain**: 200 file (60%) — UI, ViewModel, domain, contracts, utility
-- **androidMain**: 135 file (40%) — Firebase, Filament, Camera, Audio, Platform-specific UI
+- **commonMain**: 218 file (61%) — UI, ViewModel, domain, contracts, utility, Ktor clients
+- **androidMain**: 137 file (39%) — di cui solo **17 veramente platform-specific** (vedi analisi sotto)
 - **Legacy src/main/java**: 0 file (eliminati tutti i `kotlin.srcDirs` mapping)
 - **app module**: 13 file (Android-only entry point, non KMP)
-- Repository interfaces in `core/util` commonMain, implementations Firebase in `data/mongo` androidMain
-- Firebase AI, Functions, RemoteConfig, Realtime DB, Play Billing → restano androidMain (no KMP SDK)
-- Feature Flags: 10 flag in Firebase Remote Config (incl. `premium_enabled` per PRO Switch)
+- Target realistico: **~95% commonMain** (335 di 355 file)
+
+### Analisi androidMain — Cosa resta davvero platform-specific
+
+| Categoria | File | % del totale | Strategia |
+|-----------|------|-------------|-----------|
+| **Già migrabili → commonMain** | 91 | 66% | Spostare fisicamente (zero import Android) |
+| **Migrabili con Ktor** | 28 | 20% | Firebase SDK → Ktor + Firebase REST API (commonMain) |
+| **expect/actual necessario** | 17 | 12% | Interface commonMain + actual per piattaforma |
+| **Platform-only** | 1 | <1% | `PlayBillingSubscriptionRepository` (Android forever) |
+
+### Strategia Cross-Platform (Android + iOS + Web Wasm)
+
+```
+commonMain (Kotlin)          → Condiviso 1 volta, gira ovunque
+  ├── UI: Compose Multiplatform
+  ├── Data: Ktor HTTP → Firebase REST API (Firestore, Auth, Storage)
+  ├── DB: SQLDelight (driver per piattaforma)
+  ├── Nav: Decompose
+  ├── DI: Koin
+  └── Logic: ViewModel, UseCase, domain
+
+androidMain (actual)         → Solo adapter hardware
+  ├── Audio I/O: AudioTrack/AudioRecord (9 file)
+  ├── 3D render: Filament JNI (4 file)
+  ├── Camera: CameraX (2 file)
+  ├── Theme: Dynamic Colors Android 12+ (1 file)
+  ├── Permissions: android.Manifest (1 file)
+  └── Billing: Play Billing (1 file)
+
+iosMain (actual, futuro)     → Stessi adapter
+  ├── Audio I/O: AVAudioEngine
+  ├── 3D render: Filament Metal/SceneKit
+  ├── Camera: AVCaptureSession
+  ├── Theme: UIKit appearance
+  ├── Permissions: Info.plist
+  └── Billing: StoreKit2
+
+wasmJsMain (actual, futuro)  → Stessi adapter
+  ├── Audio I/O: WebAudio API
+  ├── 3D render: Three.js / Filament WASM
+  ├── Camera: getUserMedia
+  ├── Theme: CSS media query
+  ├── Permissions: browser Permissions API
+  └── Billing: Stripe/web checkout
+```
+
+**Nota chiave**: Con Compose Wasm il codice Web è **Kotlin**, non JavaScript.
+Firebase REST API funziona via Ktor da qualsiasi piattaforma — stessa implementazione.
 
 ---
 
@@ -34,7 +80,7 @@ app/                          Android-only (MainActivity, DecomposeApp, RootComp
 │
 ├── core/util/                KMP Library — commonMain: 44 file | androidMain: 2 file
 ├── core/ui/                  KMP Compose — commonMain: 12 file | androidMain: 6 file
-├── data/mongo/               KMP Library + SQLDelight — commonMain: 4 .sq | androidMain: 24 file
+├── data/mongo/               KMP Library + SQLDelight — commonMain: 4 .sq + 2 .kt | androidMain: 24 file
 │
 ├── features/auth/            commonMain: 2 | androidMain: 5
 ├── features/home/            commonMain: 32 | androidMain: 23
@@ -74,7 +120,10 @@ app/                          Android-only (MainActivity, DecomposeApp, RootComp
 | **Database** | SQLDelight | 2.0.2 | 4 tabelle. Room rimosso completamente |
 | **UI** | Compose Multiplatform | + Material3 | Compose BOM per Android, MP per common |
 | **Auth** | Firebase Auth | via AuthProvider | Interface in commonMain, impl in androidMain |
-| **Storage** | Firebase Firestore | + Storage, Functions | 19 repository implementations |
+| **Storage** | Firebase Firestore | + Storage | 19 repository implementations |
+| **Feature Flags** | Firestore document | config/flags | Migrato da Remote Config (real-time listener) |
+| **Presence** | Firestore collection | presence/{userId} | Migrato da Realtime Database |
+| **Cloud Functions** | Ktor HTTP | commonMain | KMP client per callable functions |
 | **AI/Voice** | Gemini API | Live WebSocket | Full-duplex AEC, Silero VAD, Sherpa-ONNX TTS |
 | **3D** | Filament | 1.68.2 | VRM avatar, lip-sync, bone animation |
 | **Async** | Coroutines + Flow | | StateFlow ovunque |
@@ -142,6 +191,13 @@ ErrorBoundary.kt                        — Error boundary composable
 GalleryState.kt                         — Stato galleria immagini
 ```
 
+### data/mongo/src/commonMain/kotlin/ (Ktor clients — KMP)
+
+```
+repository/KtorCloudFunctionsClient.kt     — Shared Ktor helper per Firebase callable functions (HTTPS POST)
+repository/KtorContentModerationRepository.kt — Content moderation via Cloud Functions (commonMain-ready)
+```
+
 ### data/mongo/src/commonMain/sqldelight/ (SQLDelight schema)
 
 ```
@@ -159,7 +215,7 @@ ImageToDelete.sq    — 3 queries (getAll, add, cleanup)
 
 ```
 databaseModule          — CalmifyDatabase (SQLDelight), Queries, ConnectivityObserver
-firebaseModule          — FirebaseAuth, AuthProvider, Storage, Firestore, Functions, RemoteConfig
+firebaseModule          — FirebaseAuth, AuthProvider, Storage, Firestore, Functions, Analytics
 repositoryModule        — 19 repository implementations (tutte singleton)
 networkModule           — (vuoto, riservato per Ktor)
 socialModule            — (vuoto, repos in repositoryModule)
@@ -334,19 +390,53 @@ val databaseModule = module {
 
 ---
 
-## Prossimi Passi
+## Prossimi Passi — Roadmap KMP
+
+### Fase 1: Low-Hanging Fruit (91 file → commonMain) — ~2-3 giorni
+Spostare tutti i file con **ZERO import Android**:
+- 60+ screen/component Compose (già Compose MP, solo fisicamente in androidMain)
+- 15+ use case (logica pura)
+- Tutti i ViewModel senza java.time
+- Tutti i Koin module, entry point, mapper
+- `java.time` → `kotlinx.datetime` in 3 file (DateFormatters, HomeVM, WriteVM)
+- `ColorUtils` → pure Kotlin HSL math
+
+### Fase 2: Firebase → Ktor REST (28 file → commonMain) — ~5-7 giorni
+Migrare tutti i repository da Firebase SDK a **Ktor + Firebase REST API**:
+- 18 Firestore repositories → Ktor HTTP client (REST API)
+- Firebase Auth → Ktor + Firebase Auth REST API
+- Firebase Storage → Ktor + GCS REST API
+- Firebase Analytics → Ktor + Measurement Protocol
+- MongoKoinModule → setup Ktor HttpClient in commonMain
+- **Risultato**: UNA sola implementazione per Android, iOS, Web
+
+### Fase 3: expect/actual Audio & Rendering (17 file) — ~7-9 giorni
+Creare interface in commonMain + actual per piattaforma:
+- Audio I/O: `expect interface AudioEngine` (9 file)
+- Filament 3D: `expect interface Renderer` (4 file)
+- Camera: `expect interface CameraPreview` (2 file)
+- Permissions + Theme (2 file)
+
+### Fase 4: Piattaforme Target
+- **Android**: Già funzionante (Play Store ready)
+- **Web (Compose Wasm)**: Firebase Hosting, costo €0, stessa codebase Kotlin
+- **iOS**: `iosApp/`, actual per Audio (AVAudioEngine), Filament (Metal), StoreKit2
+- **Desktop**: actual per Audio (Java Sound API), Filament (OpenGL/Metal)
 
 ### Production Launch (vedi `PRODUCTION_READY_PLAN.md`)
 1. Fase 0: Fix signing, ProGuard, Crashlytics, Privacy Policy, Prominent Disclosure
 2. Implementare WaitlistSubscriptionRepository + WaitlistDialog (PRO Switch)
 3. Compilare Play Console: Data Safety, Health Apps Declaration, IARC
-4. Alpha → Beta → Production (roadmap 20 settimane)
+4. Alpha → Beta → Production
 
-### Per supportare iOS/Desktop (futuro)
-1. Creare `iosApp/` con SwiftUI che consuma i moduli commonMain (200 file pronti)
-2. Implementare `actual` per: Theme, AuthProvider, SqlDriver (iOS = NativeSqliteDriver)
-3. Firebase repos: GitLive per Firestore/Auth/Storage, alternative per AI/Functions/Billing
-4. Filament: iOS wrapper C++/Swift, Desktop wrapper Metal/OpenGL
+### Stima Totale Migrazione Completa
+| Fase | File | Giorni | Rischio |
+|------|------|--------|---------|
+| Fase 1: Move to commonMain | 91 | 2-3 | Minimo |
+| Fase 2: Firebase → Ktor | 28 | 5-7 | Medio |
+| Fase 3: expect/actual | 17 | 7-9 | Medio |
+| **TOTALE** | **136/137** | **14-19 giorni** | |
+| **Risultato** | **~95% commonMain** | | Solo 1 file Android-only (PlayBilling) |
 
 ---
 
@@ -379,3 +469,7 @@ val databaseModule = module {
 | 2026-03-17 | Fix: java.time→kotlinx.datetime, System.currentTimeMillis→KMP, String.format→KMP |
 | 2026-03-17 | Coil downgrade 3.3.0→3.1.0 (Kotlin 2.1.0 ABI compatibility) |
 | 2026-03-18 | PRODUCTION_READY_PLAN.md: Play Store, business model, compliance, PRO Switch |
+| 2026-03-18 | Firebase RemoteConfig → Firestore document `config/flags` (FirestoreFeatureFlagRepository) |
+| 2026-03-18 | Firebase RTDB Presence → Firestore collection `presence/` (FirestorePresenceRepository) |
+| 2026-03-18 | Cloud Functions → Ktor HTTP client in commonMain (KtorCloudFunctionsClient) |
+| 2026-03-18 | Rimossi deps: firebase-database-kmp, firebase-config-kmp — 2 servizi Firebase in meno |

@@ -24,6 +24,14 @@ interface MediaUploadRepository {
         mimeType: String
     ): Flow<UploadProgress>
 
+    /**
+     * Resolves remote storage paths to download URLs.
+     * Returns a map of originalPath → resolvedUrl.
+     * Paths starting with "http" are returned as-is.
+     * Failed paths are omitted from the result.
+     */
+    suspend fun resolveImageUrls(remotePaths: List<String>): Map<String, String>
+
     suspend fun deleteMedia(mediaUrl: String): RequestState<Boolean>
 
     data class MediaUpload(

@@ -105,6 +105,24 @@ class FirebaseMediaUploadRepository @Inject constructor(
         awaitClose { uploadTask.cancel() }
     }
 
+    override suspend fun resolveImageUrls(remotePaths: List<String>): Map<String, String> {
+        val result = mutableMapOf<String, String>()
+        remotePaths.forEach { path ->
+            if (path.isBlank()) return@forEach
+            if (path.startsWith("http")) {
+                result[path] = path
+                return@forEach
+            }
+            try {
+                val url = storage.reference.child(path.trim()).downloadUrl.await().toString()
+                result[path] = url
+            } catch (_: Exception) {
+                // Skip failed paths
+            }
+        }
+        return result
+    }
+
     override suspend fun deleteMedia(mediaUrl: String): RequestState<Boolean> {
         return try {
             val ref = storage.getReferenceFromUrl(mediaUrl)

@@ -9,12 +9,8 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.firestoreSettings
 import com.google.firebase.firestore.memoryCacheSettings
 import com.google.firebase.firestore.persistentCacheSettings
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.database
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.functions.functions
-import com.google.firebase.remoteconfig.FirebaseRemoteConfig
-import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.storage
 import com.lifo.mongo.database.CalmifyDatabase
@@ -30,10 +26,10 @@ import com.lifo.mongo.repository.FirestoreSocialGraphRepository
 import com.lifo.mongo.repository.FirestoreSocialMessagingRepository
 import com.lifo.mongo.repository.FirestoreThreadRepository
 import com.lifo.mongo.repository.FirestoreWellbeingRepository
-import com.lifo.mongo.repository.FirebasePresenceRepository
+import com.lifo.mongo.repository.FirestorePresenceRepository
 import com.lifo.mongo.repository.FirebaseMediaUploadRepository
 import com.lifo.mongo.repository.CloudFunctionsContentModerationRepository
-import com.lifo.mongo.repository.FirebaseFeatureFlagRepository
+import com.lifo.mongo.repository.FirestoreFeatureFlagRepository
 import com.lifo.mongo.repository.PlayBillingSubscriptionRepository
 import com.lifo.mongo.repository.UnifiedContentRepositoryImpl
 import com.lifo.util.repository.ChatRepository
@@ -71,28 +67,7 @@ val firebaseModule = module {
     single<FirebaseAnalytics> { FirebaseAnalytics.getInstance(get()) }
     single<AnalyticsTracker> { FirebaseAnalyticsTracker(get()) }
     single<FirebaseStorage> { Firebase.storage }
-    single<FirebaseDatabase> { Firebase.database }
     single<FirebaseFunctions> { Firebase.functions("europe-west1") }
-    single<FirebaseRemoteConfig> {
-        val config = FirebaseRemoteConfig.getInstance()
-        val settings = FirebaseRemoteConfigSettings.Builder()
-            .setMinimumFetchIntervalInSeconds(3600) // 1 hour in production
-            .build()
-        config.setConfigSettingsAsync(settings)
-        config.setDefaultsAsync(mapOf(
-            "social_enabled" to false,
-            "feed_enabled" to false,
-            "messaging_enabled" to false,
-            "federation_enabled" to false,
-            "semantic_search_enabled" to false,
-            "media_pipeline_enabled" to false,
-            "premium_enabled" to false,
-            "ab_test_new_home" to false,
-            "max_free_messages_per_day" to 50L,
-            "maintenance_mode" to false,
-        ))
-        config
-    }
     single<FirebaseFirestore> {
         val firestore = FirebaseFirestore.getInstance(
             FirebaseApp.getInstance(),
@@ -132,12 +107,12 @@ val repositoryModule = module {
     single<SocialMessagingRepository> { FirestoreSocialMessagingRepository(get(), get()) }
 
     // Wave 8: Presence, Media, AI Moderation
-    single<UserPresenceRepository> { FirebasePresenceRepository(get()) }
+    single<UserPresenceRepository> { FirestorePresenceRepository(get()) }
     single<MediaUploadRepository> { FirebaseMediaUploadRepository(get()) }
     single<ContentModerationRepository> { CloudFunctionsContentModerationRepository(get()) }
 
-    // Wave 9D: Feature Flags
-    single<FeatureFlagRepository> { FirebaseFeatureFlagRepository(get()) }
+    // Feature Flags (Firestore-based, replaces Remote Config)
+    single<FeatureFlagRepository> { FirestoreFeatureFlagRepository(get()) }
 
     // Wave 9C: Subscription/Billing
     single<SubscriptionRepository> { PlayBillingSubscriptionRepository(androidContext(), get()) }

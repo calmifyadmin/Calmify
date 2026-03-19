@@ -32,7 +32,7 @@ import com.lifo.socialui.animation.pressScale
 import com.lifo.socialui.animation.staggeredEntrance
 import com.lifo.socialui.avatar.ClusteredAvatars
 import com.lifo.socialui.avatar.UserAvatar
-import com.lifo.socialui.media.MediaGrid
+import com.lifo.socialui.media.MediaCarousel
 import com.lifo.socialui.thread.ThreadLine
 import com.lifo.util.repository.ThreadRepository
 
@@ -239,7 +239,7 @@ fun ThreadPostCard(
             // Media grid (2x2 Threads-style)
             if (thread.mediaUrls.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
-                MediaGrid(
+                MediaCarousel(
                     mediaUrls = thread.mediaUrls,
                     modifier = Modifier.fillMaxWidth()
                 )

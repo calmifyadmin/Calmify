@@ -17,7 +17,7 @@ import com.lifo.util.repository.MongoRepository
 import com.lifo.ui.GalleryImage
 import com.lifo.ui.GalleryState
 import com.lifo.util.Constants.WRITE_SCREEN_ARGUMENT_KEY
-import com.lifo.ui.util.fetchImagesFromFirebase
+import com.lifo.util.repository.MediaUploadRepository
 import com.lifo.util.model.BodySensation
 import com.lifo.util.model.Diary
 import com.lifo.util.model.Mood
@@ -131,6 +131,7 @@ internal class WriteViewModel constructor(
     private val imageToUploadQueries: ImageToUploadQueries,
     private val imageToDeleteQueries: ImageToDeleteQueries,
     private val diaryRepository: MongoRepository,
+    private val mediaRepository: MediaUploadRepository,
     private val context: Application
 ) : MviViewModel<WriteContract.Intent, WriteContract.State, WriteContract.Effect>(
     initialState = WriteContract.State()
@@ -471,19 +472,15 @@ internal class WriteViewModel constructor(
                                 )
                             }
 
-                            fetchImagesFromFirebase(
-                                remoteImagePaths = diary.data.images,
-                                onImageDownload = { downloadedImage ->
-                                    currentState.galleryState.addImage(
-                                        GalleryImage(
-                                            image = downloadedImage,
-                                            remoteImagePath = extractImagePath(
-                                                fullImageUrl = downloadedImage
-                                            ),
-                                        )
+                            val urlMap = mediaRepository.resolveImageUrls(diary.data.images)
+                            urlMap.forEach { (remotePath, downloadUrl) ->
+                                currentState.galleryState.addImage(
+                                    GalleryImage(
+                                        image = downloadUrl,
+                                        remoteImagePath = remotePath,
                                     )
-                                }
-                            )
+                                )
+                            }
                         }
                     }
             }

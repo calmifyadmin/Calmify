@@ -59,9 +59,7 @@ kotlin {
                 implementation libs.firebase.auth.kmp
                 implementation libs.firebase.storage.kmp
                 implementation libs.firebase.firestore.kmp
-                implementation libs.firebase.database.kmp
                 implementation libs.firebase.functions.kmp
-                implementation libs.firebase.config.kmp
                 implementation libs.firebase.analytics.kmp
 
                 // Ktor engine (Android)

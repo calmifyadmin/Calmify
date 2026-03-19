@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
-import com.google.firebase.storage.FirebaseStorage
+import com.lifo.util.repository.MediaUploadRepository
 import com.lifo.ui.emotion.MiniMoodShape
 import com.lifo.util.auth.AuthProvider
 import com.lifo.util.auth.UserIdentityResolver
@@ -375,7 +375,8 @@ private fun JournalDiaryItem(
 private fun DiaryPhotoCarousel(
     diariesWithImages: List<Diary>,
     onDiaryClick: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    mediaRepository: MediaUploadRepository = koinInject(),
 ) {
     // Flatten to (diary, remotePath) pairs for the carousel items
     val carouselItems = remember(diariesWithImages) {
@@ -384,20 +385,11 @@ private fun DiaryPhotoCarousel(
         }
     }
 
-    // Resolve Firebase Storage paths to download URLs
+    // Resolve storage paths to download URLs via repository (KMP-compatible)
     val resolvedUrls = remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     LaunchedEffect(carouselItems) {
-        val storage = FirebaseStorage.getInstance().reference
-        carouselItems.forEach { (_, path) ->
-            if (path.startsWith("http")) {
-                resolvedUrls.value = resolvedUrls.value + (path to path)
-            } else {
-                storage.child(path.trim()).downloadUrl
-                    .addOnSuccessListener { uri ->
-                        resolvedUrls.value = resolvedUrls.value + (path to uri.toString())
-                    }
-            }
-        }
+        val paths = carouselItems.map { it.second }
+        resolvedUrls.value = mediaRepository.resolveImageUrls(paths)
     }
 
     val carouselState = rememberCarouselState { carouselItems.size }

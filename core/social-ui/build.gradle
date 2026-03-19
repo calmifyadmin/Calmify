@@ -34,6 +34,9 @@ kotlin {
             // Core Android
             implementation libs.core.ktx
 
+            // Material 3 Expressive (carousel)
+            implementation libs.compose.material3.expressive
+
             // Coil network backend (Android-specific OkHttp)
             implementation libs.coil.network.okhttp
         }
