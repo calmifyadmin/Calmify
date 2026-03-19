@@ -44,6 +44,9 @@ fun SubscriptionRouteContent(
                     val msg = if (effect.count > 0) "Abbonamento ripristinato!" else "Nessun abbonamento trovato"
                     Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                 }
+                is SubscriptionContract.Effect.WaitlistSubmitSuccess -> {
+                    Toast.makeText(context, "Iscrizione completata!", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }

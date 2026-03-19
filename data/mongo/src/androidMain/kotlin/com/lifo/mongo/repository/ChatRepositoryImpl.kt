@@ -161,6 +161,22 @@ class ChatRepositoryImpl(
         }
     }
 
+    override suspend fun deleteAllSessions(): RequestState<Boolean> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val sessions = chatSessionQueries.getAllSessions(currentUserId).executeAsList()
+                sessions.forEach { session ->
+                    chatMessageQueries.deleteMessagesForSession(session.id)
+                    chatSessionQueries.deleteSession(session.id, currentUserId)
+                }
+                RequestState.Success(true)
+            } catch (e: Exception) {
+                println("[" + TAG + "] ERROR: " + "Error deleting all sessions")
+                RequestState.Error(e)
+            }
+        }
+    }
+
     override fun getMessagesForSession(sessionId: String): Flow<RequestState<List<ChatMessage>>> {
         return chatMessageQueries.getMessagesForSession(sessionId)
             .asFlow()

@@ -149,6 +149,10 @@ fun SettingsScreen(
                     isLoading = uiState.isExporting,
                 )
 
+                // Health Disclaimer
+                SettingsSectionHeader(title = "Informazioni")
+                HealthDisclaimerCard()
+
                 // Account Actions Section
                 SettingsSectionHeader(title = "Account")
                 AccountActionsSection(
@@ -562,4 +566,37 @@ private fun DeleteAccountConfirmationDialog(
             }
         }
     )
+}
+
+/**
+ * Health Disclaimer Card (Play Store requirement)
+ */
+@Composable
+private fun HealthDisclaimerCard(modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        ),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.HealthAndSafety,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = "Calmify non e' un dispositivo medico e non e' destinata a diagnosticare, " +
+                        "trattare, curare o prevenire alcuna condizione medica. Le informazioni " +
+                        "fornite hanno scopo puramente informativo e di benessere generale. " +
+                        "Per consigli medici, consultare un professionista sanitario qualificato.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
 }

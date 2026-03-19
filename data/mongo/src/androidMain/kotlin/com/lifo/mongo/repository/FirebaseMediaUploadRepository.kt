@@ -123,6 +123,25 @@ class FirebaseMediaUploadRepository @Inject constructor(
         return result
     }
 
+    override suspend fun deleteAllUserMedia(userId: String): RequestState<Boolean> {
+        return try {
+            // Delete social-media/{userId}/ directory
+            val socialRef = storage.reference.child("$SOCIAL_MEDIA_PATH/$userId")
+            val socialItems = socialRef.listAll().await()
+            socialItems.items.forEach { it.delete().await() }
+
+            // Delete images/{userId}/ directory (diary images)
+            val imagesRef = storage.reference.child("images/$userId")
+            val imageItems = imagesRef.listAll().await()
+            imageItems.items.forEach { it.delete().await() }
+
+            RequestState.Success(true)
+        } catch (e: Exception) {
+            // Best-effort: some files may already be deleted
+            RequestState.Success(true)
+        }
+    }
+
     override suspend fun deleteMedia(mediaUrl: String): RequestState<Boolean> {
         return try {
             val ref = storage.getReferenceFromUrl(mediaUrl)

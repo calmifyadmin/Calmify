@@ -34,6 +34,9 @@ interface MediaUploadRepository {
 
     suspend fun deleteMedia(mediaUrl: String): RequestState<Boolean>
 
+    /** Delete all media for a user (account deletion / GDPR Art. 17). */
+    suspend fun deleteAllUserMedia(userId: String): RequestState<Boolean>
+
     data class MediaUpload(
         val url: String = "",
         val thumbnailUrl: String? = null,

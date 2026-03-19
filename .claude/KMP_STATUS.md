@@ -1,7 +1,7 @@
 # Calmify — Stato Progetto e Guida per Nuove Sessioni
 
 > **LEGGERE SEMPRE all'inizio di ogni sessione.**
-> Ultimo aggiornamento: 2026-03-18
+> Ultimo aggiornamento: 2026-03-19
 
 ## TL;DR — Stato Attuale
 
@@ -16,12 +16,13 @@
 - **MVI**: Tutti i 18+ ViewModel usano `MviViewModel<Intent, State, Effect>`
 - **Production Plan**: `PRODUCTION_READY_PLAN.md` — PRO Switch, Play Store, compliance, i18n
 
-### Stato Codice (verificato 2026-03-18)
-- **commonMain**: 218 file (61%) — UI, ViewModel, domain, contracts, utility, Ktor clients
+### Stato Codice (verificato 2026-03-19)
+- **commonMain**: 217 file (61%) — UI, ViewModel, domain, contracts, utility, Ktor clients
 - **androidMain**: 137 file (39%) — di cui solo **17 veramente platform-specific** (vedi analisi sotto)
 - **Legacy src/main/java**: 0 file (eliminati tutti i `kotlin.srcDirs` mapping)
 - **app module**: 13 file (Android-only entry point, non KMP)
 - Target realistico: **~95% commonMain** (335 di 355 file)
+- **Production Plan**: `PRODUCTION_READY_PLAN.md` + `.claude/PROD_PROGRESS.md` (tracker)
 
 ### Analisi androidMain — Cosa resta davvero platform-specific
 
@@ -409,6 +410,8 @@ Migrare tutti i repository da Firebase SDK a **Ktor + Firebase REST API**:
 - Firebase Analytics → Ktor + Measurement Protocol
 - MongoKoinModule → setup Ktor HttpClient in commonMain
 - **Risultato**: UNA sola implementazione per Android, iOS, Web
+- **Compose Wasm**: tutto resta Kotlin (no JavaScript), Ktor funziona su Wasm
+- **Già fatto**: Cloud Functions (KtorCloudFunctionsClient), FeatureFlags (Firestore), Presence (Firestore)
 
 ### Fase 3: expect/actual Audio & Rendering (17 file) — ~7-9 giorni
 Creare interface in commonMain + actual per piattaforma:
@@ -445,8 +448,10 @@ Creare interface in commonMain + actual per piattaforma:
 | File | Scopo |
 |------|-------|
 | `.claude/KMP_STATUS.md` | **Questo file** — stato progetto completo |
+| `.claude/PROD_PROGRESS.md` | **Tracker produzione** — checklist Fase 0-5 con stato |
 | `.claude/refactor-status.md` | Log cronologico di TUTTE le operazioni (470+ righe) |
 | `.claude/plans/valiant-noodling-prism.md` | Piano originale migrazione KMP (10 onde) |
+| `PRODUCTION_READY_PLAN.md` | Piano production-ready completo (business, legal, i18n, infra) |
 | `CLAUDE.md` | Istruzioni operative per Jarvis + overview progetto |
 | `build-logic/convention/` | Convention plugins KMP |
 | `gradle/libs.versions.toml` | Version catalog completo |
@@ -473,3 +478,7 @@ Creare interface in commonMain + actual per piattaforma:
 | 2026-03-18 | Firebase RTDB Presence → Firestore collection `presence/` (FirestorePresenceRepository) |
 | 2026-03-18 | Cloud Functions → Ktor HTTP client in commonMain (KtorCloudFunctionsClient) |
 | 2026-03-18 | Rimossi deps: firebase-database-kmp, firebase-config-kmp — 2 servizi Firebase in meno |
+| 2026-03-19 | MediaCarousel unificato: expect/actual (M3 Expressive su Android, HorizontalPager su common) |
+| 2026-03-19 | Eliminati: MediaGrid, Gallery(), FirebaseImageHelper — un solo componente per tutte le immagini |
+| 2026-03-19 | WriteViewModel usa MediaUploadRepository.resolveImageUrls() (no più Firebase diretto nell'UI) |
+| 2026-03-19 | DiaryHolder + ThreadPostCard + JournalHomeScreen tutti migrati a MediaCarousel |

@@ -1,14 +1,18 @@
 package com.lifo.subscription
 
+import com.lifo.util.analytics.AnalyticsTracker
 import com.lifo.util.auth.AuthProvider
 import com.lifo.util.model.RequestState
 import com.lifo.util.mvi.MviViewModel
 import com.lifo.util.repository.SubscriptionRepository
+import com.lifo.util.repository.WaitlistRepository
 import kotlinx.coroutines.launch
 
 class SubscriptionViewModel(
     private val subscriptionRepository: SubscriptionRepository,
     private val authProvider: AuthProvider,
+    private val waitlistRepository: WaitlistRepository,
+    private val analyticsTracker: AnalyticsTracker,
 ) : MviViewModel<SubscriptionContract.Intent, SubscriptionContract.State, SubscriptionContract.Effect>(
     initialState = SubscriptionContract.State()
 ) {
@@ -26,6 +30,9 @@ class SubscriptionViewModel(
             is SubscriptionContract.Intent.PurchaseSubscription -> purchaseSubscription(intent.productId)
             is SubscriptionContract.Intent.RestorePurchases -> restorePurchases()
             is SubscriptionContract.Intent.DismissPaywall -> sendEffect(SubscriptionContract.Effect.NavigateBack)
+            is SubscriptionContract.Intent.UpdateWaitlistEmail -> updateState { copy(waitlistEmail = intent.email) }
+            is SubscriptionContract.Intent.SubmitWaitlistEmail -> submitWaitlistEmail()
+            is SubscriptionContract.Intent.DismissWaitlistDialog -> updateState { copy(showWaitlistDialog = false, waitlistEmail = "", waitlistSubmitted = false) }
         }
     }
 
@@ -37,8 +44,14 @@ class SubscriptionViewModel(
         scope.launch {
             when (val result = subscriptionRepository.launchPurchaseFlow(activityContext, productId)) {
                 is RequestState.Error -> {
-                    updateState { copy(isLoading = false, error = result.message) }
-                    sendEffect(SubscriptionContract.Effect.ShowError(result.message))
+                    if (result.error.message?.contains("waitlist", ignoreCase = true) == true) {
+                        // PRO Switch: premium not enabled yet — show waitlist dialog
+                        analyticsTracker.logEvent("paywall_viewed", mapOf("source" to "billing_attempt"))
+                        updateState { copy(isLoading = false, showWaitlistDialog = true) }
+                    } else {
+                        updateState { copy(isLoading = false, error = result.message) }
+                        sendEffect(SubscriptionContract.Effect.ShowError(result.message))
+                    }
                 }
                 else -> { /* Billing flow launched — result comes via purchaseUpdates */ }
             }
@@ -132,6 +145,37 @@ class SubscriptionViewModel(
 
         updateState { copy(isLoading = true, error = null) }
         sendEffect(SubscriptionContract.Effect.LaunchBillingFlow(productId))
+    }
+
+    private fun submitWaitlistEmail() {
+        val email = currentState.waitlistEmail.trim()
+        if (email.isBlank() || !email.contains("@")) {
+            sendEffect(SubscriptionContract.Effect.ShowError("Inserisci un'email valida"))
+            return
+        }
+
+        scope.launch {
+            updateState { copy(isLoading = true) }
+            when (waitlistRepository.saveWaitlistEmail(
+                email = email,
+                userId = currentUserId,
+                source = "paywall"
+            )) {
+                is RequestState.Success -> {
+                    analyticsTracker.logEvent("waitlist_signup", mapOf(
+                        "source" to "paywall",
+                        "email_domain" to email.substringAfter("@")
+                    ))
+                    updateState { copy(isLoading = false, waitlistSubmitted = true) }
+                    sendEffect(SubscriptionContract.Effect.WaitlistSubmitSuccess)
+                }
+                is RequestState.Error -> {
+                    updateState { copy(isLoading = false) }
+                    sendEffect(SubscriptionContract.Effect.ShowError("Errore nel salvataggio. Riprova."))
+                }
+                else -> {}
+            }
+        }
     }
 
     private fun restorePurchases() {

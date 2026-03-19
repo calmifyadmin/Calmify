@@ -6,7 +6,7 @@ plugins {
     // id 'io.realm.kotlin'  // RIMOSSO - Migrato a Firestore
     id 'com.google.gms.google-services'
     alias(libs.plugins.org.jetbrains.kotlin.serialization)
-    // id 'com.google.firebase.crashlytics' // Uncomment for crash reporting
+    id 'com.google.firebase.crashlytics'
     // id 'com.google.firebase.firebase-perf' // Uncomment for performance monitoring
 }
 
@@ -147,7 +147,7 @@ dependencies {
     implementation libs.firebase.analytics
     implementation libs.firebase.messaging  // Week 8: FCM Push Notifications
     implementation libs.firebase.ai  // Firebase AI support (formerly vertexai)
-    // implementation libs.firebase.crashlytics // Uncomment if needed
+    implementation libs.firebase.crashlytics
 
     // SQLDelight (Room replacement)
     implementation libs.sqldelight.android
@@ -225,9 +225,5 @@ dependencies {
     androidTestImplementation libs.compose.ui.test
 }
 
-// KSP configurations
-ksp {
-    arg("room.schemaLocation", "$projectDir/schemas")
-    arg("room.incremental", "true")
-    arg("room.generateKotlin", "true")
-}
+// Crashlytics NDK symbol upload is configured automatically by the plugin.
+// To upload native symbols manually: ./gradlew app:uploadCrashlyticsSymbolFileDebug

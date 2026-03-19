@@ -31,6 +31,9 @@ interface ChatRepository {
     // Export operations
     suspend fun exportSessionToDiary(sessionId: String): RequestState<String>
 
+    // Account deletion
+    suspend fun deleteAllSessions(): RequestState<Boolean>
+
     // Live Chat integration
     suspend fun saveLiveMessage(
         sessionId: String,

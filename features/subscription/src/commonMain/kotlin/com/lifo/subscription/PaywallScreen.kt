@@ -81,6 +81,18 @@ fun PaywallScreen(
 ) {
     val scrollState = rememberScrollState()
 
+    // PRO Switch: Waitlist dialog when premium not yet enabled
+    if (state.showWaitlistDialog) {
+        WaitlistDialog(
+            email = state.waitlistEmail,
+            isLoading = state.isLoading,
+            isSubmitted = state.waitlistSubmitted,
+            onEmailChange = { onIntent(SubscriptionContract.Intent.UpdateWaitlistEmail(it)) },
+            onSubmit = { onIntent(SubscriptionContract.Intent.SubmitWaitlistEmail) },
+            onDismiss = { onIntent(SubscriptionContract.Intent.DismissWaitlistDialog) },
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(

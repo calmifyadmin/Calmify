@@ -7,6 +7,7 @@ import com.lifo.util.model.RequestState
 import com.lifo.util.mvi.MviContract
 import com.lifo.util.mvi.MviViewModel
 import com.lifo.util.repository.ChatRepository
+import com.lifo.util.repository.MediaUploadRepository
 import com.lifo.util.repository.MongoRepository
 import com.lifo.util.repository.ProfileSettingsRepository
 import kotlinx.coroutines.flow.StateFlow
@@ -74,6 +75,7 @@ class SettingsViewModel constructor(
     private val authProvider: AuthProvider,
     private val diaryRepository: MongoRepository,
     private val chatRepository: ChatRepository,
+    private val mediaUploadRepository: MediaUploadRepository,
 ) : MviViewModel<SettingsContract.Intent, SettingsUiState, SettingsContract.Effect>(
     initialState = SettingsUiState()
 ) {
@@ -392,11 +394,22 @@ class SettingsViewModel constructor(
             try {
                 val userId = authProvider.currentUserId
                 if (userId != null) {
+                    // 1. Delete all diaries
+                    diaryRepository.deleteAllDiaries()
+
+                    // 2. Delete all chat sessions
+                    chatRepository.deleteAllSessions()
+
+                    // 3. Delete all uploaded images from Storage
+                    mediaUploadRepository.deleteAllUserMedia(userId)
+
+                    // 4. Delete profile settings from Firestore
                     profileSettingsRepository.deleteProfileSettings(userId)
                 }
 
-                // Sign out (account deletion is handled server-side or via platform-specific code)
+                // 5. Sign out from Firebase Auth
                 authProvider.signOut()
+
                 updateState { copy(isDeleting = false) }
                 sendEffect(SettingsContract.Effect.AccountDeleted)
                 _legacyDeleteCallback?.invoke()
@@ -405,12 +418,12 @@ class SettingsViewModel constructor(
                 updateState {
                     copy(
                         isDeleting = false,
-                        error = "Failed to delete account: ${e.message}"
+                        error = "Errore nella cancellazione: ${e.message}"
                     )
                 }
                 sendEffect(
                     SettingsContract.Effect.ShowError(
-                        "Failed to delete account: ${e.message}"
+                        "Errore nella cancellazione: ${e.message}"
                     )
                 )
             }
