@@ -9,21 +9,29 @@ import com.lifo.util.model.SentimentLabel
 
 /**
  * Emotion-Aware Color System
- * Semantic colors for emotions and sentiments.
- * For theme accent colors, use MaterialTheme.colorScheme (primary, secondary, tertiary).
+ *
+ * All greens now derive from the Calmify sage seed (0xFF4CAF7D) tonal family
+ * defined in core/ui Color.kt — no more stock Material green.
+ *
+ * Sage tonal family:
+ *   SageBright  0xFF8AF2BE  (tone 90)
+ *   Sage        0xFF6DD4A0  (tone 70)
+ *   SageMedium  0xFF4CAF7D  (tone 50 — seed)
+ *   SageDim     0xFF2E7D55  (tone 35 — primary)
+ *   SageSoft    0xFF7BB89A  (desaturated)
  */
 @Stable
 object EmotionAwareColors {
 
-    // ==================== BASE EMOTION COLORS ====================
+    // ==================== BASE EMOTION COLORS (sage-aligned) ====================
 
-    val veryPositiveLight = Color(0xFF4CAF50)
-    val veryPositiveDark = Color(0xFF2E7D32)
-    val veryPositiveSurface = Color(0x1A4CAF50)
+    val veryPositiveLight = Color(0xFF4CAF7D)   // SageMedium (seed)
+    val veryPositiveDark = Color(0xFF2E7D55)    // SageDim (primary)
+    val veryPositiveSurface = Color(0x1A4CAF7D)
 
-    val positiveLight = Color(0xFF81C784)
-    val positiveDark = Color(0xFF66BB6A)
-    val positiveSurface = Color(0x1A81C784)
+    val positiveLight = Color(0xFF7BB89A)       // SageSoft
+    val positiveDark = Color(0xFF6DD4A0)        // Sage (tone 70)
+    val positiveSurface = Color(0x1A7BB89A)
 
     val neutralLight = Color(0xFF90A4AE)
     val neutralDark = Color(0xFF607D8B)
@@ -144,15 +152,15 @@ object EmotionAwareColors {
         )
     }
 
-    // ==================== CHART COLORS ====================
+    // ==================== CHART COLORS (sage-aligned) ====================
 
     object ChartColors {
-        val positiveSegment = Color(0xFF4CAF50)
+        val positiveSegment = Color(0xFF4CAF7D)       // SageMedium
         val neutralSegment = Color(0xFF607D8B)
         val negativeSegment = Color(0xFFEF5350)
 
-        val veryPositiveSegment = Color(0xFF2E7D32)
-        val positiveSegmentLight = Color(0xFF81C784)
+        val veryPositiveSegment = Color(0xFF2E7D55)    // SageDim
+        val positiveSegmentLight = Color(0xFF7BB89A)   // SageSoft
         val neutralSegmentLight = Color(0xFF90A4AE)
         val negativeSegmentLight = Color(0xFFFF7043)
         val veryNegativeSegment = Color(0xFFD32F2F)
@@ -174,14 +182,14 @@ object EmotionAwareColors {
         )
     }
 
-    // ==================== PATTERN COLORS ====================
+    // ==================== PATTERN COLORS (sage-aligned) ====================
 
     object PatternColors {
-        val adaptive = Color(0xFF4CAF50)
+        val adaptive = Color(0xFF4CAF7D)               // SageMedium
         val maladaptive = Color(0xFFEF5350)
         val neutral = Color(0xFF607D8B)
 
-        val adaptiveLight = Color(0xFFE8F5E9)
+        val adaptiveLight = Color(0xFFDFF5EA)           // sage-tinted surface
         val maladaptiveLight = Color(0xFFFFEBEE)
         val neutralLight = Color(0xFFECEFF1)
     }
@@ -199,12 +207,14 @@ object EmotionAwareColors {
     // ==================== STREAK/ACHIEVEMENT COLORS ====================
 
     object AchievementColors {
-        val streakFire = Color(0xFFFF3434)
-        val streakHot = Color(0xFFFF6600)
-        val streakWarm = Color(0xFFF5F108)
+        // Growth leaf tones — monochrome sage scale from seed
+        val growthLush = Color(0xFF2E7D55)      // SageDim (30+, deepest)
+        val growthFull = Color(0xFF4CAF7D)       // SageMedium (14+)
+        val growthYoung = Color(0xFF6DD4A0)      // Sage (7+)
+        val growthSprout = Color(0xFF8AF2BE)     // SageBright (1-6)
 
-        val goalComplete = Color(0xFF4CAF50)
-        val goalInProgress = Color(0xFF42A5F5)
+        val goalComplete = Color(0xFF4CAF7D)     // SageMedium
+        val goalInProgress = Color(0xFF6DD4A0)   // Sage
         val goalNotStarted = Color(0xFFBDBDBD)
 
         val common = Color(0xFF90A4AE)
@@ -212,12 +222,13 @@ object EmotionAwareColors {
         val epic = Color(0xFFAB47BC)
         val legendary = Color(0xFFFFCA28)
 
+        /** Returns a sage-toned color by growth stage */
         fun getStreakColor(days: Int): Color {
             return when {
-                days >= 30 -> streakFire
-                days >= 14 -> streakHot
-                days >= 7 -> streakWarm
-                else -> goalInProgress
+                days >= 30 -> growthLush
+                days >= 14 -> growthFull
+                days >= 7 -> growthYoung
+                else -> growthSprout
             }
         }
 

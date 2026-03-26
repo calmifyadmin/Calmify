@@ -22,7 +22,7 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 import java.time.DayOfWeek
-import androidx.compose.material.icons.rounded.LocalFireDepartment
+
 
 @Composable
 internal fun WeeklyActivityTracker(

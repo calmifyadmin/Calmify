@@ -195,307 +195,223 @@ fun EmotionProgressIndicator(
 }
 
 /**
- * Animated flame indicator for streak display
- * Uses Canvas drawing for a realistic flame shape with gradient
+ * Growth leaf indicator for streak display
+ * A monochrome leaf (seed/primary color) that grows based on writing streak.
+ * Stages: seed (0) → sprout (1-6) → young leaf (7-13) → full leaf (14-29) → lush (30+)
  */
 @Composable
-fun StreakFlameIndicator(
+fun GrowthLeafIndicator(
     streakDays: Int,
     size: Dp = 32.dp,
-    isActive: Boolean = true,
     modifier: Modifier = Modifier
 ) {
-    // Flame colors based on streak level
-    val flameColors = getFlameColors(streakDays, isActive)
+    val primaryColor = MaterialTheme.colorScheme.primary
 
-    // Subtle animation for active flames
-    val infiniteTransition = rememberInfiniteTransition(label = "flame")
+    // Growth factor: 0→0.3, 1-6→0.4-0.6, 7-13→0.65-0.8, 14-29→0.85-0.95, 30+→1.0
+    val growthFactor = when {
+        streakDays <= 0 -> 0.3f
+        streakDays < 7 -> 0.4f + (streakDays / 6f) * 0.2f
+        streakDays < 14 -> 0.65f + ((streakDays - 7) / 6f) * 0.15f
+        streakDays < 30 -> 0.85f + ((streakDays - 14) / 15f) * 0.1f
+        else -> 1f
+    }
 
-    val flickerScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.08f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(600, easing = EaseInOutSine),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "flickerScale"
-    )
+    val infiniteTransition = rememberInfiniteTransition(label = "leaf")
 
-    val flickerOffset by infiniteTransition.animateFloat(
+    // Gentle breathing sway for active leaves
+    val swayAngle by infiniteTransition.animateFloat(
         initialValue = -2f,
         targetValue = 2f,
         animationSpec = infiniteRepeatable(
-            animation = tween(400, easing = EaseInOutSine),
+            animation = tween(2500, easing = EaseInOutSine),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "flickerOffset"
+        label = "leafSway"
+    )
+
+    // Glow pulse for 30+ days
+    val glowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.15f,
+        targetValue = 0.35f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "leafGlow"
     )
 
     Canvas(
-        modifier = modifier.size(size)
+        modifier = modifier
+            .size(size)
+            .graphicsLayer { rotationZ = if (streakDays > 0) swayAngle else 0f }
     ) {
-        val width = this.size.width
-        val height = this.size.height
+        val w = this.size.width
+        val h = this.size.height
 
-        if (isActive) {
-            // Draw outer glow for high streaks
-            if (streakDays >= 7) {
-                drawFlameGlow(
-                    width = width,
-                    height = height,
-                    color = flameColors.outer,
-                    scale = flickerScale
-                )
-            }
-
-            // Draw main flame
-            drawFlame(
-                width = width,
-                height = height,
-                colors = flameColors,
-                scale = if (isActive) flickerScale else 1f,
-                offsetX = if (isActive) flickerOffset else 0f
+        // Glow for lush stage (30+)
+        if (streakDays >= 30) {
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        primaryColor.copy(alpha = glowAlpha),
+                        primaryColor.copy(alpha = glowAlpha * 0.3f),
+                        Color.Transparent
+                    ),
+                    center = Offset(w / 2, h * 0.45f),
+                    radius = w * 0.7f
+                ),
+                center = Offset(w / 2, h * 0.45f),
+                radius = w * 0.7f
             )
+        }
+
+        if (streakDays <= 0) {
+            // Dormant seed — small circle at bottom
+            drawLeafSeed(w, h, primaryColor.copy(alpha = 0.35f))
         } else {
-            // Inactive state - gray flame silhouette
-            drawInactiveFlame(width, height)
+            // Draw stem
+            drawLeafStem(w, h, primaryColor, growthFactor)
+            // Draw leaf body
+            drawLeafBody(w, h, primaryColor, growthFactor)
+            // Draw vein for 7+ days
+            if (streakDays >= 7) {
+                drawLeafVein(w, h, primaryColor, growthFactor)
+            }
         }
     }
 }
 
-private data class FlameColors(
-    val outer: Color,
-    val middle: Color,
-    val inner: Color,
-    val core: Color
-)
+// ==================== LEAF DRAWING HELPERS ====================
 
-private fun getFlameColors(streakDays: Int, isActive: Boolean): FlameColors {
-    if (!isActive) {
-        return FlameColors(
-            outer = Color(0xFF9E9E9E),
-            middle = Color(0xFFBDBDBD),
-            inner = Color(0xFFE0E0E0),
-            core = Color(0xFFF5F5F5)
-        )
-    }
-
-    return when {
-        // Legendary (30+ days) - Blue/Purple flame
-        streakDays >= 30 -> FlameColors(
-            outer = Color(0xFF7C4DFF),
-            middle = Color(0xFF536DFE),
-            inner = Color(0xFF448AFF),
-            core = Color(0xFFFFFFFF)
-        )
-        // Epic (14+ days) - Red/Orange intense flame
-        streakDays >= 14 -> FlameColors(
-            outer = Color(0xFFD32F2F),
-            middle = Color(0xFFFF5722),
-            inner = Color(0xFFFF9800),
-            core = Color(0xFFFFEB3B)
-        )
-        // Good (7+ days) - Orange/Yellow flame
-        streakDays >= 7 -> FlameColors(
-            outer = Color(0xFFE65100),
-            middle = Color(0xFFFF9800),
-            inner = Color(0xFFFFC107),
-            core = Color(0xFFFFEB3B)
-        )
-        // Starting (1+ days) - Yellow/Orange flame
-        else -> FlameColors(
-            outer = Color(0xFFFF9800),
-            middle = Color(0xFFFFA726),
-            inner = Color(0xFFFFCA28),
-            core = Color(0xFFFFEE58)
-        )
-    }
-}
-
-private fun DrawScope.drawFlameGlow(
-    width: Float,
-    height: Float,
-    color: Color,
-    scale: Float
-) {
-    val glowRadius = (width * 0.6f) * scale
+/** Dormant state: small seed circle */
+private fun DrawScope.drawLeafSeed(w: Float, h: Float, color: Color) {
+    val radius = w * 0.12f
     drawCircle(
-        brush = Brush.radialGradient(
-            colors = listOf(
-                color.copy(alpha = 0.4f),
-                color.copy(alpha = 0.1f),
-                Color.Transparent
-            ),
-            center = Offset(width / 2, height * 0.55f),
-            radius = glowRadius
-        ),
-        center = Offset(width / 2, height * 0.55f),
-        radius = glowRadius
+        color = color,
+        radius = radius,
+        center = Offset(w / 2, h * 0.85f)
+    )
+    // Tiny stem upward
+    val stemPath = Path().apply {
+        moveTo(w / 2, h * 0.85f - radius)
+        lineTo(w / 2, h * 0.7f)
+    }
+    drawPath(stemPath, color = color, style = Stroke(width = w * 0.04f))
+}
+
+/** Curved stem from bottom center */
+private fun DrawScope.drawLeafStem(w: Float, h: Float, color: Color, growth: Float) {
+    val stemPath = Path().apply {
+        moveTo(w * 0.5f, h * 0.95f)
+        cubicTo(
+            x1 = w * 0.5f, y1 = h * 0.8f,
+            x2 = w * 0.48f, y2 = h * (0.95f - growth * 0.5f),
+            x3 = w * 0.5f, y3 = h * (0.95f - growth * 0.6f)
+        )
+    }
+    drawPath(
+        stemPath,
+        color = color.copy(alpha = 0.7f),
+        style = Stroke(width = w * 0.045f * growth)
     )
 }
 
-private fun DrawScope.drawFlame(
-    width: Float,
-    height: Float,
-    colors: FlameColors,
-    scale: Float,
-    offsetX: Float
-) {
-    val centerX = width / 2 + offsetX * 0.5f
-    val baseY = height * 0.92f
+/** Main leaf body — asymmetric, organic bezier shape */
+private fun DrawScope.drawLeafBody(w: Float, h: Float, color: Color, growth: Float) {
+    val leafW = w * 0.4f * growth
+    val leafH = h * 0.55f * growth
 
-    // Outer flame layer
-    val outerPath = createFlamePath(
-        centerX = centerX,
-        baseY = baseY,
-        flameWidth = width * 0.75f * scale,
-        flameHeight = height * 0.85f * scale,
-        tipOffset = offsetX
-    )
+    // Leaf origin point (where stem meets leaf)
+    val ox = w * 0.5f
+    val oy = h * (0.95f - growth * 0.6f)
 
-    drawPath(
-        path = outerPath,
-        brush = Brush.verticalGradient(
-            colors = listOf(
-                colors.outer,
-                colors.middle,
-                colors.inner
-            ),
-            startY = height * 0.1f,
-            endY = baseY
-        )
-    )
+    // Tip of the leaf (tilted slightly right for organic feel)
+    val tipX = ox + leafW * 0.1f
+    val tipY = oy - leafH
 
-    // Middle flame layer
-    val middlePath = createFlamePath(
-        centerX = centerX,
-        baseY = baseY,
-        flameWidth = width * 0.52f * scale,
-        flameHeight = height * 0.65f * scale,
-        tipOffset = offsetX * 0.7f
-    )
+    val leafPath = Path().apply {
+        moveTo(ox, oy)
 
-    drawPath(
-        path = middlePath,
-        brush = Brush.verticalGradient(
-            colors = listOf(
-                colors.middle,
-                colors.inner,
-                colors.core
-            ),
-            startY = height * 0.25f,
-            endY = baseY
-        )
-    )
-
-    // Inner core (hottest part)
-    val innerPath = createFlamePath(
-        centerX = centerX,
-        baseY = baseY - height * 0.05f,
-        flameWidth = width * 0.28f * scale,
-        flameHeight = height * 0.38f * scale,
-        tipOffset = offsetX * 0.4f
-    )
-
-    drawPath(
-        path = innerPath,
-        brush = Brush.verticalGradient(
-            colors = listOf(
-                colors.inner,
-                colors.core,
-                colors.core
-            ),
-            startY = height * 0.4f,
-            endY = baseY - height * 0.05f
-        )
-    )
-}
-
-private fun createFlamePath(
-    centerX: Float,
-    baseY: Float,
-    flameWidth: Float,
-    flameHeight: Float,
-    tipOffset: Float
-): Path {
-    return Path().apply {
-        val halfWidth = flameWidth / 2
-        val tipY = baseY - flameHeight
-
-        // Start at bottom center
-        moveTo(centerX, baseY)
-
-        // Left side curve
+        // Left curve (wider belly)
         cubicTo(
-            x1 = centerX - halfWidth * 0.4f,
-            y1 = baseY - flameHeight * 0.1f,
-            x2 = centerX - halfWidth * 1.1f,
-            y2 = baseY - flameHeight * 0.4f,
-            x3 = centerX - halfWidth * 0.7f,
-            y3 = baseY - flameHeight * 0.6f
+            x1 = ox - leafW * 0.9f, y1 = oy - leafH * 0.25f,
+            x2 = ox - leafW * 0.7f, y2 = oy - leafH * 0.75f,
+            x3 = tipX, y3 = tipY
         )
 
-        // Left side to tip
+        // Right curve (slimmer)
         cubicTo(
-            x1 = centerX - halfWidth * 0.5f,
-            y1 = baseY - flameHeight * 0.75f,
-            x2 = centerX - halfWidth * 0.2f + tipOffset,
-            y2 = baseY - flameHeight * 0.9f,
-            x3 = centerX + tipOffset,
-            y3 = tipY
-        )
-
-        // Tip to right side
-        cubicTo(
-            x1 = centerX + halfWidth * 0.2f + tipOffset,
-            y1 = baseY - flameHeight * 0.9f,
-            x2 = centerX + halfWidth * 0.5f,
-            y2 = baseY - flameHeight * 0.75f,
-            x3 = centerX + halfWidth * 0.7f,
-            y3 = baseY - flameHeight * 0.6f
-        )
-
-        // Right side curve back to bottom
-        cubicTo(
-            x1 = centerX + halfWidth * 1.1f,
-            y1 = baseY - flameHeight * 0.4f,
-            x2 = centerX + halfWidth * 0.4f,
-            y2 = baseY - flameHeight * 0.1f,
-            x3 = centerX,
-            y3 = baseY
+            x1 = ox + leafW * 0.7f, y1 = oy - leafH * 0.7f,
+            x2 = ox + leafW * 0.85f, y2 = oy - leafH * 0.2f,
+            x3 = ox, y3 = oy
         )
 
         close()
     }
-}
 
-private fun DrawScope.drawInactiveFlame(
-    width: Float,
-    height: Float
-) {
-    val centerX = width / 2
-    val baseY = height * 0.92f
-
-    val path = createFlamePath(
-        centerX = centerX,
-        baseY = baseY,
-        flameWidth = width * 0.65f,
-        flameHeight = height * 0.75f,
-        tipOffset = 0f
-    )
-
+    // Fill with gradient from dark (base) to light (tip)
     drawPath(
-        path = path,
+        leafPath,
         brush = Brush.verticalGradient(
             colors = listOf(
-                Color(0xFF757575),
-                Color(0xFF9E9E9E),
-                Color(0xFFBDBDBD)
+                color.copy(alpha = 0.95f),
+                color.copy(alpha = 0.65f)
             ),
-            startY = height * 0.15f,
-            endY = baseY
+            startY = tipY,
+            endY = oy
         )
     )
+}
+
+/** Central vein + side veins for mature leaves (7+ days) */
+private fun DrawScope.drawLeafVein(w: Float, h: Float, color: Color, growth: Float) {
+    val ox = w * 0.5f
+    val oy = h * (0.95f - growth * 0.6f)
+    val leafH = h * 0.55f * growth
+    val tipY = oy - leafH
+    val leafW = w * 0.4f * growth
+
+    val veinColor = color.copy(alpha = 0.3f)
+    val veinWidth = w * 0.025f
+
+    // Central vein
+    val centralVein = Path().apply {
+        moveTo(ox, oy)
+        cubicTo(
+            x1 = ox, y1 = oy - leafH * 0.3f,
+            x2 = ox + leafW * 0.05f, y2 = oy - leafH * 0.7f,
+            x3 = ox + leafW * 0.1f, y3 = tipY
+        )
+    }
+    drawPath(centralVein, color = veinColor, style = Stroke(width = veinWidth))
+
+    // Side veins (2-3 pairs depending on growth)
+    val veinPairs = if (growth > 0.85f) 3 else 2
+    for (i in 1..veinPairs) {
+        val t = i.toFloat() / (veinPairs + 1)
+        val startY = oy - leafH * t
+        val startX = ox + leafW * 0.05f * t
+
+        // Left vein
+        val leftVein = Path().apply {
+            moveTo(startX, startY)
+            quadraticTo(
+                x1 = startX - leafW * 0.3f, y1 = startY - leafH * 0.06f,
+                x2 = startX - leafW * 0.5f, y2 = startY - leafH * 0.12f
+            )
+        }
+        drawPath(leftVein, color = veinColor, style = Stroke(width = veinWidth * 0.7f))
+
+        // Right vein
+        val rightVein = Path().apply {
+            moveTo(startX, startY)
+            quadraticTo(
+                x1 = startX + leafW * 0.28f, y1 = startY - leafH * 0.05f,
+                x2 = startX + leafW * 0.45f, y2 = startY - leafH * 0.1f
+            )
+        }
+        drawPath(rightVein, color = veinColor, style = Stroke(width = veinWidth * 0.7f))
+    }
 }
 
 

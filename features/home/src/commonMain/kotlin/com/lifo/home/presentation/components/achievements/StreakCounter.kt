@@ -1,7 +1,6 @@
 package com.lifo.home.presentation.components.achievements
 
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -13,26 +12,21 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lifo.home.domain.model.StreakData
-import com.lifo.home.presentation.components.common.StreakFlameIndicator
+import com.lifo.home.presentation.components.common.GrowthLeafIndicator
 import com.lifo.home.util.EmotionAwareColors
 
 /**
- * Streak Counter - Animated streak display with shape-based fire indicator
- * Uses M3 Expressive shapes instead of emojis
+ * Streak Counter — Growth leaf that reflects writing consistency
  */
 @Composable
 fun StreakCounter(
     streak: StreakData,
     modifier: Modifier = Modifier
 ) {
-    val streakColor = EmotionAwareColors.AchievementColors.getStreakColor(streak.currentStreak)
+    val primary = MaterialTheme.colorScheme.primary
 
     // Counter animation
     var animatedCount by remember { mutableIntStateOf(0) }
@@ -52,29 +46,25 @@ fun StreakCounter(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        // Shape-based flame indicator (M3 Expressive)
-        StreakFlameIndicator(
+        GrowthLeafIndicator(
             streakDays = streak.currentStreak,
-            size = 32.dp,
-            isActive = streak.currentStreak > 0
+            size = 32.dp
         )
 
-        // Count
         Text(
             text = animatedCount.toString(),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            color = streakColor
+            color = primary
         )
 
-        // Label
         Text(
-            text = "di streak",
+            text = "di crescita",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        // Streak at risk indicator with Icon
+        // Streak at risk indicator
         if (streak.streakAtRisk && !streak.isActiveToday) {
             Surface(
                 shape = RoundedCornerShape(4.dp),
@@ -103,80 +93,29 @@ fun StreakCounter(
 }
 
 /**
- * Large streak display for hero section
- * Uses M3 Expressive shapes instead of emojis
+ * Large streak display for hero section — growing leaf
  */
 @Composable
 fun LargeStreakCounter(
     streak: StreakData,
     modifier: Modifier = Modifier
 ) {
-    val streakColor = EmotionAwareColors.AchievementColors.getStreakColor(streak.currentStreak)
-
-    // Flame particles animation
-    val infiniteTransition = rememberInfiniteTransition(label = "flames")
-    val flameOffset by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 20f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "flameOffset"
-    )
+    val primary = MaterialTheme.colorScheme.primary
 
     Box(
         modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
-        // Flame background effect
-        if (streak.currentStreak >= 7) {
-            Canvas(modifier = Modifier.size(100.dp)) {
-                val center = Offset(size.width / 2, size.height / 2)
-
-                // Outer glow
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            streakColor.copy(alpha = 0.3f),
-                            streakColor.copy(alpha = 0.1f),
-                            Color.Transparent
-                        ),
-                        center = center,
-                        radius = size.minDimension / 2 + flameOffset
-                    ),
-                    center = center,
-                    radius = size.minDimension / 2 + flameOffset
-                )
-            }
-        }
-
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Shape-based flame indicators based on streak level
             if (streak.currentStreak > 0) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy((-8).dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Show multiple flames for higher streaks
-                    val flameCount = when {
-                        streak.currentStreak >= 30 -> 3
-                        streak.currentStreak >= 14 -> 2
-                        else -> 1
-                    }
-                    repeat(flameCount) { index ->
-                        StreakFlameIndicator(
-                            streakDays = streak.currentStreak,
-                            size = 48.dp,
-                            isActive = true
-                        )
-                    }
-                }
+                GrowthLeafIndicator(
+                    streakDays = streak.currentStreak,
+                    size = 56.dp
+                )
             } else {
-                // Inactive state - sleep icon
                 Icon(
                     imageVector = Icons.Default.Bedtime,
                     contentDescription = null,
@@ -193,10 +132,10 @@ fun LargeStreakCounter(
                     text = "${streak.currentStreak}",
                     style = MaterialTheme.typography.displayMedium,
                     fontWeight = FontWeight.Bold,
-                    color = streakColor
+                    color = primary
                 )
                 Text(
-                    text = if (streak.currentStreak == 1) "giorno di streak" else "giorni di streak",
+                    text = if (streak.currentStreak == 1) "giorno di crescita" else "giorni di crescita",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -212,7 +151,7 @@ fun LargeStreakCounter(
             } else if (streak.currentStreak > 0 && streak.currentStreak == streak.longestStreak) {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = EmotionAwareColors.AchievementColors.legendary.copy(alpha = 0.2f)
+                    color = primary.copy(alpha = 0.15f)
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -223,19 +162,19 @@ fun LargeStreakCounter(
                             imageVector = Icons.Default.EmojiEvents,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
-                            tint = EmotionAwareColors.AchievementColors.legendary
+                            tint = primary
                         )
                         Text(
                             text = "Nuovo record!",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = EmotionAwareColors.AchievementColors.legendary
+                            color = primary
                         )
                     }
                 }
             }
 
-            // Today's status with Icons
+            // Today's status
             if (streak.isActiveToday) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -265,7 +204,7 @@ fun LargeStreakCounter(
                         tint = EmotionAwareColors.negativeLight
                     )
                     Text(
-                        text = "Scrivi oggi per mantenere lo streak!",
+                        text = "Scrivi oggi per continuare a crescere!",
                         style = MaterialTheme.typography.labelSmall,
                         color = EmotionAwareColors.negativeLight
                     )
@@ -276,37 +215,34 @@ fun LargeStreakCounter(
 }
 
 /**
- * Mini streak badge for compact displays
- * Uses M3 Expressive shapes instead of emojis
+ * Mini streak badge for compact displays — leaf + count
  */
 @Composable
 fun MiniStreakBadge(
     streakDays: Int,
     modifier: Modifier = Modifier
 ) {
-    val streakColor = EmotionAwareColors.AchievementColors.getStreakColor(streakDays)
+    val primary = MaterialTheme.colorScheme.primary
 
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
-        color = streakColor.copy(alpha = 0.15f)
+        color = primary.copy(alpha = 0.12f)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Shape-based mini flame
-            StreakFlameIndicator(
+            GrowthLeafIndicator(
                 streakDays = streakDays,
-                size = 18.dp,
-                isActive = streakDays > 0
+                size = 18.dp
             )
             Text(
                 text = streakDays.toString(),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
-                color = streakColor
+                color = primary
             )
         }
     }

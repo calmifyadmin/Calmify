@@ -22,7 +22,7 @@ import com.lifo.home.domain.model.Badge
 import com.lifo.home.domain.model.MonthlyStats
 import com.lifo.home.domain.model.StreakData
 import com.lifo.home.domain.model.WeeklyGoal
-import com.lifo.home.presentation.components.common.StreakFlameIndicator
+import com.lifo.home.presentation.components.common.GrowthLeafIndicator
 import com.lifo.home.presentation.components.common.BadgeShapeIndicator
 
 /**
@@ -305,11 +305,11 @@ fun CompactAchievementsRow(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        // Streak with flame shape
+        // Streak with growth leaf
         CompactStatBadgeWithShape(
             icon = null,
             value = streak.currentStreak.toString(),
-            showFlame = true,
+            showLeaf = true,
             streakDays = streak.currentStreak
         )
         // Monthly entries
@@ -361,7 +361,7 @@ private fun CompactStatBadgeWithIcon(
 private fun CompactStatBadgeWithShape(
     icon: ImageVector?,
     value: String,
-    showFlame: Boolean = false,
+    showLeaf: Boolean = false,
     streakDays: Int = 0
 ) {
     Surface(
@@ -373,11 +373,10 @@ private fun CompactStatBadgeWithShape(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (showFlame) {
-                StreakFlameIndicator(
+            if (showLeaf) {
+                GrowthLeafIndicator(
                     streakDays = streakDays,
-                    size = 18.dp,
-                    isActive = streakDays > 0
+                    size = 18.dp
                 )
             } else if (icon != null) {
                 Icon(

@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Eco
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material3.*
@@ -34,9 +34,9 @@ internal fun StatsMetricRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         StatMetricCell(
-            icon = Icons.Default.LocalFireDepartment,
+            icon = Icons.Default.Eco,
             value = streakDays,
-            label = "streak",
+            label = "crescita",
             accentColor = EmotionAwareColors.AchievementColors.getStreakColor(streakDays),
             modifier = Modifier.weight(1f)
         )
