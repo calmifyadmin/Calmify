@@ -11,10 +11,10 @@ object ComposerContract {
 
     enum class ReplyPermission { Everyone, Followers, Mentioned }
 
-    enum class PostCategory(val label: String, val emoji: String) {
-        SCOPERTA("Scoperta", "\uD83D\uDCA1"),
-        SFIDA("Sfida", "\uD83D\uDCAA"),
-        DOMANDA("Domanda", "\u2753"),
+    enum class PostCategory(val label: String) {
+        SCOPERTA("Scoperta"),
+        SFIDA("Sfida"),
+        DOMANDA("Domanda"),
     }
 
     val MOOD_TAGS = listOf(

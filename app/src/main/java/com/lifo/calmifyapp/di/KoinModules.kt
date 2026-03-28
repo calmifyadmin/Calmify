@@ -28,6 +28,8 @@ import com.lifo.messaging.di.messagingKoinModule
 import com.lifo.subscription.di.subscriptionKoinModule
 import com.lifo.threaddetail.di.threadDetailKoinModule
 import com.lifo.avatarcreator.di.avatarCreatorKoinModule
+import com.lifo.habits.di.habitKoinModule
+import com.lifo.meditation.di.meditationKoinModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
@@ -92,4 +94,7 @@ val allKoinModules = listOf(
     subscriptionKoinModule,
     // Avatar System (Wave 10)
     avatarCreatorKoinModule,
+    // Holistic Growth (Sprint 1+2)
+    habitKoinModule,
+    meditationKoinModule,
 )

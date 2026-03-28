@@ -3,9 +3,14 @@ package com.lifo.home
 import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Psychology
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
@@ -13,13 +18,17 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import com.lifo.home.domain.model.*
 import com.lifo.home.presentation.components.dashboard.*
 import com.lifo.home.presentation.components.common.*
+import com.lifo.home.presentation.components.expressive.*
 import com.lifo.util.model.Diary
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
@@ -43,6 +52,12 @@ internal fun HomeContent(
     navigateToFeed: () -> Unit = {},
     navigateToThreadDetail: (String) -> Unit = {},
     navigateToSocialProfile: () -> Unit = {},
+    // Daily quick actions
+    onGratitudeClick: () -> Unit = {},
+    onEnergyCheckInClick: () -> Unit = {},
+    onSleepLogClick: () -> Unit = {},
+    onHabitsClick: () -> Unit = {},
+    onMeditationClick: () -> Unit = {},
 ) {
     val dailyInsights by viewModel.dailyInsights.collectAsState()
     val currentWeekOffset by viewModel.currentWeekOffset.collectAsState()
@@ -105,45 +120,34 @@ internal fun HomeContent(
                     )
                 }
                 else -> {
-                    // Main dashboard content
+                    // Main dashboard — M3 Expressive layout
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
-                            start = 16.dp,
-                            end = 16.dp,
+                            start = 20.dp,
+                            end = 20.dp,
                             top = 8.dp,
                             bottom = 100.dp
                         ),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(20.dp)
                     ) {
-                        // 1. Dashboard Pulse Header
-                        item(key = "pulse_header") {
-                            DashboardHeader(
+                        // 1. Expressive Hero
+                        item(key = "hero") {
+                            ExpressiveHero(
                                 todayPulse = todayPulse,
                                 userName = viewModel.getUserFirstName(),
                                 userPhotoUrl = socialAvatarUrl ?: viewModel.getUserPhotoUrl(),
                                 onProfileClick = navigateToSocialProfile,
-                                onJourneyClick = navigateToWellbeingSnapshot,
+                                onPulseClick = navigateToWellbeingSnapshot,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .staggeredEntrance(index = 0)
+                                    .staggeredEntrance(index = 0, baseDelayMs = 80)
                             )
                         }
 
-                        // 2. Weekly Activity Tracker
-                        item(key = "weekly_tracker") {
-                            WeeklyActivityTracker(
-                                dailyInsights = dailyInsights,
-                                weeklyGoal = achievementsState?.weeklyGoal,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .staggeredEntrance(index = 1)
-                            )
-                        }
-
-                        // 3. Quick Action Cards
+                        // 2. Quick Actions (hero card + pills)
                         item(key = "quick_actions") {
-                            QuickActionCards(
+                            ExpressiveQuickActions(
                                 onTalkToEve = navigateToLive,
                                 onWrite = navigateToWrite,
                                 onSnapshot = navigateToWellbeingSnapshot,
@@ -151,67 +155,77 @@ internal fun HomeContent(
                                 daysSinceSnapshot = quickActionState.daysSinceLastSnapshot,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .staggeredEntrance(index = 2)
+                                    .staggeredEntrance(index = 1, baseDelayMs = 80)
                             )
                         }
 
-                        // 4. Stats Metric Row
-                        achievementsState?.let { achievements ->
-                            item(key = "stats_row") {
-                                StatsMetricRow(
-                                    streakDays = achievements.streak.currentStreak,
-                                    monthlyEntries = achievements.monthlyStats.entriesThisMonth,
-                                    goalProgress = achievements.weeklyGoal.progress,
-                                    badgesEarned = achievements.totalBadgesEarned,
-                                    streakActive = achievements.streak.isActiveToday,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .staggeredEntrance(index = 3)
-                                )
-                            }
+                        // 3. Weekly Activity Strip (with streak)
+                        item(key = "week_strip") {
+                            ExpressiveWeekStrip(
+                                dailyInsights = dailyInsights,
+                                weeklyGoal = achievementsState?.weeklyGoal,
+                                streakDays = achievementsState?.streak?.currentStreak ?: 0,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .staggeredEntrance(index = 2, baseDelayMs = 80)
+                            )
                         }
 
-                        // 5. AI Reflection Card
+                        // 4. Daily Quick Actions (horizontal scroll)
+                        item(key = "daily_actions") {
+                            ExpressiveDailyActions(
+                                onGratitudeClick = onGratitudeClick,
+                                onEnergyClick = onEnergyCheckInClick,
+                                onSleepClick = onSleepLogClick,
+                                onHabitsClick = onHabitsClick,
+                                onMeditationClick = onMeditationClick,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .staggeredEntrance(index = 3, baseDelayMs = 80)
+                            )
+                        }
+
+                        // 5. AI Reflection (immersive quote card)
                         item(key = "reflection") {
-                            ReflectionCard(
+                            ExpressiveReflection(
                                 todayPulse = todayPulse,
                                 recurringThemes = topicsFrequency.take(3).map { it.topic },
                                 userName = viewModel.getUserFirstName(),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .staggeredEntrance(index = 4)
+                                    .staggeredEntrance(index = 4, baseDelayMs = 80)
                             )
                         }
 
-                        // 6. Mood Distribution Card
+                        // 6. Mood Distribution (centered donut + pills)
                         if (moodDistribution != null && dominantMood != null) {
-                            item(key = "mood_insight") {
-                                MoodInsightCard(
+                            item(key = "mood") {
+                                ExpressiveMoodCard(
                                     distribution = moodDistribution!!,
                                     dominantMood = dominantMood!!,
                                     timeRange = selectedTimeRange,
                                     onTimeRangeChange = { viewModel.updateTimeRange(it) },
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .staggeredEntrance(index = 5)
+                                        .staggeredEntrance(index = 5, baseDelayMs = 80)
                                 )
                             }
                         }
 
-                        // 7. Topics Card
+                        // 7. Topics
                         if (topicsFrequency.isNotEmpty()) {
-                            item(key = "topics_insight") {
+                            item(key = "topics") {
                                 TopicsInsightCard(
                                     topics = topicsFrequency,
                                     emergingTopic = emergingTopic,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .staggeredEntrance(index = 6)
+                                        .staggeredEntrance(index = 6, baseDelayMs = 80)
                                 )
                             }
                         }
 
-                        // 8. Community Preview
+                        // 8. Community
                         if (communityThreads.isNotEmpty()) {
                             item(key = "community") {
                                 CommunityPreviewCard(
@@ -220,7 +234,7 @@ internal fun HomeContent(
                                     onViewMore = navigateToFeed,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .staggeredEntrance(index = 7)
+                                        .staggeredEntrance(index = 7, baseDelayMs = 80)
                                 )
                             }
                         }
@@ -231,86 +245,96 @@ internal fun HomeContent(
     }
 }
 
-// ==================== SKELETON ====================
+// ==================== SKELETON (M3 Expressive) ====================
 
 @Composable
 private fun DashboardSkeleton(modifier: Modifier = Modifier) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        contentPadding = PaddingValues(20.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        // Pulse header skeleton
+        // Hero skeleton
         item {
             SkeletonBox(
-                height = 200.dp,
-                cornerRadius = 16.dp
-            )
-        }
-        // Weekly tracker skeleton
-        item {
-            SkeletonBox(
-                height = 120.dp,
-                cornerRadius = 16.dp
+                height = 280.dp,
+                cornerRadius = 32.dp
             )
         }
         // Quick actions skeleton
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                SkeletonBox(
-                    modifier = Modifier.weight(0.6f),
-                    height = 64.dp,
-                    cornerRadius = 16.dp
-                )
-                SkeletonBox(
-                    modifier = Modifier.weight(0.4f),
-                    height = 64.dp,
-                    cornerRadius = 16.dp
-                )
-            }
+            SkeletonBox(
+                height = 80.dp,
+                cornerRadius = 28.dp
+            )
         }
-        // Stats row skeleton
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                repeat(4) {
-                    SkeletonBox(
-                        modifier = Modifier.weight(1f),
-                        height = 80.dp,
-                        cornerRadius = 12.dp
-                    )
+                SkeletonBox(
+                    modifier = Modifier.weight(1f),
+                    height = 56.dp,
+                    cornerRadius = 20.dp
+                )
+                SkeletonBox(
+                    modifier = Modifier.weight(1f),
+                    height = 56.dp,
+                    cornerRadius = 20.dp
+                )
+            }
+        }
+        // Week strip skeleton
+        item {
+            SkeletonBox(
+                height = 140.dp,
+                cornerRadius = 28.dp
+            )
+        }
+        // Stats skeleton (asymmetric)
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                SkeletonBox(
+                    modifier = Modifier.weight(1f),
+                    height = 180.dp,
+                    cornerRadius = 24.dp
+                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    repeat(3) {
+                        SkeletonBox(
+                            height = 48.dp,
+                            cornerRadius = 20.dp
+                        )
+                    }
                 }
             }
         }
         // Reflection skeleton
         item {
             SkeletonBox(
-                height = 100.dp,
-                cornerRadius = 16.dp
-            )
-        }
-        // Mood insight skeleton
-        item {
-            SkeletonBox(
-                height = 180.dp,
-                cornerRadius = 16.dp
+                height = 140.dp,
+                cornerRadius = 32.dp
             )
         }
     }
 }
 
-// ==================== EMPTY STATE ====================
+// ==================== EMPTY STATE (M3 Expressive) ====================
 
 @Composable
 private fun EmptyDashboardState(
     onWrite: () -> Unit,
     onTalkToEve: () -> Unit
 ) {
+    val colorScheme = MaterialTheme.colorScheme
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -318,53 +342,157 @@ private fun EmptyDashboardState(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(32.dp)
+            modifier = Modifier.padding(40.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.Psychology,
-                contentDescription = null,
-                modifier = Modifier.size(80.dp),
-                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-            )
+            // Large expressive icon
+            Surface(
+                modifier = Modifier.size(96.dp),
+                shape = RoundedCornerShape(32.dp),
+                color = colorScheme.primaryContainer.copy(alpha = 0.5f)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = colorScheme.primary
+                    )
+                }
+            }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             Text(
-                text = "La tua dashboard",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+                text = "Inizia il tuo\npercorso",
+                style = MaterialTheme.typography.displaySmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = (-1).sp,
+                    lineHeight = 40.sp
+                ),
+                color = colorScheme.onSurface,
+                textAlign = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = "Inizia a scrivere per vedere insights, streak e il tuo percorso",
+                text = "Scrivi, parla, rifletti — anche solo una riga",
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 32.dp)
+                color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                FilledTonalButton(onClick = onWrite) {
+                Button(
+                    onClick = onWrite,
+                    shape = RoundedCornerShape(20.dp),
+                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
+                ) {
                     Icon(
                         imageVector = Icons.Default.EditNote,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text("Scrivi")
+                    Text("Scrivi", style = MaterialTheme.typography.labelLarge)
                 }
-                OutlinedButton(onClick = onTalkToEve) {
-                    Text("Parla con Eve")
+                FilledTonalButton(
+                    onClick = onTalkToEve,
+                    shape = RoundedCornerShape(20.dp),
+                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
+                ) {
+                    Text("Parla con Eve", style = MaterialTheme.typography.labelLarge)
                 }
             }
         }
+    }
+}
+
+// ==================== DAILY QUICK ACTIONS (Expressive) ====================
+
+private data class DailyAction(
+    val icon: ImageVector,
+    val label: String,
+    val color: Color,
+    val onClick: () -> Unit
+)
+
+@Composable
+internal fun ExpressiveDailyActions(
+    onGratitudeClick: () -> Unit,
+    onEnergyClick: () -> Unit,
+    onSleepClick: () -> Unit,
+    onHabitsClick: () -> Unit,
+    onMeditationClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+
+    val actions = remember(onGratitudeClick, onEnergyClick, onSleepClick, onHabitsClick, onMeditationClick) {
+        listOf(
+            DailyAction(Icons.Outlined.Favorite, "Gratitudine", Color(0xFFE91E63), onGratitudeClick),
+            DailyAction(Icons.Outlined.BatteryChargingFull, "Energia", Color(0xFFFF9800), onEnergyClick),
+            DailyAction(Icons.Outlined.Bedtime, "Sonno", Color(0xFF5C6BC0), onSleepClick),
+            DailyAction(Icons.Outlined.CheckCircle, "Abitudini", Color(0xFF26A69A), onHabitsClick),
+            DailyAction(Icons.Outlined.SelfImprovement, "Meditazione", Color(0xFF7E57C2), onMeditationClick),
+        )
+    }
+
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(
+            text = "Azioni quotidiane",
+            style = MaterialTheme.typography.titleSmall.copy(
+                fontWeight = FontWeight.SemiBold
+            ),
+            color = colorScheme.onSurface,
+        )
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(horizontal = 0.dp)
+        ) {
+            items(actions) { action ->
+                ExpressiveDailyChip(
+                    icon = action.icon,
+                    label = action.label,
+                    accentColor = action.color,
+                    onClick = action.onClick
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExpressiveDailyChip(
+    icon: ImageVector,
+    label: String,
+    accentColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    FilledTonalButton(
+        onClick = onClick,
+        modifier = modifier.height(44.dp),
+        shape = RoundedCornerShape(20.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+        colors = ButtonDefaults.filledTonalButtonColors(
+            containerColor = accentColor.copy(alpha = 0.1f),
+            contentColor = accentColor
+        )
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontWeight = FontWeight.SemiBold
+            ),
+            maxLines = 1
+        )
     }
 }
 

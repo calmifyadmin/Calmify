@@ -67,6 +67,11 @@ internal fun HomeScreen(
     onDiaryClicked: (HomeContentItem.DiaryItem) -> Unit = { navigateToWriteWithArgs(it.id) },
     onChatClicked: (HomeContentItem.ChatItem) -> Unit = { navigateToExistingChat(it.id) },
     navigateToSocialProfile: () -> Unit = {},
+    onGratitudeClick: () -> Unit = {},
+    onEnergyCheckInClick: () -> Unit = {},
+    onSleepLogClick: () -> Unit = {},
+    onHabitsClick: () -> Unit = {},
+    onMeditationClick: () -> Unit = {},
 ) {
     // Use enterAlwaysScrollBehavior for consistent appearance
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
@@ -105,6 +110,11 @@ internal fun HomeScreen(
                         navigateToFeed = navigateToFeed,
                         navigateToThreadDetail = navigateToThreadDetail,
                         navigateToSocialProfile = navigateToSocialProfile,
+                        onGratitudeClick = onGratitudeClick,
+                        onEnergyCheckInClick = onEnergyCheckInClick,
+                        onSleepLogClick = onSleepLogClick,
+                        onHabitsClick = onHabitsClick,
+                        onMeditationClick = onMeditationClick,
                     )
                 }
                 is RequestState.Error -> {

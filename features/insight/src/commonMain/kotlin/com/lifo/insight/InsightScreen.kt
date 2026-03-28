@@ -9,6 +9,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.SentimentDissatisfied
+import androidx.compose.material.icons.outlined.SentimentNeutral
+import androidx.compose.material.icons.outlined.SentimentSatisfied
+import androidx.compose.material.icons.outlined.SentimentVerySatisfied
+import androidx.compose.material.icons.outlined.SentimentVeryDissatisfied
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -241,10 +247,11 @@ private fun SentimentCard(sentiment: SentimentLabel, polarity: Float, magnitude:
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = sentiment.emoji,
-                    style = MaterialTheme.typography.displayMedium,
-                    modifier = Modifier.padding(end = 16.dp)
+                Icon(
+                    imageVector = sentiment.icon(),
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp).padding(end = 16.dp),
+                    tint = MaterialTheme.colorScheme.onSurface
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -555,6 +562,15 @@ private fun SuggestedPromptsCard(
             }
         }
     }
+}
+
+@Composable
+private fun SentimentLabel.icon(): ImageVector = when (this) {
+    SentimentLabel.VERY_NEGATIVE -> Icons.Outlined.SentimentVeryDissatisfied
+    SentimentLabel.NEGATIVE -> Icons.Outlined.SentimentDissatisfied
+    SentimentLabel.NEUTRAL -> Icons.Outlined.SentimentNeutral
+    SentimentLabel.POSITIVE -> Icons.Outlined.SentimentSatisfied
+    SentimentLabel.VERY_POSITIVE -> Icons.Outlined.SentimentVerySatisfied
 }
 
 @Composable

@@ -120,6 +120,13 @@ open class NavigationDestination(
         selectedIcon = Icons.Filled.TrendingUp,
         unselectedIcon = Icons.Outlined.TrendingUp
     )
+
+    object Garden : NavigationDestination(
+        route = "garden_screen",
+        label = "Garden",
+        selectedIcon = Icons.Filled.Spa,
+        unselectedIcon = Icons.Outlined.Spa
+    )
 }
 
 /**

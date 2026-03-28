@@ -51,9 +51,13 @@ Come Jarvis di Iron Man, opero con questi principi fondamentali:
 
 2. **`.claude/refactor-status.md`** — Log cronologico dettagliato di tutte le operazioni passate (utile per capire PERCHE' qualcosa e' stato fatto in un certo modo).
 
-3. **`.claude/IMPROVEMENT_PROGRESS.md`** — Tracker del piano di miglioramento strategico. Contiene lo stato di ogni task (4 fasi, 30+ task). Leggere per sapere DOVE siamo e cosa fare dopo.
+3. **`.claude/IMPROVEMENT_PROGRESS.md`** — Tracker del piano di miglioramento strategico (4 fasi, 30+ task — COMPLETATO).
 
-4. **`FEATURE_IMPROVEMENT_ANALYSIS.md`** — Piano strategico completo con analisi di tutti i 15 moduli, problemi, improvement plan, roadmap. Riferimento per i dettagli di ogni task.
+4. **`.claude/HOLISTIC_GROWTH_STATUS.md`** — Tracker del piano di crescita olistica (6 fasi, 18 deliverable, 5 sprint). Leggere per sapere DOVE siamo e cosa fare dopo.
+
+5. **`HOLISTIC_GROWTH_PLAN.md`** — Piano crescita olistica completo: feature mente-corpo-spirito, modelli dati, stack grafico KMP, roadmap sprint, principi guida.
+
+6. **`FEATURE_IMPROVEMENT_ANALYSIS.md`** — Piano strategico originale: analisi 15 moduli, problemi, improvement plan (completato, evoluto in Holistic Growth Plan).
 
 **Slash command `/improve`** — Trigger per avviare/continuare il piano di miglioramento. Legge il tracker, identifica il prossimo task, propone approccio.
 

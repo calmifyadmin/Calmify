@@ -270,7 +270,7 @@ private fun TriggerSelector(
                 FilterChip(
                     selected = selectedTrigger == trigger,
                     onClick = { onTriggerSelected(trigger) },
-                    label = { Text("${trigger.emoji} ${trigger.displayName}") },
+                    label = { Text(trigger.displayName) },
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -284,7 +284,7 @@ private fun TriggerSelector(
                 FilterChip(
                     selected = selectedTrigger == trigger,
                     onClick = { onTriggerSelected(trigger) },
-                    label = { Text("${trigger.emoji} ${trigger.displayName}") },
+                    label = { Text(trigger.displayName) },
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -313,7 +313,7 @@ private fun BodySensationSelector(
                     onClick = { onBodySensationSelected(sensation) },
                     label = {
                         Text(
-                            text = "${sensation.emoji} ${sensation.displayName}",
+                            text = sensation.displayName,
                             style = MaterialTheme.typography.bodySmall,
                             textAlign = TextAlign.Center
                         )
@@ -333,7 +333,7 @@ private fun BodySensationSelector(
                     onClick = { onBodySensationSelected(sensation) },
                     label = {
                         Text(
-                            text = "${sensation.emoji} ${sensation.displayName}",
+                            text = sensation.displayName,
                             style = MaterialTheme.typography.bodySmall,
                             textAlign = TextAlign.Center
                         )

@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -38,9 +37,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Public
-import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.InputChip
-import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.FormatQuote
@@ -55,13 +51,15 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.InputChip
+import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -95,6 +93,8 @@ fun ComposerScreen(
             && !state.isSubmitting
             && !state.isUploading
 
+    val colorScheme = MaterialTheme.colorScheme
+
     val mediaPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 4),
     ) { uris ->
@@ -107,7 +107,12 @@ fun ComposerScreen(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(if (state.replyToAuthorName != null) "Rispondi" else "Nuovo post") },
+                title = {
+                    Text(
+                        text = if (state.replyToAuthorName != null) "Rispondi" else "Nuovo post",
+                        fontWeight = FontWeight.Bold,
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = {
                         if (state.content.isNotBlank()) {
@@ -124,7 +129,7 @@ fun ComposerScreen(
                 },
                 actions = { },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = colorScheme.surface,
                 ),
             )
         },
@@ -137,128 +142,136 @@ fun ComposerScreen(
                     .imePadding()
                     .verticalScroll(rememberScrollState()),
             ) {
-                // -- Reply context: show parent post with content and images --
+                // -- Reply context: show parent post --
                 if (state.replyToAuthorName != null) {
                     val parentThread = state.parentThread
                     if (parentThread != null) {
-                        // Full parent post preview
-                        Row(
+                        Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 10.dp)
-                                .height(IntrinsicSize.Min),
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            shape = RoundedCornerShape(24.dp),
+                            color = colorScheme.surfaceContainerLow,
                         ) {
-                            // LEFT: Avatar + thread line
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.width(48.dp),
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                                    .height(IntrinsicSize.Min),
                             ) {
-                                UserAvatar(
-                                    avatarUrl = parentThread.authorAvatarUrl,
-                                    displayName = parentThread.authorDisplayName ?: parentThread.authorUsername ?: parentThread.authorId,
-                                    size = 36.dp,
-                                )
-                                Spacer(Modifier.height(4.dp))
-                                ThreadLine(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxHeight(),
-                                )
-                            }
-                            Spacer(Modifier.width(8.dp))
-                            // RIGHT: Author name + text + images
-                            Column(modifier = Modifier.weight(1f)) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.fillMaxWidth(),
+                                // LEFT: Avatar + thread line
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.width(44.dp),
                                 ) {
-                                    Text(
-                                        text = parentThread.authorDisplayName ?: parentThread.authorUsername ?: parentThread.authorId.take(12),
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface,
+                                    UserAvatar(
+                                        avatarUrl = parentThread.authorAvatarUrl,
+                                        displayName = parentThread.authorDisplayName ?: parentThread.authorUsername ?: parentThread.authorId,
+                                        size = 36.dp,
                                     )
-                                    Spacer(Modifier.weight(1f))
-                                    Icon(
-                                        imageVector = Icons.Filled.Close,
-                                        contentDescription = "Cancel reply",
+                                    Spacer(Modifier.height(4.dp))
+                                    ThreadLine(
                                         modifier = Modifier
-                                            .size(18.dp)
-                                            .clickable { onNavigateBack() },
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            .weight(1f)
+                                            .fillMaxHeight(),
                                     )
                                 }
-                                Spacer(Modifier.height(4.dp))
-                                if (parentThread.text.isNotBlank()) {
-                                    Text(
-                                        text = parentThread.text,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 4,
-                                    )
-                                }
-                                // Show images if present
-                                if (parentThread.mediaUrls.isNotEmpty()) {
-                                    Spacer(Modifier.height(6.dp))
-                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        parentThread.mediaUrls.take(3).forEach { url ->
-                                            AsyncImage(
-                                                model = url,
-                                                contentDescription = "Media",
-                                                contentScale = ContentScale.Crop,
-                                                modifier = Modifier
-                                                    .size(56.dp)
-                                                    .clip(RoundedCornerShape(8.dp)),
+                                Spacer(Modifier.width(10.dp))
+                                // RIGHT: Author + text + images
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth(),
+                                    ) {
+                                        Text(
+                                            text = parentThread.authorDisplayName ?: parentThread.authorUsername ?: parentThread.authorId.take(12),
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = colorScheme.onSurface,
+                                        )
+                                        Spacer(Modifier.weight(1f))
+                                        IconButton(
+                                            onClick = { onNavigateBack() },
+                                            modifier = Modifier.size(24.dp),
+                                        ) {
+                                            Icon(
+                                                Icons.Filled.Close,
+                                                contentDescription = "Cancel reply",
+                                                modifier = Modifier.size(16.dp),
+                                                tint = colorScheme.onSurfaceVariant,
                                             )
                                         }
-                                        if (parentThread.mediaUrls.size > 3) {
-                                            Text(
-                                                text = "+${parentThread.mediaUrls.size - 3}",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                modifier = Modifier.align(Alignment.CenterVertically),
-                                            )
+                                    }
+                                    Spacer(Modifier.height(4.dp))
+                                    if (parentThread.text.isNotBlank()) {
+                                        Text(
+                                            text = parentThread.text,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = colorScheme.onSurfaceVariant,
+                                            maxLines = 4,
+                                        )
+                                    }
+                                    if (parentThread.mediaUrls.isNotEmpty()) {
+                                        Spacer(Modifier.height(8.dp))
+                                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            parentThread.mediaUrls.take(3).forEach { url ->
+                                                AsyncImage(
+                                                    model = url,
+                                                    contentDescription = "Media",
+                                                    contentScale = ContentScale.Crop,
+                                                    modifier = Modifier
+                                                        .size(56.dp)
+                                                        .clip(RoundedCornerShape(12.dp)),
+                                                )
+                                            }
+                                            if (parentThread.mediaUrls.size > 3) {
+                                                Surface(
+                                                    shape = RoundedCornerShape(12.dp),
+                                                    color = colorScheme.surfaceContainerHigh,
+                                                    modifier = Modifier.size(56.dp),
+                                                ) {
+                                                    Box(contentAlignment = Alignment.Center) {
+                                                        Text(
+                                                            text = "+${parentThread.mediaUrls.size - 3}",
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            fontWeight = FontWeight.SemiBold,
+                                                            color = colorScheme.onSurfaceVariant,
+                                                        )
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
                     } else {
-                        // Fallback: simple chip while loading parent thread
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        // Fallback chip while loading parent
+                        Surface(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            shape = RoundedCornerShape(20.dp),
+                            color = colorScheme.secondaryContainer,
                         ) {
-                            InputChip(
-                                selected = false,
-                                onClick = { },
-                                label = {
-                                    Text(
-                                        text = "Replying to @${state.replyToAuthorName}",
-                                        style = MaterialTheme.typography.labelMedium,
-                                    )
-                                },
-                                trailingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Filled.Close,
-                                        contentDescription = "Cancel reply",
-                                        modifier = Modifier
-                                            .size(16.dp)
-                                            .clickable { onNavigateBack() },
-                                    )
-                                },
-                                colors = InputChipDefaults.inputChipColors(
-                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                    labelColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                                ),
-                            )
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Text(
+                                    text = "Rispondendo a @${state.replyToAuthorName}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = colorScheme.onSecondaryContainer,
+                                )
+                                Icon(
+                                    Icons.Filled.Close,
+                                    contentDescription = "Cancel",
+                                    modifier = Modifier
+                                        .size(16.dp)
+                                        .clickable { onNavigateBack() },
+                                    tint = colorScheme.onSecondaryContainer,
+                                )
+                            }
                         }
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                        )
                     }
                 }
 
@@ -266,13 +279,13 @@ fun ComposerScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 12.dp)
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
                         .height(IntrinsicSize.Min),
                 ) {
                     // LEFT COLUMN: Avatar + Thread Line
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.width(48.dp),
+                        modifier = Modifier.width(44.dp),
                     ) {
                         UserAvatar(
                             avatarUrl = null,
@@ -288,23 +301,20 @@ fun ComposerScreen(
                         )
                     }
 
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(10.dp))
 
                     // RIGHT COLUMN: Content
-                    Column(
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        // Username
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "You",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = colorScheme.onSurface,
                         )
 
-                        Spacer(Modifier.height(4.dp))
+                        Spacer(Modifier.height(6.dp))
 
-                        // BasicTextField (no border, transparent, Threads-style)
+                        // BasicTextField (transparent, Threads-style)
                         BasicTextField(
                             value = state.content,
                             onValueChange = { onIntent(ComposerContract.Intent.UpdateContent(it)) },
@@ -312,9 +322,9 @@ fun ComposerScreen(
                                 .fillMaxWidth()
                                 .height(IntrinsicSize.Min),
                             textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = colorScheme.onSurface,
                             ),
-                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            cursorBrush = SolidColor(colorScheme.primary),
                             maxLines = 12,
                             decorationBox = { innerTextField ->
                                 Box {
@@ -322,7 +332,7 @@ fun ComposerScreen(
                                         Text(
                                             text = if (state.replyToAuthorName != null) "Rispondi..." else "Cosa hai in mente?",
                                             style = MaterialTheme.typography.bodyLarge,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                         )
                                     }
                                     innerTextField()
@@ -330,98 +340,42 @@ fun ComposerScreen(
                             },
                         )
 
-                        Spacer(Modifier.height(10.dp))
+                        Spacer(Modifier.height(12.dp))
 
-                        // Media toolbar
+                        // Media toolbar — subtle icon row
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(0.dp),
+                            horizontalArrangement = Arrangement.spacedBy(2.dp),
                         ) {
-                            // Image icon
-                            Box(
-                                modifier = Modifier.size(44.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                IconButton(
-                                    onClick = {
-                                        mediaPickerLauncher.launch(
-                                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
-                                        )
-                                    },
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Image,
-                                        contentDescription = "Add image",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(24.dp),
+                            val toolbarTint = colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                            // Image
+                            IconButton(
+                                onClick = {
+                                    mediaPickerLauncher.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
                                     )
-                                }
+                                },
+                                modifier = Modifier.size(36.dp),
+                            ) {
+                                Icon(Icons.Outlined.Image, contentDescription = "Add image", modifier = Modifier.size(20.dp), tint = toolbarTint)
                             }
-
-                            // GIF icon
-                            Box(
-                                modifier = Modifier.size(44.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                IconButton(onClick = { /* GIF picker stub */ }) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Gif,
-                                        contentDescription = "Add GIF",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(24.dp),
-                                    )
-                                }
+                            IconButton(onClick = { }, modifier = Modifier.size(36.dp)) {
+                                Icon(Icons.Outlined.Gif, contentDescription = "GIF", modifier = Modifier.size(20.dp), tint = toolbarTint)
                             }
-
-                            // Attach file icon
-                            Box(
-                                modifier = Modifier.size(44.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                IconButton(onClick = { /* Attach file stub */ }) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.AttachFile,
-                                        contentDescription = "Attach file",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(24.dp),
-                                    )
-                                }
+                            IconButton(onClick = { }, modifier = Modifier.size(36.dp)) {
+                                Icon(Icons.Outlined.AttachFile, contentDescription = "Attach", modifier = Modifier.size(20.dp), tint = toolbarTint)
                             }
-
-                            // Format quote icon
-                            Box(
-                                modifier = Modifier.size(44.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                IconButton(onClick = { /* Format quote stub */ }) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.FormatQuote,
-                                        contentDescription = "Format quote",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(24.dp),
-                                    )
-                                }
+                            IconButton(onClick = { }, modifier = Modifier.size(36.dp)) {
+                                Icon(Icons.Outlined.FormatQuote, contentDescription = "Quote", modifier = Modifier.size(20.dp), tint = toolbarTint)
                             }
-
-                            // More options icon
-                            Box(
-                                modifier = Modifier.size(44.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                IconButton(onClick = { /* More options stub */ }) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.MoreHoriz,
-                                        contentDescription = "More options",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(24.dp),
-                                    )
-                                }
+                            IconButton(onClick = { }, modifier = Modifier.size(36.dp)) {
+                                Icon(Icons.Outlined.MoreHoriz, contentDescription = "More", modifier = Modifier.size(20.dp), tint = toolbarTint)
                             }
                         }
 
                         // Media Preview Row
                         if (state.mediaUris.isNotEmpty()) {
-                            Spacer(Modifier.height(10.dp))
+                            Spacer(Modifier.height(12.dp))
                             MediaPreviewRow(
                                 mediaUris = state.mediaUris,
                                 uploadProgress = state.uploadProgress,
@@ -440,264 +394,289 @@ fun ComposerScreen(
 
                 // -- Additional thread drafts --
                 state.threadDrafts.forEachIndexed { index, draft ->
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
-                    )
-                    Row(
+                    Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
-                            .height(IntrinsicSize.Min),
+                            .padding(horizontal = 16.dp, vertical = 2.dp),
+                        color = colorScheme.surfaceContainerLowest,
+                        shape = RoundedCornerShape(20.dp),
                     ) {
-                        // LEFT COLUMN: thread connector
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.width(48.dp),
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp)
+                                .height(IntrinsicSize.Min),
                         ) {
-                            UserAvatar(
-                                avatarUrl = null,
-                                displayName = "You",
-                                size = 28.dp,
-                                showBorder = false,
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            ThreadLine(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight(),
-                            )
-                        }
-                        Spacer(Modifier.width(8.dp))
-                        // RIGHT COLUMN: draft content
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.width(44.dp),
                             ) {
-                                Text(
-                                    text = "You",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.SemiBold,
+                                UserAvatar(
+                                    avatarUrl = null,
+                                    displayName = "You",
+                                    size = 28.dp,
+                                    showBorder = false,
                                 )
-                                IconButton(
-                                    onClick = { onIntent(ComposerContract.Intent.RemoveThreadPost(index)) },
-                                    modifier = Modifier.size(28.dp),
-                                ) {
-                                    Icon(
-                                        Icons.Filled.Close,
-                                        contentDescription = "Remove",
-                                        modifier = Modifier.size(16.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
+                                Spacer(Modifier.height(4.dp))
+                                ThreadLine(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight(),
+                                )
                             }
-                            BasicTextField(
-                                value = draft.text,
-                                onValueChange = { onIntent(ComposerContract.Intent.UpdateThreadPost(index, it)) },
-                                modifier = Modifier.fillMaxWidth(),
-                                textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                ),
-                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                                maxLines = 8,
-                                decorationBox = { innerTextField ->
-                                    Box {
-                                        if (draft.text.isEmpty()) {
-                                            Text(
-                                                text = "Continue thread...",
-                                                style = MaterialTheme.typography.bodyLarge,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                            )
-                                        }
-                                        innerTextField()
+                            Spacer(Modifier.width(10.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        text = "You",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                    )
+                                    IconButton(
+                                        onClick = { onIntent(ComposerContract.Intent.RemoveThreadPost(index)) },
+                                        modifier = Modifier.size(24.dp),
+                                    ) {
+                                        Icon(
+                                            Icons.Filled.Close,
+                                            contentDescription = "Remove",
+                                            modifier = Modifier.size(14.dp),
+                                            tint = colorScheme.onSurfaceVariant,
+                                        )
                                     }
-                                },
-                            )
+                                }
+                                BasicTextField(
+                                    value = draft.text,
+                                    onValueChange = { onIntent(ComposerContract.Intent.UpdateThreadPost(index, it)) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                        color = colorScheme.onSurface,
+                                    ),
+                                    cursorBrush = SolidColor(colorScheme.primary),
+                                    maxLines = 8,
+                                    decorationBox = { innerTextField ->
+                                        Box {
+                                            if (draft.text.isEmpty()) {
+                                                Text(
+                                                    text = "Continua il thread...",
+                                                    style = MaterialTheme.typography.bodyLarge,
+                                                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                                )
+                                            }
+                                            innerTextField()
+                                        }
+                                    },
+                                )
+                            }
                         }
                     }
                 }
 
                 // -- "Add to thread" button --
                 if (state.parentThreadId == null) {
-                    Row(
+                    Surface(
+                        onClick = { onIntent(ComposerContract.Intent.AddThreadPost) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onIntent(ComposerContract.Intent.AddThreadPost) }
-                            .padding(horizontal = 12.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        color = colorScheme.surfaceContainerLow,
                     ) {
-                        Box(
-                            modifier = Modifier.width(48.dp),
-                            contentAlignment = Alignment.Center,
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
-                            UserAvatar(
-                                avatarUrl = null,
-                                displayName = "+",
-                                size = 20.dp,
-                                showBorder = false,
-                            )
-                        }
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = "Add to thread",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        )
-                    }
-                }
-
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                )
-
-                // -- Category selector (Scoperta / Sfida / Domanda) --
-                if (state.parentThreadId == null) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = "Tipo:",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        ComposerContract.PostCategory.entries.forEach { cat ->
-                            FilterChip(
-                                selected = state.category == cat,
-                                onClick = { onIntent(ComposerContract.Intent.SetCategory(cat)) },
-                                label = {
-                                    Text(
-                                        text = "${cat.emoji} ${cat.label}",
-                                        style = MaterialTheme.typography.labelSmall,
+                            Surface(
+                                shape = CircleShape,
+                                color = colorScheme.primaryContainer,
+                                modifier = Modifier.size(24.dp),
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        Icons.Outlined.Add,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(14.dp),
+                                        tint = colorScheme.onPrimaryContainer,
                                     )
-                                },
-                                modifier = Modifier.height(28.dp),
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                                ),
+                                }
+                            }
+                            Text(
+                                text = "Aggiungi al thread",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             )
                         }
                     }
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                    )
                 }
 
-                // -- Mood Tags (compact inline) --
-                Row(
+                Spacer(Modifier.height(12.dp))
+
+                // -- Options card: Category + Mood + Visibility + Char count --
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                        .padding(horizontal = 16.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    color = colorScheme.surfaceContainerLow,
                 ) {
-                    Text(
-                        text = "Mood:",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    ComposerContract.MOOD_TAGS.forEach { tag ->
-                        FilterChip(
-                            selected = state.moodTag == tag,
-                            onClick = { onIntent(ComposerContract.Intent.SetMoodTag(tag)) },
-                            label = {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        // Category selector
+                        if (state.parentThreadId == null) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
                                 Text(
-                                    text = tag,
-                                    style = MaterialTheme.typography.labelSmall,
+                                    text = "Tipo",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = colorScheme.onSurfaceVariant,
                                 )
-                            },
-                            modifier = Modifier.height(28.dp),
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                            ),
-                        )
+                                ComposerContract.PostCategory.entries.forEach { cat ->
+                                    FilterChip(
+                                        selected = state.category == cat,
+                                        onClick = { onIntent(ComposerContract.Intent.SetCategory(cat)) },
+                                        label = {
+                                            Text(
+                                                text = cat.label,
+                                                style = MaterialTheme.typography.labelSmall,
+                                            )
+                                        },
+                                        leadingIcon = if (state.category == cat) {
+                                            {
+                                                Icon(
+                                                    Icons.Filled.Check,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(14.dp),
+                                                )
+                                            }
+                                        } else null,
+                                        shape = RoundedCornerShape(20.dp),
+                                        modifier = Modifier.height(32.dp),
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = colorScheme.tertiaryContainer,
+                                            selectedLabelColor = colorScheme.onTertiaryContainer,
+                                            selectedLeadingIconColor = colorScheme.onTertiaryContainer,
+                                            containerColor = colorScheme.surfaceContainerHigh,
+                                        ),
+                                    )
+                                }
+                            }
+                        }
+
+                        // Mood Tags
+                        Row(
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = "Mood",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = colorScheme.onSurfaceVariant,
+                            )
+                            ComposerContract.MOOD_TAGS.forEach { tag ->
+                                FilterChip(
+                                    selected = state.moodTag == tag,
+                                    onClick = { onIntent(ComposerContract.Intent.SetMoodTag(tag)) },
+                                    label = {
+                                        Text(
+                                            text = tag,
+                                            style = MaterialTheme.typography.labelSmall,
+                                        )
+                                    },
+                                    leadingIcon = if (state.moodTag == tag) {
+                                        {
+                                            Icon(
+                                                Icons.Filled.Check,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(14.dp),
+                                            )
+                                        }
+                                    } else null,
+                                    shape = RoundedCornerShape(20.dp),
+                                    modifier = Modifier.height(32.dp),
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = colorScheme.primaryContainer,
+                                        selectedLabelColor = colorScheme.onPrimaryContainer,
+                                        selectedLeadingIconColor = colorScheme.onPrimaryContainer,
+                                        containerColor = colorScheme.surfaceContainerHigh,
+                                    ),
+                                )
+                            }
+                        }
+
+                        // Bottom: visibility + char count
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            // Selected mood badge
+                            if (state.moodTag != null) {
+                                Surface(
+                                    shape = RoundedCornerShape(20.dp),
+                                    color = colorScheme.secondaryContainer,
+                                ) {
+                                    Text(
+                                        text = state.moodTag,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = colorScheme.onSecondaryContainer,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    )
+                                }
+                                Spacer(Modifier.width(8.dp))
+                            }
+
+                            VisibilitySelector(
+                                currentVisibility = state.visibility,
+                                onVisibilitySelected = { onIntent(ComposerContract.Intent.SetVisibility(it)) },
+                            )
+
+                            Spacer(Modifier.weight(1f))
+
+                            // Character count
+                            val isNearLimit = state.characterCount > (state.maxCharacters * 0.9).toInt()
+                            val isOverLimit = state.characterCount > state.maxCharacters
+                            val counterColor = when {
+                                isOverLimit -> colorScheme.error
+                                isNearLimit -> colorScheme.error.copy(alpha = 0.7f)
+                                else -> colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                            }
+                            Text(
+                                text = "${state.characterCount}/${state.maxCharacters}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = counterColor,
+                                fontWeight = if (isOverLimit) FontWeight.Bold else FontWeight.Normal,
+                            )
+                        }
                     }
                 }
 
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                )
+                Spacer(Modifier.height(16.dp))
 
-                // -- Bottom bar: mood selected + visibility + char count --
+                // -- Footer: Reply permission + Publish --
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    // Selected mood tag (if any)
-                    if (state.moodTag != null) {
-                        FilterChip(
-                            selected = true,
-                            onClick = { onIntent(ComposerContract.Intent.SetMoodTag(null)) },
-                            label = {
-                                Text(
-                                    text = state.moodTag,
-                                    style = MaterialTheme.typography.labelSmall,
-                                )
-                            },
-                            modifier = Modifier.height(26.dp),
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                            ),
-                        )
-                        Spacer(Modifier.width(8.dp))
-                    }
-
-                    // Visibility selector (compact)
-                    VisibilitySelector(
-                        currentVisibility = state.visibility,
-                        onVisibilitySelected = { onIntent(ComposerContract.Intent.SetVisibility(it)) },
-                    )
-
-                    Spacer(Modifier.weight(1f))
-
-                    // Character count
-                    val isNearLimit = state.characterCount > (state.maxCharacters * 0.9).toInt()
-                    val isOverLimit = state.characterCount > state.maxCharacters
-                    val counterColor = when {
-                        isOverLimit -> MaterialTheme.colorScheme.error
-                        isNearLimit -> MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
-                        else -> MaterialTheme.colorScheme.onSurfaceVariant
-                    }
-                    Text(
-                        text = "${state.characterCount}/${state.maxCharacters}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = counterColor,
-                        fontWeight = if (isOverLimit) FontWeight.Bold else FontWeight.Normal,
-                    )
-                }
-
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                )
-
-                // -- Footer: Reply options + Publish --
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     val replyLabel = when (state.replyPermission) {
-                        ComposerContract.ReplyPermission.Everyone -> "Anyone can reply"
-                        ComposerContract.ReplyPermission.Followers -> "Followers can reply"
-                        ComposerContract.ReplyPermission.Mentioned -> "Mentioned can reply"
+                        ComposerContract.ReplyPermission.Everyone -> "Tutti possono rispondere"
+                        ComposerContract.ReplyPermission.Followers -> "Solo follower"
+                        ComposerContract.ReplyPermission.Mentioned -> "Solo menzionati"
                     }
-                    Text(
-                        text = replyLabel,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.clickable {
+                    Surface(
+                        onClick = {
                             val next = when (state.replyPermission) {
                                 ComposerContract.ReplyPermission.Everyone -> ComposerContract.ReplyPermission.Followers
                                 ComposerContract.ReplyPermission.Followers -> ComposerContract.ReplyPermission.Mentioned
@@ -705,24 +684,35 @@ fun ComposerScreen(
                             }
                             onIntent(ComposerContract.Intent.ChangeReplyPermission(next))
                         },
-                    )
+                        shape = RoundedCornerShape(20.dp),
+                        color = colorScheme.surfaceContainerLow,
+                    ) {
+                        Text(
+                            text = replyLabel,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                        )
+                    }
 
                     Button(
                         onClick = { onIntent(ComposerContract.Intent.Submit) },
                         enabled = canSubmit,
                         shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier.height(44.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
+                            containerColor = colorScheme.primary,
+                            contentColor = colorScheme.onPrimary,
+                            disabledContainerColor = colorScheme.surfaceContainerHigh,
+                            disabledContentColor = colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
                         ),
                     ) {
                         if (state.isSubmitting) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
                                 strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onPrimary,
+                                color = colorScheme.onPrimary,
                             )
                         } else {
                             Text(
@@ -733,6 +723,8 @@ fun ComposerScreen(
                         }
                     }
                 }
+
+                Spacer(Modifier.height(16.dp))
             }
 
             // -- Loading overlay --
@@ -744,18 +736,26 @@ fun ComposerScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.32f)),
+                        .background(colorScheme.scrim.copy(alpha = 0.32f)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator()
-                        if (state.isUploading) {
-                            Spacer(Modifier.height(12.dp))
-                            Text(
-                                text = "Uploading media...",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.87f),
-                            )
+                    Surface(
+                        shape = RoundedCornerShape(28.dp),
+                        color = colorScheme.surfaceContainerHigh,
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            CircularProgressIndicator()
+                            if (state.isUploading) {
+                                Text(
+                                    text = "Caricamento media...",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = colorScheme.onSurface,
+                                )
+                            }
                         }
                     }
                 }
@@ -787,7 +787,7 @@ private fun MediaPreviewRow(
             Box(
                 modifier = Modifier
                     .size(80.dp)
-                    .clip(RoundedCornerShape(12.dp)),
+                    .clip(RoundedCornerShape(16.dp)),
             ) {
                 AsyncImage(
                     model = uri,
@@ -818,7 +818,7 @@ private fun MediaPreviewRow(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
                             .padding(4.dp)
-                            .size(18.dp)
+                            .size(20.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.primary),
                         contentAlignment = Alignment.Center,
@@ -832,15 +832,15 @@ private fun MediaPreviewRow(
                     }
                 }
 
-                // Remove button overlay (disabled during upload)
+                // Remove button
                 if (!isUploading) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(4.dp)
-                            .size(20.dp)
+                            .size(22.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f))
                             .clickable { onRemove(index) },
                         contentAlignment = Alignment.Center,
                     ) {
@@ -855,26 +855,26 @@ private fun MediaPreviewRow(
             }
         }
 
-        // Add more button (if under limit and not uploading)
+        // Add more button
         if (mediaUris.size < maxMedia && !isUploading) {
-            Box(
-                modifier = Modifier
-                    .size(80.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                        shape = RoundedCornerShape(12.dp),
-                    )
-                    .clickable { onAddMore() },
-                contentAlignment = Alignment.Center,
+            Surface(
+                modifier = Modifier.size(80.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                ),
+                onClick = { onAddMore() },
             ) {
-                Icon(
-                    imageVector = Icons.Outlined.Add,
-                    contentDescription = "Add media",
-                    modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Outlined.Add,
+                        contentDescription = "Add media",
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
     }
@@ -890,25 +890,28 @@ private fun VisibilitySelector(
     var expanded by remember { mutableStateOf(false) }
 
     Box {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .clip(RoundedCornerShape(14.dp))
-                .clickable { expanded = true }
-                .padding(horizontal = 8.dp, vertical = 4.dp),
+        Surface(
+            onClick = { expanded = true },
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
         ) {
-            Icon(
-                imageVector = currentVisibility.icon(),
-                contentDescription = null,
-                modifier = Modifier.size(14.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = currentVisibility.label(),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            ) {
+                Icon(
+                    imageVector = currentVisibility.icon(),
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = currentVisibility.label(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
 
         DropdownMenu(
@@ -945,7 +948,7 @@ private fun ComposerContract.Visibility.icon(): ImageVector = when (this) {
 }
 
 private fun ComposerContract.Visibility.label(): String = when (this) {
-    ComposerContract.Visibility.PUBLIC -> "Public"
-    ComposerContract.Visibility.FOLLOWERS_ONLY -> "Followers"
-    ComposerContract.Visibility.PRIVATE -> "Private"
+    ComposerContract.Visibility.PUBLIC -> "Pubblico"
+    ComposerContract.Visibility.FOLLOWERS_ONLY -> "Follower"
+    ComposerContract.Visibility.PRIVATE -> "Privato"
 }

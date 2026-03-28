@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicReference
  *
  * Features:
  * - Text-based lip-sync generation
- * - Smooth transitions between visemes
+ * - Smooth transitions between visemes (crossfade from current weights)
  * - Coarticulation for natural speech
  * - Priority-based integration with other blend shapes
  * - SYNCHRONIZED MODE: Real-time audio-driven lip-sync for ultra-accurate sync
@@ -35,14 +35,14 @@ class LipSyncController(
 
     private var lipSyncJob: Job? = null
 
+    // Tracks the actual current blend shape weights for crossfading
+    private val currentLipWeights = AtomicReference<Map<String, Float>>(emptyMap())
+
     // Configuration for viseme transitions
     private var config = LipSyncConfig()
 
     // ==================== Synchronized Speech State ====================
 
-    /**
-     * State for synchronized audio-driven lip-sync
-     */
     private data class SyncState(
         val text: String = "",
         val messageId: String = "",
@@ -62,42 +62,36 @@ class LipSyncController(
      * Lip-sync configuration
      */
     data class LipSyncConfig(
-        val fadeInMs: Long = 40L,           // Time to reach target viseme
-        val fadeOutMs: Long = 60L,          // Time to return to neutral
+        val fadeInMs: Long = 16L,            // Crossfade duration toward target viseme (short = snappy)
+        val fadeOutMs: Long = 80L,           // Time to return to neutral
         val minVisemeDurationMs: Long = 30L, // Minimum viseme duration
-        val coarticulationStrength: Float = 0.25f, // Influence of previous viseme
-        val intensity: Float = 1.0f          // Overall lip movement intensity
+        val coarticulationStrength: Float = 0.20f, // Influence of previous viseme
+        val intensity: Float = 1.0f,         // Overall lip movement intensity
+        // Asymmetric envelope for audio-reactive mode:
+        // attack fast (follow rising audio immediately),
+        // release slow (decay naturally like real speech formants)
+        val lerpAttack: Float = 0.75f,       // per-frame lerp when weight is rising
+        val lerpRelease: Float = 0.18f       // per-frame lerp when weight is falling
     )
 
     // ==================== Synchronized Speech Methods ====================
 
-    /**
-     * Prepare lip-sync for synchronized playback.
-     * Generates viseme sequence but does NOT start animation until startSynchronized() is called.
-     *
-     * @param text The text to speak
-     * @param estimatedDurationMs Estimated duration (will be adjusted when audio starts)
-     * @param messageId Unique identifier for this speech instance
-     * @param scope CoroutineScope for execution
-     */
     fun prepareSynchronized(
         text: String,
         estimatedDurationMs: Long,
         messageId: String,
         scope: CoroutineScope
     ) {
-        stop() // Clear any existing lip-sync
+        stop()
 
         val durationToUse = if (estimatedDurationMs > 0) estimatedDurationMs else 5000L
 
-        // If text is empty, prepare for AUDIO-REACTIVE mode (pure amplitude-based lip-sync)
         if (text.isBlank()) {
             println("[LipSyncController] Preparing AUDIO-REACTIVE lip-sync (no text): $messageId")
-
             syncState.set(SyncState(
                 text = "",
                 messageId = messageId,
-                visemeTimings = emptyList(), // No pre-calculated visemes
+                visemeTimings = emptyList(),
                 totalDurationMs = durationToUse,
                 isPrepared = true,
                 isPlaying = false
@@ -107,7 +101,6 @@ class LipSyncController(
 
         println("[LipSyncController] Preparing TEXT-BASED lip-sync: '${text.take(50)}...' (${durationToUse}ms)")
 
-        // Generate phonemes and visemes from text
         val phonemeTimings = phonemeConverter.textToPhonemes(text, durationToUse)
         val visemeTimings = VisemeMapper.phonemesToVisemes(phonemeTimings)
 
@@ -123,13 +116,6 @@ class LipSyncController(
         ))
     }
 
-    /**
-     * Start synchronized lip-sync playback NOW.
-     * Call this when audio playback actually starts (e.g., AudioTrack.play()).
-     *
-     * @param actualDurationMs The actual audio duration (if known, otherwise 0 to use estimate)
-     * @param scope CoroutineScope for execution
-     */
     fun startSynchronized(actualDurationMs: Long = 0, scope: CoroutineScope) {
         val state = syncState.get()
 
@@ -143,10 +129,8 @@ class LipSyncController(
             return
         }
 
-        // Use actual duration if provided, otherwise use estimate
         val durationToUse = if (actualDurationMs > 0) actualDurationMs else state.totalDurationMs
 
-        // Re-calculate timings if duration changed significantly
         val visemeTimings = if (actualDurationMs > 0 &&
             kotlin.math.abs(actualDurationMs - state.totalDurationMs) > 500) {
             println("[LipSyncController] Recalculating visemes for actual duration: ${actualDurationMs}ms (was ${state.totalDurationMs}ms)")
@@ -166,8 +150,8 @@ class LipSyncController(
 
         _isSpeaking.value = true
         _progress.value = 0f
+        currentLipWeights.set(emptyMap())
 
-        // Determine if we're in audio-reactive mode (no text/visemes)
         val isAudioReactiveMode = visemeTimings.isEmpty()
 
         if (isAudioReactiveMode) {
@@ -188,58 +172,35 @@ class LipSyncController(
             } finally {
                 _isSpeaking.value = false
                 _progress.value = 0f
+                currentLipWeights.set(emptyMap())
                 syncState.set(SyncState())
             }
         }
     }
 
-    /**
-     * Update synchronized playback progress based on audio position.
-     * Call this regularly during playback for real-time sync.
-     *
-     * @param progressMs Current audio playback position in milliseconds
-     * @param totalDurationMs Total audio duration (may update as streaming continues)
-     */
     fun updateSyncProgress(progressMs: Long, totalDurationMs: Long) {
         val state = syncState.get()
         if (!state.isPlaying) return
 
-        // Update progress
         val normalizedProgress = (progressMs.toFloat() / totalDurationMs.toFloat()).coerceIn(0f, 1f)
         _progress.value = normalizedProgress
 
-        // If duration changed significantly, we may need to adjust timing
         if (totalDurationMs > 0 && kotlin.math.abs(totalDurationMs - state.totalDurationMs) > 1000) {
             syncState.set(state.copy(totalDurationMs = totalDurationMs))
             println("[LipSyncController] Updated total duration: ${totalDurationMs}ms")
         }
     }
 
-    /**
-     * Update lip-sync intensity based on real-time audio amplitude.
-     * Call this frequently for natural lip movement that matches audio volume.
-     *
-     * @param audioLevel Audio amplitude (0.0-1.0)
-     */
     fun updateAudioIntensity(audioLevel: Float) {
-        // Map audio level to intensity multiplier (0.3-1.5 range for natural variation)
-        audioIntensityMultiplier = 0.3f + (audioLevel * 1.2f)
+        // No floor offset: allow true zero so the mouth actually closes between syllables.
+        // Multiply by 1.3 to compensate for the removed 0.4 boost on loud frames.
+        audioIntensityMultiplier = (audioLevel * 1.3f).coerceIn(0f, 1.5f)
     }
 
-    /**
-     * Update viseme weights from external FFT-based audio analysis.
-     * When non-empty, these weights drive the lip-sync instead of amplitude-only mode.
-     *
-     * @param weights Map of VRM viseme blend shape names ("a","e","i","o","u") to weights (0.0-1.0)
-     */
     fun updateVisemeWeights(weights: Map<String, Float>) {
         externalVisemeWeights.set(weights)
     }
 
-    /**
-     * Stop synchronized lip-sync immediately.
-     * Call this when audio is interrupted or stopped.
-     */
     fun stopSynchronized() {
         syncJob?.cancel()
         syncJob = null
@@ -248,117 +209,80 @@ class LipSyncController(
         _progress.value = 0f
         audioIntensityMultiplier = 1.0f
         externalVisemeWeights.set(emptyMap())
-
-        // Clear lip-sync blend shapes with quick fade
+        currentLipWeights.set(emptyMap())
         blendShapeController.clearCategory(VrmBlendShapeController.CATEGORY_LIPSYNC)
-
         println("[LipSyncController] Synchronized lip-sync stopped")
     }
 
     /**
-     * Play audio-reactive lip-sync loop.
-     * Uses FFT-derived viseme weights when available, falls back to amplitude-only.
-     * Used when text is not available (streaming audio mode).
+     * Audio-reactive loop with FFT-derived viseme weights.
+     *
+     * FIX: lerp factor reduced to 0.18f (was 0.95f) so the mouth
+     * glides smoothly toward the target instead of snapping to it.
      */
     private suspend fun playAudioReactiveLoop(startTime: Long) {
         println("[LipSyncController] Audio-reactive loop started (FFT-enhanced)")
 
-        var lastWeights = mapOf<String, Float>()
-        val coarticulationFactor = 0.2f // 20% blend from previous frame
+        val smoothedWeights = mutableMapOf<String, Float>()
 
         while (syncState.get().isPlaying) {
             val fftWeights = externalVisemeWeights.get()
             val intensityMultiplier = audioIntensityMultiplier.coerceIn(0f, 1.5f)
 
-            if (fftWeights.isNotEmpty() && intensityMultiplier > 0.08f) {
-                // FFT-DRIVEN MODE: Use spectrally-derived viseme weights
-                val volumeModulation = intensityMultiplier * config.intensity
-                val modulatedWeights = mutableMapOf<String, Float>()
-
-                fftWeights.forEach { (name, weight) ->
-                    val prevWeight = lastWeights[name] ?: 0f
-                    // Coarticulation: blend with previous frame for natural transitions
-                    val blended = weight * (1f - coarticulationFactor) + prevWeight * coarticulationFactor
-                    // Volume envelope modulation
-                    modulatedWeights[name] = (blended * volumeModulation).coerceIn(0f, 1f)
+            val targetWeights: Map<String, Float> = when {
+                fftWeights.isNotEmpty() && intensityMultiplier > 0.12f -> {
+                    val vol = (intensityMultiplier * config.intensity).coerceAtMost(0.85f)
+                    fftWeights.mapValues { (_, w) -> (w * vol).coerceIn(0f, 1f) }
                 }
-
-                blendShapeController.setCategoryWeights(
-                    VrmBlendShapeController.CATEGORY_LIPSYNC,
-                    modulatedWeights
-                )
-
-                // Track dominant viseme for state reporting
-                val dominant = modulatedWeights.maxByOrNull { it.value }
-                _currentViseme.value = when (dominant?.key) {
-                    "a" -> Viseme.AA
-                    "e" -> Viseme.E
-                    "i" -> Viseme.I
-                    "o" -> Viseme.O
-                    "u" -> Viseme.U
-                    else -> Viseme.SILENCE
+                intensityMultiplier > 0.12f -> {
+                    val eff = (intensityMultiplier * config.intensity).coerceAtMost(1.0f)
+                    getAudioReactiveBlendShapes(eff)
                 }
-
-                lastWeights = modulatedWeights
-
-            } else if (intensityMultiplier > 0.1f) {
-                // FALLBACK: No FFT data, use amplitude-only (legacy behavior)
-                val effectiveIntensity = intensityMultiplier * config.intensity
-                val blendShapes = getAudioReactiveBlendShapes(effectiveIntensity)
-                blendShapeController.setCategoryWeights(
-                    VrmBlendShapeController.CATEGORY_LIPSYNC,
-                    blendShapes
-                )
-                _currentViseme.value = Viseme.AA
-            } else {
-                // Low audio - nearly closed mouth
-                blendShapeController.setCategoryWeights(
-                    VrmBlendShapeController.CATEGORY_LIPSYNC,
-                    mapOf("a" to 0.05f)
-                )
-                _currentViseme.value = Viseme.SILENCE
-                lastWeights = emptyMap()
+                else -> emptyMap() // true silence: mouth fully closed
             }
 
-            // Update at ~60fps for smooth animation
+            // Asymmetric envelope: attack fast, release slow
+            val allKeys = (smoothedWeights.keys + targetWeights.keys).toSet()
+            allKeys.forEach { name ->
+                val current = smoothedWeights[name] ?: 0f
+                val target  = targetWeights[name]  ?: 0f
+                val factor  = if (target > current) config.lerpAttack else config.lerpRelease
+                smoothedWeights[name] = current + (target - current) * factor
+            }
+            smoothedWeights.keys.removeAll { (smoothedWeights[it] ?: 0f) < 0.005f }
+
+            val snapshot = smoothedWeights.toMap()
+            currentLipWeights.set(snapshot)
+            blendShapeController.setCategoryWeights(VrmBlendShapeController.CATEGORY_LIPSYNC, snapshot)
+
+            _currentViseme.value = if (intensityMultiplier <= 0.08f) Viseme.SILENCE else {
+                when (smoothedWeights.maxByOrNull { it.value }?.key) {
+                    "a" -> Viseme.AA; "e" -> Viseme.E; "i" -> Viseme.I
+                    "o" -> Viseme.O;  "u" -> Viseme.U; else -> Viseme.SILENCE
+                }
+            }
+
             delay(16)
         }
 
-        // Fade out when done
         fadeToNeutral()
         println("[LipSyncController] Audio-reactive loop ended")
     }
 
-    /**
-     * Generate blend shapes for audio-reactive lip-sync based on amplitude.
-     * Creates natural-looking mouth movements by combining multiple visemes.
-     */
     private fun getAudioReactiveBlendShapes(intensity: Float): Map<String, Float> {
-        // Fallback amplitude-only mode: blend different mouth shapes based on intensity
-        // Uses lowercase keys matching VRM standard preset names
         return when {
-            intensity < 0.3f -> mapOf(
-                "a" to intensity * 0.5f,
-                "i" to intensity * 0.2f
-            )
-            intensity < 0.6f -> mapOf(
-                "a" to intensity * 0.7f,
-                "o" to intensity * 0.2f,
-                "i" to 0.1f
-            )
-            intensity < 0.9f -> mapOf(
-                "a" to intensity * 0.85f,
-                "o" to intensity * 0.15f
-            )
-            else -> mapOf(
-                "a" to 1.0f,
-                "o" to 0.2f
-            )
+            intensity < 0.3f -> mapOf("a" to intensity * 0.8f, "i" to intensity * 0.3f)
+            intensity < 0.6f -> mapOf("a" to intensity * 0.9f, "o" to intensity * 0.3f, "i" to 0.15f)
+            intensity < 0.9f -> mapOf("a" to intensity, "o" to intensity * 0.2f)
+            else             -> mapOf("a" to 1.0f, "o" to 0.25f)
         }
     }
 
     /**
-     * Play viseme sequence synchronized to audio timeline
+     * Play viseme sequence synchronized to audio timeline.
+     *
+     * FIX: timing now accounts for both fade-in AND fade-out so
+     * adjacent visemes overlap correctly (crossfade, no gaps/jumps).
      */
     private suspend fun playSynchronizedSequence(
         visemes: List<VisemeTiming>,
@@ -369,27 +293,21 @@ class LipSyncController(
 
         var previousViseme: Viseme? = null
 
-        for (visemeTiming in visemes) {
-            // Calculate target time relative to audio start
+        for ((index, visemeTiming) in visemes.withIndex()) {
             val targetTime = startTime + visemeTiming.startTimeMs
             val now = System.currentTimeMillis()
             val waitTime = targetTime - now
 
-            if (waitTime > 0) {
-                delay(waitTime)
-            } else if (waitTime < -100) {
-                // We're running behind, skip to catch up
-                continue
+            when {
+                waitTime > 0 -> delay(waitTime)
+                waitTime < -150 -> continue // too late, skip this viseme
             }
 
-            // Check if still playing
             if (!syncState.get().isPlaying) break
 
-            // Update progress
             _progress.value = visemeTiming.startTimeMs.toFloat() / totalDurationMs
 
-            // Apply viseme with audio-modulated intensity
-            val modulatedIntensity = config.intensity * audioIntensityMultiplier
+            val modulatedIntensity = (config.intensity * audioIntensityMultiplier).coerceIn(0f, 1.2f)
             applyVisemeWithCoarticulation(
                 visemeTiming.viseme,
                 previousViseme,
@@ -400,20 +318,18 @@ class LipSyncController(
             _currentViseme.value = visemeTiming.viseme
             previousViseme = visemeTiming.viseme
 
-            // Hold for duration (minus fade time)
+            // Hold = full duration minus the crossfade-in time.
+            // The next viseme's crossfade-in will overlap naturally.
             val holdTime = visemeTiming.durationMs - config.fadeInMs
-            if (holdTime > 0) {
-                delay(holdTime)
-            }
+            if (holdTime > 0) delay(holdTime)
         }
 
-        // Final fade out
         fadeToNeutral()
         _progress.value = 1f
     }
 
     /**
-     * Apply a viseme with coarticulation and custom intensity
+     * Apply a viseme crossfading FROM current weights (not from zero).
      */
     private suspend fun applyVisemeWithCoarticulation(
         viseme: Viseme,
@@ -421,37 +337,28 @@ class LipSyncController(
         durationMs: Long,
         intensityOverride: Float = config.intensity
     ) {
-        // Get base blend shapes for this viseme
-        val blendShapes = VisemeMapper.getVisemeBlendShapes(viseme, intensityOverride).toMutableMap()
+        val targetShapes = VisemeMapper.getVisemeBlendShapes(viseme, intensityOverride).toMutableMap()
 
-        // Apply coarticulation from previous viseme
+        // Coarticulation: blend in a fraction of the previous viseme
         if (previousViseme != null) {
             val prevShapes = VisemeMapper.getVisemeBlendShapes(previousViseme, intensityOverride)
             prevShapes.forEach { (name, prevWeight) ->
-                val currentWeight = blendShapes[name] ?: 0f
-                blendShapes[name] = currentWeight + prevWeight * config.coarticulationStrength
+                val currentWeight = targetShapes[name] ?: 0f
+                targetShapes[name] = currentWeight + prevWeight * config.coarticulationStrength
             }
         }
 
-        // Normalize weights if any exceed 1.0
-        val maxWeight = blendShapes.values.maxOrNull() ?: 1f
+        // Normalize if any weight exceeds 1.0
+        val maxWeight = targetShapes.values.maxOrNull() ?: 1f
         if (maxWeight > 1f) {
-            blendShapes.forEach { (name, weight) ->
-                blendShapes[name] = weight / maxWeight
-            }
+            targetShapes.replaceAll { _, weight -> weight / maxWeight }
         }
 
-        // Apply with smooth fade-in
-        fadeToViseme(blendShapes, config.fadeInMs.coerceAtMost(durationMs / 2))
+        val fadeDuration = config.fadeInMs.coerceAtMost(durationMs / 2)
+        // Crossfade from wherever we currently are
+        crossfadeTo(targetShapes, fadeDuration)
     }
 
-    /**
-     * Start lip-sync for a text with specified duration
-     *
-     * @param text The text to speak
-     * @param durationMs Total duration of the speech in milliseconds
-     * @param scope CoroutineScope for execution
-     */
     fun speak(text: String, durationMs: Long, scope: CoroutineScope) {
         stop()
 
@@ -461,9 +368,9 @@ class LipSyncController(
         }
 
         _isSpeaking.value = true
+        currentLipWeights.set(emptyMap())
         println("[LipSyncController] Starting lip-sync for: '$text', duration: ${durationMs}ms")
 
-        // Convert text to phonemes
         val phonemeTimings = phonemeConverter.textToPhonemes(text, durationMs)
         println("[LipSyncController] Generated ${phonemeTimings.size} phonemes")
 
@@ -472,7 +379,6 @@ class LipSyncController(
             return
         }
 
-        // Convert phonemes to visemes
         val visemeTimings = VisemeMapper.phonemesToVisemes(phonemeTimings)
 
         lipSyncJob = scope.launch {
@@ -482,34 +388,25 @@ class LipSyncController(
                 _isSpeaking.value = false
                 _currentViseme.value = Viseme.SILENCE
                 _progress.value = 0f
+                currentLipWeights.set(emptyMap())
             }
         }
     }
 
-    /**
-     * Stop current lip-sync
-     */
     fun stop() {
         lipSyncJob?.cancel()
         lipSyncJob = null
         _isSpeaking.value = false
         _currentViseme.value = Viseme.SILENCE
         _progress.value = 0f
-
-        // Clear lip-sync blend shapes
+        currentLipWeights.set(emptyMap())
         blendShapeController.clearCategory(VrmBlendShapeController.CATEGORY_LIPSYNC)
     }
 
-    /**
-     * Set configuration
-     */
     fun setConfig(config: LipSyncConfig) {
         this.config = config
     }
 
-    /**
-     * Play the viseme sequence with smooth transitions (legacy method)
-     */
     private suspend fun playVisemeSequence(visemes: List<VisemeTiming>, totalDurationMs: Long) {
         if (visemes.isEmpty()) return
 
@@ -517,20 +414,14 @@ class LipSyncController(
         val startTime = System.currentTimeMillis()
 
         for (visemeTiming in visemes) {
-            // Wait until the correct start time
             val targetTime = startTime + visemeTiming.startTimeMs
             val waitTime = targetTime - System.currentTimeMillis()
-            if (waitTime > 0) {
-                delay(waitTime)
-            }
+            if (waitTime > 0) delay(waitTime)
 
-            // Check if cancelled
             if (!_isSpeaking.value) break
 
-            // Update progress
             _progress.value = visemeTiming.startTimeMs.toFloat() / totalDurationMs
 
-            // Apply viseme with coarticulation (using default intensity)
             applyVisemeWithCoarticulation(
                 visemeTiming.viseme,
                 previousViseme,
@@ -541,98 +432,98 @@ class LipSyncController(
             _currentViseme.value = visemeTiming.viseme
             previousViseme = visemeTiming.viseme
 
-            // Hold for duration (minus fade time)
             val holdTime = visemeTiming.durationMs - config.fadeInMs
-            if (holdTime > 0) {
-                delay(holdTime)
-            }
+            if (holdTime > 0) delay(holdTime)
         }
 
-        // Final fade out
         fadeToNeutral()
         _progress.value = 1f
     }
 
     /**
-     * Smoothly transition to a set of blend shapes
+     * Crossfade FROM the current lip weights TO the target weights.
+     *
+     * This is the core fix: instead of always animating 0→target (which
+     * produces a "pop" when the mouth is already open), we interpolate
+     * from wherever the mouth currently is.
      */
-    private suspend fun fadeToViseme(targetShapes: Map<String, Float>, durationMs: Long) {
+    private suspend fun crossfadeTo(targetShapes: Map<String, Float>, durationMs: Long) {
         if (durationMs <= 0) {
-            blendShapeController.setCategoryWeights(
-                VrmBlendShapeController.CATEGORY_LIPSYNC,
-                targetShapes
-            )
+            applyWeights(targetShapes)
             return
         }
 
-        val steps = (durationMs / 8).toInt().coerceAtLeast(1) // ~120fps max
-        val stepDelay = durationMs / steps
+        // Snapshot the current weights before we start moving
+        val fromShapes = currentLipWeights.get()
+
+        // Collect all blend-shape keys involved in either state
+        val allKeys = (fromShapes.keys + targetShapes.keys).toSet()
+
+        val steps = (durationMs / 6).toInt().coerceAtLeast(1)
+        val stepDelayMs = durationMs / steps
 
         for (step in 1..steps) {
-            val progress = step.toFloat() / steps
-            val easedProgress = easeOutQuad(progress)
+            val t = step.toFloat() / steps
+            val easedT = easeOutQuad(t) // fast attack: 75% reached in first half
 
-            val interpolatedShapes = targetShapes.mapValues { (_, targetWeight) ->
-                targetWeight * easedProgress
-            }
+            val interpolated = allKeys.associateWith { key ->
+                val from = fromShapes[key] ?: 0f
+                val to   = targetShapes[key] ?: 0f
+                from + (to - from) * easedT
+            }.filter { it.value > 0.001f }
 
-            blendShapeController.setCategoryWeights(
-                VrmBlendShapeController.CATEGORY_LIPSYNC,
-                interpolatedShapes
-            )
-
-            delay(stepDelay)
+            applyWeights(interpolated)
+            delay(stepDelayMs)
         }
+
+        // Ensure we land exactly on target
+        applyWeights(targetShapes)
     }
 
     /**
-     * Fade to neutral mouth position
+     * Apply weights to the blend shape controller and update local cache.
+     */
+    private fun applyWeights(weights: Map<String, Float>) {
+        currentLipWeights.set(weights)
+        blendShapeController.setCategoryWeights(
+            VrmBlendShapeController.CATEGORY_LIPSYNC,
+            weights
+        )
+    }
+
+    /**
+     * Fade the current lip shape back to neutral (mouth closed).
+     * Reads from the tracked currentLipWeights so it always starts
+     * from the real current state, never from stale data.
      */
     private suspend fun fadeToNeutral() {
-        val steps = (config.fadeOutMs / 8).toInt().coerceAtLeast(1)
-        val stepDelay = config.fadeOutMs / steps
+        val fromWeights = currentLipWeights.get()
+        if (fromWeights.isEmpty()) return
 
-        // Get current weights and fade them out
-        val currentWeights = blendShapeController.currentWeights.value
+        val steps = (config.fadeOutMs / 8).toInt().coerceAtLeast(1)
+        val stepDelayMs = config.fadeOutMs / steps
 
         for (step in 1..steps) {
-            val progress = step.toFloat() / steps
-            val easedProgress = easeOutQuad(progress)
+            val t = step.toFloat() / steps
+            val easedT = easeOutQuad(t)
 
-            val fadedWeights = currentWeights.mapValues { (_, weight) ->
-                weight * (1f - easedProgress)
-            }
+            val fadedWeights = fromWeights.mapValues { (_, weight) ->
+                weight * (1f - easedT)
+            }.filter { it.value > 0.001f }
 
-            blendShapeController.setCategoryWeights(
-                VrmBlendShapeController.CATEGORY_LIPSYNC,
-                fadedWeights
-            )
-
-            delay(stepDelay)
+            applyWeights(fadedWeights)
+            delay(stepDelayMs)
         }
 
-        // Clear completely
+        applyWeights(emptyMap())
         blendShapeController.clearCategory(VrmBlendShapeController.CATEGORY_LIPSYNC)
     }
 
-    /**
-     * Easing function for smooth transitions
-     */
     private fun easeOutQuad(t: Float): Float = 1f - (1f - t) * (1f - t)
 
-    /**
-     * Easing function for smooth in-out transitions
-     */
-    private fun easeInOutQuad(t: Float): Float {
-        return if (t < 0.5f) {
-            2f * t * t
-        } else {
-            1f - (-2f * t + 2f).let { it * it } / 2f
-        }
-    }
+    private fun easeInOutQuad(t: Float): Float =
+        if (t < 0.5f) 2f * t * t
+        else 1f - (-2f * t + 2f).let { it * it } / 2f
 
-    /**
-     * Check if lip-sync is active
-     */
     fun isActive(): Boolean = _isSpeaking.value
 }

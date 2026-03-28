@@ -71,7 +71,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lifo.ui.resources.*
 import com.lifo.util.repository.SubscriptionRepository
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -101,7 +103,7 @@ fun PaywallScreen(
                     IconButton(onClick = { onIntent(SubscriptionContract.Intent.DismissPaywall) }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Indietro",
+                            contentDescription = stringResource(Res.string.back),
                         )
                     }
                 },
@@ -150,7 +152,7 @@ fun PaywallScreen(
                     onClick = { onIntent(SubscriptionContract.Intent.RestorePurchases) },
                 ) {
                     Text(
-                        text = "Ripristina acquisti",
+                        text = stringResource(Res.string.paywall_restore),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -200,7 +202,7 @@ fun PaywallScreen(
                             CircularProgressIndicator()
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                text = "Un momento...",
+                                text = stringResource(Res.string.loading),
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                         }
@@ -287,7 +289,7 @@ private fun PaywallHeader() {
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Calmify Pro",
+            text = stringResource(Res.string.paywall_title),
             style = MaterialTheme.typography.headlineMedium.copy(
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 0.5.sp,
@@ -298,7 +300,7 @@ private fun PaywallHeader() {
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Sblocca il pieno potenziale del tuo percorso",
+            text = stringResource(Res.string.paywall_subtitle),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -324,7 +326,7 @@ private fun FeatureComparisonSection() {
             modifier = Modifier.padding(20.dp),
         ) {
             Text(
-                text = "Confronta i piani",
+                text = stringResource(Res.string.paywall_compare_plans),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -339,14 +341,14 @@ private fun FeatureComparisonSection() {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Funzionalita'",
+                    text = stringResource(Res.string.paywall_features),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1.5f),
                 )
                 Text(
-                    text = "Free",
+                    text = stringResource(Res.string.paywall_free),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -354,7 +356,7 @@ private fun FeatureComparisonSection() {
                     modifier = Modifier.weight(0.8f),
                 )
                 Text(
-                    text = "Pro",
+                    text = stringResource(Res.string.paywall_pro),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
@@ -372,16 +374,16 @@ private fun FeatureComparisonSection() {
             Spacer(modifier = Modifier.height(8.dp))
 
             val features = listOf(
-                Triple("Diario", "3 al giorno", true),
-                Triple("Chat AI", "5 messaggi", true),
-                Triple("Mood tracking", true, true),
-                Triple("Diari illimitati", false, true),
-                Triple("Chat AI illimitata", false, true),
-                Triple("Avatar personalizzato", false, true),
-                Triple("Insight avanzati", false, true),
-                Triple("Messaggi social", false, true),
-                Triple("Supporto prioritario", false, true),
-                Triple("Accesso anticipato", false, true),
+                Triple(stringResource(Res.string.feature_diary), stringResource(Res.string.feature_diary_free), true),
+                Triple(stringResource(Res.string.feature_chat_ai), stringResource(Res.string.feature_chat_ai_free), true),
+                Triple(stringResource(Res.string.feature_mood_tracking), true, true),
+                Triple(stringResource(Res.string.feature_unlimited_diaries), false, true),
+                Triple(stringResource(Res.string.feature_unlimited_chat), false, true),
+                Triple(stringResource(Res.string.feature_custom_avatar), false, true),
+                Triple(stringResource(Res.string.feature_advanced_insights), false, true),
+                Triple(stringResource(Res.string.feature_social_messages), false, true),
+                Triple(stringResource(Res.string.feature_priority_support), false, true),
+                Triple(stringResource(Res.string.feature_early_access), false, true),
             )
 
             features.forEachIndexed { index, (name, free, pro) ->
@@ -485,7 +487,7 @@ private fun FeatureCell(
                     }
                     Icon(
                         imageVector = Icons.Default.Check,
-                        contentDescription = "Incluso",
+                        contentDescription = stringResource(Res.string.paywall_included),
                         modifier = Modifier
                             .size(18.dp)
                             .graphicsLayer {
@@ -501,7 +503,7 @@ private fun FeatureCell(
                 } else {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Non incluso",
+                        contentDescription = stringResource(Res.string.paywall_not_included),
                         modifier = Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.outlineVariant,
                     )
@@ -553,11 +555,14 @@ private fun ProProductCard(
         label = "subscribeButtonScale",
     )
 
+    val defaultTitle = stringResource(Res.string.paywall_title)
+    val defaultDesc = stringResource(Res.string.paywall_default_desc)
+    val defaultPrice = stringResource(Res.string.paywall_default_price)
     val displayProduct = product ?: SubscriptionRepository.ProductInfo(
         productId = "calmify_pro",
-        title = "Calmify Pro",
-        description = "Tutto illimitato: diari, chat AI, avatar, insight, social",
-        price = "$4.99/mese",
+        title = defaultTitle,
+        description = defaultDesc,
+        price = defaultPrice,
         priceMicros = 4_990_000,
         currencyCode = "USD",
     )
@@ -666,7 +671,7 @@ private fun ProProductCard(
                 ) {
                     if (isCurrentTier) {
                         Text(
-                            text = "Piano attuale",
+                            text = stringResource(Res.string.paywall_current_plan),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold,
                         )
@@ -678,7 +683,7 @@ private fun ProProductCard(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Abbonati",
+                            text = stringResource(Res.string.paywall_subscribe),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold,
                         )

@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
@@ -33,7 +34,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -67,6 +67,7 @@ fun ThreadDetailScreen(
     onThreadClick: (String) -> Unit,
 ) {
     val context = LocalContext.current
+    val colorScheme = MaterialTheme.colorScheme
 
     Scaffold(
         topBar = {
@@ -78,8 +79,8 @@ fun ThreadDetailScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+                    containerColor = colorScheme.surface,
+                ),
             )
         },
         bottomBar = {
@@ -90,83 +91,87 @@ fun ThreadDetailScreen(
                 ?: mainThread?.authorDisplayName
                 ?: mainThread?.authorId
 
+            // Reply input bar — M3 Expressive
             Surface(
-                tonalElevation = 3.dp,
-                shadowElevation = 8.dp,
+                color = colorScheme.surfaceContainerLow,
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .imePadding(),
+                        .imePadding()
+                        .padding(top = 12.dp, bottom = 8.dp),
                 ) {
                     // Reply context preview
                     if (replyTarget != null) {
-                        Row(
+                        Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(MaterialTheme.colorScheme.surfaceContainerLow)
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                                .padding(horizontal = 20.dp, vertical = 4.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            color = colorScheme.surfaceContainerHigh,
                         ) {
-                            // Vertical accent line
-                            Box(
-                                modifier = Modifier
-                                    .width(3.dp)
-                                    .height(32.dp)
-                                    .background(
-                                        MaterialTheme.colorScheme.primary,
-                                        RoundedCornerShape(2.dp)
-                                    )
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Replying to ${replyAuthorName ?: ""}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.SemiBold,
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                // Vertical accent line
+                                Box(
+                                    modifier = Modifier
+                                        .width(3.dp)
+                                        .height(28.dp)
+                                        .background(colorScheme.primary, RoundedCornerShape(2.dp)),
                                 )
-                                if (replyTarget.text.isNotBlank()) {
+                                Spacer(Modifier.width(10.dp))
+                                Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = replyTarget.text,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
+                                        text = "Rispondendo a ${replyAuthorName ?: ""}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = colorScheme.primary,
+                                        fontWeight = FontWeight.SemiBold,
                                     )
+                                    if (replyTarget.text.isNotBlank()) {
+                                        Text(
+                                            text = replyTarget.text,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    }
                                 }
-                            }
-                            // Clear reply target (only when replying to a specific reply)
-                            if (state.replyingToReply != null) {
-                                IconButton(
-                                    onClick = { onIntent(ThreadDetailContract.Intent.ClearReplyTarget) },
-                                    modifier = Modifier.size(28.dp),
-                                ) {
-                                    Icon(
-                                        Icons.Filled.Close,
-                                        contentDescription = "Cancel",
-                                        modifier = Modifier.size(16.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
+                                if (state.replyingToReply != null) {
+                                    IconButton(
+                                        onClick = { onIntent(ThreadDetailContract.Intent.ClearReplyTarget) },
+                                        modifier = Modifier.size(28.dp),
+                                    ) {
+                                        Icon(
+                                            Icons.Filled.Close,
+                                            contentDescription = "Cancel",
+                                            modifier = Modifier.size(16.dp),
+                                            tint = colorScheme.onSurfaceVariant,
+                                        )
+                                    }
                                 }
                             }
                         }
+                        Spacer(Modifier.height(8.dp))
                     }
 
                     // Input row
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                            .padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         UserAvatar(
                             avatarUrl = null,
                             displayName = "You",
-                            size = 28.dp,
+                            size = 32.dp,
                             showBorder = false,
                         )
-                        Spacer(Modifier.width(8.dp))
                         OutlinedTextField(
                             value = state.replyText,
                             onValueChange = { onIntent(ThreadDetailContract.Intent.UpdateReplyText(it)) },
@@ -174,59 +179,67 @@ fun ThreadDetailScreen(
                             placeholder = {
                                 Text(
                                     if (state.replyingToReply != null)
-                                        "Reply to ${state.replyingToReply.authorDisplayName ?: ""}..."
-                                    else "Reply..."
+                                        "Rispondi a ${state.replyingToReply.authorDisplayName ?: ""}..."
+                                    else "Scrivi una risposta...",
+                                    style = MaterialTheme.typography.bodyMedium,
                                 )
                             },
                             maxLines = 4,
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                                focusedBorderColor = colorScheme.primary,
+                                unfocusedBorderColor = colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                focusedContainerColor = colorScheme.surfaceContainerLowest,
+                                unfocusedContainerColor = colorScheme.surfaceContainerLowest,
                             ),
-                            shape = MaterialTheme.shapes.extraLarge,
+                            shape = RoundedCornerShape(20.dp),
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        IconButton(
+                        // Send button — pill
+                        Surface(
                             onClick = { onIntent(ThreadDetailContract.Intent.SubmitReply) },
                             enabled = state.replyText.isNotBlank() && !state.isSendingReply,
+                            shape = RoundedCornerShape(16.dp),
+                            color = if (state.replyText.isNotBlank()) colorScheme.primary
+                                    else colorScheme.surfaceContainerHigh,
+                            modifier = Modifier.size(40.dp),
                         ) {
-                            if (state.isSendingReply) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                            } else {
-                                Icon(
-                                    Icons.AutoMirrored.Outlined.Send,
-                                    contentDescription = "Send reply",
-                                    tint = if (state.replyText.isNotBlank()) MaterialTheme.colorScheme.primary
-                                           else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                                if (state.isSendingReply) {
+                                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                                } else {
+                                    Icon(
+                                        Icons.AutoMirrored.Outlined.Send,
+                                        contentDescription = "Send",
+                                        modifier = Modifier.size(20.dp),
+                                        tint = if (state.replyText.isNotBlank()) colorScheme.onPrimary
+                                               else colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                    )
+                                }
                             }
                         }
                     }
 
-                    // Media attachment stub icons
+                    // Media attachment icons
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 48.dp, vertical = 2.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            .padding(start = 56.dp, top = 4.dp, end = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
-                        val stubTint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                        IconButton(onClick = { }, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Outlined.CameraAlt, contentDescription = "Camera", modifier = Modifier.size(18.dp), tint = stubTint)
-                        }
-                        IconButton(onClick = { }, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Outlined.Image, contentDescription = "Image", modifier = Modifier.size(18.dp), tint = stubTint)
-                        }
-                        IconButton(onClick = { }, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Outlined.Gif, contentDescription = "GIF", modifier = Modifier.size(18.dp), tint = stubTint)
-                        }
-                        IconButton(onClick = { }, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Outlined.Mic, contentDescription = "Mic", modifier = Modifier.size(18.dp), tint = stubTint)
+                        val stubTint = colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+                        listOf(
+                            Icons.Outlined.CameraAlt to "Camera",
+                            Icons.Outlined.Image to "Image",
+                            Icons.Outlined.Gif to "GIF",
+                            Icons.Outlined.Mic to "Mic",
+                        ).forEach { (icon, desc) ->
+                            IconButton(onClick = { }, modifier = Modifier.size(32.dp)) {
+                                Icon(icon, contentDescription = desc, modifier = Modifier.size(18.dp), tint = stubTint)
+                            }
                         }
                     }
                 }
             }
-        }
+        },
     ) { paddingValues ->
         when (val threadState = state.thread) {
             is RequestState.Loading -> {
@@ -236,37 +249,36 @@ fun ThreadDetailScreen(
             }
             is RequestState.Error -> {
                 Box(Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                    Text("Error loading thread", color = MaterialTheme.colorScheme.error)
+                    Text("Errore nel caricamento", color = colorScheme.error)
                 }
             }
             is RequestState.Success -> {
                 val thread = threadState.data
                 if (thread == null) {
                     Box(Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                        Text("Thread not found")
+                        Text("Thread non trovato")
                     }
                 } else {
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(paddingValues)
+                            .padding(paddingValues),
                     ) {
                         // Main thread
                         item {
                             ThreadPostCard(
                                 thread = thread,
                                 onLike = {
-                                    if (thread.isLikedByCurrentUser) {
+                                    if (thread.isLikedByCurrentUser)
                                         onIntent(ThreadDetailContract.Intent.UnlikeThread(thread.threadId))
-                                    } else {
+                                    else
                                         onIntent(ThreadDetailContract.Intent.LikeThread(thread.threadId))
-                                    }
                                 },
-                                onReply = { /* Focus reply input */ },
+                                onReply = { },
                                 onRepost = { },
                                 onShare = {
                                     val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                                        putExtra(Intent.EXTRA_TEXT, "${thread.text}\n\n— shared via Calmify")
+                                        putExtra(Intent.EXTRA_TEXT, "${thread.text}\n\n-- shared via Calmify")
                                         type = "text/plain"
                                     }
                                     context.startActivity(Intent.createChooser(sendIntent, null))
@@ -274,45 +286,53 @@ fun ThreadDetailScreen(
                                 onUserClick = { onUserClick(thread.authorId) },
                                 onOptions = { },
                             )
-                            HorizontalDivider(thickness = 0.5.dp)
+                            Spacer(Modifier.height(4.dp))
                         }
 
-                        // Sort selector
+                        // Sort selector — M3 Expressive chips
                         item {
                             Row(
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
-                                FilterChip(
-                                    selected = state.sortOrder == ReplySortOrder.MostPopular,
-                                    onClick = { onIntent(ThreadDetailContract.Intent.ChangeSortOrder(ReplySortOrder.MostPopular)) },
-                                    label = { Text("Most popular") },
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                                    ),
-                                )
-                                FilterChip(
-                                    selected = state.sortOrder == ReplySortOrder.MostRecent,
-                                    onClick = { onIntent(ThreadDetailContract.Intent.ChangeSortOrder(ReplySortOrder.MostRecent)) },
-                                    label = { Text("Most recent") },
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                                    ),
-                                )
+                                listOf(
+                                    ReplySortOrder.MostPopular to "Popolari",
+                                    ReplySortOrder.MostRecent to "Recenti",
+                                ).forEach { (order, label) ->
+                                    FilterChip(
+                                        selected = state.sortOrder == order,
+                                        onClick = { onIntent(ThreadDetailContract.Intent.ChangeSortOrder(order)) },
+                                        label = { Text(label) },
+                                        leadingIcon = if (state.sortOrder == order) {
+                                            {
+                                                Icon(
+                                                    Icons.Filled.Check,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(16.dp),
+                                                )
+                                            }
+                                        } else null,
+                                        shape = RoundedCornerShape(20.dp),
+                                        modifier = Modifier.height(36.dp),
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = colorScheme.primaryContainer,
+                                            selectedLabelColor = colorScheme.onPrimaryContainer,
+                                            selectedLeadingIconColor = colorScheme.onPrimaryContainer,
+                                            containerColor = colorScheme.surfaceContainerLow,
+                                        ),
+                                    )
+                                }
                             }
                         }
 
                         // Replies header
                         item {
                             Text(
-                                text = "Replies",
+                                text = "Risposte",
                                 style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                                fontWeight = FontWeight.SemiBold,
+                                color = colorScheme.onSurface,
+                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
                             )
                         }
 
@@ -323,48 +343,56 @@ fun ThreadDetailScreen(
                                 if (replies.isEmpty()) {
                                     item {
                                         Column(
-                                            modifier = Modifier.fillMaxWidth().padding(48.dp),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(48.dp),
                                             horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalArrangement = Arrangement.Center,
                                         ) {
-                                            Icon(
-                                                Icons.Outlined.ChatBubbleOutline,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(48.dp),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                                            )
-                                            Spacer(Modifier.height(12.dp))
+                                            Surface(
+                                                shape = RoundedCornerShape(24.dp),
+                                                color = colorScheme.surfaceContainerLow,
+                                                modifier = Modifier.size(80.dp),
+                                            ) {
+                                                Box(contentAlignment = Alignment.Center) {
+                                                    Icon(
+                                                        Icons.Outlined.ChatBubbleOutline,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(36.dp),
+                                                        tint = colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                                    )
+                                                }
+                                            }
+                                            Spacer(Modifier.height(16.dp))
                                             Text(
-                                                "No replies yet",
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                "Nessuna risposta",
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = colorScheme.onSurface,
                                             )
                                             Text(
-                                                "Be the first to reply",
+                                                "Sii il primo a rispondere",
                                                 style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                                color = colorScheme.onSurfaceVariant,
                                             )
                                         }
                                     }
                                 } else {
                                     items(replies, key = { it.threadId }) { reply ->
                                         Column {
-                                            // Reply with follow badge overlay on avatar
                                             Box {
                                                 ThreadPostCard(
                                                     thread = reply,
                                                     onLike = {
-                                                        if (reply.isLikedByCurrentUser) {
+                                                        if (reply.isLikedByCurrentUser)
                                                             onIntent(ThreadDetailContract.Intent.UnlikeThread(reply.threadId))
-                                                        } else {
+                                                        else
                                                             onIntent(ThreadDetailContract.Intent.LikeThread(reply.threadId))
-                                                        }
                                                     },
                                                     onReply = { onIntent(ThreadDetailContract.Intent.ReplyToReply(reply)) },
                                                     onRepost = { },
                                                     onShare = {
                                                         val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                                                            putExtra(Intent.EXTRA_TEXT, "${reply.text}\n\n— shared via Calmify")
+                                                            putExtra(Intent.EXTRA_TEXT, "${reply.text}\n\n-- shared via Calmify")
                                                             type = "text/plain"
                                                         }
                                                         context.startActivity(Intent.createChooser(sendIntent, null))
@@ -377,16 +405,16 @@ fun ThreadDetailScreen(
                                                 Box(
                                                     modifier = Modifier
                                                         .padding(start = 36.dp, top = 36.dp)
-                                                        .size(12.dp)
+                                                        .size(14.dp)
                                                         .clip(CircleShape)
-                                                        .background(MaterialTheme.colorScheme.primary),
+                                                        .background(colorScheme.primary),
                                                     contentAlignment = Alignment.Center,
                                                 ) {
                                                     Icon(
                                                         Icons.Filled.Add,
                                                         contentDescription = "Follow",
-                                                        modifier = Modifier.size(8.dp),
-                                                        tint = MaterialTheme.colorScheme.onPrimary,
+                                                        modifier = Modifier.size(9.dp),
+                                                        tint = colorScheme.onPrimary,
                                                     )
                                                 }
                                             }
@@ -394,18 +422,21 @@ fun ThreadDetailScreen(
                                             // Nested replies toggle
                                             if (reply.replyCount > 0) {
                                                 val isExpanded = reply.threadId in state.expandedReplies
-                                                Text(
-                                                    text = if (isExpanded) "Hide replies"
-                                                           else "Show ${formatCount(reply.replyCount)} replies",
-                                                    style = MaterialTheme.typography.labelMedium,
-                                                    color = MaterialTheme.colorScheme.primary,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    modifier = Modifier
-                                                        .padding(start = 56.dp, bottom = 8.dp)
-                                                        .clickable {
-                                                            onIntent(ThreadDetailContract.Intent.ToggleNestedReplies(reply.threadId))
-                                                        }
-                                                )
+                                                Surface(
+                                                    onClick = { onIntent(ThreadDetailContract.Intent.ToggleNestedReplies(reply.threadId)) },
+                                                    shape = RoundedCornerShape(20.dp),
+                                                    color = colorScheme.surfaceContainerLow,
+                                                    modifier = Modifier.padding(start = 56.dp, bottom = 8.dp),
+                                                ) {
+                                                    Text(
+                                                        text = if (isExpanded) "Nascondi risposte"
+                                                               else "Mostra ${formatCount(reply.replyCount)} risposte",
+                                                        style = MaterialTheme.typography.labelMedium,
+                                                        color = colorScheme.primary,
+                                                        fontWeight = FontWeight.SemiBold,
+                                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                                                    )
+                                                }
                                                 if (isExpanded) {
                                                     val nestedState = state.nestedReplies[reply.threadId]
                                                     when (nestedState) {
@@ -423,34 +454,31 @@ fun ThreadDetailScreen(
                                                         }
                                                         is RequestState.Success -> {
                                                             nestedState.data.forEach { nested ->
-                                                                Row(
-                                                                    modifier = Modifier.padding(start = 16.dp),
-                                                                ) {
-                                                                    // Thread line connecting to parent
+                                                                Row(modifier = Modifier.padding(start = 20.dp)) {
+                                                                    // Thread connector line
                                                                     Box(
                                                                         modifier = Modifier
                                                                             .width(2.dp)
                                                                             .height(48.dp)
                                                                             .background(
-                                                                                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                                                                                RoundedCornerShape(1.dp)
-                                                                            )
+                                                                                colorScheme.outlineVariant.copy(alpha = 0.4f),
+                                                                                RoundedCornerShape(1.dp),
+                                                                            ),
                                                                     )
                                                                     Box(modifier = Modifier.weight(1f)) {
                                                                         ThreadPostCard(
                                                                             thread = nested,
                                                                             onLike = {
-                                                                                if (nested.isLikedByCurrentUser) {
+                                                                                if (nested.isLikedByCurrentUser)
                                                                                     onIntent(ThreadDetailContract.Intent.UnlikeThread(nested.threadId))
-                                                                                } else {
+                                                                                else
                                                                                     onIntent(ThreadDetailContract.Intent.LikeThread(nested.threadId))
-                                                                                }
                                                                             },
                                                                             onReply = { onIntent(ThreadDetailContract.Intent.ReplyToReply(nested)) },
                                                                             onRepost = { },
                                                                             onShare = {
                                                                                 val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                                                                                    putExtra(Intent.EXTRA_TEXT, "${nested.text}\n\n— shared via Calmify")
+                                                                                    putExtra(Intent.EXTRA_TEXT, "${nested.text}\n\n-- shared via Calmify")
                                                                                     type = "text/plain"
                                                                                 }
                                                                                 context.startActivity(Intent.createChooser(sendIntent, null))
@@ -464,9 +492,9 @@ fun ThreadDetailScreen(
                                                         }
                                                         is RequestState.Error -> {
                                                             Text(
-                                                                text = "Failed to load replies",
+                                                                text = "Errore nel caricamento",
                                                                 style = MaterialTheme.typography.bodySmall,
-                                                                color = MaterialTheme.colorScheme.error,
+                                                                color = colorScheme.error,
                                                                 modifier = Modifier.padding(start = 56.dp, bottom = 8.dp),
                                                             )
                                                         }
@@ -475,7 +503,6 @@ fun ThreadDetailScreen(
                                                 }
                                             }
                                         }
-                                        HorizontalDivider(thickness = 0.5.dp)
                                     }
                                 }
                             }
@@ -493,21 +520,28 @@ fun ThreadDetailScreen(
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                     ) {
                                         Text(
-                                            "Failed to load replies",
+                                            "Errore nel caricamento risposte",
                                             style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.error,
+                                            color = colorScheme.error,
                                         )
                                         Spacer(Modifier.height(8.dp))
-                                        Text(
-                                            "Tap to retry",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.clickable {
+                                        Surface(
+                                            onClick = {
                                                 onIntent(ThreadDetailContract.Intent.LoadThread(
                                                     (state.thread as? RequestState.Success)?.data?.threadId ?: ""
                                                 ))
-                                            }
-                                        )
+                                            },
+                                            shape = RoundedCornerShape(20.dp),
+                                            color = colorScheme.primaryContainer,
+                                        ) {
+                                            Text(
+                                                "Riprova",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = colorScheme.onPrimaryContainer,
+                                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                            )
+                                        }
                                     }
                                 }
                             }

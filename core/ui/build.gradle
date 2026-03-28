@@ -6,6 +6,11 @@ android {
     namespace 'com.lifo.ui'
 }
 
+compose.resources {
+    publicResClass = true
+    packageOfResClass = "com.lifo.ui.resources"
+}
+
 // Force kotlin-stdlib to match our Kotlin version across all source sets.
 // Without this, Android deps (Firebase etc.) pull in newer stdlib versions,
 // and Gradle's consistent resolution enforces that on commonMain, breaking KLIB resolution.
@@ -27,6 +32,11 @@ kotlin {
 
             // Core module
             implementation project(':core:util')
+
+            // Advanced graphics
+            implementation libs.haze
+            implementation libs.haze.materials
+            implementation libs.colormath
         }
 
         androidMain.dependencies {

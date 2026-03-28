@@ -3,9 +3,17 @@ package com.lifo.home.presentation.components.hero
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.SentimentDissatisfied
+import androidx.compose.material.icons.outlined.SentimentNeutral
+import androidx.compose.material.icons.outlined.SentimentSatisfied
+import androidx.compose.material.icons.outlined.SentimentVerySatisfied
+import androidx.compose.material.icons.outlined.SentimentVeryDissatisfied
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -119,10 +127,12 @@ fun TodayPulseIndicator(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            // Emoji
-            Text(
-                text = dominantEmotion.emoji,
-                style = MaterialTheme.typography.headlineMedium
+            // Sentiment icon
+            Icon(
+                imageVector = dominantEmotion.icon(),
+                contentDescription = null,
+                modifier = Modifier.size(32.dp),
+                tint = sentimentColor
             )
 
             // Score
@@ -241,9 +251,11 @@ fun MiniPulseIndicator(
                 )
             }
 
-            Text(
-                text = dominantEmotion.emoji,
-                style = MaterialTheme.typography.labelSmall
+            Icon(
+                imageVector = dominantEmotion.icon(),
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = sentimentColor
             )
         }
 
@@ -301,4 +313,12 @@ fun HorizontalPulseBar(
             cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadius)
         )
     }
+}
+
+private fun SentimentLabel.icon(): ImageVector = when (this) {
+    SentimentLabel.VERY_NEGATIVE -> Icons.Outlined.SentimentVeryDissatisfied
+    SentimentLabel.NEGATIVE -> Icons.Outlined.SentimentDissatisfied
+    SentimentLabel.NEUTRAL -> Icons.Outlined.SentimentNeutral
+    SentimentLabel.POSITIVE -> Icons.Outlined.SentimentSatisfied
+    SentimentLabel.VERY_POSITIVE -> Icons.Outlined.SentimentVerySatisfied
 }

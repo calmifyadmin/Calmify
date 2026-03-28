@@ -59,11 +59,11 @@ data class StressPeak(
 /**
  * Trend enum for UI display
  */
-enum class Trend(val displayName: String, val emoji: String, val colorName: String) {
-    IMPROVING("Miglioramento", "↑", "primary"),
-    STABLE("Stabile", "→", "onSurfaceVariant"),
-    DECLINING("In calo", "↓", "error"),
-    INSUFFICIENT_DATA("Dati insufficienti", "?", "onSurfaceVariant")
+enum class Trend(val displayName: String, val colorName: String) {
+    IMPROVING("Miglioramento", "primary"),
+    STABLE("Stabile", "onSurfaceVariant"),
+    DECLINING("In calo", "error"),
+    INSUFFICIENT_DATA("Dati insufficienti", "onSurfaceVariant"),
 }
 
 fun PsychologicalProfile.getWeekLabel(): String = "W$weekNumber"

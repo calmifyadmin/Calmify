@@ -25,6 +25,21 @@ import com.lifo.mongo.repository.FirestoreSearchRepository
 import com.lifo.mongo.repository.FirestoreSocialGraphRepository
 import com.lifo.mongo.repository.FirestoreSocialMessagingRepository
 import com.lifo.mongo.repository.FirestoreThreadRepository
+import com.lifo.mongo.repository.FirestoreEnergyRepository
+import com.lifo.mongo.repository.FirestoreGratitudeRepository
+import com.lifo.mongo.repository.FirestoreHabitRepository
+import com.lifo.mongo.repository.FirestoreReframeRepository
+import com.lifo.mongo.repository.FirestoreSleepRepository
+import com.lifo.mongo.repository.FirestoreMeditationRepository
+import com.lifo.mongo.repository.FirestoreBlockRepository
+import com.lifo.mongo.repository.FirestoreMovementRepository
+import com.lifo.mongo.repository.FirestoreEnvironmentRepository
+import com.lifo.mongo.repository.FirestoreRecurringThoughtRepository
+import com.lifo.mongo.repository.FirestoreValuesRepository
+import com.lifo.mongo.repository.FirestoreIkigaiRepository
+import com.lifo.mongo.repository.FirestoreAweRepository
+import com.lifo.mongo.repository.FirestoreConnectionRepository
+import com.lifo.mongo.repository.FirestoreGardenRepository
 import com.lifo.mongo.repository.FirestoreWellbeingRepository
 import com.lifo.mongo.repository.FirestorePresenceRepository
 import com.lifo.mongo.repository.FirebaseMediaUploadRepository
@@ -58,6 +73,21 @@ import com.lifo.util.auth.AuthProvider
 import com.lifo.util.auth.FirebaseAuthProvider
 import com.lifo.util.repository.AvatarRepository
 import com.lifo.util.repository.WaitlistRepository
+import com.lifo.util.repository.EnergyRepository
+import com.lifo.util.repository.GratitudeRepository
+import com.lifo.util.repository.HabitRepository
+import com.lifo.util.repository.ReframeRepository
+import com.lifo.util.repository.MeditationRepository
+import com.lifo.util.repository.BlockRepository
+import com.lifo.util.repository.MovementRepository
+import com.lifo.util.repository.EnvironmentRepository
+import com.lifo.util.repository.RecurringThoughtRepository
+import com.lifo.util.repository.ValuesRepository
+import com.lifo.util.repository.IkigaiRepository
+import com.lifo.util.repository.AweRepository
+import com.lifo.util.repository.ConnectionRepository
+import com.lifo.util.repository.GardenRepository
+import com.lifo.util.repository.SleepRepository
 import com.lifo.util.repository.WellbeingRepository
 import com.lifo.mongo.repository.FirestoreWaitlistRepository
 import com.lifo.mongo.repository.FirebaseAvatarRepository
@@ -96,6 +126,21 @@ val repositoryModule = module {
     single<ChatRepository> { ChatRepositoryImpl(get(), get(), get()) }
     single<UnifiedContentRepository> { UnifiedContentRepositoryImpl(get(), get()) }
     single<WellbeingRepository> { FirestoreWellbeingRepository(get(), get()) }
+    single<GratitudeRepository> { FirestoreGratitudeRepository(get(), get()) }
+    single<EnergyRepository> { FirestoreEnergyRepository(get(), get()) }
+    single<HabitRepository> { FirestoreHabitRepository(get(), get()) }
+    single<SleepRepository> { FirestoreSleepRepository(get(), get()) }
+    single<ReframeRepository> { FirestoreReframeRepository(get(), get()) }
+    single<MeditationRepository> { FirestoreMeditationRepository(get()) }
+    single<BlockRepository> { FirestoreBlockRepository(get()) }
+    single<MovementRepository> { FirestoreMovementRepository(get()) }
+    single<EnvironmentRepository> { FirestoreEnvironmentRepository(get()) }
+    single<RecurringThoughtRepository> { FirestoreRecurringThoughtRepository(get()) }
+    single<ValuesRepository> { FirestoreValuesRepository(get()) }
+    single<IkigaiRepository> { FirestoreIkigaiRepository(get()) }
+    single<AweRepository> { FirestoreAweRepository(get()) }
+    single<ConnectionRepository> { FirestoreConnectionRepository(get()) }
+    single<GardenRepository> { FirestoreGardenRepository(get()) }
     single<InsightRepository> { FirestoreInsightRepository(get(), get()) }
     single<ProfileRepository> { FirestoreProfileRepository(get(), get()) }
     single<ProfileSettingsRepository> { FirestoreProfileSettingsRepository(get(), get()) }

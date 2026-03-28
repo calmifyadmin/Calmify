@@ -140,6 +140,38 @@ class VrmHumanoidBoneMapper {
         "J_Bip_R_LowerLeg" to "rightLowerLeg",
         "J_Bip_R_Foot" to "rightFoot",
         "J_Bip_R_ToeBase" to "rightToes",
+        // Left hand fingers (VRoid J_Bip style)
+        "J_Bip_L_Thumb1" to "leftThumbProximal",
+        "J_Bip_L_Thumb2" to "leftThumbIntermediate",
+        "J_Bip_L_Thumb3" to "leftThumbDistal",
+        "J_Bip_L_Index1" to "leftIndexProximal",
+        "J_Bip_L_Index2" to "leftIndexIntermediate",
+        "J_Bip_L_Index3" to "leftIndexDistal",
+        "J_Bip_L_Middle1" to "leftMiddleProximal",
+        "J_Bip_L_Middle2" to "leftMiddleIntermediate",
+        "J_Bip_L_Middle3" to "leftMiddleDistal",
+        "J_Bip_L_Ring1" to "leftRingProximal",
+        "J_Bip_L_Ring2" to "leftRingIntermediate",
+        "J_Bip_L_Ring3" to "leftRingDistal",
+        "J_Bip_L_Little1" to "leftLittleProximal",
+        "J_Bip_L_Little2" to "leftLittleIntermediate",
+        "J_Bip_L_Little3" to "leftLittleDistal",
+        // Right hand fingers (VRoid J_Bip style)
+        "J_Bip_R_Thumb1" to "rightThumbProximal",
+        "J_Bip_R_Thumb2" to "rightThumbIntermediate",
+        "J_Bip_R_Thumb3" to "rightThumbDistal",
+        "J_Bip_R_Index1" to "rightIndexProximal",
+        "J_Bip_R_Index2" to "rightIndexIntermediate",
+        "J_Bip_R_Index3" to "rightIndexDistal",
+        "J_Bip_R_Middle1" to "rightMiddleProximal",
+        "J_Bip_R_Middle2" to "rightMiddleIntermediate",
+        "J_Bip_R_Middle3" to "rightMiddleDistal",
+        "J_Bip_R_Ring1" to "rightRingProximal",
+        "J_Bip_R_Ring2" to "rightRingIntermediate",
+        "J_Bip_R_Ring3" to "rightRingDistal",
+        "J_Bip_R_Little1" to "rightLittleProximal",
+        "J_Bip_R_Little2" to "rightLittleIntermediate",
+        "J_Bip_R_Little3" to "rightLittleDistal",
         // Alternative naming conventions
         "Hips" to "hips",
         "Spine" to "spine",
@@ -162,7 +194,81 @@ class VrmHumanoidBoneMapper {
         "RightUpLeg" to "rightUpperLeg",
         "RightLeg" to "rightLowerLeg",
         "RightFoot" to "rightFoot",
-        "RightToeBase" to "rightToes"
+        "RightToeBase" to "rightToes",
+        // Left hand fingers (Mixamo/alternative naming)
+        "LeftHandThumb1" to "leftThumbProximal",
+        "LeftHandThumb2" to "leftThumbIntermediate",
+        "LeftHandThumb3" to "leftThumbDistal",
+        "LeftHandIndex1" to "leftIndexProximal",
+        "LeftHandIndex2" to "leftIndexIntermediate",
+        "LeftHandIndex3" to "leftIndexDistal",
+        "LeftHandMiddle1" to "leftMiddleProximal",
+        "LeftHandMiddle2" to "leftMiddleIntermediate",
+        "LeftHandMiddle3" to "leftMiddleDistal",
+        "LeftHandRing1" to "leftRingProximal",
+        "LeftHandRing2" to "leftRingIntermediate",
+        "LeftHandRing3" to "leftRingDistal",
+        "LeftHandPinky1" to "leftLittleProximal",
+        "LeftHandPinky2" to "leftLittleIntermediate",
+        "LeftHandPinky3" to "leftLittleDistal",
+        // Right hand fingers (Mixamo/alternative naming)
+        "RightHandThumb1" to "rightThumbProximal",
+        "RightHandThumb2" to "rightThumbIntermediate",
+        "RightHandThumb3" to "rightThumbDistal",
+        "RightHandIndex1" to "rightIndexProximal",
+        "RightHandIndex2" to "rightIndexIntermediate",
+        "RightHandIndex3" to "rightIndexDistal",
+        "RightHandMiddle1" to "rightMiddleProximal",
+        "RightHandMiddle2" to "rightMiddleIntermediate",
+        "RightHandMiddle3" to "rightMiddleDistal",
+        "RightHandRing1" to "rightRingProximal",
+        "RightHandRing2" to "rightRingIntermediate",
+        "RightHandRing3" to "rightRingDistal",
+        "RightHandPinky1" to "rightLittleProximal",
+        "RightHandPinky2" to "rightLittleIntermediate",
+        "RightHandPinky3" to "rightLittleDistal",
+        // Mixamo prefixed finger names
+        "mixamorigLeftHandThumb1" to "leftThumbProximal",
+        "mixamorigLeftHandThumb2" to "leftThumbIntermediate",
+        "mixamorigLeftHandThumb3" to "leftThumbDistal",
+        "mixamorigLeftHandIndex1" to "leftIndexProximal",
+        "mixamorigLeftHandIndex2" to "leftIndexIntermediate",
+        "mixamorigLeftHandIndex3" to "leftIndexDistal",
+        "mixamorigLeftHandMiddle1" to "leftMiddleProximal",
+        "mixamorigLeftHandMiddle2" to "leftMiddleIntermediate",
+        "mixamorigLeftHandMiddle3" to "leftMiddleDistal",
+        "mixamorigLeftHandRing1" to "leftRingProximal",
+        "mixamorigLeftHandRing2" to "leftRingIntermediate",
+        "mixamorigLeftHandRing3" to "leftRingDistal",
+        "mixamorigLeftHandPinky1" to "leftLittleProximal",
+        "mixamorigLeftHandPinky2" to "leftLittleIntermediate",
+        "mixamorigLeftHandPinky3" to "leftLittleDistal",
+        "mixamorigRightHandThumb1" to "rightThumbProximal",
+        "mixamorigRightHandThumb2" to "rightThumbIntermediate",
+        "mixamorigRightHandThumb3" to "rightThumbDistal",
+        "mixamorigRightHandIndex1" to "rightIndexProximal",
+        "mixamorigRightHandIndex2" to "rightIndexIntermediate",
+        "mixamorigRightHandIndex3" to "rightIndexDistal",
+        "mixamorigRightHandMiddle1" to "rightMiddleProximal",
+        "mixamorigRightHandMiddle2" to "rightMiddleIntermediate",
+        "mixamorigRightHandMiddle3" to "rightMiddleDistal",
+        "mixamorigRightHandRing1" to "rightRingProximal",
+        "mixamorigRightHandRing2" to "rightRingIntermediate",
+        "mixamorigRightHandRing3" to "rightRingDistal",
+        "mixamorigRightHandPinky1" to "rightLittleProximal",
+        "mixamorigRightHandPinky2" to "rightLittleIntermediate",
+        "mixamorigRightHandPinky3" to "rightLittleDistal",
+        // Face bones
+        "J_Bip_C_Jaw" to "jaw",
+        "Jaw" to "jaw",
+        "mixamorigJaw" to "jaw",
+        // Eye bones (VRoid / Mixamo / generic)
+        "J_Adj_L_FaceEye" to "leftEye",
+        "J_Adj_R_FaceEye" to "rightEye",
+        "LeftEye" to "leftEye",
+        "RightEye" to "rightEye",
+        "mixamorigLeftEye" to "leftEye",
+        "mixamorigRightEye" to "rightEye"
     )
 
     /**
@@ -253,6 +359,9 @@ class VrmHumanoidBoneMapper {
             lowerName.contains("neck") -> HumanoidBone.NECK
             lowerName.contains("head") && !lowerName.contains("eye") -> HumanoidBone.HEAD
 
+            // Jaw
+            lowerName.contains("jaw") -> HumanoidBone.JAW
+
             // Eyes (VRoid: J_Adj_L_FaceEye / J_Adj_R_FaceEye)
             (lowerName.contains("left") || lowerName.contains("_l_")) && lowerName.contains("eye") && !lowerName.contains("brow") && !lowerName.contains("lid") -> HumanoidBone.LEFT_EYE
             (lowerName.contains("right") || lowerName.contains("_r_")) && lowerName.contains("eye") && !lowerName.contains("brow") && !lowerName.contains("lid") -> HumanoidBone.RIGHT_EYE
@@ -281,8 +390,114 @@ class VrmHumanoidBoneMapper {
             (lowerName.contains("right") || lowerName.contains("_r_")) && lowerName.contains("foot") && !lowerName.contains("toe") -> HumanoidBone.RIGHT_FOOT
             (lowerName.contains("right") || lowerName.contains("_r_")) && (lowerName.contains("toe") || lowerName.contains("toes")) -> HumanoidBone.RIGHT_TOES
 
+            // Left hand fingers (check most specific first: distal > intermediate > proximal)
+            else -> findFingerBone(lowerName)
+        }
+    }
+
+    /**
+     * Resolve finger bone from node name.
+     * Handles VRoid (J_Bip_L_Thumb1/2/3), Mixamo (LeftHandThumb1/2/3),
+     * and numeric suffixes where 1=proximal, 2=intermediate, 3=distal.
+     */
+    private fun findFingerBone(lowerName: String): HumanoidBone? {
+        val isLeft = lowerName.contains("left") || lowerName.contains("_l_")
+        val isRight = lowerName.contains("right") || lowerName.contains("_r_")
+        if (!isLeft && !isRight) return null
+
+        // Determine finger type
+        val fingerType = when {
+            lowerName.contains("thumb") -> "thumb"
+            lowerName.contains("index") -> "index"
+            lowerName.contains("middle") -> "middle"
+            lowerName.contains("ring") -> "ring"
+            lowerName.contains("little") || lowerName.contains("pinky") -> "little"
+            else -> return null
+        }
+
+        // Determine joint level: 3/distal > 2/intermediate > 1/proximal/metacarpal
+        val jointLevel = when {
+            lowerName.contains("distal") || lowerName.endsWith("3") -> "distal"
+            lowerName.contains("intermediate") || lowerName.endsWith("2") -> "intermediate"
+            lowerName.contains("proximal") || lowerName.endsWith("1") -> "proximal"
+            lowerName.contains("metacarpal") || lowerName.endsWith("0") ->
+                if (fingerType == "thumb") "proximal" else return null // Only thumb has metacarpal in VRM
+            else -> return null
+        }
+
+        return when {
+            isLeft -> resolveLeftFingerBone(fingerType, jointLevel)
+            isRight -> resolveRightFingerBone(fingerType, jointLevel)
             else -> null
         }
+    }
+
+    private fun resolveLeftFingerBone(finger: String, joint: String): HumanoidBone? = when (finger) {
+        "thumb" -> when (joint) {
+            "proximal" -> HumanoidBone.LEFT_THUMB_PROXIMAL
+            "intermediate" -> HumanoidBone.LEFT_THUMB_INTERMEDIATE
+            "distal" -> HumanoidBone.LEFT_THUMB_DISTAL
+            else -> null
+        }
+        "index" -> when (joint) {
+            "proximal" -> HumanoidBone.LEFT_INDEX_PROXIMAL
+            "intermediate" -> HumanoidBone.LEFT_INDEX_INTERMEDIATE
+            "distal" -> HumanoidBone.LEFT_INDEX_DISTAL
+            else -> null
+        }
+        "middle" -> when (joint) {
+            "proximal" -> HumanoidBone.LEFT_MIDDLE_PROXIMAL
+            "intermediate" -> HumanoidBone.LEFT_MIDDLE_INTERMEDIATE
+            "distal" -> HumanoidBone.LEFT_MIDDLE_DISTAL
+            else -> null
+        }
+        "ring" -> when (joint) {
+            "proximal" -> HumanoidBone.LEFT_RING_PROXIMAL
+            "intermediate" -> HumanoidBone.LEFT_RING_INTERMEDIATE
+            "distal" -> HumanoidBone.LEFT_RING_DISTAL
+            else -> null
+        }
+        "little" -> when (joint) {
+            "proximal" -> HumanoidBone.LEFT_LITTLE_PROXIMAL
+            "intermediate" -> HumanoidBone.LEFT_LITTLE_INTERMEDIATE
+            "distal" -> HumanoidBone.LEFT_LITTLE_DISTAL
+            else -> null
+        }
+        else -> null
+    }
+
+    private fun resolveRightFingerBone(finger: String, joint: String): HumanoidBone? = when (finger) {
+        "thumb" -> when (joint) {
+            "proximal" -> HumanoidBone.RIGHT_THUMB_PROXIMAL
+            "intermediate" -> HumanoidBone.RIGHT_THUMB_INTERMEDIATE
+            "distal" -> HumanoidBone.RIGHT_THUMB_DISTAL
+            else -> null
+        }
+        "index" -> when (joint) {
+            "proximal" -> HumanoidBone.RIGHT_INDEX_PROXIMAL
+            "intermediate" -> HumanoidBone.RIGHT_INDEX_INTERMEDIATE
+            "distal" -> HumanoidBone.RIGHT_INDEX_DISTAL
+            else -> null
+        }
+        "middle" -> when (joint) {
+            "proximal" -> HumanoidBone.RIGHT_MIDDLE_PROXIMAL
+            "intermediate" -> HumanoidBone.RIGHT_MIDDLE_INTERMEDIATE
+            "distal" -> HumanoidBone.RIGHT_MIDDLE_DISTAL
+            else -> null
+        }
+        "ring" -> when (joint) {
+            "proximal" -> HumanoidBone.RIGHT_RING_PROXIMAL
+            "intermediate" -> HumanoidBone.RIGHT_RING_INTERMEDIATE
+            "distal" -> HumanoidBone.RIGHT_RING_DISTAL
+            else -> null
+        }
+        "little" -> when (joint) {
+            "proximal" -> HumanoidBone.RIGHT_LITTLE_PROXIMAL
+            "intermediate" -> HumanoidBone.RIGHT_LITTLE_INTERMEDIATE
+            "distal" -> HumanoidBone.RIGHT_LITTLE_DISTAL
+            else -> null
+        }
+        else -> null
     }
 
     /**

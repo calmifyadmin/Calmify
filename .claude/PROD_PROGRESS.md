@@ -18,38 +18,39 @@
 - [ ] Configurare `signingConfigs.release` in `app/build.gradle`
 - [ ] Iscriversi a Google Play App Signing
 - [ ] Build AAB firmato (`.aab`)
-- [ ] ProGuard rules complete (Firebase, Koin, Serialization, Filament, Compose, OkHttp)
+- [x] ProGuard rules complete (Firebase, Koin, Serialization, Filament, Compose, OkHttp)
 - [ ] Test release build su device fisico
-- [ ] Abilitare Crashlytics (decommentare plugin + dependency)
+- [x] Abilitare Crashlytics (plugin + dependency attivi)
 - [ ] Verificare upload symbolication NDK (Oboe/Filament)
 
 ### Legal & Privacy
 - [ ] Privacy Policy conforme GDPR (Art. 13-14)
 - [ ] Terms of Service
 - [ ] Hosting Privacy/Terms su URL pubblico (calmify.app o GitHub Pages)
-- [ ] Link Privacy/Terms in-app (Settings)
-- [ ] Prominent Disclosure in onboarding (step dedicato dati sensibili)
-- [ ] Consenso GDPR checkbox (non pre-spuntato) in onboarding
-- [ ] "Elimina account" in Settings (Firestore + Storage + SQLDelight + Auth)
+- [x] Link Privacy/Terms in-app (Settings > Legale — Privacy Policy + ToS navigation items)
+- [x] Prominent Disclosure in onboarding (step 3: dati benessere, diario, voce + checkbox consenso)
+- [x] Consenso GDPR checkbox (non pre-spuntato) in onboarding step 3
+- [x] "Elimina account" in Settings (Firestore + Storage + SQLDelight + Auth)
 - [ ] Link web cancellazione account
-- [ ] Health disclaimer in-app (Settings > About + onboarding)
+- [x] Health disclaimer in-app (Settings > Informazioni + HealthDisclaimerCard)
 
 ### Sicurezza
-- [ ] Rimuovere `usesCleartextTraffic="true"` → Network Security Config
-- [ ] Verificare Firestore security rules per OGNI collection
+- [x] Rimuovere `usesCleartextTraffic="true"` → Network Security Config (`network_security_config.xml`)
+- [x] Verificare Firestore security rules per OGNI collection (16 top-level + subcollections)
 - [ ] Verificare API key restrictions (package name + SHA-1)
 
 ### i18n
-- [ ] Estrarre stringhe hardcoded → `strings.xml` / Compose Resources
-- [ ] `values/strings.xml` (EN, default)
-- [ ] `values-it/strings.xml` (IT, lingua primaria)
+- [x] Estrarre stringhe hardcoded → Compose Multiplatform Resources
+- [x] `core/ui/composeResources/values/strings.xml` (IT, default — 90+ stringhe)
+- [x] `core/ui/composeResources/values-en/strings.xml` (EN — 90+ stringhe)
+- [x] Wire stringhe nei composable: OnboardingScreen, PaywallScreen, WaitlistDialog, SubscriptionEntryPoint, SettingsScreen
 
 ### PRO Switch
-- [ ] `WaitlistSubscriptionRepository` implementato
-- [ ] `WaitlistDialog` (email capture UI)
-- [ ] Koin switch basato su `premium_enabled` flag
+- [x] `WaitlistSubscriptionRepository` implementato (commonMain)
+- [x] `WaitlistDialog` (email capture UI con animated states)
+- [x] Koin switch basato su `premium_enabled` flag (MongoKoinModule)
 - [ ] Verificare `premium_enabled = false` in Firestore `config/flags`
-- [ ] Analytics events: `paywall_viewed`, `waitlist_signup`
+- [x] Analytics events: `paywall_viewed`, `waitlist_signup`
 
 ---
 
@@ -149,8 +150,8 @@
 | androidMain files | 137 (39%) | ~20 (~5%) |
 | Build status | assembleDebug OK | bundleRelease OK |
 | Crash-free rate | N/A | >99.5% |
-| ProGuard | Template only | Full rules |
-| Crashlytics | Disabilitato | Attivo |
+| ProGuard | Full rules (150+) | Full rules |
+| Crashlytics | Attivo | Attivo |
 | Privacy Policy | Inesistente | Online + in-app |
 | Data Safety | Non compilata | Compilata |
 | Feature flags | Firestore `config/flags` | Verificato |

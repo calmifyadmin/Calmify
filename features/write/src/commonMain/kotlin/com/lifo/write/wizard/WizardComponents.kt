@@ -153,7 +153,6 @@ fun AnimatedMetricSlider(
  */
 @Composable
 fun SelectableMetricCard(
-    emoji: String,
     label: String,
     isSelected: Boolean,
     onClick: () -> Unit,
@@ -207,11 +206,6 @@ fun SelectableMetricCard(
                 .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = emoji,
-                fontSize = 32.sp
-            )
-            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodyMedium,

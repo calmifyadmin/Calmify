@@ -36,6 +36,11 @@ fun HomeRouteContent(
     navigateToFeed: () -> Unit = {},
     navigateToThreadDetail: (String) -> Unit = {},
     navigateToSocialProfile: () -> Unit = {},
+    onGratitudeClick: () -> Unit = {},
+    onEnergyCheckInClick: () -> Unit = {},
+    onSleepLogClick: () -> Unit = {},
+    onHabitsClick: () -> Unit = {},
+    onMeditationClick: () -> Unit = {},
     onDataLoaded: () -> Unit,
     drawerState: DrawerState
 ) {
@@ -103,6 +108,11 @@ fun HomeRouteContent(
         navigateToFeed = navigateToFeed,
         navigateToThreadDetail = navigateToThreadDetail,
         navigateToSocialProfile = navigateToSocialProfile,
+        onGratitudeClick = onGratitudeClick,
+        onEnergyCheckInClick = onEnergyCheckInClick,
+        onSleepLogClick = onSleepLogClick,
+        onHabitsClick = onHabitsClick,
+        onMeditationClick = onMeditationClick,
     )
 
     // Sign Out Dialog

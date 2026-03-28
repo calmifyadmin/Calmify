@@ -31,21 +31,22 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -63,10 +64,6 @@ import com.lifo.socialui.avatar.UserAvatar
 import org.koin.compose.viewmodel.koinViewModel
 import java.io.ByteArrayOutputStream
 
-/**
- * Public entry point for the dedicated Edit Profile screen.
- * Navigated to via Decompose from SocialProfileScreen's "Edit profile" button.
- */
 @Composable
 fun EditProfileRouteContent(
     userId: String,
@@ -77,7 +74,7 @@ fun EditProfileRouteContent(
     val context = LocalContext.current
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
+        contract = ActivityResultContracts.GetContent(),
     ) { uri ->
         if (uri != null) {
             try {
@@ -87,7 +84,6 @@ fun EditProfileRouteContent(
                     @Suppress("DEPRECATION")
                     MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
                 }
-                // Scale down to max 512x512 for avatar
                 val scaled = Bitmap.createScaledBitmap(
                     bitmap,
                     512.coerceAtMost(bitmap.width),
@@ -106,20 +102,18 @@ fun EditProfileRouteContent(
         }
     }
 
-    // Load profile and open edit mode
     LaunchedEffect(userId) {
         viewModel.onIntent(SocialProfileContract.Intent.LoadProfile(userId))
         viewModel.onIntent(SocialProfileContract.Intent.OpenEditProfile)
     }
 
-    // Collect effects
     LaunchedEffect(Unit) {
         viewModel.effects.collect { effect ->
             when (effect) {
                 is SocialProfileContract.Effect.ProfileSaved -> onNavigateBack()
-                is SocialProfileContract.Effect.ShowError -> { /* handled in UI */ }
+                is SocialProfileContract.Effect.ShowError -> { }
                 is SocialProfileContract.Effect.LaunchImagePicker -> imagePickerLauncher.launch("image/*")
-                else -> { /* ignore other effects */ }
+                else -> { }
             }
         }
     }
@@ -140,10 +134,12 @@ fun EditProfileScreen(
     onNavigateBack: () -> Unit,
     onPickImage: () -> Unit = {},
 ) {
+    val colorScheme = MaterialTheme.colorScheme
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Edit profile", fontWeight = FontWeight.Bold) },
+                title = { Text("Modifica profilo", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -161,13 +157,16 @@ fun EditProfileScreen(
                             )
                         } else {
                             Text(
-                                text = "Save",
+                                text = "Salva",
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = colorScheme.primary,
                             )
                         }
                     }
                 },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = colorScheme.surface,
+                ),
             )
         },
     ) { paddingValues ->
@@ -179,25 +178,21 @@ fun EditProfileScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            // -- Avatar Card --
-            Card(
+            // Avatar Card
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                ),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(24.dp),
+                color = colorScheme.surfaceContainerLow,
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Box(contentAlignment = Alignment.BottomEnd) {
-                        Box(
-                            modifier = Modifier.clickable { onPickImage() },
-                        ) {
+                        Box(modifier = Modifier.clickable { onPickImage() }) {
                             UserAvatar(
                                 avatarUrl = state.editAvatarUri,
                                 displayName = state.profile?.displayName,
@@ -205,39 +200,46 @@ fun EditProfileScreen(
                                 showBorder = true,
                             )
                         }
-                        Icon(
-                            imageVector = Icons.Filled.CameraAlt,
-                            contentDescription = "Change photo",
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = colorScheme.primary,
                             modifier = Modifier.size(28.dp),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Filled.CameraAlt,
+                                    contentDescription = "Cambia foto",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = colorScheme.onPrimary,
+                                )
+                            }
+                        }
                     }
                     Text(
                         text = "Tocca per cambiare foto",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = colorScheme.onSurfaceVariant,
                     )
                 }
             }
 
-            // -- Name & Bio Card --
-            Card(
+            // Identity Card
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                ),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(24.dp),
+                color = colorScheme.surfaceContainerLow,
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     Text(
                         text = "Identita'",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
+                        color = colorScheme.onSurface,
                     )
 
                     OutlinedTextField(
@@ -250,12 +252,12 @@ fun EditProfileScreen(
                         supportingText = {
                             Text(
                                 text = state.editUsernameError ?: "Lettere, numeri, . e _ (3-20 caratteri)",
-                                color = if (state.editUsernameError != null) MaterialTheme.colorScheme.error
-                                else MaterialTheme.colorScheme.onSurfaceVariant
+                                color = if (state.editUsernameError != null) colorScheme.error
+                                        else colorScheme.onSurfaceVariant,
                             )
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(16.dp),
                     )
 
                     OutlinedTextField(
@@ -265,7 +267,7 @@ fun EditProfileScreen(
                         singleLine = true,
                         supportingText = { Text("${state.editName.length}/30") },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(16.dp),
                     )
 
                     OutlinedTextField(
@@ -275,48 +277,44 @@ fun EditProfileScreen(
                         maxLines = 4,
                         supportingText = { Text("${state.editBio.length}/150") },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(16.dp),
                     )
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                     OutlinedTextField(
                         value = state.editLink,
                         onValueChange = { onIntent(SocialProfileContract.Intent.UpdateEditLink(it)) },
-                        label = { Text("Website / Link") },
+                        label = { Text("Sito web / Link") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(16.dp),
                     )
                 }
             }
 
-            // -- Interests Card --
-            Card(
+            // Interests Card
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                ),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(24.dp),
+                color = colorScheme.surfaceContainerLow,
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Text(
-                        text = "Interests",
+                        text = "Interessi",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
+                        color = colorScheme.onSurface,
                     )
 
-                    // Current interest chips
                     if (state.editInterests.isNotEmpty()) {
                         FlowRow(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
                             state.editInterests.forEach { interest ->
                                 InputChip(
@@ -326,19 +324,19 @@ fun EditProfileScreen(
                                     trailingIcon = {
                                         Icon(
                                             Icons.Filled.Close,
-                                            contentDescription = "Remove",
+                                            contentDescription = "Rimuovi",
                                             modifier = Modifier.size(14.dp),
                                         )
                                     },
+                                    shape = RoundedCornerShape(20.dp),
                                     colors = InputChipDefaults.inputChipColors(
-                                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                        containerColor = colorScheme.secondaryContainer,
                                     ),
                                 )
                             }
                         }
                     }
 
-                    // Add interest input
                     var newInterest by remember { mutableStateOf("") }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -347,10 +345,10 @@ fun EditProfileScreen(
                         OutlinedTextField(
                             value = newInterest,
                             onValueChange = { newInterest = it },
-                            label = { Text("Add interest") },
+                            label = { Text("Aggiungi interesse") },
                             singleLine = true,
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(16.dp),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                             keyboardActions = KeyboardActions(
                                 onDone = {
@@ -362,39 +360,50 @@ fun EditProfileScreen(
                             ),
                         )
                         Spacer(Modifier.width(8.dp))
-                        IconButton(
+                        Surface(
                             onClick = {
                                 if (newInterest.isNotBlank()) {
                                     onIntent(SocialProfileContract.Intent.AddInterest(newInterest))
                                     newInterest = ""
                                 }
                             },
+                            shape = RoundedCornerShape(16.dp),
+                            color = colorScheme.primaryContainer,
+                            modifier = Modifier.size(48.dp),
                         ) {
-                            Icon(
-                                Icons.Filled.Add,
-                                contentDescription = "Add",
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Filled.Add,
+                                    contentDescription = "Aggiungi",
+                                    tint = colorScheme.onPrimaryContainer,
+                                )
+                            }
                         }
                     }
                 }
             }
 
-            // -- Save button (bottom) --
+            // Save button
             Button(
                 onClick = { onIntent(SocialProfileContract.Intent.SaveProfile) },
                 enabled = !state.isSaving,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colorScheme.primary,
+                    contentColor = colorScheme.onPrimary,
+                ),
             ) {
                 if (state.isSaving) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
                         strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary,
+                        color = colorScheme.onPrimary,
                     )
                 } else {
-                    Text("Save changes", fontWeight = FontWeight.SemiBold)
+                    Text("Salva modifiche", fontWeight = FontWeight.SemiBold)
                 }
             }
 

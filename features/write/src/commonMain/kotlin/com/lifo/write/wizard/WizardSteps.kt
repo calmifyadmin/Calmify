@@ -490,7 +490,6 @@ fun TriggerSelectionStep(
         ) {
             Trigger.entries.forEach { trigger ->
                 SelectableMetricCard(
-                    emoji = trigger.emoji,
                     label = trigger.displayName,
                     isSelected = selectedTrigger == trigger,
                     onClick = { onTriggerSelected(trigger) },
@@ -539,7 +538,6 @@ fun BodySensationStep(
         ) {
             BodySensation.entries.forEach { sensation ->
                 SelectableMetricCard(
-                    emoji = sensation.emoji,
                     label = sensation.displayName,
                     isSelected = selectedSensation == sensation,
                     onClick = { onSensationSelected(sensation) },

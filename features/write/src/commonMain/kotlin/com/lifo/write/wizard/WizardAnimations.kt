@@ -4,10 +4,17 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.SentimentNeutral
+import androidx.compose.material.icons.outlined.SentimentSatisfied
+import androidx.compose.material.icons.outlined.SentimentSatisfiedAlt
+import androidx.compose.material.icons.outlined.SentimentVerySatisfied
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
  * Palette colori per ogni step del wizard
@@ -137,26 +144,26 @@ object MetricSymbolicColors {
 }
 
 /**
- * Emoji per lo step Intensita' Emotiva
- * Cambiano in base al valore dello slider
+ * Icone Material per lo step Intensita' Emotiva
+ * Cambiano in base al valore dello slider (0-10)
  */
-object EmotionEmojis {
-    val emojis = listOf(
-        "\uD83D\uDE36", // 0 - Neutral face
-        "\uD83D\uDE10", // 1 - Neutral
-        "\uD83D\uDE42", // 2 - Slightly smiling
-        "\uD83D\uDE0A", // 3 - Smiling
-        "\uD83D\uDE04", // 4 - Grinning
-        "\uD83D\uDE03", // 5 - Big smile
-        "\uD83D\uDE06", // 6 - Laughing
-        "\uD83E\uDD29", // 7 - Star eyes
-        "\uD83D\uDE0D", // 8 - Heart eyes
-        "\uD83E\uDD79", // 9 - Face with spiral eyes
-        "\uD83E\uDD2F"  // 10 - Exploding head
+object EmotionIcons {
+    val icons = listOf(
+        Icons.Outlined.SentimentNeutral,      // 0 - Neutro
+        Icons.Outlined.SentimentNeutral,      // 1 - Neutro
+        Icons.Outlined.SentimentNeutral,      // 2 - Bassa intensita'
+        Icons.Outlined.SentimentSatisfied,    // 3 - Medio-bassa
+        Icons.Outlined.SentimentSatisfied,    // 4 - Medio-bassa
+        Icons.Outlined.SentimentSatisfiedAlt, // 5 - Media
+        Icons.Outlined.SentimentSatisfiedAlt, // 6 - Media
+        Icons.Outlined.SentimentVerySatisfied,// 7 - Alta
+        Icons.Outlined.SentimentVerySatisfied,// 8 - Alta
+        Icons.Outlined.AutoAwesome,           // 9 - Molto alta
+        Icons.Outlined.AutoAwesome            // 10 - Massima
     )
 
-    fun getEmoji(intensity: Int): String {
-        return emojis.getOrElse(intensity.coerceIn(0, 10)) { emojis[5] }
+    fun getIcon(intensity: Int): ImageVector {
+        return icons.getOrElse(intensity.coerceIn(0, 10)) { icons[5] }
     }
 }
 

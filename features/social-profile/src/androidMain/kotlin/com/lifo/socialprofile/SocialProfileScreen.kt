@@ -40,7 +40,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -49,14 +48,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SuggestionChip
-import androidx.compose.material3.SuggestionChipDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -86,14 +85,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/**
- * SocialProfileScreen -- Threads-style profile layout
- *
- * Layout:
- * - ProfileHeader: displayName, @userId, avatar, bio, stats, follow button
- * - TabRow: Threads | Replies | Reposts
- * - Thread list using ThreadPostCard shared component
- */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun SocialProfileScreen(
@@ -104,73 +95,60 @@ fun SocialProfileScreen(
     onUserClick: (String) -> Unit = {},
     onFollowersClick: (String) -> Unit = {},
     onFollowingClick: (String) -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val colorScheme = MaterialTheme.colorScheme
 
-    // Show error via snackbar
     LaunchedEffect(state.error) {
         state.error?.let { message ->
-            snackbarHostState.showSnackbar(
-                message = message,
-                duration = SnackbarDuration.Short
-            )
+            snackbarHostState.showSnackbar(message = message, duration = SnackbarDuration.Short)
         }
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = colorScheme.surface,
         topBar = {
             TopAppBar(
                 title = {
                     Text(
                         text = state.profile?.displayName
                             ?: state.profile?.username
-                            ?: state.profile?.userId?.take(12)
-                            ?: "",
+                            ?: state.profile?.userId?.take(12) ?: "",
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        fontWeight = FontWeight.Bold,
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
                     if (!state.isOwnProfile && state.profile != null) {
                         IconButton(onClick = { onIntent(SocialProfileContract.Intent.BlockUser) }) {
-                            Icon(
-                                imageVector = Icons.Outlined.Block,
-                                contentDescription = "Block user"
-                            )
+                            Icon(Icons.Outlined.Block, contentDescription = "Blocca utente")
                         }
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = colorScheme.surface,
+                ),
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        modifier = modifier
+        modifier = modifier,
     ) { paddingValues ->
         when {
             state.isLoading && state.profile == null -> {
-                // Full-screen loading
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
+                    modifier = Modifier.fillMaxSize().padding(paddingValues),
+                    contentAlignment = Alignment.Center,
+                ) { CircularProgressIndicator() }
             }
-
             state.error != null && state.profile == null -> {
-                // Full-screen error
                 ErrorContent(
                     message = state.error,
                     onRetry = {
@@ -178,28 +156,20 @@ fun SocialProfileScreen(
                             onIntent(SocialProfileContract.Intent.LoadProfile(state.userId))
                         }
                     },
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
+                    modifier = Modifier.fillMaxSize().padding(paddingValues),
                 )
             }
-
             else -> {
-                // Profile content
                 LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentPadding = PaddingValues(bottom = 24.dp)
+                    modifier = Modifier.fillMaxSize().padding(paddingValues),
+                    contentPadding = PaddingValues(bottom = 24.dp),
                 ) {
-                    // -- Cover Photo --
+                    // Cover Photo
                     item(key = "cover_photo") {
-                        CoverPhotoSection(
-                            coverPhotoUrl = state.profile?.coverPhotoUrl,
-                        )
+                        CoverPhotoSection(coverPhotoUrl = state.profile?.coverPhotoUrl)
                     }
 
-                    // -- Profile Header --
+                    // Profile Header — M3 Expressive
                     item(key = "profile_header") {
                         ProfileHeader(
                             profile = state.profile,
@@ -210,10 +180,7 @@ fun SocialProfileScreen(
                             onEditProfileClick = { onIntent(SocialProfileContract.Intent.EditProfile) },
                             onShareProfileClick = {
                                 val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                                    putExtra(
-                                        Intent.EXTRA_TEXT,
-                                        "Check out @${state.profile?.username?.takeIf { it.isNotBlank() } ?: state.profile?.userId} on Calmify!"
-                                    )
+                                    putExtra(Intent.EXTRA_TEXT, "Check out @${state.profile?.username?.takeIf { it.isNotBlank() } ?: state.profile?.userId} on Calmify!")
                                     type = "text/plain"
                                 }
                                 context.startActivity(Intent.createChooser(sendIntent, null))
@@ -223,63 +190,45 @@ fun SocialProfileScreen(
                         )
                     }
 
-                    // -- Tab Row: Threads | Replies | Reposts --
+                    // Tab Row
                     item(key = "tab_row") {
                         ProfileTabRow(
                             selectedTab = state.selectedProfileTab,
-                            onTabSelected = { tab ->
-                                onIntent(SocialProfileContract.Intent.SelectProfileTab(tab))
-                            }
+                            onTabSelected = { tab -> onIntent(SocialProfileContract.Intent.SelectProfileTab(tab)) },
                         )
                     }
 
-                    // -- Divider under tabs --
-                    item(key = "tab_divider") {
-                        HorizontalDivider(
-                            thickness = 0.5.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant
-                        )
-                    }
-
-                    // -- Threads list using ThreadPostCard --
+                    // Threads
                     if (state.threads.isEmpty() && !state.isLoading) {
                         item(key = "empty") {
                             EmptyThreadsPlaceholder(
                                 isOwnProfile = state.isOwnProfile,
                                 selectedTab = state.selectedProfileTab,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 48.dp)
+                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 48.dp),
                             )
                         }
                     } else {
-                        items(
-                            items = state.threads,
-                            key = { it.threadId }
-                        ) { thread ->
+                        items(items = state.threads, key = { it.threadId }) { thread ->
                             ThreadPostCard(
                                 thread = thread,
                                 onThreadClick = { onThreadClick(thread.threadId) },
                                 onUserClick = { onUserClick(thread.authorId) },
                                 onLike = {
-                                    if (thread.isLikedByCurrentUser) {
+                                    if (thread.isLikedByCurrentUser)
                                         onIntent(SocialProfileContract.Intent.UnlikeThread(thread.threadId))
-                                    } else {
+                                    else
                                         onIntent(SocialProfileContract.Intent.LikeThread(thread.threadId))
-                                    }
                                 },
                                 onReply = { onThreadClick(thread.threadId) },
-                                onRepost = { /* TODO: repost */ },
+                                onRepost = { },
                                 onShare = {
                                     val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                                        putExtra(Intent.EXTRA_TEXT, "${thread.text}\n\n— shared via Calmify")
+                                        putExtra(Intent.EXTRA_TEXT, "${thread.text}\n\n-- shared via Calmify")
                                         type = "text/plain"
                                     }
                                     context.startActivity(Intent.createChooser(sendIntent, null))
                                 },
                                 onOptions = { },
-                            )
-                            HorizontalDivider(
-                                thickness = 0.5.dp,
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                             )
                         }
                     }
@@ -289,7 +238,7 @@ fun SocialProfileScreen(
     }
 }
 
-// -- Profile Header (Threads-style) -------------------------------------------
+// -- Profile Header (M3 Expressive) -------------------------------------------
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -303,240 +252,229 @@ private fun ProfileHeader(
     onShareProfileClick: () -> Unit = {},
     onFollowersClick: () -> Unit = {},
     onFollowingClick: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
-    Column(
+    val colorScheme = MaterialTheme.colorScheme
+
+    Surface(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(28.dp),
+        color = colorScheme.surfaceContainerLow,
     ) {
-        // Top row: Name + Username on left, Avatar on right
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            // Left side: display name + username
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+            // Top row: Name + Username on left, Avatar on right
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top,
             ) {
-                // Display name with optional verified badge
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    Text(
-                        text = profile?.displayName ?: "User",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (profile?.isVerified == true) {
-                        Icon(
-                            imageVector = Icons.Filled.Verified,
-                            contentDescription = "Verified",
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.primary
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Text(
+                            text = profile?.displayName ?: "User",
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
+                        if (profile?.isVerified == true) {
+                            Icon(
+                                imageVector = Icons.Filled.Verified,
+                                contentDescription = "Verificato",
+                                modifier = Modifier.size(20.dp),
+                                tint = colorScheme.primary,
+                            )
+                        }
                     }
+                    Text(
+                        text = "@${profile?.username?.takeIf { it.isNotBlank() } ?: profile?.userId ?: ""}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
 
-                // @username (falls back to userId if no username set)
-                Text(
-                    text = "@${profile?.username?.takeIf { it.isNotBlank() } ?: profile?.userId ?: ""}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                Spacer(Modifier.width(16.dp))
+
+                UserAvatar(
+                    avatarUrl = profile?.avatarUrl,
+                    displayName = profile?.displayName,
+                    size = 80.dp,
+                    showBorder = true,
                 )
             }
 
-            Spacer(Modifier.width(16.dp))
+            // Bio
+            if (!profile?.bio.isNullOrBlank()) {
+                Text(
+                    text = profile?.bio.orEmpty(),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colorScheme.onSurface,
+                    maxLines = 4,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
 
-            // Right side: Avatar (large, with border)
-            UserAvatar(
-                avatarUrl = profile?.avatarUrl,
-                displayName = profile?.displayName,
-                size = 80.dp,
-                showBorder = true,
-            )
-        }
-
-        // Bio
-        if (!profile?.bio.isNullOrBlank()) {
-            Text(
-                text = profile?.bio.orEmpty(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 4,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-
-        // Interest tags
-        if (!profile?.interests.isNullOrEmpty()) {
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                profile?.interests?.forEach { interest ->
-                    SuggestionChip(
-                        onClick = { /* no-op for now */ },
-                        label = {
+            // Interest tags — pill chips
+            if (!profile?.interests.isNullOrEmpty()) {
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    profile?.interests?.forEach { interest ->
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = colorScheme.surfaceContainerHigh,
+                        ) {
                             Text(
                                 text = interest,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                             )
-                        },
-                        shape = RoundedCornerShape(20.dp),
-                        colors = SuggestionChipDefaults.suggestionChipColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                        ),
-                    )
-                }
-            }
-        }
-
-        // Stats: "X followers . Y following" (inline, clickable style) + avatar previews
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val followerCount = profile?.followerCount ?: 0
-            val followingCount = profile?.followingCount ?: 0
-
-            // Follower avatar previews
-            if (!profile?.followerPreviewAvatars.isNullOrEmpty()) {
-                OverlappingAvatars(
-                    avatarUrls = profile?.followerPreviewAvatars.orEmpty(),
-                    avatarSize = 16.dp,
-                )
-                Spacer(Modifier.width(6.dp))
-            }
-
-            Text(
-                text = buildAnnotatedString {
-                    withStyle(SpanStyle(color = MaterialTheme.colorScheme.onSurfaceVariant)) {
-                        append(formatCount(followerCount))
-                        append(" followers")
+                        }
                     }
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onFollowersClick
-                )
-            )
-
-            Text(
-                text = " \u00B7 ",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Text(
-                text = buildAnnotatedString {
-                    withStyle(SpanStyle(color = MaterialTheme.colorScheme.onSurfaceVariant)) {
-                        append(formatCount(followingCount))
-                        append(" following")
-                    }
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onFollowingClick
-                )
-            )
-        }
-
-        // Analytics: profile views in last 30 days
-        if ((profile?.profileViews30Days ?: 0) > 0) {
-            Text(
-                text = "${formatCount(profile?.profileViews30Days ?: 0)} views in last 30 days",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
-        // Follow / Unfollow button OR Edit + Share buttons
-        if (isOwnProfile) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                OutlinedButton(
-                    onClick = onEditProfileClick,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(8.dp),
-                ) {
-                    Text(
-                        text = "Edit profile",
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-                OutlinedButton(
-                    onClick = onShareProfileClick,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(8.dp),
-                ) {
-                    Text(
-                        text = "Share profile",
-                        fontWeight = FontWeight.SemiBold,
-                    )
                 }
             }
-        } else {
-            val haptic = LocalHapticFeedback.current
-            AnimatedContent(
-                targetState = isFollowing,
-                transitionSpec = {
-                    (scaleIn(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessLow,
-                        )
-                    ) + fadeIn()) togetherWith (scaleOut() + fadeOut())
-                },
-                label = "followButton",
-            ) { following ->
-                if (following) {
+
+            // Stats row
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val followerCount = profile?.followerCount ?: 0
+                val followingCount = profile?.followingCount ?: 0
+
+                if (!profile?.followerPreviewAvatars.isNullOrEmpty()) {
+                    OverlappingAvatars(
+                        avatarUrls = profile?.followerPreviewAvatars.orEmpty(),
+                        avatarSize = 16.dp,
+                    )
+                    Spacer(Modifier.width(6.dp))
+                }
+
+                Text(
+                    text = buildAnnotatedString {
+                        withStyle(SpanStyle(fontWeight = FontWeight.SemiBold, color = colorScheme.onSurface)) {
+                            append(formatCount(followerCount))
+                        }
+                        withStyle(SpanStyle(color = colorScheme.onSurfaceVariant)) {
+                            append(" follower")
+                        }
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onFollowersClick,
+                    ),
+                )
+
+                Text(
+                    text = " \u00B7 ",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colorScheme.onSurfaceVariant,
+                )
+
+                Text(
+                    text = buildAnnotatedString {
+                        withStyle(SpanStyle(fontWeight = FontWeight.SemiBold, color = colorScheme.onSurface)) {
+                            append(formatCount(followingCount))
+                        }
+                        withStyle(SpanStyle(color = colorScheme.onSurfaceVariant)) {
+                            append(" seguiti")
+                        }
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onFollowingClick,
+                    ),
+                )
+            }
+
+            // Profile views
+            if ((profile?.profileViews30Days ?: 0) > 0) {
+                Text(
+                    text = "${formatCount(profile?.profileViews30Days ?: 0)} visite negli ultimi 30 giorni",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                )
+            }
+
+            // Follow / Edit buttons
+            if (isOwnProfile) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
                     OutlinedButton(
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onUnfollowClick()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.medium,
+                        onClick = onEditProfileClick,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(20.dp),
                     ) {
-                        Text(
-                            text = "Following",
-                            fontWeight = FontWeight.SemiBold,
-                        )
+                        Text("Modifica profilo", fontWeight = FontWeight.SemiBold)
                     }
-                } else {
-                    Button(
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onFollowClick()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.medium,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.onSurface,
-                            contentColor = MaterialTheme.colorScheme.surface,
-                        ),
+                    OutlinedButton(
+                        onClick = onShareProfileClick,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(20.dp),
                     ) {
-                        Text(
-                            text = "Follow",
-                            fontWeight = FontWeight.SemiBold,
-                        )
+                        Text("Condividi", fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            } else {
+                val haptic = LocalHapticFeedback.current
+                AnimatedContent(
+                    targetState = isFollowing,
+                    transitionSpec = {
+                        (scaleIn(
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessLow,
+                            )
+                        ) + fadeIn()) togetherWith (scaleOut() + fadeOut())
+                    },
+                    label = "followButton",
+                ) { following ->
+                    if (following) {
+                        OutlinedButton(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onUnfollowClick()
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(20.dp),
+                        ) {
+                            Text("Seguito", fontWeight = FontWeight.SemiBold)
+                        }
+                    } else {
+                        Button(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onFollowClick()
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(20.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = colorScheme.primary,
+                                contentColor = colorScheme.onPrimary,
+                            ),
+                        ) {
+                            Text("Segui", fontWeight = FontWeight.SemiBold)
+                        }
                     }
                 }
             }
@@ -555,6 +493,7 @@ private fun CoverPhotoSection(
         modifier = modifier
             .fillMaxWidth()
             .height(160.dp)
+            .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
             .background(MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
         if (!coverPhotoUrl.isNullOrBlank()) {
@@ -565,7 +504,6 @@ private fun CoverPhotoSection(
                 modifier = Modifier.fillMaxSize(),
             )
         }
-        // Gradient overlay at bottom for text readability
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -589,34 +527,34 @@ private fun CoverPhotoSection(
 private fun ProfileTabRow(
     selectedTab: SocialProfileContract.ProfileTab,
     onTabSelected: (SocialProfileContract.ProfileTab) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val tabs = SocialProfileContract.ProfileTab.entries
     val selectedIndex = tabs.indexOf(selectedTab)
+    val colorScheme = MaterialTheme.colorScheme
 
     TabRow(
         selectedTabIndex = selectedIndex,
         modifier = modifier.fillMaxWidth(),
-        containerColor = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface,
+        containerColor = colorScheme.surface,
+        contentColor = colorScheme.onSurface,
         indicator = { tabPositions ->
             if (selectedIndex in tabPositions.indices) {
                 TabRowDefaults.SecondaryIndicator(
                     modifier = Modifier.tabIndicatorOffset(tabPositions[selectedIndex]),
-                    height = 1.5.dp,
-                    color = MaterialTheme.colorScheme.onSurface
+                    height = 2.dp,
+                    color = colorScheme.primary,
                 )
             }
         },
-        divider = { /* No divider, we add our own */ }
+        divider = { },
     ) {
         tabs.forEachIndexed { index, tab ->
             val selected = selectedIndex == index
             val textColor = animateColorAsState(
-                targetValue = if (selected) MaterialTheme.colorScheme.onSurface
-                else MaterialTheme.colorScheme.onSurfaceVariant,
+                targetValue = if (selected) colorScheme.onSurface else colorScheme.onSurfaceVariant,
                 animationSpec = tween(200),
-                label = "tabTextColor"
+                label = "tabTextColor",
             )
 
             Tab(
@@ -627,18 +565,18 @@ private fun ProfileTabRow(
                         text = tab.label(),
                         fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
                         color = textColor.value,
-                        style = MaterialTheme.typography.titleSmall
+                        style = MaterialTheme.typography.titleSmall,
                     )
-                }
+                },
             )
         }
     }
 }
 
 private fun SocialProfileContract.ProfileTab.label(): String = when (this) {
-    SocialProfileContract.ProfileTab.THREADS -> "Threads"
-    SocialProfileContract.ProfileTab.REPLIES -> "Replies"
-    SocialProfileContract.ProfileTab.REPOSTS -> "Reposts"
+    SocialProfileContract.ProfileTab.THREADS -> "Thread"
+    SocialProfileContract.ProfileTab.REPLIES -> "Risposte"
+    SocialProfileContract.ProfileTab.REPOSTS -> "Repost"
 }
 
 // -- Empty / Error states -----------------------------------------------------
@@ -647,39 +585,45 @@ private fun SocialProfileContract.ProfileTab.label(): String = when (this) {
 private fun EmptyThreadsPlaceholder(
     isOwnProfile: Boolean,
     selectedTab: SocialProfileContract.ProfileTab,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val message = when (selectedTab) {
         SocialProfileContract.ProfileTab.THREADS -> {
-            if (isOwnProfile) "You haven't posted any threads yet"
-            else "No threads yet"
+            if (isOwnProfile) "Non hai ancora pubblicato thread" else "Nessun thread"
         }
         SocialProfileContract.ProfileTab.REPLIES -> {
-            if (isOwnProfile) "You haven't replied to any threads yet"
-            else "No replies yet"
+            if (isOwnProfile) "Non hai ancora risposto a thread" else "Nessuna risposta"
         }
         SocialProfileContract.ProfileTab.REPOSTS -> {
-            if (isOwnProfile) "You haven't reposted any threads yet"
-            else "No reposts yet"
+            if (isOwnProfile) "Non hai ancora repostato thread" else "Nessun repost"
         }
     }
 
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Icon(
-            imageVector = Icons.Outlined.Forum,
-            contentDescription = null,
-            modifier = Modifier.size(48.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-        )
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            modifier = Modifier.size(80.dp),
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Outlined.Forum,
+                    contentDescription = null,
+                    modifier = Modifier.size(36.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                )
+            }
+        }
         Text(
             text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
         )
     }
 }
@@ -688,48 +632,53 @@ private fun EmptyThreadsPlaceholder(
 private fun ErrorContent(
     message: String,
     onRetry: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
-        Icon(
-            imageVector = Icons.Filled.ErrorOutline,
-            contentDescription = null,
-            modifier = Modifier.size(56.dp),
-            tint = MaterialTheme.colorScheme.error
-        )
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
+            modifier = Modifier.size(80.dp),
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Filled.ErrorOutline,
+                    contentDescription = null,
+                    modifier = Modifier.size(40.dp),
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = message,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 32.dp)
+            modifier = Modifier.padding(horizontal = 32.dp),
         )
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onRetry) {
-            Text("Retry")
+        Button(
+            onClick = onRetry,
+            shape = RoundedCornerShape(20.dp),
+        ) {
+            Text("Riprova", fontWeight = FontWeight.SemiBold)
         }
     }
 }
 
 // -- Utility ------------------------------------------------------------------
 
-/**
- * Format a large count into a compact form (e.g. 1.2K, 3.4M).
- */
 private fun formatCount(count: Long): String = when {
     count >= 1_000_000 -> String.format(Locale.US, "%.1fM", count / 1_000_000.0)
     count >= 1_000 -> String.format(Locale.US, "%.1fK", count / 1_000.0)
     else -> count.toString()
 }
 
-/**
- * Format a unix-millis timestamp into a human-readable relative or short date.
- */
 private fun formatTimestamp(epochMillis: Long): String {
     val now = System.currentTimeMillis()
     val diffMs = now - epochMillis
@@ -738,10 +687,10 @@ private fun formatTimestamp(epochMillis: Long): String {
     val diffDays = diffMs / 86_400_000
 
     return when {
-        diffMinutes < 1 -> "now"
+        diffMinutes < 1 -> "ora"
         diffMinutes < 60 -> "${diffMinutes}m"
         diffHours < 24 -> "${diffHours}h"
-        diffDays < 7 -> "${diffDays}d"
-        else -> SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(epochMillis))
+        diffDays < 7 -> "${diffDays}g"
+        else -> SimpleDateFormat("d MMM", Locale.getDefault()).format(Date(epochMillis))
     }
 }

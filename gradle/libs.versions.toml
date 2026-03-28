@@ -95,6 +95,11 @@ android-vad = "2.0.10"
 # Graphics Shapes - M3 Expressive shape morphing
 graphics-shapes = "1.0.1"
 
+# Visualization KMP
+koalaplot = "0.6.3"
+haze = "1.3.1"
+colormath = "3.6.1"
+
 # === KMP ACTIVE ===
 compose-multiplatform = "1.7.1"
 sqldelight = "2.0.2"
@@ -257,6 +262,12 @@ vad-webrtc = { module = "com.github.gkonovalov.android-vad:webrtc", version.ref 
 
 # Graphics Shapes - M3 Expressive shape morphing & RoundedPolygon
 graphics-shapes = { module = "androidx.graphics:graphics-shapes", version.ref = "graphics-shapes" }
+
+# Visualization KMP
+koalaplot-core = { module = "io.github.koalaplot:koalaplot-core", version.ref = "koalaplot" }
+haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
+haze-materials = { module = "dev.chrisbanes.haze:haze-materials", version.ref = "haze" }
+colormath = { module = "com.github.ajalt.colormath:colormath", version.ref = "colormath" }
 
 # === KMP LIBRARIES (ACTIVE) ===
 # SQLDelight (Room replacement for KMP)

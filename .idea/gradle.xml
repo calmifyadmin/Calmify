@@ -39,13 +39,16 @@
             <option value="$PROJECT_DIR$/data/mongo" />
             <option value="$PROJECT_DIR$/features" />
             <option value="$PROJECT_DIR$/features/auth" />
+            <option value="$PROJECT_DIR$/features/avatar-creator" />
             <option value="$PROJECT_DIR$/features/chat" />
             <option value="$PROJECT_DIR$/features/composer" />
             <option value="$PROJECT_DIR$/features/feed" />
+            <option value="$PROJECT_DIR$/features/habits" />
             <option value="$PROJECT_DIR$/features/history" />
             <option value="$PROJECT_DIR$/features/home" />
             <option value="$PROJECT_DIR$/features/humanoid" />
             <option value="$PROJECT_DIR$/features/insight" />
+            <option value="$PROJECT_DIR$/features/meditation" />
             <option value="$PROJECT_DIR$/features/messaging" />
             <option value="$PROJECT_DIR$/features/notifications" />
             <option value="$PROJECT_DIR$/features/onboarding" />

@@ -79,12 +79,6 @@ internal fun DashboardHeader(
                 EmotionAwareColors.getWellbeingScoreColor(todayPulse.score)
             else colorScheme.primary
 
-            val emoji = when {
-                hour < 12 -> "\uD83D\uDC4B"  // 👋
-                hour < 18 -> "\u2728"          // ✨
-                else -> "\uD83C\uDF19"         // 🌙
-            }
-
             val bigTextStyle = MaterialTheme.typography.headlineLarge.copy(
                 fontWeight = FontWeight.Normal,
                 fontSize = 30.sp,
@@ -99,7 +93,7 @@ internal fun DashboardHeader(
                     color = colorScheme.onSurface,
                     fontWeight = FontWeight.Light
                 )) {
-                    append("Ciao $emoji ")
+                    append("Ciao, ")
                 }
                 if (displayName.isNotBlank()) {
                     withStyle(SpanStyle(

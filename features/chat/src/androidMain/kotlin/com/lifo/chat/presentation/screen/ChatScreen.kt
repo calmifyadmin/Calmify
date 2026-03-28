@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.WavingHand
 import androidx.compose.material.icons.outlined.VolumeOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -571,7 +572,7 @@ private fun NaturalAnimatedEmptyState(
             color = MaterialTheme.colorScheme.onBackground
         )
 
-        // Animated wave emoji
+        // Animated wave icon
         val waveRotation by rememberInfiniteTransition(label = "wave").animateFloat(
             initialValue = -10f,
             targetValue = 10f,
@@ -582,12 +583,15 @@ private fun NaturalAnimatedEmptyState(
             label = "waveRotation"
         )
 
-        Text(
-            text = "👋",
-            fontSize = 48.sp,
-            modifier = Modifier.graphicsLayer {
-                rotationZ = waveRotation
-            }
+        Icon(
+            imageVector = Icons.Default.WavingHand,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier
+                .size(48.dp)
+                .graphicsLayer {
+                    rotationZ = waveRotation
+                }
         )
 
         Spacer(modifier = Modifier.height(8.dp))

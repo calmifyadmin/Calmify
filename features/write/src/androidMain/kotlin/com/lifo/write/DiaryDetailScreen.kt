@@ -29,8 +29,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.AttachMoney
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.FitnessCenter
+import androidx.compose.material.icons.outlined.Group
+import androidx.compose.material.icons.outlined.HelpOutline
+import androidx.compose.material.icons.outlined.MoreHoriz
+import androidx.compose.material.icons.outlined.Psychology
+import androidx.compose.material.icons.outlined.SentimentNeutral
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -203,16 +211,16 @@ internal fun DiaryDetailScreen(
 
                 if (diary.description.isNotBlank()) {
                     DescriptionCard(description = diary.description, moodColor = moodColor)
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(20.dp))
                 }
 
                 MetricsDashboard(diary = diary)
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(20.dp))
 
                 ContextChipsRow(diary = diary)
 
                 if (diary.images.isNotEmpty()) {
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(20.dp))
                     ImagesRow(images = diary.images)
                 }
 
@@ -236,6 +244,7 @@ internal fun DiaryDetailScreen(
             onClick        = { onInsightClicked(diary._id) },
             containerColor = moodColor,
             contentColor   = surface,
+            shape          = RoundedCornerShape(20.dp),
             modifier       = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(20.dp),
@@ -244,7 +253,11 @@ internal fun DiaryDetailScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(horizontal = 16.dp),
             ) {
-                Text("✦", fontSize = 20.sp)
+                Icon(
+                    imageVector = Icons.Outlined.Psychology,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                )
                 Spacer(Modifier.size(8.dp))
                 Text(
                     text       = "Insight",
@@ -656,13 +669,10 @@ private fun CollapsingHeroOverlay(
 
 @Composable
 private fun DescriptionCard(description: String, moodColor: Color) {
-    Card(
-        modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        shape     = RoundedCornerShape(20.dp),
-        colors    = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+        shape    = RoundedCornerShape(24.dp),
+        color    = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(
@@ -677,7 +687,7 @@ private fun DescriptionCard(description: String, moodColor: Color) {
                 )
                 Text(
                     text       = "Come mi sentivo",
-                    style      = MaterialTheme.typography.labelLarge,
+                    style      = MaterialTheme.typography.titleSmall,
                     color      = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -698,10 +708,10 @@ private fun DescriptionCard(description: String, moodColor: Color) {
 @Composable
 private fun MetricsDashboard(diary: Diary) {
     Column(
-        modifier            = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        modifier            = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        SectionHeader("Il tuo stato")
+        SectionHeader("Come stavi?")
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             EmotionMetricCard(value = diary.emotionIntensity, modifier = Modifier.weight(1f))
             StressMetricCard(value  = diary.stressLevel,      modifier = Modifier.weight(1f))
@@ -716,12 +726,11 @@ private fun MetricsDashboard(diary: Diary) {
 @Composable
 private fun SectionHeader(title: String) {
     Text(
-        text          = title,
-        style         = MaterialTheme.typography.titleSmall,
-        fontWeight    = FontWeight.SemiBold,
-        color         = MaterialTheme.colorScheme.onSurfaceVariant,
-        letterSpacing = 0.5.sp,
-        modifier      = Modifier.padding(start = 4.dp, bottom = 2.dp),
+        text       = title,
+        style      = MaterialTheme.typography.titleSmall,
+        fontWeight = FontWeight.SemiBold,
+        color      = MaterialTheme.colorScheme.onSurface,
+        modifier   = Modifier.padding(start = 4.dp, bottom = 2.dp),
     )
 }
 
@@ -800,13 +809,10 @@ private fun MetricCardShell(
     modifier: Modifier = Modifier,
     visual: @Composable () -> Unit,
 ) {
-    Card(
-        modifier  = modifier,
-        shape     = RoundedCornerShape(20.dp),
-        colors    = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
-        elevation = CardDefaults.cardElevation(0.dp),
+    Surface(
+        modifier = modifier,
+        shape    = RoundedCornerShape(24.dp),
+        color    = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
         Column(
             Modifier.fillMaxWidth().padding(16.dp),
@@ -816,7 +822,7 @@ private fun MetricCardShell(
             visual()
             Text(title, style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Surface(shape = RoundedCornerShape(10.dp), color = accentColor.copy(alpha = 0.15f)) {
+            Surface(shape = RoundedCornerShape(20.dp), color = accentColor.copy(alpha = 0.12f)) {
                 Text(
                     "$value/10",
                     Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
@@ -842,30 +848,38 @@ private fun ContextChipsRow(diary: Diary) {
     }
     if (trigger == Trigger.NONE && bodySensation == BodySensation.NONE) return
 
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-        SectionHeader("Contesto")
+    Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
+        SectionHeader("Cosa ha influito?")
         Spacer(Modifier.height(8.dp))
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalArrangement   = Arrangement.spacedBy(10.dp),
         ) {
-            if (trigger != Trigger.NONE) ContextChip(trigger.emoji, trigger.displayName, "Trigger", MetricSymbolicColors.trigger)
-            if (bodySensation != BodySensation.NONE) ContextChip(bodySensation.emoji, bodySensation.displayName, "Corpo", MetricSymbolicColors.bodySensation)
+            if (trigger != Trigger.NONE) ContextChip(trigger.icon(), trigger.displayName, "Trigger", MetricSymbolicColors.trigger)
+            if (bodySensation != BodySensation.NONE) ContextChip(bodySensation.icon(), bodySensation.displayName, "Corpo", MetricSymbolicColors.bodySensation)
         }
     }
 }
 
 @Composable
-private fun ContextChip(emoji: String, label: String, subtitle: String, accentColor: Color) {
-    Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
+private fun ContextChip(icon: ImageVector, label: String, subtitle: String, accentColor: Color) {
+    Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
         Row(
-            Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment     = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(emoji, fontSize = 22.sp)
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = accentColor.copy(alpha = 0.12f),
+                modifier = Modifier.size(36.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = accentColor)
+                }
+            }
             Column {
-                Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = accentColor)
+                Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
                 Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -886,8 +900,8 @@ private fun ImagesRow(images: List<String>) {
             }
         }
     }
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-        SectionHeader("Foto")
+    Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
+        SectionHeader("Ricordi")
         Spacer(Modifier.height(8.dp))
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -895,7 +909,7 @@ private fun ImagesRow(images: List<String>) {
         ) {
             items(images) { path ->
                 val url = resolvedUrls.value[path]
-                Card(modifier = Modifier.size(140.dp), shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(0.dp)) {
+                Surface(modifier = Modifier.size(140.dp), shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
                     if (url != null) {
                         SubcomposeAsyncImage(
                             model              = ImageRequest.Builder(LocalContext.current).data(url).build(),
@@ -919,4 +933,27 @@ private fun ImagesRow(images: List<String>) {
             }
         }
     }
+}
+
+@Composable
+private fun Trigger.icon(): ImageVector = when (this) {
+    Trigger.WORK    -> Icons.Outlined.FitnessCenter
+    Trigger.FAMILY  -> Icons.Outlined.Group
+    Trigger.HEALTH  -> Icons.Outlined.FavoriteBorder
+    Trigger.FINANCE -> Icons.Outlined.AttachMoney
+    Trigger.SOCIAL  -> Icons.Outlined.AccountCircle
+    Trigger.SELF    -> Icons.Outlined.Psychology
+    Trigger.OTHER   -> Icons.Outlined.MoreHoriz
+    Trigger.NONE    -> Icons.Outlined.HelpOutline
+}
+
+@Composable
+private fun BodySensation.icon(): ImageVector = when (this) {
+    BodySensation.TENSION     -> Icons.Outlined.FitnessCenter
+    BodySensation.LIGHTNESS   -> Icons.Outlined.SentimentNeutral
+    BodySensation.FATIGUE     -> Icons.Outlined.Psychology
+    BodySensation.HEAVINESS   -> Icons.Outlined.FitnessCenter
+    BodySensation.AGITATION   -> Icons.Outlined.SentimentNeutral
+    BodySensation.RELAXATION  -> Icons.Outlined.FavoriteBorder
+    BodySensation.NONE        -> Icons.Outlined.HelpOutline
 }

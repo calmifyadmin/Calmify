@@ -9,18 +9,7 @@ import com.lifo.util.repository.ProfileRepository
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import javax.inject.Inject
-
-/**
- * FirestoreProfileRepository Implementation
- *
- * Firestore-backed implementation of ProfileRepository
- * Collection: psychological_profiles
- * Database: calmify-native
- *
- * Week 7 - PSYCHOLOGICAL_INSIGHTS_PLAN.md
- */
-class FirestoreProfileRepository @Inject constructor(
+class FirestoreProfileRepository(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth
 ) : ProfileRepository {

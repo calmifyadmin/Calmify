@@ -204,6 +204,9 @@ dependencies {
     implementation(project(":features:subscription"))
     // Avatar System (Wave 10)
     implementation(project(":features:avatar-creator"))
+    // Holistic Growth (Sprint 1+2)
+    implementation(project(":features:habits"))
+    implementation(project(":features:meditation"))
 
     // Decompose Navigation (KMP lifecycle-aware) — Shell for future migration
     implementation libs.decompose

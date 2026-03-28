@@ -22,18 +22,20 @@ object OnboardingContract {
         data class UpdateUsername(val username: String) : Intent
         data class UpdateMotivations(val motivations: List<String>) : Intent
         data class UpdatePreference(val preference: String) : Intent
+        data class UpdateDataConsent(val accepted: Boolean) : Intent
 
         data object CompleteOnboarding : Intent
     }
 
     data class State(
         val currentStep: Int = 0,
-        val totalSteps: Int = 3,
+        val totalSteps: Int = 4,
         val name: String = "",
         val username: String = "",
         val usernameError: String? = null,
         val motivations: List<String> = emptyList(),
         val preference: String = "", // "write", "speak", "both"
+        val dataCollectionConsent: Boolean = false,
         val isSaving: Boolean = false,
         val error: String? = null
     ) : MviContract.State
@@ -65,6 +67,7 @@ class OnboardingViewModel constructor(
             is OnboardingContract.Intent.UpdateUsername -> doUpdateUsername(intent.username)
             is OnboardingContract.Intent.UpdateMotivations -> updateState { copy(motivations = intent.motivations) }
             is OnboardingContract.Intent.UpdatePreference -> updateState { copy(preference = intent.preference) }
+            is OnboardingContract.Intent.UpdateDataConsent -> updateState { copy(dataCollectionConsent = intent.accepted) }
             is OnboardingContract.Intent.CompleteOnboarding -> doCompleteOnboarding()
         }
     }
@@ -94,6 +97,7 @@ class OnboardingViewModel constructor(
             0 -> s.name.isNotBlank() && (s.username.isBlank() || UserIdentityResolver.isValidUsername(s.username))
             1 -> s.motivations.isNotEmpty()
             2 -> s.preference.isNotBlank()
+            3 -> s.dataCollectionConsent
             else -> false
         }
     }
@@ -101,7 +105,7 @@ class OnboardingViewModel constructor(
     // ── Private business logic ──────────────────────────────────────────────
 
     private fun doNextStep() {
-        if (currentState.currentStep < 2) {
+        if (currentState.currentStep < 3) {
             updateState { copy(currentStep = currentStep + 1) }
         }
     }

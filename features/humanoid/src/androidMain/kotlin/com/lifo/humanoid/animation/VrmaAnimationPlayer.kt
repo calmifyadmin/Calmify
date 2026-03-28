@@ -83,7 +83,46 @@ class VrmaAnimationPlayer(
             "mixamorigRightUpLeg" to "rightUpperLeg",
             "mixamorigRightLeg" to "rightLowerLeg",
             "mixamorigRightFoot" to "rightFoot",
-            "mixamorigRightToeBase" to "rightToes"
+            "mixamorigRightToeBase" to "rightToes",
+            // Left hand fingers
+            "l_thumb1" to "leftThumbProximal",
+            "l_thumb2" to "leftThumbIntermediate",
+            "l_thumb3" to "leftThumbDistal",
+            "l_index1" to "leftIndexProximal",
+            "l_index2" to "leftIndexIntermediate",
+            "l_index3" to "leftIndexDistal",
+            "l_middle1" to "leftMiddleProximal",
+            "l_middle2" to "leftMiddleIntermediate",
+            "l_middle3" to "leftMiddleDistal",
+            "l_ring1" to "leftRingProximal",
+            "l_ring2" to "leftRingIntermediate",
+            "l_ring3" to "leftRingDistal",
+            "l_little1" to "leftLittleProximal",
+            "l_little2" to "leftLittleIntermediate",
+            "l_little3" to "leftLittleDistal",
+            // Right hand fingers
+            "r_thumb1" to "rightThumbProximal",
+            "r_thumb2" to "rightThumbIntermediate",
+            "r_thumb3" to "rightThumbDistal",
+            "r_index1" to "rightIndexProximal",
+            "r_index2" to "rightIndexIntermediate",
+            "r_index3" to "rightIndexDistal",
+            "r_middle1" to "rightMiddleProximal",
+            "r_middle2" to "rightMiddleIntermediate",
+            "r_middle3" to "rightMiddleDistal",
+            "r_ring1" to "rightRingProximal",
+            "r_ring2" to "rightRingIntermediate",
+            "r_ring3" to "rightRingDistal",
+            "r_little1" to "rightLittleProximal",
+            "r_little2" to "rightLittleIntermediate",
+            "r_little3" to "rightLittleDistal",
+            // Face bones
+            "jaw" to "jaw",
+            "jaw_lower" to "jaw",
+            "l_eye" to "leftEye",
+            "r_eye" to "rightEye",
+            "lefteye" to "leftEye",
+            "righteye" to "rightEye"
         )
     }
 
@@ -1002,6 +1041,9 @@ class VrmaAnimationPlayer(
         return null
     }
 
+    // Track already-warned node names to avoid log spam
+    private val warnedUnmappedNodes = mutableSetOf<String>()
+
     private fun resolveHumanoidBone(nodeName: String, action: AnimationAction): HumanoidBone? {
         action.nodeMapping[nodeName]?.let { return it }
 
@@ -1014,8 +1056,15 @@ class VrmaAnimationPlayer(
             if (bone != null) return bone
         }
 
-        return vrmBoneNameToEnum[nodeName.lowercase()]
+        val directBone = vrmBoneNameToEnum[nodeName.lowercase()]
             ?: vrmBoneNameToEnum[nodeName]
+        if (directBone != null) return directBone
+
+        // Log once per unresolved node name
+        if (warnedUnmappedNodes.add(nodeName)) {
+            println("[VrmaAnimationPlayer] WARNING: Unmapped animation bone '$nodeName' in '${action.animation.name}' — animation data dropped")
+        }
+        return null
     }
 
     // ==================== Interpolation ====================

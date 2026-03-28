@@ -19,6 +19,8 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.lifo.ui.resources.*
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import coil3.compose.rememberAsyncImagePainter
 import com.lifo.settings.components.SettingsNavigationItem
@@ -44,6 +46,8 @@ fun SettingsScreen(
     onNavigateToLifestyle: () -> Unit,
     onNavigateToGoals: () -> Unit,
     onNavigateToAiPreferences: () -> Unit = {},
+    onNavigateToEnvironment: () -> Unit = {},
+    onNavigateToAvatarDebug: () -> Unit = {},
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = koinViewModel()
@@ -134,6 +138,15 @@ fun SettingsScreen(
                     onClick = onNavigateToAiPreferences,
                 )
 
+                // Environment Design Section
+                SettingsSectionHeader(title = "Il Tuo Ambiente")
+                SettingsNavigationItem(
+                    title = "Design del tuo ambiente",
+                    subtitle = "Checklist, routine e digital detox",
+                    icon = Icons.Default.Spa,
+                    onClick = onNavigateToEnvironment,
+                )
+
                 // Privacy Section
                 SettingsSectionHeader(title = "Privacy & Dati")
                 PrivacySection(
@@ -150,8 +163,32 @@ fun SettingsScreen(
                 )
 
                 // Health Disclaimer
-                SettingsSectionHeader(title = "Informazioni")
+                SettingsSectionHeader(title = stringResource(Res.string.settings_info_section))
                 HealthDisclaimerCard()
+
+                // Legal Section — Privacy Policy & ToS
+                SettingsSectionHeader(title = stringResource(Res.string.settings_legal_section))
+                SettingsNavigationItem(
+                    title = stringResource(Res.string.settings_privacy_policy),
+                    subtitle = "calmify.app/privacy",
+                    icon = Icons.Outlined.PrivacyTip,
+                    onClick = { /* TODO: open privacy policy URL */ },
+                )
+                SettingsNavigationItem(
+                    title = stringResource(Res.string.settings_terms_of_service),
+                    subtitle = "calmify.app/terms",
+                    icon = Icons.Outlined.Description,
+                    onClick = { /* TODO: open terms URL */ },
+                )
+
+                // Developer / Debug
+                SettingsSectionHeader(title = "Developer")
+                SettingsNavigationItem(
+                    title = "Avatar Debug",
+                    subtitle = "Test animazioni, visemi e idle loop",
+                    icon = Icons.Default.BugReport,
+                    onClick = onNavigateToAvatarDebug,
+                )
 
                 // Account Actions Section
                 SettingsSectionHeader(title = "Account")
@@ -499,7 +536,7 @@ private fun AccountActionsSection(
                     tint = MaterialTheme.colorScheme.error
                 )
                 Text(
-                    text = "Deleting your account will permanently remove all your data. This action cannot be undone.",
+                    text = stringResource(Res.string.settings_delete_warning),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onErrorContainer
                 )
@@ -528,13 +565,13 @@ private fun DeleteAccountConfirmationDialog(
         },
         title = {
             Text(
-                text = "Delete Account?",
+                text = stringResource(Res.string.settings_delete_confirm_title),
                 style = MaterialTheme.typography.headlineSmall
             )
         },
         text = {
             Text(
-                text = "This will permanently delete your account and all associated data. This action cannot be undone.\n\nAre you absolutely sure?",
+                text = stringResource(Res.string.settings_delete_confirm_message),
                 style = MaterialTheme.typography.bodyMedium
             )
         },
@@ -554,7 +591,7 @@ private fun DeleteAccountConfirmationDialog(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                 }
-                Text(if (isDeleting) "Deleting..." else "Delete")
+                Text(if (isDeleting) stringResource(Res.string.settings_deleting) else stringResource(Res.string.delete))
             }
         },
         dismissButton = {
@@ -562,7 +599,7 @@ private fun DeleteAccountConfirmationDialog(
                 onClick = onDismiss,
                 enabled = !isDeleting
             ) {
-                Text("Cancel")
+                Text(stringResource(Res.string.cancel))
             }
         }
     )
@@ -590,10 +627,7 @@ private fun HealthDisclaimerCard(modifier: Modifier = Modifier) {
                 tint = MaterialTheme.colorScheme.primary
             )
             Text(
-                text = "Calmify non e' un dispositivo medico e non e' destinata a diagnosticare, " +
-                        "trattare, curare o prevenire alcuna condizione medica. Le informazioni " +
-                        "fornite hanno scopo puramente informativo e di benessere generale. " +
-                        "Per consigli medici, consultare un professionista sanitario qualificato.",
+                text = stringResource(Res.string.health_disclaimer_text),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

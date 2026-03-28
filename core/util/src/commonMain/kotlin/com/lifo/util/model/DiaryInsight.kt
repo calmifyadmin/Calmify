@@ -49,12 +49,12 @@ data class DiaryInsight(
 /**
  * Sentiment Label Categories
  */
-enum class SentimentLabel(val displayName: String, val emoji: String) {
-    VERY_NEGATIVE("Molto Negativo", "😢"),
-    NEGATIVE("Negativo", "😟"),
-    NEUTRAL("Neutro", "😐"),
-    POSITIVE("Positivo", "😊"),
-    VERY_POSITIVE("Molto Positivo", "😄")
+enum class SentimentLabel(val displayName: String) {
+    VERY_NEGATIVE("Molto Negativo"),
+    NEGATIVE("Negativo"),
+    NEUTRAL("Neutro"),
+    POSITIVE("Positivo"),
+    VERY_POSITIVE("Molto Positivo"),
 }
 
 /**

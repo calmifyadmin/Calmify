@@ -64,6 +64,8 @@ import com.lifo.ui.components.DisplayAlertDialog
 import com.lifo.ui.components.navigation.NavigationDestination
 import com.lifo.util.model.RequestState
 import com.lifo.util.repository.MongoRepository
+import com.lifo.write.navigation.ActivityGardenRouteContent
+import com.lifo.write.navigation.GardenRouteContent
 import com.lifo.write.navigation.JournalHomeRouteContent
 import com.lifo.write.navigation.WriteRouteContent
 import com.lifo.feed.FeedRouteContent
@@ -141,9 +143,10 @@ fun DecomposeApp(
         derivedStateOf {
             when (childStack.active.configuration) {
                 is RootDestination.Home,
+                is RootDestination.Garden,
                 is RootDestination.JournalHome,
                 is RootDestination.Feed,
-                is RootDestination.Profile -> true
+                is RootDestination.Percorso -> true
                 else -> false
             }
         }
@@ -327,6 +330,11 @@ fun DecomposeApp(
                                 val userId = auth.currentUser?.uid
                                 if (userId != null) rootComponent.navigateToUserProfile(userId)
                             },
+                            onGratitudeClick = { rootComponent.navigateToGratitude() },
+                            onEnergyCheckInClick = { rootComponent.navigateToEnergyCheckIn() },
+                            onSleepLogClick = { rootComponent.navigateToSleepLog() },
+                            onHabitsClick = { rootComponent.navigateToHabits() },
+                            onMeditationClick = { rootComponent.navigateToMeditation() },
                             onDataLoaded = onDataLoaded,
                             drawerState = drawerState
                         )
@@ -365,6 +373,8 @@ fun DecomposeApp(
                             onNavigateToLifestyle = { rootComponent.navigateToSettingsLifestyle() },
                             onNavigateToGoals = { rootComponent.navigateToSettingsGoals() },
                             onNavigateToAiPreferences = { rootComponent.navigateToSettingsAiPreferences() },
+                            onNavigateToEnvironment = { rootComponent.navigateToEnvironment() },
+                            onNavigateToAvatarDebug = { rootComponent.navigateToAvatarDebug() },
                             onLogout = { rootComponent.navigateToAuth() }
                         )
                     }
@@ -419,6 +429,13 @@ fun DecomposeApp(
                     is RootComponent.Child.Write -> {
                         WriteRouteContent(
                             diaryId = instance.diaryId,
+                            isBrainDump = instance.isBrainDump,
+                            isGratitude = instance.isGratitude,
+                            isEnergyCheckIn = instance.isEnergyCheckIn,
+                            isSleepLog = instance.isSleepLog,
+                            isReframe = instance.isReframe,
+                            isBlock = instance.isBlock,
+                            isMovement = instance.isMovement,
                             navigateBack = { rootComponent.navigateBack() },
                             onShareToComposer = { prefilledContent ->
                                 rootComponent.navigateBack()
@@ -426,7 +443,19 @@ fun DecomposeApp(
                             },
                             onNavigateToInsight = { id ->
                                 rootComponent.navigateToInsight(id)
-                            }
+                            },
+                            onNavigateToBrainDump = {
+                                rootComponent.navigateBack()
+                                rootComponent.navigateToBrainDump()
+                            },
+                            onNavigateToReframing = {
+                                rootComponent.navigateBack()
+                                rootComponent.navigateToReframe()
+                            },
+                            onNavigateToMeditation = {
+                                rootComponent.navigateBack()
+                                rootComponent.navigateToMeditation()
+                            },
                         )
                     }
 
@@ -457,13 +486,18 @@ fun DecomposeApp(
                                     viewModel = humanoidViewModel
                                 )
                             },
-                            speechAnimationTarget = humanoidController
+                            speechAnimationTarget = humanoidController,
+                            gestureAnimationCallback = { animationName ->
+                                humanoidController.playAnimationByName(animationName)
+                            }
                         )
                     }
 
                     is RootComponent.Child.JournalHome -> {
                         JournalHomeRouteContent(
                             onWriteClick = { rootComponent.navigateToWrite() },
+                            onBrainDumpClick = { rootComponent.navigateToBrainDump() },
+                            onGratitudeClick = { rootComponent.navigateToGratitude() },
                             onDiaryClick = { diaryId -> rootComponent.navigateToWrite(diaryId) },
                             onInsightClick = { diaryId -> rootComponent.navigateToInsight(diaryId) },
                             onMenuClicked = {
@@ -474,6 +508,12 @@ fun DecomposeApp(
                                 }
                             },
                             onNotificationsClick = { rootComponent.navigateToNotifications() },
+                            onEnergyClick = { rootComponent.navigateToEnergyCheckIn() },
+                            onSleepClick = { rootComponent.navigateToSleepLog() },
+                            onHabitsClick = { rootComponent.navigateToHabits() },
+                            onMeditationClick = { rootComponent.navigateToMeditation() },
+                            onMovementClick = { rootComponent.navigateToMovement() },
+                            onAllActivitiesClick = { rootComponent.navigateToActivityGarden() },
                         )
                     }
 
@@ -612,6 +652,202 @@ fun DecomposeApp(
                             },
                         )
                     }
+
+                    // === Holistic Growth (Sprint 1+2) ===
+
+                    is RootComponent.Child.Habits -> {
+                        com.lifo.habits.HabitRouteContent(
+                            navigateBack = { rootComponent.navigateBack() },
+                        )
+                    }
+
+                    is RootComponent.Child.Meditation -> {
+                        com.lifo.meditation.MeditationRouteContent(
+                            navigateBack = { rootComponent.navigateBack() },
+                        )
+                    }
+
+                    is RootComponent.Child.Environment -> {
+                        com.lifo.settings.navigation.EnvironmentRouteContent(
+                            navigateBack = { rootComponent.navigateBack() },
+                        )
+                    }
+
+                    is RootComponent.Child.Dashboard -> {
+                        val dashboardVm: com.lifo.write.DashboardViewModel = koinViewModel(key = "dashboard_vm")
+                        val dashboardState by dashboardVm.state.collectAsState()
+                        com.lifo.write.DashboardScreen(
+                            state = dashboardState,
+                            onBackPressed = { rootComponent.navigateBack() },
+                        )
+                    }
+
+                    is RootComponent.Child.RecurringThoughts -> {
+                        val rtVm: com.lifo.write.RecurringThoughtsViewModel = koinViewModel(key = "recurring_thoughts_vm")
+                        val rtState by rtVm.state.collectAsState()
+                        com.lifo.write.RecurringThoughtsScreen(
+                            state = rtState,
+                            onIntent = rtVm::onIntent,
+                            onBackPressed = { rootComponent.navigateBack() },
+                            onNavigateToReframe = { rootComponent.navigateToReframe() },
+                        )
+                    }
+
+                    is RootComponent.Child.Values -> {
+                        val valuesVm: com.lifo.write.ValuesViewModel = koinViewModel(key = "values_vm")
+                        val valuesState by valuesVm.state.collectAsState()
+                        com.lifo.write.ValuesScreen(
+                            state = valuesState,
+                            onIntent = valuesVm::onIntent,
+                            onBackPressed = { rootComponent.navigateBack() },
+                        )
+                    }
+
+                    is RootComponent.Child.Ikigai -> {
+                        val ikigaiVm: com.lifo.write.IkigaiViewModel = koinViewModel(key = "ikigai_vm")
+                        val ikigaiState by ikigaiVm.state.collectAsState()
+                        com.lifo.write.IkigaiScreen(
+                            state = ikigaiState,
+                            onIntent = ikigaiVm::onIntent,
+                            onBackPressed = { rootComponent.navigateBack() },
+                        )
+                    }
+
+                    is RootComponent.Child.Awe -> {
+                        val aweVm: com.lifo.write.AweViewModel = koinViewModel(key = "awe_vm")
+                        val aweState by aweVm.state.collectAsState()
+                        com.lifo.write.AweScreen(
+                            state = aweState,
+                            onIntent = aweVm::onIntent,
+                            onBackPressed = { rootComponent.navigateBack() },
+                        )
+                    }
+
+                    is RootComponent.Child.Silence -> {
+                        val silenceVm: com.lifo.write.SilenceViewModel = koinViewModel(key = "silence_vm")
+                        val silenceState by silenceVm.state.collectAsState()
+                        com.lifo.write.SilenceScreen(
+                            state = silenceState,
+                            onIntent = silenceVm::onIntent,
+                            onBackPressed = { rootComponent.navigateBack() },
+                        )
+                    }
+                    is RootComponent.Child.Connection -> {
+                        val connectionVm: com.lifo.write.ConnectionViewModel = koinViewModel(key = "connection_vm")
+                        val connectionState by connectionVm.state.collectAsState()
+                        com.lifo.write.ConnectionScreen(
+                            state = connectionState,
+                            onIntent = connectionVm::onIntent,
+                            navigateBack = { rootComponent.navigateBack() },
+                        )
+                    }
+                    is RootComponent.Child.Inspiration -> {
+                        val inspirationVm: com.lifo.write.InspirationViewModel = koinViewModel(key = "inspiration_vm")
+                        val inspirationState by inspirationVm.state.collectAsState()
+                        com.lifo.write.InspirationScreen(
+                            state = inspirationState,
+                            onIntent = inspirationVm::onIntent,
+                            navigateBack = { rootComponent.navigateBack() },
+                        )
+                    }
+                    is RootComponent.Child.Percorso -> {
+                        val percorsoVm: com.lifo.write.PercorsoViewModel = koinViewModel(key = "percorso_vm")
+                        val percorsoState by percorsoVm.state.collectAsState()
+
+                        // Profile data for psychological insights
+                        val profileVm: com.lifo.profile.ProfileViewModel = koinViewModel(key = "percorso_profile_vm")
+                        val profileUiState by profileVm.uiState.collectAsState()
+                        val latestProfile = (profileUiState as? com.lifo.profile.ProfileUiState.Success)?.profiles?.firstOrNull()
+                        val profileChartData = (profileUiState as? com.lifo.profile.ProfileUiState.Success)?.chartData
+                        val percorsoChartData = com.lifo.write.PercorsoChartData(
+                            moodLine = profileChartData?.moodLine ?: emptyList(),
+                            weekLabels = profileChartData?.weekLabels ?: emptyList(),
+                        )
+
+                        com.lifo.write.PercorsoScreen(
+                            state = percorsoState,
+                            onIntent = percorsoVm::onIntent,
+                            latestProfile = latestProfile,
+                            chartData = percorsoChartData,
+                            profileLoading = profileUiState is com.lifo.profile.ProfileUiState.Loading,
+                            onProfileRetry = { profileVm.refresh() },
+                            onMeditationClick = { rootComponent.navigateToMeditation() },
+                            onReframeClick = { rootComponent.navigateToReframe() },
+                            onBlockClick = { rootComponent.navigateToBlock() },
+                            onRecurringThoughtsClick = { rootComponent.navigateToRecurringThoughts() },
+                            onEnergyCheckInClick = { rootComponent.navigateToEnergyCheckIn() },
+                            onSleepLogClick = { rootComponent.navigateToSleepLog() },
+                            onMovementClick = { rootComponent.navigateToMovement() },
+                            onValuesClick = { rootComponent.navigateToValues() },
+                            onIkigaiClick = { rootComponent.navigateToIkigai() },
+                            onAweClick = { rootComponent.navigateToAwe() },
+                            onSilenceClick = { rootComponent.navigateToSilence() },
+                            onConnectionClick = { rootComponent.navigateToConnection() },
+                            onInspirationClick = { rootComponent.navigateToInspiration() },
+                            onHabitsClick = { rootComponent.navigateToHabits() },
+                            onEnvironmentClick = { rootComponent.navigateToEnvironment() },
+                            onDashboardClick = { rootComponent.navigateToDashboard() },
+                        )
+                    }
+
+                    is RootComponent.Child.ActivityGarden -> {
+                        ActivityGardenRouteContent(
+                            onBackPressed = { rootComponent.navigateBack() },
+                            onWriteClick = { rootComponent.navigateToWrite() },
+                            onBrainDumpClick = { rootComponent.navigateToBrainDump() },
+                            onGratitudeClick = { rootComponent.navigateToGratitude() },
+                            onMeditationClick = { rootComponent.navigateToMeditation() },
+                            onReframeClick = { rootComponent.navigateToReframe() },
+                            onBlockClick = { rootComponent.navigateToBlock() },
+                            onRecurringThoughtsClick = { rootComponent.navigateToRecurringThoughts() },
+                            onEnergyClick = { rootComponent.navigateToEnergyCheckIn() },
+                            onSleepClick = { rootComponent.navigateToSleepLog() },
+                            onMovementClick = { rootComponent.navigateToMovement() },
+                            onDashboardClick = { rootComponent.navigateToDashboard() },
+                            onValuesClick = { rootComponent.navigateToValues() },
+                            onIkigaiClick = { rootComponent.navigateToIkigai() },
+                            onAweClick = { rootComponent.navigateToAwe() },
+                            onSilenceClick = { rootComponent.navigateToSilence() },
+                            onConnectionClick = { rootComponent.navigateToConnection() },
+                            onInspirationClick = { rootComponent.navigateToInspiration() },
+                            onHabitsClick = { rootComponent.navigateToHabits() },
+                            onEnvironmentClick = { rootComponent.navigateToEnvironment() },
+                        )
+                    }
+
+                    is RootComponent.Child.Garden -> {
+                        GardenRouteContent(
+                            onActivityClick = { activityId ->
+                                when (activityId) {
+                                    "diary" -> rootComponent.navigateToWrite()
+                                    "braindump" -> rootComponent.navigateToBrainDump()
+                                    "gratitude" -> rootComponent.navigateToGratitude()
+                                    "meditation" -> rootComponent.navigateToMeditation()
+                                    "reframe" -> rootComponent.navigateToReframe()
+                                    "block" -> rootComponent.navigateToBlock()
+                                    "recurring" -> rootComponent.navigateToRecurringThoughts()
+                                    "energy" -> rootComponent.navigateToEnergyCheckIn()
+                                    "sleep" -> rootComponent.navigateToSleepLog()
+                                    "movement" -> rootComponent.navigateToMovement()
+                                    "dashboard" -> rootComponent.navigateToDashboard()
+                                    "values" -> rootComponent.navigateToValues()
+                                    "ikigai" -> rootComponent.navigateToIkigai()
+                                    "awe" -> rootComponent.navigateToAwe()
+                                    "silence" -> rootComponent.navigateToSilence()
+                                    "connection" -> rootComponent.navigateToConnection()
+                                    "inspiration" -> rootComponent.navigateToInspiration()
+                                    "habits" -> rootComponent.navigateToHabits()
+                                    "environment" -> rootComponent.navigateToEnvironment()
+                                }
+                            },
+                        )
+                    }
+
+                    is RootComponent.Child.AvatarDebug -> {
+                        com.lifo.humanoid.debug.AvatarDebugScreen(
+                            onClose = { rootComponent.navigateBack() }
+                        )
+                    }
                 }
             }
 
@@ -620,15 +856,17 @@ fun DecomposeApp(
                 val onDestinationClickStable = remember(rootComponent) { { dest: NavigationDestination ->
                     when (dest) {
                         is NavigationDestination.Home -> rootComponent.switchTab(RootDestination.Home)
+                        is NavigationDestination.Garden -> rootComponent.switchTab(RootDestination.Garden)
                         is NavigationDestination.Journal -> rootComponent.switchTab(RootDestination.JournalHome)
                         is NavigationDestination.Community -> rootComponent.switchTab(RootDestination.Feed)
-                        is NavigationDestination.Journey -> rootComponent.switchTab(RootDestination.Profile)
+                        is NavigationDestination.Journey -> rootComponent.switchTab(RootDestination.Percorso)
                         else -> {}
                     }
                 } }
                 val destinations = remember {
                     listOf(
                         NavigationDestination.Home,
+                        NavigationDestination.Garden,
                         NavigationDestination.Journal,
                         NavigationDestination.Community,
                         NavigationDestination.Journey,
@@ -807,9 +1045,10 @@ private fun DecomposeBottomBar(
         destinations.forEach { destination ->
             val selected = when (destination) {
                 is NavigationDestination.Home -> activeDestination is RootDestination.Home
+                is NavigationDestination.Garden -> activeDestination is RootDestination.Garden
                 is NavigationDestination.Journal -> activeDestination is RootDestination.JournalHome
                 is NavigationDestination.AIChat -> activeDestination is RootDestination.Chat
-                is NavigationDestination.Journey -> activeDestination is RootDestination.Profile
+                is NavigationDestination.Journey -> activeDestination is RootDestination.Percorso
                 is NavigationDestination.Community -> activeDestination is RootDestination.Feed
                 is NavigationDestination.Feed -> activeDestination is RootDestination.Feed
                 is NavigationDestination.Humanoid -> activeDestination is RootDestination.Humanoid

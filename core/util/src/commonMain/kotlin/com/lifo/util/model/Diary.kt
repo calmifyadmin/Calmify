@@ -31,27 +31,27 @@ data class Diary(
  * Psychological Trigger Categories
  * Based on cognitive-behavioral therapy frameworks
  */
-enum class Trigger(val displayName: String, val emoji: String) {
-    NONE("Nessuno", "➖"),
-    WORK("Lavoro", "💼"),
-    FAMILY("Famiglia", "👨\u200D👩\u200D👧\u200D👦"),
-    HEALTH("Salute", "🏥"),
-    FINANCE("Finanze", "💰"),
-    SOCIAL("Sociale", "👥"),
-    SELF("Se stesso", "🪞"),
-    OTHER("Altro", "📝")
+enum class Trigger(val displayName: String) {
+    NONE("Nessuno"),
+    WORK("Lavoro"),
+    FAMILY("Famiglia"),
+    HEALTH("Salute"),
+    FINANCE("Finanze"),
+    SOCIAL("Sociale"),
+    SELF("Se stesso"),
+    OTHER("Altro"),
 }
 
 /**
  * Body Sensation Categories
  * Based on somatic experiencing and body-awareness practices
  */
-enum class BodySensation(val displayName: String, val emoji: String) {
-    NONE("Nessuna", "➖"),
-    TENSION("Tensione", "😬"),
-    LIGHTNESS("Leggerezza", "🪶"),
-    FATIGUE("Affaticamento", "😮\u200D💨"),
-    HEAVINESS("Pesantezza", "⚓"),
-    AGITATION("Agitazione", "⚡"),
-    RELAXATION("Rilassamento", "😌")
+enum class BodySensation(val displayName: String) {
+    NONE("Nessuna"),
+    TENSION("Tensione"),
+    LIGHTNESS("Leggerezza"),
+    FATIGUE("Affaticamento"),
+    HEAVINESS("Pesantezza"),
+    AGITATION("Agitazione"),
+    RELAXATION("Rilassamento"),
 }

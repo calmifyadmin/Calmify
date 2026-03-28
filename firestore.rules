@@ -263,6 +263,253 @@ rules_version = '2';
       }
 
       // ============================================================
+      // INFRASTRUCTURE & MONETIZATION
+      // ============================================================
+
+      // --- Config (Feature Flags) — read-only for clients ---
+      match /config/{configId} {
+        allow read: if request.auth != null;
+        allow write: if false; // Admin SDK only
+      }
+
+      // --- Presence (Online Status) ---
+      match /presence/{userId} {
+        // Anyone authenticated can read presence (for online indicators)
+        allow read: if request.auth != null;
+
+        // Only the user can update their own presence
+        allow create, update: if request.auth != null &&
+                                 request.auth.uid == userId;
+        allow delete: if request.auth != null &&
+                         request.auth.uid == userId;
+      }
+
+      // --- Waitlist (PRO Waitlist Signups) ---
+      match /waitlist/{emailId} {
+        // Users can create their own waitlist entry
+        allow create: if request.auth != null;
+
+        // Only read your own (matched by userId field) or admin
+        allow read: if request.auth != null &&
+                       resource.data.userId == request.auth.uid;
+
+        // No update/delete from client
+        allow update, delete: if false;
+      }
+
+      // ============================================================
+      // HOLISTIC GROWTH FEATURES
+      // ============================================================
+
+      // --- Awe Entries ---
+      match /awe_entries/{entryId} {
+        allow read: if request.auth != null &&
+                       resource.data.ownerId == request.auth.uid;
+        allow create: if request.auth != null &&
+                         request.resource.data.ownerId == request.auth.uid;
+        allow update: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+        allow delete: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+      }
+
+      // --- Connection Entries ---
+      match /connection_entries/{entryId} {
+        allow read: if request.auth != null &&
+                       resource.data.ownerId == request.auth.uid;
+        allow create: if request.auth != null &&
+                         request.resource.data.ownerId == request.auth.uid;
+        allow update: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+        allow delete: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+      }
+
+      // --- Relationship Reflections ---
+      match /relationship_reflections/{reflectionId} {
+        allow read: if request.auth != null &&
+                       resource.data.ownerId == request.auth.uid;
+        allow create: if request.auth != null &&
+                         request.resource.data.ownerId == request.auth.uid;
+        allow update: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+        allow delete: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+      }
+
+      // --- Ikigai Exploration (per-user doc) ---
+      match /ikigai_exploration/{userId} {
+        allow read: if request.auth != null &&
+                       request.auth.uid == userId;
+        allow create, update: if request.auth != null &&
+                                 request.auth.uid == userId;
+        allow delete: if request.auth != null &&
+                         request.auth.uid == userId;
+      }
+
+      // --- Values Discovery (per-user doc) ---
+      match /values_discovery/{userId} {
+        allow read: if request.auth != null &&
+                       request.auth.uid == userId;
+        allow create, update: if request.auth != null &&
+                                 request.auth.uid == userId;
+        allow delete: if request.auth != null &&
+                         request.auth.uid == userId;
+      }
+
+      // --- Recurring Thoughts ---
+      match /recurring_thoughts/{thoughtId} {
+        allow read: if request.auth != null &&
+                       resource.data.ownerId == request.auth.uid;
+        allow create: if request.auth != null &&
+                         request.resource.data.ownerId == request.auth.uid;
+        allow update: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+        allow delete: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+      }
+
+      // --- Environment Design (per-user doc) ---
+      match /environment_design/{userId} {
+        allow read: if request.auth != null &&
+                       request.auth.uid == userId;
+        allow create, update: if request.auth != null &&
+                                 request.auth.uid == userId;
+        allow delete: if request.auth != null &&
+                         request.auth.uid == userId;
+      }
+
+      // --- Movement Logs ---
+      match /movement_logs/{logId} {
+        allow read: if request.auth != null &&
+                       resource.data.ownerId == request.auth.uid;
+        allow create: if request.auth != null &&
+                         request.resource.data.ownerId == request.auth.uid;
+        allow update: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+        allow delete: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+      }
+
+      // --- Blocks ---
+      match /blocks/{blockId} {
+        allow read: if request.auth != null &&
+                       resource.data.ownerId == request.auth.uid;
+        allow create: if request.auth != null &&
+                         request.resource.data.ownerId == request.auth.uid;
+        allow update: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+        allow delete: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+      }
+
+      // --- Energy Check-Ins ---
+      match /energy_checkins/{checkinId} {
+        allow read: if request.auth != null &&
+                       resource.data.ownerId == request.auth.uid;
+        allow create: if request.auth != null &&
+                         request.resource.data.ownerId == request.auth.uid;
+        allow update: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+        allow delete: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+      }
+
+      // --- Gratitude Entries ---
+      match /gratitude_entries/{entryId} {
+        allow read: if request.auth != null &&
+                       resource.data.ownerId == request.auth.uid;
+        allow create: if request.auth != null &&
+                         request.resource.data.ownerId == request.auth.uid;
+        allow update: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+        allow delete: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+      }
+
+      // --- Habits ---
+      match /habits/{habitId} {
+        allow read: if request.auth != null &&
+                       resource.data.ownerId == request.auth.uid;
+        allow create: if request.auth != null &&
+                         request.resource.data.ownerId == request.auth.uid;
+        allow update: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+        allow delete: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+      }
+
+      // --- Habit Completions ---
+      match /habit_completions/{completionId} {
+        allow read: if request.auth != null &&
+                       resource.data.ownerId == request.auth.uid;
+        allow create: if request.auth != null &&
+                         request.resource.data.ownerId == request.auth.uid;
+        allow update: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+        allow delete: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+      }
+
+      // --- Sleep Logs ---
+      match /sleep_logs/{logId} {
+        allow read: if request.auth != null &&
+                       resource.data.ownerId == request.auth.uid;
+        allow create: if request.auth != null &&
+                         request.resource.data.ownerId == request.auth.uid;
+        allow update: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+        allow delete: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+      }
+
+      // --- Thought Reframes ---
+      match /thought_reframes/{reframeId} {
+        allow read: if request.auth != null &&
+                       resource.data.ownerId == request.auth.uid;
+        allow create: if request.auth != null &&
+                         request.resource.data.ownerId == request.auth.uid;
+        allow update: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+        allow delete: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+      }
+
+      // --- Meditation Sessions ---
+      match /meditation_sessions/{sessionId} {
+        allow read: if request.auth != null &&
+                       resource.data.ownerId == request.auth.uid;
+        allow create: if request.auth != null &&
+                         request.resource.data.ownerId == request.auth.uid;
+        allow update: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+        allow delete: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+      }
+
+      // --- Garden (Activity Garden per-user state) ---
+      match /garden/{userId} {
+        allow read: if request.auth != null &&
+                       request.auth.uid == userId;
+        allow create, update: if request.auth != null &&
+                                 request.auth.uid == userId;
+        allow delete: if request.auth != null &&
+                         request.auth.uid == userId;
+      }
+
+      // --- Avatars (Top-level, legacy path) ---
+      match /avatars/{avatarId} {
+        allow read: if request.auth != null &&
+                       resource.data.ownerId == request.auth.uid;
+        allow create: if request.auth != null &&
+                         request.resource.data.ownerId == request.auth.uid;
+        allow update: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+        allow delete: if request.auth != null &&
+                         resource.data.ownerId == request.auth.uid;
+      }
+
+      // ============================================================
       // DENY ALL OTHER ACCESS (MUST BE LAST RULE)
       // ============================================================
       match /{document=**} {

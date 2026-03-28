@@ -445,11 +445,9 @@ class GeminiLiveAudioManager constructor(
                 audioQueue.add(arrayBuffer)
                 totalQueueBytes.addAndGet(arrayBuffer.size)
 
-                // Calculate audio level & viseme HERE, not on the playback thread
-                val rawAiLevel = calculateAudioLevelFromBytes(arrayBuffer)
-                aiLevelSmoothing = aiLevelSmoothing * (1f - smoothingFactor) + rawAiLevel * smoothingFactor
-                _aiAudioLevel.value = aiLevelSmoothing
-                _aiVisemeWeights.value = visemeAnalyzer.analyze(arrayBuffer, OUTPUT_SAMPLE_RATE)
+                // NOTE: Audio level & viseme are computed during PLAYBACK (in playAudio),
+                // not here during queuing. This ensures lip-sync stays synced with
+                // actual audio output, not ahead of it due to buffering.
 
                 // Jitter Buffer: wait for N chunks before starting playback
                 // This absorbs network micro-fluctuations that cause clicks/pops
@@ -570,6 +568,12 @@ class GeminiLiveAudioManager constructor(
                 }
                 referenceSignalDetector.feedReferenceSignal(shortBuf)
 
+                // Compute viseme weights for primed chunks too
+                val rawLevel = calculateAudioLevelFromBytes(chunk)
+                aiLevelSmoothing = aiLevelSmoothing * (1f - smoothingFactor) + rawLevel * smoothingFactor
+                _aiAudioLevel.value = aiLevelSmoothing
+                _aiVisemeWeights.value = visemeAnalyzer.analyze(chunk, OUTPUT_SAMPLE_RATE)
+
                 // Write directly (AudioTrack accepts data before play)
                 var offset = 0
                 while (offset < chunk.size) {
@@ -619,9 +623,18 @@ class GeminiLiveAudioManager constructor(
                 }
 
                 // Write to AudioTrack in 40ms sub-chunks (1920 bytes @ 24kHz, 16-bit)
+                // Compute viseme weights PER sub-chunk for responsive lip-sync (~25fps)
                 var offset = 0
                 while (offset < processedData.size && isActive) {
                     val bytesToWrite = minOf(1920, processedData.size - offset)
+
+                    // Analyze this sub-chunk for lip-sync before blocking on write
+                    val subChunk = byteArray.copyOfRange(offset, offset + bytesToWrite)
+                    val rawAiLevel = calculateAudioLevelFromBytes(subChunk)
+                    aiLevelSmoothing = aiLevelSmoothing * (1f - smoothingFactor) + rawAiLevel * smoothingFactor
+                    _aiAudioLevel.value = aiLevelSmoothing
+                    _aiVisemeWeights.value = visemeAnalyzer.analyze(subChunk, OUTPUT_SAMPLE_RATE)
+
                     val bytesWritten = track.write(processedData, offset, bytesToWrite)
                     if (bytesWritten < 0) {
                         Log.e(TAG, "AudioTrack write error: $bytesWritten")

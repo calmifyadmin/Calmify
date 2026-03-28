@@ -41,7 +41,7 @@ class RootComponent(
         is RootDestination.Auth -> Child.Auth(context)
         is RootDestination.Onboarding -> Child.Onboarding(context)
         is RootDestination.Home -> Child.Home(context)
-        is RootDestination.Write -> Child.Write(context, destination.diaryId)
+        is RootDestination.Write -> Child.Write(context, destination.diaryId, destination.isBrainDump, destination.isGratitude, destination.isEnergyCheckIn, destination.isSleepLog, destination.isReframe, destination.isBlock, destination.isMovement)
         is RootDestination.Chat -> Child.Chat(context, destination.sessionId)
         is RootDestination.LiveChat -> Child.LiveChat(context)
         is RootDestination.History -> Child.History(context)
@@ -75,6 +75,22 @@ class RootComponent(
         // Avatar System (Wave 10)
         is RootDestination.AvatarCreator -> Child.AvatarCreator(context)
         is RootDestination.AvatarList -> Child.AvatarList(context)
+        // Holistic Growth (Sprint 1+2)
+        is RootDestination.Habits -> Child.Habits(context)
+        is RootDestination.Meditation -> Child.Meditation(context)
+        is RootDestination.Environment -> Child.Environment(context)
+        is RootDestination.Dashboard -> Child.Dashboard(context)
+        is RootDestination.RecurringThoughts -> Child.RecurringThoughts(context)
+        is RootDestination.Values -> Child.Values(context)
+        is RootDestination.Ikigai -> Child.Ikigai(context)
+        is RootDestination.Awe -> Child.Awe(context)
+        is RootDestination.Silence -> Child.Silence(context)
+        is RootDestination.Connection -> Child.Connection(context)
+        is RootDestination.Inspiration -> Child.Inspiration(context)
+        is RootDestination.Percorso -> Child.Percorso(context)
+        is RootDestination.ActivityGarden -> Child.ActivityGarden(context)
+        is RootDestination.Garden -> Child.Garden(context)
+        is RootDestination.AvatarDebug -> Child.AvatarDebug(context)
     }
 
     // ===== Navigation Helpers =====
@@ -122,6 +138,31 @@ class RootComponent(
     @OptIn(DelicateDecomposeApi::class)
     fun navigateToWrite(diaryId: String? = null) {
         navigation.push(RootDestination.Write(diaryId = diaryId))
+    }
+
+    @OptIn(DelicateDecomposeApi::class)
+    fun navigateToBrainDump() {
+        navigation.push(RootDestination.Write(isBrainDump = true))
+    }
+
+    @OptIn(DelicateDecomposeApi::class)
+    fun navigateToGratitude() {
+        navigation.push(RootDestination.Write(isGratitude = true))
+    }
+
+    @OptIn(DelicateDecomposeApi::class)
+    fun navigateToEnergyCheckIn() {
+        navigation.push(RootDestination.Write(isEnergyCheckIn = true))
+    }
+
+    @OptIn(DelicateDecomposeApi::class)
+    fun navigateToSleepLog() {
+        navigation.push(RootDestination.Write(isSleepLog = true))
+    }
+
+    @OptIn(DelicateDecomposeApi::class)
+    fun navigateToReframe() {
+        navigation.push(RootDestination.Write(isReframe = true))
     }
 
     @OptIn(DelicateDecomposeApi::class)
@@ -267,6 +308,91 @@ class RootComponent(
         navigation.push(RootDestination.AvatarList)
     }
 
+    @OptIn(DelicateDecomposeApi::class)
+    fun navigateToHabits() {
+        navigation.push(RootDestination.Habits)
+    }
+
+    @OptIn(DelicateDecomposeApi::class)
+    fun navigateToMovement() {
+        navigation.push(RootDestination.Write(isMovement = true))
+    }
+
+    @OptIn(DelicateDecomposeApi::class)
+    fun navigateToBlock() {
+        navigation.push(RootDestination.Write(isBlock = true))
+    }
+
+    @OptIn(DelicateDecomposeApi::class)
+    fun navigateToMeditation() {
+        navigation.push(RootDestination.Meditation)
+    }
+
+    @OptIn(DelicateDecomposeApi::class)
+    fun navigateToEnvironment() {
+        navigation.push(RootDestination.Environment)
+    }
+
+    @OptIn(DelicateDecomposeApi::class)
+    fun navigateToDashboard() {
+        navigation.push(RootDestination.Dashboard)
+    }
+
+    @OptIn(DelicateDecomposeApi::class)
+    fun navigateToRecurringThoughts() {
+        navigation.push(RootDestination.RecurringThoughts)
+    }
+
+    @OptIn(DelicateDecomposeApi::class)
+    fun navigateToValues() {
+        navigation.push(RootDestination.Values)
+    }
+
+    @OptIn(DelicateDecomposeApi::class)
+    fun navigateToIkigai() {
+        navigation.push(RootDestination.Ikigai)
+    }
+
+    @OptIn(DelicateDecomposeApi::class)
+    fun navigateToAwe() {
+        navigation.push(RootDestination.Awe)
+    }
+
+    @OptIn(DelicateDecomposeApi::class)
+    fun navigateToSilence() {
+        navigation.push(RootDestination.Silence)
+    }
+
+    @OptIn(DelicateDecomposeApi::class)
+    fun navigateToConnection() {
+        navigation.push(RootDestination.Connection)
+    }
+
+    @OptIn(DelicateDecomposeApi::class)
+    fun navigateToInspiration() {
+        navigation.push(RootDestination.Inspiration)
+    }
+
+    @OptIn(DelicateDecomposeApi::class)
+    fun navigateToPercorso() {
+        navigation.push(RootDestination.Percorso)
+    }
+
+    @OptIn(DelicateDecomposeApi::class)
+    fun navigateToActivityGarden() {
+        navigation.push(RootDestination.ActivityGarden)
+    }
+
+    @OptIn(DelicateDecomposeApi::class)
+    fun navigateToGarden() {
+        navigation.push(RootDestination.Garden)
+    }
+
+    @OptIn(DelicateDecomposeApi::class)
+    fun navigateToAvatarDebug() {
+        navigation.push(RootDestination.AvatarDebug)
+    }
+
     /**
      * Returns the current active destination by inspecting the top of the stack.
      */
@@ -283,7 +409,7 @@ class RootComponent(
         data class Auth(override val componentContext: ComponentContext) : Child
         data class Onboarding(override val componentContext: ComponentContext) : Child
         data class Home(override val componentContext: ComponentContext) : Child
-        data class Write(override val componentContext: ComponentContext, val diaryId: String?) : Child
+        data class Write(override val componentContext: ComponentContext, val diaryId: String?, val isBrainDump: Boolean = false, val isGratitude: Boolean = false, val isEnergyCheckIn: Boolean = false, val isSleepLog: Boolean = false, val isReframe: Boolean = false, val isBlock: Boolean = false, val isMovement: Boolean = false) : Child
         data class Chat(override val componentContext: ComponentContext, val sessionId: String?) : Child
         data class LiveChat(override val componentContext: ComponentContext) : Child
         data class History(override val componentContext: ComponentContext) : Child
@@ -317,5 +443,21 @@ class RootComponent(
         // Avatar System (Wave 10)
         data class AvatarCreator(override val componentContext: ComponentContext) : Child
         data class AvatarList(override val componentContext: ComponentContext) : Child
+        // Holistic Growth (Sprint 1+2)
+        data class Habits(override val componentContext: ComponentContext) : Child
+        data class Meditation(override val componentContext: ComponentContext) : Child
+        data class Environment(override val componentContext: ComponentContext) : Child
+        data class Dashboard(override val componentContext: ComponentContext) : Child
+        data class RecurringThoughts(override val componentContext: ComponentContext) : Child
+        data class Values(override val componentContext: ComponentContext) : Child
+        data class Ikigai(override val componentContext: ComponentContext) : Child
+        data class Awe(override val componentContext: ComponentContext) : Child
+        data class Silence(override val componentContext: ComponentContext) : Child
+        data class Connection(override val componentContext: ComponentContext) : Child
+        data class Inspiration(override val componentContext: ComponentContext) : Child
+        data class Percorso(override val componentContext: ComponentContext) : Child
+        data class ActivityGarden(override val componentContext: ComponentContext) : Child
+        data class Garden(override val componentContext: ComponentContext) : Child
+        data class AvatarDebug(override val componentContext: ComponentContext) : Child
     }
 }

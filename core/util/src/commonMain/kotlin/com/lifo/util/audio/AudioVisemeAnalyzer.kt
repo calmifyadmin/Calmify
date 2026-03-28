@@ -32,8 +32,8 @@ class AudioVisemeAnalyzer(private val defaultSampleRate: Int = 24000) {
         private const val VOICED_ENERGY_THRESHOLD = 0.005f
 
         // Smoothing (exponential moving average)
-        // alpha=0.4 gives ~40ms effective time constant at 30fps → responsive but smooth
-        private const val SMOOTHING_ALPHA = 0.4f
+        // alpha=0.55 gives ~25ms effective time constant at 30fps → snappy and responsive
+        private const val SMOOTHING_ALPHA = 0.55f
 
         // Silence fade rate (how fast weights decay to zero during silence)
         private const val SILENCE_DECAY = 0.7f
@@ -47,8 +47,8 @@ class AudioVisemeAnalyzer(private val defaultSampleRate: Int = 24000) {
         private val VISEME_O = floatArrayOf(0.45f, 0.30f) // Mid F1, low F2 (half-open, rounded)
         private val VISEME_U = floatArrayOf(0.22f, 0.18f) // Low F1, very low F2 (closed, rounded)
 
-        // Gaussian width for soft classification (larger = more overlap between visemes)
-        private const val SIGMA = 0.25f
+        // Gaussian width for soft classification (smaller = sharper peaks, more decisive visemes)
+        private const val SIGMA = 0.20f
         private const val SIGMA_SQ_2 = 2f * SIGMA * SIGMA
     }
 
@@ -277,8 +277,8 @@ class AudioVisemeAnalyzer(private val defaultSampleRate: Int = 24000) {
         }
 
         // Scale by voice energy (louder = more mouth movement)
-        // Use sqrt for more natural response (logarithmic perception)
-        val energyScale = sqrt(rms / 0.3f).coerceIn(0.2f, 1.2f)
+        // Use sqrt for more natural response
+        val energyScale = sqrt(rms / 0.3f).coerceIn(0.3f, 1.0f)
         for (i in raw.indices) {
             raw[i] *= energyScale
         }

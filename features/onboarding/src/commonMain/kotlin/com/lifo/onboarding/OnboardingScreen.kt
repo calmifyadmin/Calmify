@@ -16,7 +16,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.HealthAndSafety
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.SyncAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,13 +31,16 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.lifo.ui.resources.*
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Simplified 3-step conversational onboarding.
+ * 4-step conversational onboarding.
  * Step 0: "Come ti chiami?" (Name)
  * Step 1: "Cosa ti ha portato qui?" (Motivations)
  * Step 2: "Come preferisci esprimerti?" (Write / Speak / Both)
+ * Step 3: Prominent Disclosure — data collection consent (Play Store requirement)
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
@@ -64,16 +69,16 @@ fun OnboardingScreen(
     if (showExitDialog) {
         AlertDialog(
             onDismissRequest = { showExitDialog = false },
-            title = { Text("Uscire?") },
-            text = { Text("Dovrai completare la configurazione per usare l'app.") },
+            title = { Text(stringResource(Res.string.onboarding_exit_title)) },
+            text = { Text(stringResource(Res.string.onboarding_exit_message)) },
             confirmButton = {
                 TextButton(onClick = { showExitDialog = false }) {
-                    Text("Resta")
+                    Text(stringResource(Res.string.onboarding_exit_stay))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showExitDialog = false }) {
-                    Text("Esci")
+                    Text(stringResource(Res.string.onboarding_exit_leave))
                 }
             }
         )
@@ -193,6 +198,10 @@ fun OnboardingScreen(
                         selectedPreference = uiState.preference,
                         onPreferenceChange = { viewModel.updatePreference(it) }
                     )
+                    3 -> ProminentDisclosureStep(
+                        consentAccepted = uiState.dataCollectionConsent,
+                        onConsentChange = { viewModel.onIntent(OnboardingContract.Intent.UpdateDataConsent(it)) }
+                    )
                 }
             }
         }
@@ -220,14 +229,14 @@ private fun NameStep(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Ciao!",
+            text = stringResource(Res.string.onboarding_hello),
             style = MaterialTheme.typography.displaySmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Come ti chiami?",
+            text = stringResource(Res.string.onboarding_whats_your_name),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground
         )
@@ -235,8 +244,8 @@ private fun NameStep(
         OutlinedTextField(
             value = name,
             onValueChange = onNameChange,
-            label = { Text("Il tuo nome") },
-            supportingText = { Text("Il nome che vedranno gli altri") },
+            label = { Text(stringResource(Res.string.onboarding_name_label)) },
+            supportingText = { Text(stringResource(Res.string.onboarding_name_hint)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.Words,
@@ -249,13 +258,13 @@ private fun NameStep(
         OutlinedTextField(
             value = username,
             onValueChange = { if (it.length <= 20) onUsernameChange(it.lowercase()) },
-            label = { Text("Username") },
+            label = { Text(stringResource(Res.string.onboarding_username_label)) },
             prefix = { Text("@") },
             singleLine = true,
             isError = usernameError != null,
             supportingText = {
                 Text(
-                    text = usernameError ?: "Il tuo identificativo unico (opzionale)",
+                    text = usernameError ?: stringResource(Res.string.onboarding_username_hint),
                     color = if (usernameError != null) MaterialTheme.colorScheme.error
                     else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -271,7 +280,7 @@ private fun NameStep(
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "Potrai cambiare nome e username in qualsiasi momento",
+            text = stringResource(Res.string.onboarding_name_changeable),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
@@ -305,14 +314,14 @@ private fun MotivationStep(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Cosa ti ha portato qui?",
+            text = stringResource(Res.string.onboarding_motivations_title),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Seleziona tutto cio' che risuona con te",
+            text = stringResource(Res.string.onboarding_motivations_subtitle),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
@@ -400,14 +409,14 @@ private fun PreferenceStep(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Come preferisci esprimerti?",
+            text = stringResource(Res.string.onboarding_preference_title),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Potrai sempre cambiare idea",
+            text = stringResource(Res.string.onboarding_preference_subtitle),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
@@ -501,6 +510,138 @@ private fun PreferenceStep(
     }
 }
 
+// ── Step 3: Prominent Disclosure ────────────────────────────────────────────────
+
+@Composable
+private fun ProminentDisclosureStep(
+    consentAccepted: Boolean,
+    onConsentChange: (Boolean) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 32.dp, vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = Icons.Default.Shield,
+            contentDescription = null,
+            modifier = Modifier.size(48.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = stringResource(Res.string.disclosure_title),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = stringResource(Res.string.disclosure_subtitle),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+            ),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                DisclosureItem(
+                    icon = Icons.Default.HealthAndSafety,
+                    title = stringResource(Res.string.disclosure_wellness_title),
+                    description = stringResource(Res.string.disclosure_wellness_desc)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                DisclosureItem(
+                    icon = Icons.Default.Edit,
+                    title = stringResource(Res.string.disclosure_diary_title),
+                    description = stringResource(Res.string.disclosure_diary_desc)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                DisclosureItem(
+                    icon = Icons.Default.Mic,
+                    title = stringResource(Res.string.disclosure_voice_title),
+                    description = stringResource(Res.string.disclosure_voice_desc)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .selectable(
+                    selected = consentAccepted,
+                    role = Role.Checkbox,
+                    onClick = { onConsentChange(!consentAccepted) }
+                )
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Checkbox(
+                checked = consentAccepted,
+                onCheckedChange = null
+            )
+            Text(
+                text = stringResource(Res.string.disclosure_consent_text),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = stringResource(Res.string.disclosure_revoke_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun DisclosureItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    description: String
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(24.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Column {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
 // ── Bottom Bar ──────────────────────────────────────────────────────────────────
 
 @Composable
@@ -537,7 +678,7 @@ private fun OnboardingBottomBar(
                         contentDescription = null
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Indietro")
+                    Text(stringResource(Res.string.back))
                 }
             } else {
                 Spacer(modifier = Modifier.width(100.dp))
@@ -549,7 +690,7 @@ private fun OnboardingBottomBar(
                     enabled = isStepValid && !isSaving,
                     modifier = Modifier.height(56.dp)
                 ) {
-                    Text("Avanti")
+                    Text(stringResource(Res.string.next))
                     Spacer(modifier = Modifier.width(8.dp))
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
@@ -569,9 +710,9 @@ private fun OnboardingBottomBar(
                             strokeWidth = 2.dp
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Salvataggio...")
+                        Text(stringResource(Res.string.onboarding_saving))
                     } else {
-                        Text("Iniziamo!")
+                        Text(stringResource(Res.string.onboarding_start))
                     }
                 }
             }

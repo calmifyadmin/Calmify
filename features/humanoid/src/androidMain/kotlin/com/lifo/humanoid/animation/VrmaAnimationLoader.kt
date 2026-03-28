@@ -385,20 +385,51 @@ class VrmaAnimationLoader(private val context: Context) {
         val mapping = mutableMapOf<String, String>()
 
         val humanoid = vrmAnimExt.getAsJsonObject("humanoid")
-        val humanBones = humanoid?.getAsJsonObject("humanBones")
-
-        humanBones?.entrySet()?.forEach { (boneName, value) ->
-            val nodeIndex = value.asJsonObject?.get("node")?.asInt
-            if (nodeIndex != null && nodeIndex < nodes.size()) {
-                val nodeName = nodes[nodeIndex].asJsonObject?.get("name")?.asString
-                if (nodeName != null) {
-                    mapping[boneName] = nodeName
-                    println("[VrmaAnimationLoader] Humanoid bone mapping: $boneName -> $nodeName (node $nodeIndex)")
-                }
-            }
+        if (humanoid == null) {
+            println("[VrmaAnimationLoader] WARNING: No humanoid object in VRM animation extension")
+            return emptyMap()
         }
 
-        return mapping
+        // VRM 1.0 format: humanBones is an object { "hips": { "node": 0 }, ... }
+        val humanBonesObj = humanoid.getAsJsonObject("humanBones")
+        if (humanBonesObj != null) {
+            humanBonesObj.entrySet().forEach { (boneName, value) ->
+                val nodeIndex = value.asJsonObject?.get("node")?.asInt
+                if (nodeIndex != null && nodeIndex < nodes.size()) {
+                    val nodeName = nodes[nodeIndex].asJsonObject?.get("name")?.asString
+                    if (nodeName != null) {
+                        mapping[boneName] = nodeName
+                    }
+                }
+            }
+            println("[VrmaAnimationLoader] Parsed VRM 1.0 humanoid mapping: ${mapping.size} bones")
+            return mapping
+        }
+
+        // VRM 0.x format: humanBones is an array [ { "bone": "hips", "node": 0 }, ... ]
+        val humanBonesArr = humanoid.getAsJsonArray("humanBones")
+        if (humanBonesArr != null) {
+            humanBonesArr.forEach { element ->
+                try {
+                    val boneObj = element.asJsonObject
+                    val boneName = boneObj.get("bone")?.asString ?: return@forEach
+                    val nodeIndex = boneObj.get("node")?.asInt ?: return@forEach
+                    if (nodeIndex < nodes.size()) {
+                        val nodeName = nodes[nodeIndex].asJsonObject?.get("name")?.asString
+                        if (nodeName != null) {
+                            mapping[boneName] = nodeName
+                        }
+                    }
+                } catch (e: Exception) {
+                    println("[VrmaAnimationLoader] ERROR parsing VRM 0.x bone: ${e.message}")
+                }
+            }
+            println("[VrmaAnimationLoader] Parsed VRM 0.x humanoid mapping: ${mapping.size} bones")
+            return mapping
+        }
+
+        println("[VrmaAnimationLoader] WARNING: humanBones not found as object or array")
+        return emptyMap()
     }
 
     /**

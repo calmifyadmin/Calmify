@@ -27,7 +27,7 @@ class VrmBlendShapeController {
     val currentWeights: StateFlow<Map<String, Float>> = _currentWeights.asStateFlow()
 
     private val targetWeights = mutableMapOf<String, Float>()
-    private val blendSpeed = 0.15f // Interpolation speed (0-1)
+    private val blendSpeed = 0.45f // Interpolation speed (0-1) — fast for responsive lip-sync
 
     // Track which blend shape presets are available in the current VRM model
     private var _availablePresets: Set<String> = emptySet()

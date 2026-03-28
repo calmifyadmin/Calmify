@@ -8,6 +8,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.platform.LocalContext
+import com.lifo.ui.resources.*
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -17,6 +19,13 @@ fun SubscriptionRouteContent(
     val viewModel: SubscriptionViewModel = koinViewModel()
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
+
+    // Capture i18n strings in composable scope for use in LaunchedEffect
+    val strUnableToPurchase = stringResource(Res.string.toast_unable_to_purchase)
+    val strSubscriptionActivated = stringResource(Res.string.toast_subscription_activated)
+    val strSubscriptionRestored = stringResource(Res.string.toast_subscription_restored)
+    val strNoSubscription = stringResource(Res.string.toast_no_subscription_found)
+    val strWaitlistSuccess = stringResource(Res.string.toast_waitlist_success)
 
     LaunchedEffect(Unit) {
         viewModel.onIntent(SubscriptionContract.Intent.LoadSubscriptionState)
@@ -31,21 +40,21 @@ fun SubscriptionRouteContent(
                     if (activity != null) {
                         viewModel.launchBillingFlow(activity, effect.productId)
                     } else {
-                        Toast.makeText(context, "Unable to launch purchase", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, strUnableToPurchase, Toast.LENGTH_SHORT).show()
                     }
                 }
                 is SubscriptionContract.Effect.PurchaseSuccess -> {
-                    Toast.makeText(context, "Abbonamento attivato!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, strSubscriptionActivated, Toast.LENGTH_SHORT).show()
                 }
                 is SubscriptionContract.Effect.ShowError -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
                 }
                 is SubscriptionContract.Effect.ShowRestoreResult -> {
-                    val msg = if (effect.count > 0) "Abbonamento ripristinato!" else "Nessun abbonamento trovato"
+                    val msg = if (effect.count > 0) strSubscriptionRestored else strNoSubscription
                     Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                 }
                 is SubscriptionContract.Effect.WaitlistSubmitSuccess -> {
-                    Toast.makeText(context, "Iscrizione completata!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, strWaitlistSuccess, Toast.LENGTH_SHORT).show()
                 }
             }
         }

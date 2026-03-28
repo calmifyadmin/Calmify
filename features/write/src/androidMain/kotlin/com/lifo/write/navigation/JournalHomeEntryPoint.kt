@@ -10,16 +10,32 @@ import com.lifo.write.JournalHomeScreen
 @Composable
 fun JournalHomeRouteContent(
     onWriteClick: () -> Unit,
+    onBrainDumpClick: () -> Unit = {},
+    onGratitudeClick: () -> Unit = {},
     onDiaryClick: (String) -> Unit,
     onInsightClick: (String) -> Unit,
     onMenuClicked: () -> Unit = {},
     onNotificationsClick: () -> Unit = {},
+    onEnergyClick: () -> Unit = {},
+    onSleepClick: () -> Unit = {},
+    onHabitsClick: () -> Unit = {},
+    onMeditationClick: () -> Unit = {},
+    onMovementClick: () -> Unit = {},
+    onAllActivitiesClick: () -> Unit = {},
 ) {
     JournalHomeScreen(
         onWriteClick = onWriteClick,
+        onBrainDumpClick = onBrainDumpClick,
+        onGratitudeClick = onGratitudeClick,
         onDiaryClick = onDiaryClick,
         onInsightClick = onInsightClick,
         onMenuClicked = onMenuClicked,
         onNotificationsClick = onNotificationsClick,
+        onEnergyClick = onEnergyClick,
+        onSleepClick = onSleepClick,
+        onHabitsClick = onHabitsClick,
+        onMeditationClick = onMeditationClick,
+        onMovementClick = onMovementClick,
+        onAllActivitiesClick = onAllActivitiesClick,
     )
 }

@@ -169,7 +169,7 @@ fun EnhancedActivityCard(
                     // Sentiment badge
                     item.sentimentIndicator?.let { sentiment ->
                         Text(
-                            text = "${sentiment.label.emoji} ${sentiment.label.displayName}",
+                            text = sentiment.label.displayName,
                             style = MaterialTheme.typography.labelSmall,
                             color = sentimentColor
                         )

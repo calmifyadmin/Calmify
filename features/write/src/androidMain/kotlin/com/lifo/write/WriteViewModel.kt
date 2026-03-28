@@ -100,6 +100,8 @@ object WriteContract {
         val smartCaptureComplete: Boolean = false,
         // View mode (true when viewing existing diary, false when creating/editing)
         val isViewMode: Boolean = false,
+        // Brain Dump mode (minimal UI: just description, no metrics/title/mood)
+        val isBrainDumpMode: Boolean = false,
         // Image state
         val isUploadingImages: Boolean = false,
         val selectedImageIndex: Int? = null,
@@ -437,6 +439,12 @@ internal class WriteViewModel constructor(
         if (diaryId != null && currentState.selectedDiaryId == null) {
             updateState { copy(selectedDiaryId = diaryId, isViewMode = true) }
             fetchSelectedDiary()
+        }
+    }
+
+    internal fun setBrainDumpMode(enabled: Boolean) {
+        if (enabled) {
+            updateState { copy(isBrainDumpMode = true, title = "Scarico mentale") }
         }
     }
 

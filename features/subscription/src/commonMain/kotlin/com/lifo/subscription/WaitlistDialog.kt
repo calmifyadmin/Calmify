@@ -29,6 +29,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.lifo.ui.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun WaitlistDialog(
@@ -52,7 +54,7 @@ fun WaitlistDialog(
         },
         title = {
             Text(
-                text = if (isSubmitted) "Sei nella lista!" else "PRO arriva presto!",
+                text = stringResource(if (isSubmitted) Res.string.waitlist_title_done else Res.string.waitlist_title_pending),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
@@ -70,8 +72,7 @@ fun WaitlistDialog(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Text(
-                            text = "Stiamo preparando Calmify PRO con funzionalità esclusive. " +
-                                    "Iscriviti per accesso prioritario e uno sconto speciale al lancio.",
+                            text = stringResource(Res.string.waitlist_description),
                             style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -82,7 +83,7 @@ fun WaitlistDialog(
                         OutlinedTextField(
                             value = email,
                             onValueChange = onEmailChange,
-                            label = { Text("La tua email") },
+                            label = { Text(stringResource(Res.string.waitlist_email_label)) },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Email,
@@ -96,8 +97,7 @@ fun WaitlistDialog(
 
                 AnimatedVisibility(visible = isSubmitted) {
                     Text(
-                        text = "Ti avviseremo appena PRO sarà disponibile. " +
-                                "Grazie per credere in Calmify!",
+                        text = stringResource(Res.string.waitlist_done_description),
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -108,7 +108,7 @@ fun WaitlistDialog(
         confirmButton = {
             if (isSubmitted) {
                 Button(onClick = onDismiss) {
-                    Text("Perfetto!")
+                    Text(stringResource(Res.string.waitlist_done))
                 }
             } else {
                 Button(
@@ -121,14 +121,14 @@ fun WaitlistDialog(
                             strokeWidth = 2.dp,
                         )
                     }
-                    Text("Iscrivimi")
+                    Text(stringResource(Res.string.waitlist_submit))
                 }
             }
         },
         dismissButton = {
             if (!isSubmitted) {
                 TextButton(onClick = onDismiss) {
-                    Text("Non ora")
+                    Text(stringResource(Res.string.waitlist_not_now))
                 }
             }
         },

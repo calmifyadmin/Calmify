@@ -13,7 +13,7 @@ sealed interface RootDestination {
     @Serializable data object Auth : RootDestination
     @Serializable data object Onboarding : RootDestination
     @Serializable data object Home : RootDestination
-    @Serializable data class Write(val diaryId: String? = null) : RootDestination
+    @Serializable data class Write(val diaryId: String? = null, val isBrainDump: Boolean = false, val isGratitude: Boolean = false, val isEnergyCheckIn: Boolean = false, val isSleepLog: Boolean = false, val isReframe: Boolean = false, val isBlock: Boolean = false, val isMovement: Boolean = false) : RootDestination
     @Serializable data class Chat(val sessionId: String? = null) : RootDestination
     @Serializable data object LiveChat : RootDestination
     @Serializable data object History : RootDestination
@@ -53,4 +53,21 @@ sealed interface RootDestination {
     // === Avatar System (Wave 10) ===
     @Serializable data object AvatarCreator : RootDestination
     @Serializable data object AvatarList : RootDestination
+    // === Holistic Growth (Sprint 1+2) ===
+    @Serializable data object Habits : RootDestination
+    @Serializable data object Meditation : RootDestination
+    @Serializable data object Environment : RootDestination
+    @Serializable data object Dashboard : RootDestination
+    @Serializable data object RecurringThoughts : RootDestination
+    @Serializable data object Values : RootDestination
+    @Serializable data object Ikigai : RootDestination
+    @Serializable data object Awe : RootDestination
+    @Serializable data object Silence : RootDestination
+    @Serializable data object Connection : RootDestination
+    @Serializable data object Inspiration : RootDestination
+    @Serializable data object Percorso : RootDestination
+    @Serializable data object ActivityGarden : RootDestination
+    @Serializable data object Garden : RootDestination
+    // === Debug ===
+    @Serializable data object AvatarDebug : RootDestination
 }

@@ -77,11 +77,17 @@ fun LiveScreen(
     avatarContent: (@Composable () -> Unit)? = null,
     onAvatarSetup: ((com.lifo.util.speech.SpeechAnimationTarget) -> Unit)? = null,
     speechAnimationTarget: com.lifo.util.speech.SpeechAnimationTarget? = null,
+    gestureAnimationCallback: ((String) -> Unit)? = null,
     viewModel: LiveChatViewModel = koinViewModel()
 ) {
     // Connect avatar lip-sync controller to the live chat audio pipeline
     LaunchedEffect(speechAnimationTarget) {
         speechAnimationTarget?.let { viewModel.attachHumanoidController(it) }
+    }
+
+    // Connect gesture animation callback for AI-triggered animations (play_animation tool)
+    LaunchedEffect(gestureAnimationCallback) {
+        gestureAnimationCallback?.let { viewModel.attachGestureCallback(it) }
     }
 
     val liveChatState by viewModel.uiState.collectAsStateWithLifecycle()

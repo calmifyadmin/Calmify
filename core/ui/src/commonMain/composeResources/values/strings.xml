@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources>
+    <!-- ============================================================ -->
+    <!-- Common / Shared -->
+    <!-- ============================================================ -->
+    <string name="app_name">Calmify</string>
+    <string name="back">Indietro</string>
+    <string name="next">Avanti</string>
+    <string name="save">Salva</string>
+    <string name="cancel">Annulla</string>
+    <string name="close">Chiudi</string>
+    <string name="ok">OK</string>
+    <string name="error_generic">Qualcosa e\' andato storto</string>
+    <string name="loading">Un momento...</string>
+    <string name="yes">Si\'</string>
+    <string name="no">No</string>
+    <string name="confirm">Conferma</string>
+    <string name="delete">Elimina</string>
+
+    <!-- ============================================================ -->
+    <!-- Onboarding -->
+    <!-- ============================================================ -->
+    <!-- Step 0: Name -->
+    <string name="onboarding_hello">Ciao!</string>
+    <string name="onboarding_whats_your_name">Come ti chiami?</string>
+    <string name="onboarding_name_label">Il tuo nome</string>
+    <string name="onboarding_name_hint">Il nome che vedranno gli altri</string>
+    <string name="onboarding_username_label">Username</string>
+    <string name="onboarding_username_hint">Il tuo identificativo unico (opzionale)</string>
+    <string name="onboarding_username_taken">Username gia\' in uso</string>
+    <string name="onboarding_username_error">Errore verifica username</string>
+    <string name="onboarding_name_changeable">Potrai cambiare nome e username in qualsiasi momento</string>
+
+    <!-- Step 1: Motivations -->
+    <string name="onboarding_motivations_title">Cosa ti ha portato qui?</string>
+    <string name="onboarding_motivations_subtitle">Seleziona tutto cio\' che risuona con te</string>
+    <string name="motivation_anxiety">Ridurre l\'ansia</string>
+    <string name="motivation_emotions">Capire le mie emozioni</string>
+    <string name="motivation_growth">Crescita personale</string>
+    <string name="motivation_journaling">Journaling quotidiano</string>
+    <string name="motivation_mindfulness">Mindfulness</string>
+    <string name="motivation_sleep">Dormire meglio</string>
+    <string name="motivation_stress">Gestire lo stress</string>
+
+    <!-- Step 2: Preference -->
+    <string name="onboarding_preference_title">Come preferisci esprimerti?</string>
+    <string name="onboarding_preference_subtitle">Potrai sempre cambiare idea</string>
+    <string name="preference_write_title">Scrivere</string>
+    <string name="preference_write_desc">Preferisco mettere i pensieri nero su bianco</string>
+    <string name="preference_speak_title">Parlare</string>
+    <string name="preference_speak_desc">Mi trovo meglio a parlare a voce</string>
+    <string name="preference_both_title">Entrambi</string>
+    <string name="preference_both_desc">Dipende dal momento</string>
+
+    <!-- Step 3: Prominent Disclosure -->
+    <string name="disclosure_title">I tuoi dati, la tua scelta</string>
+    <string name="disclosure_subtitle">Prima di iniziare, vogliamo essere trasparenti su come trattiamo i tuoi dati.</string>
+    <string name="disclosure_wellness_title">Dati sul benessere</string>
+    <string name="disclosure_wellness_desc">Raccogliamo dati su umore, emozioni e abitudini di journaling per fornirti insight personalizzati e migliorare la tua esperienza.</string>
+    <string name="disclosure_diary_title">Contenuti del diario</string>
+    <string name="disclosure_diary_desc">I testi che scrivi nel diario vengono analizzati localmente e tramite AI per offrirti riflessioni e suggerimenti. Non vengono mai condivisi con terze parti.</string>
+    <string name="disclosure_voice_title">Dati vocali</string>
+    <string name="disclosure_voice_desc">Se usi la chat vocale, l\'audio viene elaborato in tempo reale per la conversazione AI e non viene salvato sui nostri server.</string>
+    <string name="disclosure_consent_text">Ho letto e acconsento alla raccolta e all\'elaborazione dei miei dati sul benessere come descritto sopra.</string>
+    <string name="disclosure_revoke_hint">Puoi revocare il consenso e cancellare i tuoi dati in qualsiasi momento dalle Impostazioni.</string>
+
+    <!-- Onboarding navigation -->
+    <string name="onboarding_saving">Salvataggio...</string>
+    <string name="onboarding_start">Iniziamo!</string>
+    <string name="onboarding_exit_title">Uscire?</string>
+    <string name="onboarding_exit_message">Dovrai completare la configurazione per usare l\'app.</string>
+    <string name="onboarding_exit_stay">Resta</string>
+    <string name="onboarding_exit_leave">Esci</string>
+
+    <!-- ============================================================ -->
+    <!-- Paywall / Subscription -->
+    <!-- ============================================================ -->
+    <string name="paywall_title">Calmify Pro</string>
+    <string name="paywall_subtitle">Sblocca il pieno potenziale del tuo percorso</string>
+    <string name="paywall_compare_plans">Confronta i piani</string>
+    <string name="paywall_features">Funzionalita\'</string>
+    <string name="paywall_free">Free</string>
+    <string name="paywall_pro">Pro</string>
+    <string name="paywall_current_plan">Piano attuale</string>
+    <string name="paywall_subscribe">Abbonati</string>
+    <string name="paywall_restore">Ripristina acquisti</string>
+    <string name="paywall_included">Incluso</string>
+    <string name="paywall_not_included">Non incluso</string>
+    <!-- Feature names -->
+    <string name="feature_diary">Diario</string>
+    <string name="feature_diary_free">3 al giorno</string>
+    <string name="feature_chat_ai">Chat AI</string>
+    <string name="feature_chat_ai_free">5 messaggi</string>
+    <string name="feature_mood_tracking">Mood tracking</string>
+    <string name="feature_unlimited_diaries">Diari illimitati</string>
+    <string name="feature_unlimited_chat">Chat AI illimitata</string>
+    <string name="feature_custom_avatar">Avatar personalizzato</string>
+    <string name="feature_advanced_insights">Insight avanzati</string>
+    <string name="feature_social_messages">Messaggi social</string>
+    <string name="feature_priority_support">Supporto prioritario</string>
+    <string name="feature_early_access">Accesso anticipato</string>
+    <!-- Default product -->
+    <string name="paywall_default_desc">Tutto illimitato: diari, chat AI, avatar, insight, social</string>
+    <string name="paywall_default_price">$4.99/mese</string>
+
+    <!-- ============================================================ -->
+    <!-- Waitlist Dialog -->
+    <!-- ============================================================ -->
+    <string name="waitlist_title_pending">PRO arriva presto!</string>
+    <string name="waitlist_title_done">Sei nella lista!</string>
+    <string name="waitlist_description">Stiamo preparando Calmify PRO con funzionalita\' esclusive. Iscriviti per accesso prioritario e uno sconto speciale al lancio.</string>
+    <string name="waitlist_done_description">Ti avviseremo appena PRO sara\' disponibile. Grazie per credere in Calmify!</string>
+    <string name="waitlist_email_label">La tua email</string>
+    <string name="waitlist_submit">Iscrivimi</string>
+    <string name="waitlist_done">Perfetto!</string>
+    <string name="waitlist_not_now">Non ora</string>
+
+    <!-- ============================================================ -->
+    <!-- Subscription Toasts -->
+    <!-- ============================================================ -->
+    <string name="toast_subscription_activated">Abbonamento attivato!</string>
+    <string name="toast_subscription_restored">Abbonamento ripristinato!</string>
+    <string name="toast_no_subscription_found">Nessun abbonamento trovato</string>
+    <string name="toast_waitlist_success">Iscrizione completata!</string>
+    <string name="toast_unable_to_purchase">Impossibile avviare l\'acquisto</string>
+
+    <!-- ============================================================ -->
+    <!-- Settings / Health -->
+    <!-- ============================================================ -->
+    <string name="settings_info_section">Informazioni</string>
+    <string name="health_disclaimer_title">Disclaimer Salute</string>
+    <string name="health_disclaimer_text">Calmify NON e\' un dispositivo medico e NON fornisce diagnosi, trattamenti o consigli medici. Le funzionalita\' di benessere (mood tracking, journaling, chat AI) sono strumenti di auto-riflessione e NON sostituiscono il parere di un professionista sanitario. Se stai vivendo una crisi, contatta il tuo medico o i servizi di emergenza.</string>
+    <string name="settings_delete_account">Elimina account</string>
+    <string name="settings_delete_confirm_title">Eliminare l\'account?</string>
+    <string name="settings_delete_confirm_message">Tutti i tuoi dati verranno eliminati permanentemente. Questa azione non e\' reversibile.</string>
+    <string name="settings_delete_warning">L\'eliminazione dell\'account rimuovera\' permanentemente tutti i tuoi dati. Questa azione non e\' reversibile.</string>
+    <string name="settings_deleting">Eliminazione...</string>
+    <string name="settings_privacy_policy">Privacy Policy</string>
+    <string name="settings_terms_of_service">Termini di Servizio</string>
+    <string name="settings_legal_section">Legale</string>
+</resources>
