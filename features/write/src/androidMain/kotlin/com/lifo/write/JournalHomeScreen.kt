@@ -34,15 +34,14 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import com.lifo.util.repository.MediaUploadRepository
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import com.lifo.ui.components.CalmifyTopBar
 import com.lifo.ui.emotion.MiniMoodShape
-import com.lifo.util.auth.AuthProvider
 import com.lifo.util.auth.UserIdentityResolver
 import com.lifo.util.model.Diary
 import com.lifo.util.model.Mood
 import com.lifo.util.model.RequestState
 import com.lifo.util.repository.MongoRepository
-import com.lifo.util.repository.NotificationRepository
-import kotlinx.coroutines.flow.flowOf
 import org.koin.compose.koinInject
 import java.time.Instant
 import java.time.LocalDate
@@ -63,6 +62,7 @@ fun JournalHomeScreen(
     onDiaryClick: (String) -> Unit,
     onInsightClick: (String) -> Unit,
     onMenuClicked: () -> Unit = {},
+    unreadNotificationCount: Int = 0,
     onNotificationsClick: () -> Unit = {},
     // Activity navigation
     onEnergyClick: () -> Unit = {},
@@ -72,8 +72,6 @@ fun JournalHomeScreen(
     onMovementClick: () -> Unit = {},
     onAllActivitiesClick: () -> Unit = {},
     mongoRepository: MongoRepository = koinInject(),
-    authProvider: AuthProvider = koinInject(),
-    notificationRepository: NotificationRepository = koinInject(),
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val diariesState by mongoRepository.getAllDiaries().collectAsState(initial = RequestState.Loading)
@@ -91,51 +89,13 @@ fun JournalHomeScreen(
         diaries.filter { it.images.isNotEmpty() }
     }
 
-    val userId = authProvider.currentUserId
-    val unreadCount by remember(userId) {
-        if (userId != null) notificationRepository.getUnreadCount(userId)
-        else flowOf(0)
-    }.collectAsState(initial = 0)
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = colorScheme.background,
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Journal",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onMenuClicked) {
-                        Icon(Icons.Default.Menu, contentDescription = "Menu")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onNotificationsClick) {
-                        BadgedBox(
-                            badge = {
-                                if (unreadCount > 0) {
-                                    Badge {
-                                        Text(
-                                            text = if (unreadCount > 99) "99+" else unreadCount.toString(),
-                                            style = MaterialTheme.typography.labelSmall
-                                        )
-                                    }
-                                }
-                            }
-                        ) {
-                            Icon(Icons.Outlined.Notifications, contentDescription = "Notifiche")
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = colorScheme.background,
-                    scrolledContainerColor = colorScheme.background
-                )
-            )
+            CalmifyTopBar(title = "Journal", scrollBehavior = scrollBehavior)
         },
     ) { paddingValues ->
         LazyColumn(

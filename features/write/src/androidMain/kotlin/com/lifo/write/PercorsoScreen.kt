@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingFlat
@@ -34,6 +33,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import com.lifo.ui.components.CalmifyTopBar
 import com.lifo.ui.components.graphics.GraphEdge
 import com.lifo.ui.components.graphics.GraphNode
 import com.lifo.ui.components.graphics.InteractiveNodeGraph
@@ -56,7 +57,9 @@ data class PercorsoChartData(
 fun PercorsoScreen(
     state: PercorsoContract.State,
     onIntent: (PercorsoContract.Intent) -> Unit,
-    navigateBack: (() -> Unit)? = null,
+    onMenuClicked: () -> Unit = {},
+    unreadNotificationCount: Int = 0,
+    onNotificationsClick: () -> Unit = {},
     // Profile data (from ProfileViewModel, passed through DecomposeApp)
     latestProfile: PsychologicalProfile? = null,
     chartData: PercorsoChartData = PercorsoChartData(),
@@ -101,31 +104,13 @@ fun PercorsoScreen(
     // Section card indices shift based on whether profile hero is shown
     val sectionStartIndex = if (latestProfile != null) 3 else 2
 
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            "Il Mio Percorso",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            "Mente, corpo e spirito",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                navigationIcon = {
-                    if (navigateBack != null) {
-                        IconButton(onClick = navigateBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
-                        }
-                    }
-                },
-            )
+            CalmifyTopBar(title = "Il Mio Percorso", scrollBehavior = scrollBehavior)
         }
     ) { padding ->
         LazyColumn(

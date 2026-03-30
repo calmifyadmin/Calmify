@@ -61,32 +61,17 @@ internal fun ExpressiveHero(
         EmotionAwareColors.getWellbeingScoreColor(todayPulse.score)
     else colorScheme.primary
 
-    // Mood-aware gradient background
-    val heroGradient = Brush.verticalGradient(
-        colors = listOf(
-            scoreColor.copy(alpha = 0.08f),
-            Color.Transparent
-        )
-    )
-
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(32.dp),
+        shape = RoundedCornerShape(28.dp),
         color = colorScheme.surfaceContainerLow,
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp
     ) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(heroGradient)
+                .padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
                 val hour = java.time.LocalTime.now().hour
 
                 // --- Inline greeting with photo embedded in text (original content) ---
@@ -229,7 +214,6 @@ internal fun ExpressiveHero(
             }
         }
     }
-}
 
 // ==================== INLINE PROFILE PHOTO ====================
 

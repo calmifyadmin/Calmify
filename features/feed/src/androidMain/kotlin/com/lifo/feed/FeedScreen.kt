@@ -16,23 +16,20 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MailOutline
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Forum
-import androidx.compose.material.icons.outlined.PeopleOutline
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import com.lifo.ui.components.CalmifyTopBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -56,6 +53,8 @@ fun FeedScreen(
     onUserClick: (String) -> Unit,
     onComposeClick: () -> Unit,
     onReplyClick: (threadId: String, authorName: String) -> Unit = { _, _ -> },
+    onMenuClicked: () -> Unit = {},
+    unreadNotificationCount: Int = 0,
     onSearchClick: () -> Unit = {},
     onNotificationsClick: () -> Unit = {},
     onMessagingClick: () -> Unit = {},
@@ -111,27 +110,13 @@ fun FeedScreen(
         )
     }
 
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Community",
-                        style = MaterialTheme.typography.titleLarge,
-                    )
-                },
-                actions = {
-                    IconButton(onClick = onSearchClick) {
-                        Icon(Icons.Default.Search, contentDescription = "Search")
-                    }
-                    IconButton(onClick = onNotificationsClick) {
-                        Icon(Icons.Default.Notifications, contentDescription = "Notifications")
-                    }
-                    IconButton(onClick = onMessagingClick) {
-                        Icon(Icons.Default.MailOutline, contentDescription = "Messages")
-                    }
-                },
-            )
+            CalmifyTopBar(title = "Community", scrollBehavior = scrollBehavior)
         },
         // FAB removed — handled by global contextual FAB in DecomposeApp
     ) { paddingValues ->
@@ -148,7 +133,7 @@ fun FeedScreen(
             ) {
             ScrollableTabRow(
                 selectedTabIndex = state.selectedTab.ordinal,
-                containerColor = MaterialTheme.colorScheme.surface,
+                containerColor = MaterialTheme.colorScheme.background,
                 contentColor = MaterialTheme.colorScheme.primary,
                 edgePadding = 12.dp,
             ) {

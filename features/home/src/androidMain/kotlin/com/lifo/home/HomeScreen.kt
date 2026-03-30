@@ -15,7 +15,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
@@ -23,13 +22,10 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.lifo.home.components.*
 import com.lifo.util.repository.Diaries
+import com.lifo.ui.components.CalmifyTopBar
 import com.lifo.ui.components.loading.*
 import com.lifo.util.model.RequestState
 import com.lifo.util.model.HomeContentItem
-import com.lifo.util.auth.AuthProvider
-import com.lifo.util.repository.NotificationRepository
-import kotlinx.coroutines.flow.flowOf
-import org.koin.compose.koinInject
 import java.time.ZonedDateTime
 
 // Screen state management
@@ -60,6 +56,7 @@ internal fun HomeScreen(
     navigateToExistingChat: (String) -> Unit,
     navigateToLiveScreen: () -> Unit,
     navigateToWellbeingSnapshot: () -> Unit,
+    unreadNotificationCount: Int = 0,
     onNotificationsClick: () -> Unit = {},
     navigateToFeed: () -> Unit = {},
     navigateToThreadDetail: (String) -> Unit = {},
@@ -73,22 +70,37 @@ internal fun HomeScreen(
     onHabitsClick: () -> Unit = {},
     onMeditationClick: () -> Unit = {},
 ) {
-    // Use enterAlwaysScrollBehavior for consistent appearance
+    val colorScheme = MaterialTheme.colorScheme
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
-            .nestedScroll(scrollBehavior.nestedScrollConnection)
-            .background(MaterialTheme.colorScheme.surface),
-        containerColor = MaterialTheme.colorScheme.surface,
-        contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
+        containerColor = colorScheme.background,
         topBar = {
-            MinimalHomeTopBar(
+            CalmifyTopBar(
+                title = "Calmify",
+                onMenuClick = onMenuClicked,
                 scrollBehavior = scrollBehavior,
-                onMenuClicked = onMenuClicked,
-                onNotificationsClick = onNotificationsClick,
-                userProfileImageUrl = userProfileImageUrl
+                actions = {
+                    IconButton(onClick = onNotificationsClick) {
+                        BadgedBox(
+                            badge = {
+                                if (unreadNotificationCount > 0) {
+                                    Badge {
+                                        Text(
+                                            text = if (unreadNotificationCount > 99) "99+" else unreadNotificationCount.toString(),
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    }
+                                }
+                            }
+                        ) {
+                            Icon(Icons.Outlined.Notifications, contentDescription = "Notifiche")
+                        }
+                    }
+                },
             )
         },
         // FAB rimosso - gestito a livello Scaffold principale in CalmifyApp
@@ -172,70 +184,6 @@ internal fun HomeScreen(
                 }
             }
         }
-    )
-}
-
-/**
- * Minimal TopBar for the Home screen — with global notification bell + badge.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun MinimalHomeTopBar(
-    scrollBehavior: TopAppBarScrollBehavior,
-    onMenuClicked: () -> Unit,
-    onNotificationsClick: () -> Unit,
-    userProfileImageUrl: String?
-) {
-    val notificationRepository: NotificationRepository = koinInject()
-    val authProvider: AuthProvider = koinInject()
-    val userId = authProvider.currentUserId
-    val unreadCount by remember(userId) {
-        if (userId != null) notificationRepository.getUnreadCount(userId)
-        else flowOf(0)
-    }.collectAsState(initial = 0)
-
-    TopAppBar(
-        title = {
-            Text(
-                text = "Calmify",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold
-            )
-        },
-        navigationIcon = {
-            IconButton(onClick = onMenuClicked) {
-                Icon(
-                    imageVector = Icons.Default.Menu,
-                    contentDescription = "Menu"
-                )
-            }
-        },
-        actions = {
-            IconButton(onClick = onNotificationsClick) {
-                BadgedBox(
-                    badge = {
-                        if (unreadCount > 0) {
-                            Badge {
-                                Text(
-                                    text = if (unreadCount > 99) "99+" else unreadCount.toString(),
-                                    style = MaterialTheme.typography.labelSmall
-                                )
-                            }
-                        }
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Notifications,
-                        contentDescription = "Notifiche"
-                    )
-                }
-            }
-        },
-        scrollBehavior = scrollBehavior,
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Color.Transparent,
-            scrolledContainerColor = Color.Transparent
-        )
     )
 }
 

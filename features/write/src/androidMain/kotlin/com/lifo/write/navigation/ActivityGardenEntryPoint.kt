@@ -5,7 +5,9 @@ import com.lifo.write.ActivityGardenScreen
 
 @Composable
 fun ActivityGardenRouteContent(
-    onBackPressed: () -> Unit,
+    onBackPressed: () -> Unit = {},
+    onMenuClicked: () -> Unit = {},
+    onNotificationsClick: () -> Unit = {},
     onWriteClick: () -> Unit = {},
     onBrainDumpClick: () -> Unit = {},
     onGratitudeClick: () -> Unit = {},
@@ -28,6 +30,8 @@ fun ActivityGardenRouteContent(
 ) {
     ActivityGardenScreen(
         onBackPressed = onBackPressed,
+        onMenuClicked = onMenuClicked,
+        onNotificationsClick = onNotificationsClick,
         onWriteClick = onWriteClick,
         onBrainDumpClick = onBrainDumpClick,
         onGratitudeClick = onGratitudeClick,

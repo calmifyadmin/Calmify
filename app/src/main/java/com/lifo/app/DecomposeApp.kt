@@ -84,6 +84,7 @@ import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import com.lifo.util.auth.AuthProvider
+import com.lifo.util.repository.NotificationRepository
 import com.lifo.util.repository.ProfileSettingsRepository
 
 /**
@@ -184,6 +185,14 @@ fun DecomposeApp(
     // User info
     val user = auth.currentUser
     val userProfileImageUrl = user?.photoUrl?.toString()
+
+    // ── Centralized notification badge count (collected once, passed to all screens) ──
+    val notificationRepository: NotificationRepository = koinInject()
+    val currentUserId = authProvider.currentUserId
+    val unreadNotificationCount by remember(currentUserId) {
+        if (currentUserId != null) notificationRepository.getUnreadCount(currentUserId)
+        else kotlinx.coroutines.flow.flowOf(0)
+    }.collectAsState(initial = 0)
 
     // Dialog states
     var signOutDialogOpened by remember { mutableStateOf(false) }
@@ -323,6 +332,7 @@ fun DecomposeApp(
                             navigateToExistingChat = { sessionId -> rootComponent.navigateToChat(sessionId) },
                             navigateToLiveScreen = { rootComponent.navigateToLiveChat() },
                             navigateToWellbeingSnapshot = { rootComponent.navigateToWellbeingSnapshot() },
+                            unreadNotificationCount = unreadNotificationCount,
                             onNotificationsClick = { rootComponent.navigateToNotifications() },
                             navigateToFeed = { rootComponent.navigateToFeed() },
                             navigateToThreadDetail = { threadId -> rootComponent.navigateToThreadDetail(threadId) },
@@ -507,6 +517,7 @@ fun DecomposeApp(
                                     }
                                 }
                             },
+                            unreadNotificationCount = unreadNotificationCount,
                             onNotificationsClick = { rootComponent.navigateToNotifications() },
                             onEnergyClick = { rootComponent.navigateToEnergyCheckIn() },
                             onSleepClick = { rootComponent.navigateToSleepLog() },
@@ -542,6 +553,14 @@ fun DecomposeApp(
                                     replyToAuthorName = authorName,
                                 )
                             },
+                            onMenuClicked = {
+                                scope.launch {
+                                    if (!drawerState.isAnimationRunning && drawerState.isClosed) {
+                                        drawerState.open()
+                                    }
+                                }
+                            },
+                            unreadNotificationCount = unreadNotificationCount,
                             onSearchClick = { rootComponent.navigateToSearch() },
                             onNotificationsClick = { rootComponent.navigateToNotifications() },
                             onMessagingClick = { rootComponent.navigateToMessaging() },
@@ -767,6 +786,15 @@ fun DecomposeApp(
                         com.lifo.write.PercorsoScreen(
                             state = percorsoState,
                             onIntent = percorsoVm::onIntent,
+                            onMenuClicked = {
+                                scope.launch {
+                                    if (!drawerState.isAnimationRunning && drawerState.isClosed) {
+                                        drawerState.open()
+                                    }
+                                }
+                            },
+                            unreadNotificationCount = unreadNotificationCount,
+                            onNotificationsClick = { rootComponent.navigateToNotifications() },
                             latestProfile = latestProfile,
                             chartData = percorsoChartData,
                             profileLoading = profileUiState is com.lifo.profile.ProfileUiState.Loading,
@@ -793,6 +821,14 @@ fun DecomposeApp(
                     is RootComponent.Child.ActivityGarden -> {
                         ActivityGardenRouteContent(
                             onBackPressed = { rootComponent.navigateBack() },
+                            onMenuClicked = {
+                                scope.launch {
+                                    if (!drawerState.isAnimationRunning && drawerState.isClosed) {
+                                        drawerState.open()
+                                    }
+                                }
+                            },
+                            onNotificationsClick = { rootComponent.navigateToNotifications() },
                             onWriteClick = { rootComponent.navigateToWrite() },
                             onBrainDumpClick = { rootComponent.navigateToBrainDump() },
                             onGratitudeClick = { rootComponent.navigateToGratitude() },
@@ -817,6 +853,15 @@ fun DecomposeApp(
 
                     is RootComponent.Child.Garden -> {
                         GardenRouteContent(
+                            onMenuClicked = {
+                                scope.launch {
+                                    if (!drawerState.isAnimationRunning && drawerState.isClosed) {
+                                        drawerState.open()
+                                    }
+                                }
+                            },
+                            unreadNotificationCount = unreadNotificationCount,
+                            onNotificationsClick = { rootComponent.navigateToNotifications() },
                             onActivityClick = { activityId ->
                                 when (activityId) {
                                     "diary" -> rootComponent.navigateToWrite()
@@ -1039,8 +1084,9 @@ private fun DecomposeBottomBar(
 ) {
     NavigationBar(
         modifier = modifier,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        contentColor = MaterialTheme.colorScheme.onSurface
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        tonalElevation = 0.dp,
     ) {
         destinations.forEach { destination ->
             val selected = when (destination) {

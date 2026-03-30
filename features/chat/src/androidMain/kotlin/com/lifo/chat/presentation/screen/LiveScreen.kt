@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -50,6 +51,7 @@ import com.lifo.chat.domain.model.AudioDevice
 import com.lifo.chat.domain.model.AudioDeviceType
 import com.lifo.chat.domain.model.ConnectionStatus
 import com.lifo.chat.domain.model.TurnState
+import com.lifo.chat.presentation.components.AiAwakeningOverlay
 import com.lifo.chat.presentation.components.GeminiLiquidVisualizer
 import com.lifo.chat.presentation.components.SimpleLiveCameraPreview
 import com.lifo.chat.presentation.viewmodel.LiveChatViewModel
@@ -100,6 +102,16 @@ fun LiveScreen(
     val conversationMode by viewModel.conversationMode.collectAsStateWithLifecycle()
 
     val haptics = LocalHapticFeedback.current
+
+    // AI Awakening overlay — plays once during initial connection
+    var hasShownAwakening by remember { mutableStateOf(false) }
+    val showAwakening by remember {
+        derivedStateOf {
+            !hasShownAwakening &&
+            (liveChatState.connectionStatus == ConnectionStatus.Connecting ||
+             liveChatState.connectionStatus == ConnectionStatus.Connected)
+        }
+    }
 
     // Local state to track if user wants camera on
     var wantsCameraOn by remember { mutableStateOf(false) }
@@ -216,6 +228,13 @@ fun LiveScreen(
 
 
 
+        // LAYER 1.5: AI Awakening overlay — dissolves organically to reveal avatar
+        AiAwakeningOverlay(
+            isActive = showAwakening,
+            modifier = Modifier.fillMaxSize(),
+            onComplete = { hasShownAwakening = true }
+        )
+
         // LAYER 2: Dark scrim when time limit reached — avatar still animates underneath but inaccessible
         if (liveChatState.showTimeLimitReached) {
             val scrimAlpha by animateFloatAsState(
@@ -230,27 +249,29 @@ fun LiveScreen(
             )
         }
 
-        // LAYER 3: Top bar with close button, display toggle, AR toggle, and status
-        LiveTopBar(
-            connectionStatus = liveChatState.connectionStatus,
-            turnState = liveChatState.turnState,
-            isMuted = liveChatState.isMuted,
-            showAvatar = showAvatar,
-            displayAvatar = displayAvatar,
-            onToggleDisplayMode = if (showAvatar) {
-                {
-                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    displayAvatar = !displayAvatar
-                }
-            } else null,
-            onClose = {
-                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                onClose()
-            },
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .statusBarsPadding()
-        )
+        // LAYER 3: Top bar — hidden during awakening animation
+        AnimatedVisibility(
+            visible = hasShownAwakening,
+            enter = fadeIn(tween(400)),
+            exit = fadeOut()
+        ) {
+            LiveTopBar(
+                connectionStatus = liveChatState.connectionStatus,
+                turnState = liveChatState.turnState,
+                isMuted = liveChatState.isMuted,
+                showAvatar = showAvatar,
+                displayAvatar = displayAvatar,
+                onToggleDisplayMode = if (showAvatar) {
+                    {
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        displayAvatar = !displayAvatar
+                    }
+                } else null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+            )
+        }
 
         // Simplified camera preview - shows when user wants camera on and has permission
         AnimatedVisibility(
@@ -430,7 +451,7 @@ fun LiveScreen(
 
         // Bottom controls - nascosti quando chat input è attiva
         AnimatedVisibility(
-            visible = !showChatInput && !liveChatState.showTimeLimitReached,
+            visible = !showChatInput && !liveChatState.showTimeLimitReached && hasShownAwakening,
             enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 }),
             exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 2 })
         ) {
@@ -445,6 +466,10 @@ fun LiveScreen(
                 onToggleMute = {
                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     viewModel.toggleMute()
+                },
+                onClose = {
+                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onClose()
                 },
                 isCameraActive = liveChatState.isCameraActive,
                 hasCameraPermission = liveChatState.hasCameraPermission,
@@ -527,7 +552,6 @@ private fun LiveTopBar(
     showAvatar: Boolean,
     displayAvatar: Boolean,
     onToggleDisplayMode: (() -> Unit)?,
-    onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -544,46 +568,29 @@ private fun LiveTopBar(
             isMuted = isMuted
         )
 
-        // Right side - Display toggle (if avatar enabled) + Close button
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Display mode toggle button (only if avatar mode enabled)
-            if (showAvatar && onToggleDisplayMode != null) {
-                IconButton(
-                    onClick = onToggleDisplayMode,
-                    colors = IconButtonDefaults.iconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
-                        contentColor = MaterialTheme.colorScheme.onSurface
-                    )
-                ) {
-                    Crossfade(
-                        targetState = displayAvatar,
-                        animationSpec = tween(200),
-                        label = "displayModeIcon"
-                    ) { isAvatar ->
-                        Icon(
-                            imageVector = if (isAvatar) Icons.Outlined.Waves else Icons.Filled.Person,
-                            contentDescription = if (isAvatar) "Switch to Wave" else "Switch to Avatar"
-                        )
-                    }
-                }
-            }
-
-            // Close button
+        // Right side - Display toggle (if avatar enabled)
+        if (showAvatar && onToggleDisplayMode != null) {
             IconButton(
-                onClick = onClose,
+                onClick = onToggleDisplayMode,
                 colors = IconButtonDefaults.iconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
                     contentColor = MaterialTheme.colorScheme.onSurface
                 )
             ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Close Live Chat"
-                )
+                Crossfade(
+                    targetState = displayAvatar,
+                    animationSpec = tween(200),
+                    label = "displayModeIcon"
+                ) { isAvatar ->
+                    Icon(
+                        imageVector = if (isAvatar) Icons.Outlined.Waves else Icons.Filled.Person,
+                        contentDescription = if (isAvatar) "Switch to Wave" else "Switch to Avatar"
+                    )
+                }
             }
+        } else {
+            // Empty spacer to keep status chip aligned left
+            Spacer(modifier = Modifier.size(48.dp))
         }
     }
 }
@@ -679,6 +686,7 @@ private fun LiveBottomControls(
     transcript: String = "",
     error: String?,
     onToggleMute: () -> Unit,
+    onClose: () -> Unit,
     isCameraActive: Boolean,
     hasCameraPermission: Boolean,
     wantsCameraOn: Boolean,
@@ -724,121 +732,133 @@ private fun LiveBottomControls(
             }
         }
 
-        // Mute/Unmute and Camera buttons row
+        // Toolbar pill + End call button
         Row(
             modifier = Modifier.padding(bottom = 24.dp, top = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Camera toggle button
-            val cameraScale by animateFloatAsState(
-                targetValue = if (wantsCameraOn && isCameraActive) 1.1f else 1f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessMedium
-                ),
-                label = "cameraScale"
-            )
-
-            FloatingActionButton(
-                onClick = onToggleCamera,
-                modifier = Modifier
-                    .size(64.dp)
-                    .graphicsLayer {
-                        scaleX = cameraScale
-                        scaleY = cameraScale
-                    },
-                containerColor = if (wantsCameraOn && isCameraActive)
-                    MaterialTheme.colorScheme.secondaryContainer
-                else
-                    MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = if (wantsCameraOn && isCameraActive)
-                    MaterialTheme.colorScheme.onSecondaryContainer
-                else
-                    MaterialTheme.colorScheme.onSurfaceVariant
+            // Toolbar pill — unified container with all action icons
+            Surface(
+                shape = RoundedCornerShape(28.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                tonalElevation = 2.dp,
+                shadowElevation = 4.dp
             ) {
-                Icon(
-                    imageVector = if (wantsCameraOn && isCameraActive) Icons.Default.CameraAlt else Icons.Outlined.CameraAlt,
-                    contentDescription = if (isCameraActive) "Disable Camera" else "Enable Camera",
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-
-            // Chat Input toggle button (only if onToggleChatInput is provided)
-            if (onToggleChatInput != null) {
-                FloatingActionButton(
-                    onClick = onToggleChatInput,
-                    modifier = Modifier.size(64.dp),
-                    containerColor = if (showChatInput)
-                        MaterialTheme.colorScheme.tertiaryContainer
-                    else
-                        MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = if (showChatInput)
-                        MaterialTheme.colorScheme.onTertiaryContainer
-                    else
-                        MaterialTheme.colorScheme.onSurfaceVariant
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = if (showChatInput) Icons.Filled.Edit else Icons.Outlined.Edit,
-                        contentDescription = if (showChatInput) "Hide Chat Input" else "Show Chat Input",
-                        modifier = Modifier.size(28.dp)
+                    // Camera toggle
+                    IconButton(
+                        onClick = onToggleCamera,
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = if (wantsCameraOn && isCameraActive)
+                                MaterialTheme.colorScheme.secondaryContainer
+                            else Color.Transparent,
+                            contentColor = if (wantsCameraOn && isCameraActive)
+                                MaterialTheme.colorScheme.onSecondaryContainer
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    ) {
+                        Icon(
+                            imageVector = if (wantsCameraOn && isCameraActive)
+                                Icons.Filled.CameraAlt else Icons.Outlined.CameraAlt,
+                            contentDescription = if (isCameraActive) "Disable Camera" else "Enable Camera"
+                        )
+                    }
+
+                    // Mic toggle
+                    val micScale by animateFloatAsState(
+                        targetValue = if (turnState == TurnState.UserTurn && !isMuted) 1.08f else 1f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        ),
+                        label = "micScale"
                     )
-                }
-            }
 
-            // Audio device selector button
-            if (onOpenDeviceSelector != null) {
-                FloatingActionButton(
-                    onClick = onOpenDeviceSelector,
-                    modifier = Modifier.size(52.dp),
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                ) {
-                    Icon(
-                        imageVector = when (activeDevice?.type) {
-                            AudioDeviceType.BLUETOOTH -> Icons.Default.BluetoothAudio
-                            AudioDeviceType.WIRED_HEADSET -> Icons.Default.Headphones
-                            AudioDeviceType.USB -> Icons.Default.Usb
-                            AudioDeviceType.EARPIECE -> Icons.Default.PhoneInTalk
-                            else -> Icons.Default.VolumeUp
+                    IconButton(
+                        onClick = onToggleMute,
+                        modifier = Modifier.graphicsLayer {
+                            scaleX = micScale
+                            scaleY = micScale
                         },
-                        contentDescription = "Audio device: ${activeDevice?.name ?: "Speaker"}",
-                        modifier = Modifier.size(24.dp)
-                    )
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = if (isMuted)
+                                MaterialTheme.colorScheme.errorContainer
+                            else Color.Transparent,
+                            contentColor = if (isMuted)
+                                MaterialTheme.colorScheme.onErrorContainer
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    ) {
+                        Icon(
+                            imageVector = if (isMuted) Icons.Outlined.VolumeOff else Icons.Filled.Mic,
+                            contentDescription = if (isMuted) "Unmute" else "Mute"
+                        )
+                    }
+
+                    // Chat Input toggle
+                    if (onToggleChatInput != null) {
+                        IconButton(
+                            onClick = onToggleChatInput,
+                            colors = IconButtonDefaults.iconButtonColors(
+                                containerColor = if (showChatInput)
+                                    MaterialTheme.colorScheme.tertiaryContainer
+                                else Color.Transparent,
+                                contentColor = if (showChatInput)
+                                    MaterialTheme.colorScheme.onTertiaryContainer
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        ) {
+                            Icon(
+                                imageVector = if (showChatInput) Icons.Filled.Edit else Icons.Outlined.Edit,
+                                contentDescription = if (showChatInput) "Hide Chat Input" else "Show Chat Input"
+                            )
+                        }
+                    }
+
+                    // Audio device selector
+                    if (onOpenDeviceSelector != null) {
+                        IconButton(
+                            onClick = onOpenDeviceSelector,
+                            colors = IconButtonDefaults.iconButtonColors(
+                                containerColor = Color.Transparent,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        ) {
+                            Icon(
+                                imageVector = when (activeDevice?.type) {
+                                    AudioDeviceType.BLUETOOTH -> Icons.Default.BluetoothAudio
+                                    AudioDeviceType.WIRED_HEADSET -> Icons.Default.Headphones
+                                    AudioDeviceType.USB -> Icons.Default.Usb
+                                    AudioDeviceType.EARPIECE -> Icons.Default.PhoneInTalk
+                                    else -> Icons.Default.VolumeUp
+                                },
+                                contentDescription = "Audio device: ${activeDevice?.name ?: "Speaker"}"
+                            )
+                        }
+                    }
                 }
             }
 
-            // Mute/Unmute button - large, prominent
-            val micScale by animateFloatAsState(
-                targetValue = if (turnState == TurnState.UserTurn && !isMuted) 1.1f else 1f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessMedium
+            // End call button — subtle outlined, slightly larger
+            OutlinedIconButton(
+                onClick = onClose,
+                modifier = Modifier.size(48.dp),
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant
                 ),
-                label = "micScale"
-            )
-
-            FloatingActionButton(
-                onClick = onToggleMute,
-                modifier = Modifier
-                    .size(72.dp)
-                    .graphicsLayer {
-                        scaleX = micScale
-                        scaleY = micScale
-                    },
-                containerColor = if (isMuted)
-                    MaterialTheme.colorScheme.errorContainer
-                else
-                    MaterialTheme.colorScheme.primaryContainer,
-                contentColor = if (isMuted)
-                    MaterialTheme.colorScheme.onErrorContainer
-                else
-                    MaterialTheme.colorScheme.onPrimaryContainer
+                colors = IconButtonDefaults.outlinedIconButtonColors(
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             ) {
                 Icon(
-                    imageVector = if (isMuted) Icons.Outlined.VolumeOff else Icons.Default.Mic,
-                    contentDescription = if (isMuted) "Unmute" else "Mute",
-                    modifier = Modifier.size(32.dp)
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "End session"
                 )
             }
         }

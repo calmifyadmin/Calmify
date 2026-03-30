@@ -10,9 +10,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.DirectionsRun
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -46,7 +46,9 @@ private data class GardenActivity(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActivityGardenScreen(
-    onBackPressed: () -> Unit,
+    onBackPressed: () -> Unit = {},
+    onMenuClicked: () -> Unit = {},
+    onNotificationsClick: () -> Unit = {},
     // Scrittura
     onWriteClick: () -> Unit = {},
     onBrainDumpClick: () -> Unit = {},
@@ -110,27 +112,30 @@ fun ActivityGardenScreen(
     }
 
     Scaffold(
+        containerColor = colorScheme.background,
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text(
-                            "Tutte le Attivita'",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        Text(
-                            "${filtered.size} strumenti disponibili",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = colorScheme.onSurfaceVariant,
-                        )
-                    }
+                    Text(
+                        "Garden",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBackPressed) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                    IconButton(onClick = onMenuClicked) {
+                        Icon(Icons.Default.Menu, contentDescription = "Menu")
                     }
                 },
+                actions = {
+                    IconButton(onClick = onNotificationsClick) {
+                        Icon(Icons.Outlined.Notifications, contentDescription = "Notifiche")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = colorScheme.background,
+                    scrolledContainerColor = colorScheme.background
+                ),
             )
         },
     ) { padding ->

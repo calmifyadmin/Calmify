@@ -1,12 +1,13 @@
 package com.lifo.home.presentation.components.expressive
 
-import androidx.compose.foundation.background
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.SelfImprovement
@@ -15,8 +16,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -40,21 +41,15 @@ internal fun ExpressiveQuickActions(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Hero card: Talk to Eve — full width, prominent
         HeroActionCard(
             icon = Icons.Default.AutoAwesome,
             title = "Parla con Eve",
             subtitle = "La tua assistente AI vocale",
             onClick = onTalkToEve,
-            gradientColors = listOf(
-                colorScheme.primary.copy(alpha = 0.15f),
-                colorScheme.primary.copy(alpha = 0.04f)
-            ),
             accentColor = colorScheme.primary,
             modifier = Modifier.fillMaxWidth()
         )
 
-        // Two pill buttons side by side
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -95,7 +90,6 @@ private fun HeroActionCard(
     title: String,
     subtitle: String,
     onClick: () -> Unit,
-    gradientColors: List<Color>,
     accentColor: Color,
     modifier: Modifier = Modifier
 ) {
@@ -104,10 +98,23 @@ private fun HeroActionCard(
     val isPressed by interactionSource.collectIsPressedAsState()
     val colorScheme = MaterialTheme.colorScheme
 
+    val infiniteTransition = rememberInfiniteTransition(label = "heroCard")
+    val arrowOffset by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 4f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "arrowNudge"
+    )
+
+    val shape = RoundedCornerShape(28.dp)
+
     Surface(
         modifier = modifier
             .pressScale(isPressed)
-            .clip(RoundedCornerShape(28.dp))
+            .clip(shape)
             .clickable(
                 interactionSource = interactionSource,
                 indication = ripple(),
@@ -116,67 +123,64 @@ private fun HeroActionCard(
                     onClick()
                 }
             ),
-        shape = RoundedCornerShape(28.dp),
+        shape = shape,
         color = colorScheme.surfaceContainerLow
     ) {
-        Box(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Brush.linearGradient(gradientColors))
-                .padding(24.dp)
+                .padding(24.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            Surface(
+                modifier = Modifier.size(48.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = accentColor.copy(alpha = 0.12f)
             ) {
-                // Large icon container
-                Surface(
-                    modifier = Modifier.size(48.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    color = accentColor.copy(alpha = 0.12f)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = title,
-                            modifier = Modifier.size(24.dp),
-                            tint = accentColor
-                        )
-                    }
-                }
-
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            letterSpacing = (-0.2).sp
-                        ),
-                        color = colorScheme.onSurface
-                    )
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = title,
+                        modifier = Modifier.size(24.dp),
+                        tint = accentColor
                     )
                 }
+            }
 
-                // Arrow indicator
-                Surface(
-                    modifier = Modifier.size(36.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    color = accentColor.copy(alpha = 0.08f)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "->",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = accentColor
-                        )
-                    }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = (-0.3).sp
+                    ),
+                    color = colorScheme.onSurface
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                )
+            }
+
+            Surface(
+                modifier = Modifier.size(40.dp),
+                shape = RoundedCornerShape(14.dp),
+                color = accentColor.copy(alpha = 0.10f)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(20.dp)
+                            .graphicsLayer { translationX = arrowOffset },
+                        tint = accentColor
+                    )
                 }
             }
         }

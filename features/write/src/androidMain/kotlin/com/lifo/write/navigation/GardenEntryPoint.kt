@@ -10,6 +10,9 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun GardenRouteContent(
     onActivityClick: (String) -> Unit,
+    onMenuClicked: () -> Unit = {},
+    unreadNotificationCount: Int = 0,
+    onNotificationsClick: () -> Unit = {},
 ) {
     val viewModel: GardenViewModel = koinViewModel()
     val state by viewModel.state.collectAsState()
@@ -18,5 +21,8 @@ fun GardenRouteContent(
         state = state,
         onIntent = viewModel::onIntent,
         onActivityClick = onActivityClick,
+        onMenuClicked = onMenuClicked,
+        unreadNotificationCount = unreadNotificationCount,
+        onNotificationsClick = onNotificationsClick,
     )
 }

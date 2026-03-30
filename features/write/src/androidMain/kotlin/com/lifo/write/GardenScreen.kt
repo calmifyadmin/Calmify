@@ -48,6 +48,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import com.lifo.ui.components.CalmifyTopBar
 import kotlinx.coroutines.delay
 
 // ── Peaceful palette (same as IkigaiScreen) ──
@@ -228,14 +230,26 @@ fun GardenScreen(
     state: GardenContract.State,
     onIntent: (GardenContract.Intent) -> Unit,
     onActivityClick: (String) -> Unit,
+    onMenuClicked: () -> Unit = {},
+    unreadNotificationCount: Int = 0,
+    onNotificationsClick: () -> Unit = {},
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     val categories = GardenContract.Category.entries
     val listState = rememberLazyListState()
 
     val totalActivities = allActivities.size
     val exploredCount = state.exploredIds.size
 
-    Scaffold { padding ->
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+
+    Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        containerColor = colorScheme.background,
+        topBar = {
+            CalmifyTopBar(title = "Garden", scrollBehavior = scrollBehavior)
+        },
+    ) { padding ->
         if (state.isLoading) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
