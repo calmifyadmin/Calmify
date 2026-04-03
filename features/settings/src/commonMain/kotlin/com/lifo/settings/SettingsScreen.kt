@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -54,6 +55,7 @@ fun SettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
+    val uriHandler = LocalUriHandler.current
 
     // Delete account confirmation dialog
     if (uiState.showDeleteAccountDialog) {
@@ -172,13 +174,13 @@ fun SettingsScreen(
                     title = stringResource(Res.string.settings_privacy_policy),
                     subtitle = "calmify.app/privacy",
                     icon = Icons.Outlined.PrivacyTip,
-                    onClick = { /* TODO: open privacy policy URL */ },
+                    onClick = { uriHandler.openUri("https://calmify.app/privacy") },
                 )
                 SettingsNavigationItem(
                     title = stringResource(Res.string.settings_terms_of_service),
                     subtitle = "calmify.app/terms",
                     icon = Icons.Outlined.Description,
-                    onClick = { /* TODO: open terms URL */ },
+                    onClick = { uriHandler.openUri("https://calmify.app/terms") },
                 )
 
                 // Developer / Debug
