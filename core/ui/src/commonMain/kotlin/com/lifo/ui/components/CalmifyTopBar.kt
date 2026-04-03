@@ -16,6 +16,10 @@ import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.back_cd
+import com.lifo.ui.resources.menu_cd
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Unified top bar for all screens.
@@ -63,10 +67,10 @@ fun CalmifyTopBar(
         navigationIcon = {
             when {
                 onBackClick != null -> IconButton(onClick = onBackClick) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back_cd))
                 }
                 onMenuClick != null -> IconButton(onClick = onMenuClick) {
-                    Icon(Icons.Default.Menu, contentDescription = "Menu")
+                    Icon(Icons.Default.Menu, contentDescription = stringResource(Res.string.menu_cd))
                 }
             }
         },

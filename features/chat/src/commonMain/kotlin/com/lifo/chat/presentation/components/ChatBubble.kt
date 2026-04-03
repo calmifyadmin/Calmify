@@ -31,6 +31,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.sp
 import com.lifo.ui.R as UiR
 import com.lifo.util.model.ChatMessage
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 /**
  * Simplified chat bubble with integrated natural voice indicators
@@ -111,7 +114,7 @@ fun ChatBubble(
             onDismissRequest = { showMenu = false }
         ) {
             DropdownMenuItem(
-                text = { Text("Copia") },
+                text = { Text(stringResource(Res.string.copy)) },
                 onClick = {
                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     onCopy()
@@ -140,7 +143,7 @@ fun ChatBubble(
             }
 
             DropdownMenuItem(
-                text = { Text("Elimina", color = MaterialTheme.colorScheme.error) },
+                text = { Text(stringResource(Res.string.delete), color = MaterialTheme.colorScheme.error) },
                 onClick = {
                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                     onDelete()
@@ -169,7 +172,7 @@ private fun AiAvatarWithVoice(
     ) {
         androidx.compose.foundation.Image(
             painter = painterResource(id = UiR.mipmap.calmify_logo_foreground),
-            contentDescription = "Calmify AI",
+            contentDescription = stringResource(Res.string.chat_calmify_ai_cd),
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)

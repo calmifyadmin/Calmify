@@ -19,9 +19,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.error_ui_occurred
+import com.lifo.ui.resources.retry
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ErrorBoundary(
@@ -46,7 +50,7 @@ fun ErrorBoundary(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.padding(16.dp)
             ) {
-                Text("An error occurred in the UI")
+                Text(stringResource(Res.string.error_ui_occurred))
                 if (errorMessage != null) {
                     Text(
                         text = errorMessage!!,
@@ -60,7 +64,7 @@ fun ErrorBoundary(
                     hasError = false
                     errorMessage = null
                 }) {
-                    Text("Retry")
+                    Text(stringResource(Res.string.retry))
                 }
             }
         }

@@ -42,6 +42,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lifo.util.model.Avatar
 import com.lifo.util.model.AvatarStatus
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,17 +59,17 @@ fun AvatarListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("I miei Avatar") },
+                title = { Text(stringResource(Res.string.avatar_list_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back_cd))
                     }
                 },
             )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = onCreateAvatar) {
-                Icon(Icons.Filled.Add, contentDescription = "Crea Avatar")
+                Icon(Icons.Filled.Add, contentDescription = stringResource(Res.string.avatar_creator_create_cd))
             }
         },
     ) { paddingValues ->

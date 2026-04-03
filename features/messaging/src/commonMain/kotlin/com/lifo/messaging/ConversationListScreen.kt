@@ -52,6 +52,9 @@ import androidx.compose.ui.unit.dp
 import com.lifo.socialui.avatar.ClusteredAvatars
 import com.lifo.socialui.avatar.UserAvatar
 import com.lifo.util.repository.SocialMessagingRepository
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 /**
  * Conversation list screen displaying all active conversations.
@@ -73,7 +76,7 @@ fun ConversationListScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Messages",
+                        text = stringResource(Res.string.messaging_title),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -92,7 +95,7 @@ fun ConversationListScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "New conversation"
+                    contentDescription = stringResource(Res.string.messaging_new_conversation_cd)
                 )
             }
         }
@@ -109,11 +112,11 @@ fun ConversationListScreen(
                 value = "",
                 onValueChange = {},
                 readOnly = true,
-                placeholder = { Text("Search") },
+                placeholder = { Text(stringResource(Res.string.messaging_search_placeholder)) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Search,
-                        contentDescription = "Search"
+                        contentDescription = stringResource(Res.string.search_cd)
                     )
                 },
                 shape = RoundedCornerShape(28.dp),
@@ -194,7 +197,7 @@ fun ConversationListScreen(
                             )
                             Spacer(modifier = Modifier.height(24.dp))
                             Button(onClick = onNewConversation) {
-                                Text("Start a conversation")
+                                Text(stringResource(Res.string.messaging_start_conversation))
                             }
                         }
                     }

@@ -37,6 +37,9 @@ import com.lifo.settings.components.SettingsSectionHeader
 import com.lifo.util.model.AiTone
 import com.lifo.util.model.ReminderFrequency
 import com.lifo.util.model.TopicsToAvoid
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -55,10 +58,10 @@ fun AiPreferencesScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Preferenze AI", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(Res.string.ai_pref_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back_cd))
                     }
                 },
             )
@@ -74,15 +77,15 @@ fun AiPreferencesScreen(
         ) {
             Spacer(modifier = Modifier.height(8.dp))
 
-            SettingsSectionHeader(title = "Tono dell'AI")
+            SettingsSectionHeader(title = stringResource(Res.string.ai_pref_tone_section))
             Text(
-                text = "Come vuoi che ti parli Eve?",
+                text = stringResource(Res.string.ai_pref_tone_label),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             SettingsDropdownItem(
-                title = "Tono",
+                title = stringResource(Res.string.ai_pref_tone_dropdown),
                 icon = Icons.Default.Psychology,
                 selectedValue = AiTone.entries.find { it.name == tone }?.displayName ?: "Amichevole",
                 options = AiTone.entries.map { it.displayName },
@@ -91,15 +94,15 @@ fun AiPreferencesScreen(
                 },
             )
 
-            SettingsSectionHeader(title = "Promemoria")
+            SettingsSectionHeader(title = stringResource(Res.string.ai_pref_reminders_section))
             Text(
-                text = "Quanto spesso vuoi ricevere un promemoria per scrivere?",
+                text = stringResource(Res.string.ai_pref_reminders_label),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             SettingsDropdownItem(
-                title = "Frequenza",
+                title = stringResource(Res.string.ai_pref_frequency_dropdown),
                 icon = Icons.Default.Notifications,
                 selectedValue = ReminderFrequency.entries.find { it.name == reminderFreq }?.displayName ?: "Giornaliero",
                 options = ReminderFrequency.entries.map { it.displayName },
@@ -108,9 +111,9 @@ fun AiPreferencesScreen(
                 },
             )
 
-            SettingsSectionHeader(title = "Argomenti da evitare")
+            SettingsSectionHeader(title = stringResource(Res.string.ai_pref_topics_section))
             Text(
-                text = "Eve non parlera' di questi argomenti a meno che non sia tu a iniziare.",
+                text = stringResource(Res.string.ai_pref_topics_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -139,7 +142,7 @@ fun AiPreferencesScreen(
                 enabled = !isSaving,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Salva preferenze", fontWeight = FontWeight.SemiBold)
+                Text(stringResource(Res.string.ai_pref_save), fontWeight = FontWeight.SemiBold)
             }
 
             Spacer(modifier = Modifier.height(24.dp))

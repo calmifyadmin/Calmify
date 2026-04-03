@@ -22,6 +22,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lifo.ui.emotion.MiniMoodShape
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 import com.lifo.util.model.ContentFilter
 import com.lifo.util.model.HomeContentItem
 import java.time.Instant
@@ -285,12 +288,12 @@ private fun EmptyTimeline(modifier: Modifier = Modifier) {
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
             )
             Text(
-                text = "Nessuna attivita' ancora",
+                text = stringResource(Res.string.history_empty_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = "I tuoi diari e le conversazioni appariranno qui",
+                text = stringResource(Res.string.history_empty_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
@@ -322,7 +325,7 @@ private fun ErrorContent(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Errore nel caricamento",
+            text = stringResource(Res.string.history_loading_error),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Medium
         )
@@ -336,7 +339,7 @@ private fun ErrorContent(
         Button(onClick = onRetry) {
             Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Riprova")
+            Text(stringResource(Res.string.retry))
         }
     }
 }

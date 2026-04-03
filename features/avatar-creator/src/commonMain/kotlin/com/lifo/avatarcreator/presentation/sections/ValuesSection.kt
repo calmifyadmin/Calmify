@@ -15,6 +15,9 @@ import com.lifo.avatarcreator.presentation.AvatarCreatorContract.State
 import com.lifo.avatarcreator.presentation.components.SectionHeader
 import com.lifo.avatarcreator.presentation.components.TagPicker
 import com.lifo.util.model.RecognizedBiases
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 @Composable
 fun ValuesSection(
@@ -37,7 +40,7 @@ fun ValuesSection(
         OutlinedTextField(
             value = state.form.values,
             onValueChange = { onIntent(Intent.UpdateValues(it)) },
-            label = { Text("Cosa e' assolutamente non negoziabile per lui/lei?") },
+            label = { Text(stringResource(Res.string.avatar_values_nonnegotiable_label)) },
             placeholder = { Text("Es: L'onesta', la liberta' personale, il rispetto...") },
             minLines = 2,
             maxLines = 4,
@@ -57,7 +60,7 @@ fun ValuesSection(
         OutlinedTextField(
             value = state.form.coreWound,
             onValueChange = { onIntent(Intent.UpdateCoreWound(it)) },
-            label = { Text("Cosa lo/la fa sentire incompreso/a?") },
+            label = { Text(stringResource(Res.string.avatar_values_wound_label)) },
             placeholder = { Text("La ferita che non si chiude mai del tutto...") },
             minLines = 2,
             maxLines = 3,
@@ -68,7 +71,7 @@ fun ValuesSection(
         OutlinedTextField(
             value = state.form.coreStrength,
             onValueChange = { onIntent(Intent.UpdateCoreStrength(it)) },
-            label = { Text("Qual e' la sua forza genuina?") },
+            label = { Text(stringResource(Res.string.avatar_values_strength_label)) },
             placeholder = { Text("Quella cosa che sa fare meglio di chiunque altro...") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -78,7 +81,7 @@ fun ValuesSection(
         OutlinedTextField(
             value = state.form.culturalBackground,
             onValueChange = { onIntent(Intent.UpdateCulturalBackground(it)) },
-            label = { Text("Background culturale che lo influenza") },
+            label = { Text(stringResource(Res.string.avatar_values_cultural_bg_label)) },
             placeholder = { Text("Es: Cresciuto in una famiglia del sud Italia...") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -88,7 +91,7 @@ fun ValuesSection(
         OutlinedTextField(
             value = state.form.culturalReference,
             onValueChange = { onIntent(Intent.UpdateCulturalReference(it)) },
-            label = { Text("Personaggio/opera che lo ispira") },
+            label = { Text(stringResource(Res.string.avatar_values_reference_label)) },
             placeholder = { Text("Es: Spike Spiegel, Amelie Poulain, Naruto...") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),

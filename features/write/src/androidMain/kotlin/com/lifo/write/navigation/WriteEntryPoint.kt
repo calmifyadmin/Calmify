@@ -41,6 +41,9 @@ import com.lifo.write.MovementScreen
 import com.lifo.write.MovementViewModel
 import com.lifo.write.WriteScreen
 import com.lifo.write.WriteViewModel
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 /**
  * Public entry point composable for the Write feature.
@@ -359,15 +362,15 @@ fun WriteRouteContent(
                 showShareDialog = false
                 navigateBack()
             },
-            title = { Text("Salvato!") },
-            text = { Text("Vuoi condividere come ti senti con la community?") },
+            title = { Text(stringResource(Res.string.write_entry_saved_title)) },
+            text = { Text(stringResource(Res.string.write_share_prompt)) },
             confirmButton = {
                 TextButton(onClick = {
                     showShareDialog = false
                     val prefilledContent = excerpt
                     onShareToComposer?.invoke(prefilledContent)
                 }) {
-                    Text("Condividi")
+                    Text(stringResource(Res.string.share))
                 }
             },
             dismissButton = {
@@ -375,7 +378,7 @@ fun WriteRouteContent(
                     showShareDialog = false
                     navigateBack()
                 }) {
-                    Text("No, grazie")
+                    Text(stringResource(Res.string.thanks_no))
                 }
             }
         )

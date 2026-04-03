@@ -59,6 +59,9 @@ import com.lifo.util.repository.SocialGraphRepository
 import com.lifo.util.repository.ThreadRepository
 import com.lifo.util.formatCompactCount
 import com.lifo.util.formatRelativeTimeKmp
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,12 +77,12 @@ fun SearchScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Cerca") },
+                title = { Text(stringResource(Res.string.search_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Indietro"
+                            contentDescription = stringResource(Res.string.back_cd)
                         )
                     }
                 },
@@ -103,7 +106,7 @@ fun SearchScreen(
                     .padding(horizontal = 16.dp),
                 placeholder = {
                     Text(
-                        "Cerca thread o utenti...",
+                        stringResource(Res.string.search_placeholder),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -120,7 +123,7 @@ fun SearchScreen(
                         IconButton(onClick = { onIntent(SearchContract.Intent.ClearSearch) }) {
                             Icon(
                                 imageVector = Icons.Default.Clear,
-                                contentDescription = "Cancella"
+                                contentDescription = stringResource(Res.string.search_clear_cd)
                             )
                         }
                     }

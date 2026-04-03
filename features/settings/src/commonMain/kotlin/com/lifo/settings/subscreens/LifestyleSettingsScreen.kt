@@ -17,6 +17,9 @@ import androidx.compose.ui.unit.dp
 import com.lifo.util.model.ExerciseFrequency
 import com.lifo.util.model.SocialSupport
 import kotlin.math.roundToInt
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 /**
  * LifestyleSettingsScreen - Edit lifestyle information
@@ -49,12 +52,12 @@ fun LifestyleSettingsScreen(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
-                title = { Text("Lifestyle Information") },
+                title = { Text(stringResource(Res.string.settings_ls_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(Res.string.back_cd)
                         )
                     }
                 }
@@ -76,7 +79,7 @@ fun LifestyleSettingsScreen(
                         modifier = Modifier.weight(1f),
                         enabled = !isSaving
                     ) {
-                        Text("Cancel")
+                        Text(stringResource(Res.string.cancel))
                     }
 
                     Button(
@@ -99,7 +102,7 @@ fun LifestyleSettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                         }
-                        Text(if (isSaving) "Saving..." else "Save Changes")
+                        Text(if (isSaving) stringResource(Res.string.settings_saving) else stringResource(Res.string.settings_save_changes))
                     }
                 }
             }
@@ -117,8 +120,8 @@ fun LifestyleSettingsScreen(
             // Header
             ExpressiveStepHeader(
                 icon = Icons.Default.SelfImprovement,
-                title = "Your Lifestyle",
-                subtitle = "Update your daily habits and routines"
+                title = stringResource(Res.string.settings_ls_your_lifestyle),
+                subtitle = stringResource(Res.string.settings_ls_update_subtitle)
             )
 
             // Info Card
@@ -139,7 +142,7 @@ fun LifestyleSettingsScreen(
                         tint = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = "Lifestyle factors like sleep, exercise, and social connections significantly impact mental well-being.",
+                        text = stringResource(Res.string.settings_ls_description),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -150,7 +153,7 @@ fun LifestyleSettingsScreen(
 
             // Section 1: Occupation
             Text(
-                text = "Occupation",
+                text = stringResource(Res.string.settings_ls_occupation_section),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -169,7 +172,7 @@ fun LifestyleSettingsScreen(
                     "Homemaker",
                     "Other"
                 ),
-                label = "Current Occupation",
+                label = stringResource(Res.string.settings_ls_occupation_label),
                 leadingIcon = Icons.Default.Work,
                 enabled = !isSaving
             )
@@ -182,13 +185,13 @@ fun LifestyleSettingsScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Sleep",
+                text = stringResource(Res.string.settings_ls_sleep_section),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
 
             Text(
-                text = "Average hours per night",
+                text = stringResource(Res.string.settings_ls_sleep_hours),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -215,13 +218,13 @@ fun LifestyleSettingsScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Physical Activity",
+                text = stringResource(Res.string.settings_ls_activity_section),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
 
             Text(
-                text = "How often do you exercise?",
+                text = stringResource(Res.string.settings_ls_exercise_question),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -232,7 +235,7 @@ fun LifestyleSettingsScreen(
                 value = editedExerciseFrequency,
                 onValueChange = { editedExerciseFrequency = it },
                 options = ExerciseFrequency.entries.map { it.displayName },
-                label = "Exercise Frequency",
+                label = stringResource(Res.string.settings_ls_exercise_label),
                 leadingIcon = Icons.Default.FitnessCenter,
                 enabled = !isSaving
             )
@@ -245,13 +248,13 @@ fun LifestyleSettingsScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Social Support",
+                text = stringResource(Res.string.settings_ls_social_section),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
 
             Text(
-                text = "How would you describe your social support network?",
+                text = stringResource(Res.string.settings_ls_social_question),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -262,7 +265,7 @@ fun LifestyleSettingsScreen(
                 value = editedSocialSupport,
                 onValueChange = { editedSocialSupport = it },
                 options = SocialSupport.entries.map { it.displayName },
-                label = "Social Support Level",
+                label = stringResource(Res.string.settings_ls_social_label),
                 leadingIcon = Icons.Default.Groups,
                 enabled = !isSaving
             )
@@ -365,7 +368,7 @@ private fun ExpressiveSleepSlider(
                     )
 
                     Text(
-                        text = "hours",
+                        text = stringResource(Res.string.settings_ls_hours_unit),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -415,26 +418,30 @@ private fun SleepQualityIndicator(
     hours: Float,
     modifier: Modifier = Modifier
 ) {
+    val sleepQualityLow = stringResource(Res.string.settings_ls_sleep_quality_low)
+    val sleepQualityMedium = stringResource(Res.string.settings_ls_sleep_quality_medium)
+    val sleepQualityGood = stringResource(Res.string.settings_ls_sleep_quality_good)
+    val sleepQualityHigh = stringResource(Res.string.settings_ls_sleep_quality_high)
     val (color, icon, message) = when {
         hours < 5f -> Triple(
             MaterialTheme.colorScheme.error,
             Icons.Default.ErrorOutline,
-            "Too little sleep can impact mental health"
+            sleepQualityLow
         )
         hours < 7f -> Triple(
             MaterialTheme.colorScheme.tertiary,
             Icons.Default.Warning,
-            "Try to aim for 7-9 hours for optimal well-being"
+            sleepQualityMedium
         )
         hours <= 9f -> Triple(
             MaterialTheme.colorScheme.primary,
             Icons.Default.CheckCircle,
-            "Great! This is in the recommended range"
+            sleepQualityGood
         )
         else -> Triple(
             MaterialTheme.colorScheme.tertiary,
             Icons.Default.Info,
-            "Excessive sleep can also affect mood"
+            sleepQualityHigh
         )
     }
 

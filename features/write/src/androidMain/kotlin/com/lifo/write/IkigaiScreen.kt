@@ -36,6 +36,9 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 // Peaceful palette — muted, sage-cohesive tones
 private val PetalRose = Color(0xFFE8728B)
@@ -58,10 +61,10 @@ fun IkigaiScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Il Tuo Ikigai", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(Res.string.ikigai_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back_cd))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -293,7 +296,7 @@ fun IkigaiScreen(
                         value = state.currentInput,
                         onValueChange = { onIntent(IkigaiContract.Intent.UpdateInput(it)) },
                         modifier = Modifier.weight(1f),
-                        placeholder = { Text("Aggiungi...") },
+                        placeholder = { Text(stringResource(Res.string.ikigai_add_placeholder)) },
                         shape = RoundedCornerShape(20.dp),
                         singleLine = true,
                     )

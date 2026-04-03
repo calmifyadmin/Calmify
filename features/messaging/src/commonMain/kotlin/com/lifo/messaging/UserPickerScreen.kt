@@ -37,6 +37,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lifo.socialui.avatar.UserAvatar
 import com.lifo.util.repository.SocialGraphRepository
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,10 +54,10 @@ fun UserPickerScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Nuovo messaggio", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(Res.string.messaging_new_message_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back_cd))
                     }
                 },
             )
@@ -71,7 +74,7 @@ fun UserPickerScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                placeholder = { Text("Cerca utente...") },
+                placeholder = { Text(stringResource(Res.string.messaging_search_user_placeholder)) },
                 leadingIcon = {
                     Icon(Icons.Default.Search, contentDescription = null)
                 },
@@ -103,7 +106,7 @@ fun UserPickerScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = "Cerca un utente per iniziare una conversazione",
+                            text = stringResource(Res.string.messaging_search_hint),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -115,7 +118,7 @@ fun UserPickerScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = "Nessun utente trovato",
+                            text = stringResource(Res.string.messaging_no_user_found),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

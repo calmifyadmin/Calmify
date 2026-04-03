@@ -21,6 +21,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 /**
  * Simplified camera preview for LiveScreen - no borders, no title, full space
@@ -111,7 +114,7 @@ fun SimpleLiveCameraPreview(
                             .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
                         Text(
-                            text = "LIVE",
+                            text = stringResource(Res.string.chat_live_label),
                             style = MaterialTheme.typography.labelSmall,
                             color = Color.White,
                             fontWeight = FontWeight.Bold
@@ -146,7 +149,7 @@ fun SimpleLiveCameraPreview(
                             )
 
                             Text(
-                                text = "Sending frames every 3s",
+                                text = stringResource(Res.string.chat_sending_frames),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface
                             )

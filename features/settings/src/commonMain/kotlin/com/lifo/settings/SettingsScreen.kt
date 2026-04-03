@@ -122,7 +122,7 @@ fun SettingsScreen(
                 )
 
                 // Profile Settings Section
-                SettingsSectionHeader(title = "Profile Settings")
+                SettingsSectionHeader(title = stringResource(Res.string.settings_profile_section))
 
                 ProfileSettingsSection(
                     onNavigateToPersonalInfo = onNavigateToPersonalInfo,
@@ -132,25 +132,25 @@ fun SettingsScreen(
                 )
 
                 // AI Preferences Section
-                SettingsSectionHeader(title = "Preferenze AI")
+                SettingsSectionHeader(title = stringResource(Res.string.settings_ai_preferences_section))
                 SettingsNavigationItem(
-                    title = "Tono, promemoria e argomenti",
-                    subtitle = "Personalizza come Eve interagisce con te",
+                    title = stringResource(Res.string.settings_ai_tone_topic),
+                    subtitle = stringResource(Res.string.settings_ai_tone_subtitle),
                     icon = Icons.Default.Psychology,
                     onClick = onNavigateToAiPreferences,
                 )
 
                 // Environment Design Section
-                SettingsSectionHeader(title = "Il Tuo Ambiente")
+                SettingsSectionHeader(title = stringResource(Res.string.settings_environment_section))
                 SettingsNavigationItem(
-                    title = "Design del tuo ambiente",
-                    subtitle = "Checklist, routine e digital detox",
+                    title = stringResource(Res.string.settings_environment_item_title),
+                    subtitle = stringResource(Res.string.settings_environment_item_subtitle),
                     icon = Icons.Default.Spa,
                     onClick = onNavigateToEnvironment,
                 )
 
                 // Privacy Section
-                SettingsSectionHeader(title = "Privacy & Dati")
+                SettingsSectionHeader(title = stringResource(Res.string.settings_privacy_section))
                 PrivacySection(
                     profileSettings = uiState.profileSettings,
                     onUpdateSettings = viewModel::updatePrivacySettings,
@@ -158,7 +158,7 @@ fun SettingsScreen(
                 )
 
                 SettingsActionButton(
-                    title = "Esporta i tuoi dati",
+                    title = stringResource(Res.string.settings_export_data),
                     icon = Icons.Default.Download,
                     onClick = { viewModel.onIntent(SettingsContract.Intent.ExportUserData) },
                     isLoading = uiState.isExporting,
@@ -184,16 +184,16 @@ fun SettingsScreen(
                 )
 
                 // Developer / Debug
-                SettingsSectionHeader(title = "Developer")
+                SettingsSectionHeader(title = stringResource(Res.string.settings_developer_section))
                 SettingsNavigationItem(
-                    title = "Avatar Debug",
-                    subtitle = "Test animazioni, visemi e idle loop",
+                    title = stringResource(Res.string.settings_avatar_debug),
+                    subtitle = stringResource(Res.string.settings_avatar_debug_subtitle),
                     icon = Icons.Default.BugReport,
                     onClick = onNavigateToAvatarDebug,
                 )
 
                 // Account Actions Section
-                SettingsSectionHeader(title = "Account")
+                SettingsSectionHeader(title = stringResource(Res.string.settings_account_section))
                 AccountActionsSection(
                     onLogout = { viewModel.logout(onLogout) },
                     onDeleteAccount = { viewModel.showDeleteAccountDialog(true) }
@@ -219,7 +219,7 @@ private fun SettingsTopBar(
         title = {
             Column {
                 Text(
-                    text = "Settings",
+                    text = stringResource(Res.string.settings_title),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
@@ -236,7 +236,7 @@ private fun SettingsTopBar(
             IconButton(onClick = onNavigateBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back"
+                    contentDescription = stringResource(Res.string.back_cd)
                 )
             }
         },
@@ -292,7 +292,7 @@ private fun ProfileOverviewCard(
                         error = painterResource(id = com.lifo.ui.R.drawable.google_logo_ic),
                         placeholder = painterResource(id = com.lifo.ui.R.drawable.google_logo_ic)
                     ),
-                    contentDescription = "Profile Picture",
+                    contentDescription = stringResource(Res.string.settings_profile_picture_cd),
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -303,7 +303,7 @@ private fun ProfileOverviewCard(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    text = profileSettings.fullName.ifBlank { "User" },
+                    text = profileSettings.fullName.ifBlank { stringResource(Res.string.settings_user_fallback) },
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -311,13 +311,13 @@ private fun ProfileOverviewCard(
                 val age = profileSettings.getAge()
                 if (age != null) {
                     Text(
-                        text = "$age years old",
+                        text = stringResource(Res.string.settings_age_format, age),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
                 Text(
-                    text = profileSettings.location.ifBlank { "No location set" },
+                    text = profileSettings.location.ifBlank { stringResource(Res.string.settings_no_location) },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                 )
@@ -333,7 +333,7 @@ private fun ProfileOverviewCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.Edit,
-                    contentDescription = "Edit Profile"
+                    contentDescription = stringResource(Res.string.settings_edit_profile_cd)
                 )
             }
         }
@@ -356,29 +356,29 @@ private fun ProfileSettingsSection(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         SettingsNavigationItem(
-            title = "Personal Information",
-            subtitle = "Name, age, physical details, location",
+            title = stringResource(Res.string.settings_personal_info),
+            subtitle = stringResource(Res.string.settings_personal_info_subtitle),
             icon = Icons.Outlined.Person,
             onClick = onNavigateToPersonalInfo
         )
 
         SettingsNavigationItem(
-            title = "Mental Health",
-            subtitle = "Concerns, history, current treatment",
+            title = stringResource(Res.string.settings_mental_health),
+            subtitle = stringResource(Res.string.settings_mental_health_subtitle),
             icon = Icons.Outlined.Psychology,
             onClick = onNavigateToHealthInfo
         )
 
         SettingsNavigationItem(
-            title = "Lifestyle",
-            subtitle = "Sleep, exercise, work, social support",
+            title = stringResource(Res.string.settings_lifestyle),
+            subtitle = stringResource(Res.string.settings_lifestyle_subtitle),
             icon = Icons.Outlined.SelfImprovement,
             onClick = onNavigateToLifestyle
         )
 
         SettingsNavigationItem(
-            title = "Goals & Strategies",
-            subtitle = "Wellness goals and coping strategies",
+            title = stringResource(Res.string.settings_goals_strategies),
+            subtitle = stringResource(Res.string.settings_goals_subtitle),
             icon = Icons.Outlined.EmojiEvents,
             onClick = onNavigateToGoals
         )
@@ -400,8 +400,8 @@ private fun PrivacySection(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         PrivacySwitchItem(
-            title = "Share Data for Research",
-            subtitle = "Help improve mental health research with anonymized data",
+            title = stringResource(Res.string.settings_share_research_title),
+            subtitle = stringResource(Res.string.settings_share_research_subtitle),
             icon = Icons.Outlined.Science,
             checked = profileSettings.shareDataForResearch,
             onCheckedChange = { onUpdateSettings(it, null) },
@@ -409,8 +409,8 @@ private fun PrivacySection(
         )
 
         PrivacySwitchItem(
-            title = "Advanced AI Insights",
-            subtitle = "Enable detailed psychological analysis and recommendations",
+            title = stringResource(Res.string.settings_advanced_insights_title),
+            subtitle = stringResource(Res.string.settings_advanced_insights_subtitle),
             icon = Icons.Outlined.Psychology,
             checked = profileSettings.enableAdvancedInsights,
             onCheckedChange = { onUpdateSettings(null, it) },
@@ -508,14 +508,14 @@ private fun AccountActionsSection(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         SettingsActionButton(
-            title = "Logout",
+            title = stringResource(Res.string.settings_logout),
             icon = Icons.Default.Logout,
             onClick = onLogout,
             isDestructive = false
         )
 
         SettingsActionButton(
-            title = "Delete Account",
+            title = stringResource(Res.string.settings_delete_account),
             icon = Icons.Default.DeleteForever,
             onClick = onDeleteAccount,
             isDestructive = true

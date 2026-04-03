@@ -42,6 +42,9 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.todayIn
 import org.koin.compose.koinInject
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -422,14 +425,14 @@ private fun EmptyDashboardState(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text("Scrivi", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(Res.string.write_action), style = MaterialTheme.typography.labelLarge)
                 }
                 FilledTonalButton(
                     onClick = onTalkToEve,
                     shape = RoundedCornerShape(20.dp),
                     contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
                 ) {
-                    Text("Parla con Eve", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(Res.string.home_talk_to_eve), style = MaterialTheme.typography.labelLarge)
                 }
             }
         }

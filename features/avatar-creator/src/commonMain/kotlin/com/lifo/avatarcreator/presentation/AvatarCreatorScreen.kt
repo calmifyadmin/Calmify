@@ -39,6 +39,9 @@ import com.lifo.avatarcreator.presentation.AvatarCreatorContract.Intent
 import com.lifo.avatarcreator.presentation.components.CreationProgressScreen
 import com.lifo.avatarcreator.presentation.components.WizardProgressBar
 import com.lifo.avatarcreator.presentation.sections.*
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,10 +77,10 @@ fun AvatarCreatorScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Crea il tuo Avatar") },
+                title = { Text(stringResource(Res.string.avatar_creator_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.Close, contentDescription = "Chiudi")
+                        Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.back_cd))
                     }
                 },
             )   
@@ -134,7 +137,7 @@ fun AvatarCreatorScreen(
                     ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Indietro")
+                        Text(stringResource(Res.string.back_cd))
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                 }
@@ -147,14 +150,14 @@ fun AvatarCreatorScreen(
                     ) {
                         Icon(Icons.Default.Done, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Crea Avatar")
+                        Text(stringResource(Res.string.avatar_creator_create))
                     }
                 } else {
                     Button(
                         onClick = { viewModel.onIntent(Intent.NextSection) },
                         modifier = Modifier.weight(1f),
                     ) {
-                        Text("Avanti")
+                        Text(stringResource(Res.string.avatar_creator_next))
                         Spacer(modifier = Modifier.width(8.dp))
                         Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
                     }

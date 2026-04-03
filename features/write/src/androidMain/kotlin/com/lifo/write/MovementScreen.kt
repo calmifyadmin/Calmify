@@ -27,6 +27,9 @@ import androidx.compose.ui.unit.sp
 import com.lifo.util.model.MovementType
 import com.lifo.util.model.PostMovementFeeling
 import kotlinx.coroutines.delay
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -138,7 +141,7 @@ fun MovementScreen(
                 } else {
                     Icon(Icons.Default.Check, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Registra movimento", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(Res.string.movement_record), style = MaterialTheme.typography.labelLarge)
                 }
             }
 
@@ -481,7 +484,7 @@ private fun NoteCard(
                 value = note,
                 onValueChange = onNoteChanged,
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Note (opzionale)") },
+                placeholder = { Text(stringResource(Res.string.movement_notes_placeholder)) },
                 maxLines = 3,
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(

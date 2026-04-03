@@ -29,6 +29,9 @@ import androidx.compose.ui.unit.sp
 import com.lifo.util.model.RecurringThought
 import com.lifo.util.model.ThoughtType
 import kotlin.math.*
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,10 +44,10 @@ fun RecurringThoughtsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("I Tuoi Circuiti") },
+                title = { Text(stringResource(Res.string.recurring_thoughts_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back_cd))
                     }
                 },
             )
@@ -383,14 +386,14 @@ private fun ThoughtDetailCard(
                     ) {
                         Icon(Icons.Default.Transform, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Reframing")
+                        Text(stringResource(Res.string.recurring_thoughts_reframing))
                     }
                 }
                 OutlinedButton(
                     onClick = onResolve,
                     shape = RoundedCornerShape(12.dp),
                 ) {
-                    Text("Risolto")
+                    Text(stringResource(Res.string.recurring_thoughts_resolved))
                 }
             }
         }

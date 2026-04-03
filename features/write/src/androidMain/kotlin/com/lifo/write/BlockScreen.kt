@@ -28,6 +28,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifo.util.model.BlockResolution
 import com.lifo.util.model.BlockType
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,10 +42,10 @@ fun BlockScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Cosa Ti Blocca?") },
+                title = { Text(stringResource(Res.string.block_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back_cd))
                     }
                 },
                 actions = {
@@ -52,7 +55,7 @@ fun BlockScreen(
                             onIntent(BlockContract.Intent.LoadBlocks)
                             // Navigate to history step
                         }) {
-                            Icon(Icons.Default.History, contentDescription = "Storico")
+                            Icon(Icons.Default.History, contentDescription = stringResource(Res.string.block_history_cd))
                         }
                     }
                 },
@@ -108,7 +111,7 @@ private fun DescribeStep(state: BlockContract.State, onIntent: (BlockContract.In
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
-            placeholder = { Text("Cosa ti blocca in questo momento?") },
+            placeholder = { Text(stringResource(Res.string.block_placeholder)) },
             shape = RoundedCornerShape(16.dp),
         )
 
@@ -140,7 +143,7 @@ private fun DescribeStep(state: BlockContract.State, onIntent: (BlockContract.In
             shape = RoundedCornerShape(16.dp),
             enabled = state.description.length >= 10,
         ) {
-            Text("Analizza", fontSize = 16.sp)
+            Text(stringResource(Res.string.block_analyze), fontSize = 16.sp)
         }
     }
 }
@@ -187,7 +190,7 @@ private fun DiagnosisStep(state: BlockContract.State, onIntent: (BlockContract.I
         }
 
         // Confirm or change type
-        Text("Tipo di blocco", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(Res.string.block_type_label), style = MaterialTheme.typography.titleMedium)
         BlockType.entries.filter { it != BlockType.UNKNOWN }.forEach { type ->
             val selected = state.selectedType == type
             FilterChip(
@@ -214,7 +217,7 @@ private fun DiagnosisStep(state: BlockContract.State, onIntent: (BlockContract.I
                     color = MaterialTheme.colorScheme.onPrimary,
                 )
             } else {
-                Text("Registra e procedi", fontSize = 16.sp)
+                Text(stringResource(Res.string.block_register_proceed), fontSize = 16.sp)
             }
         }
     }
@@ -281,7 +284,7 @@ private fun ActionStep(
             onClick = onBackPressed,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text("Torna al diario")
+            Text(stringResource(Res.string.block_back_to_diary))
         }
     }
 }
@@ -335,7 +338,7 @@ private fun HistoryStep(state: BlockContract.State, onIntent: (BlockContract.Int
     ) {
         // Active blocks
         if (state.activeBlocks.isNotEmpty()) {
-            item { Text("Blocchi attivi", style = MaterialTheme.typography.titleMedium) }
+            item { Text(stringResource(Res.string.block_active), style = MaterialTheme.typography.titleMedium) }
             items(state.activeBlocks, key = { it.id }) { block ->
                 BlockHistoryCard(block = block, isResolved = false, onResolve = {
                     onIntent(BlockContract.Intent.ResolveBlock(block.id))
@@ -347,7 +350,7 @@ private fun HistoryStep(state: BlockContract.State, onIntent: (BlockContract.Int
         if (state.resolvedBlocks.isNotEmpty()) {
             item {
                 Spacer(Modifier.height(8.dp))
-                Text("Blocchi superati", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(Res.string.block_overcome), style = MaterialTheme.typography.titleMedium)
             }
             items(state.resolvedBlocks, key = { it.id }) { block ->
                 BlockHistoryCard(block = block, isResolved = true, onResolve = {})
@@ -435,7 +438,7 @@ private fun BlockHistoryCard(
             if (!isResolved) {
                 Spacer(Modifier.height(8.dp))
                 TextButton(onClick = onResolve) {
-                    Text("Segna come superato")
+                    Text(stringResource(Res.string.block_mark_overcome))
                 }
             } else if (block.resolutionNote.isNotBlank()) {
                 Spacer(Modifier.height(4.dp))

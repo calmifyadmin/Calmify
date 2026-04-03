@@ -32,8 +32,11 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.info_tooltip_cd
 import com.lifo.ui.theme.CalmifyRadius
 import com.lifo.ui.theme.CalmifySpacing
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * A small ⓘ icon that opens a [ModalBottomSheet] with a title and detailed
@@ -73,7 +76,7 @@ fun InfoTooltip(
 
     Icon(
         imageVector         = Icons.Outlined.Info,
-        contentDescription  = "Informazioni: $title",
+        contentDescription  = stringResource(Res.string.info_tooltip_cd, title),
         tint                = iconTint ?: MaterialTheme.colorScheme.onSurfaceVariant,
         modifier            = modifier
             .size(iconSize)

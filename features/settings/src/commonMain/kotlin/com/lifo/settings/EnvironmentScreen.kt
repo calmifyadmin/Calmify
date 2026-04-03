@@ -18,6 +18,9 @@ import androidx.compose.ui.unit.sp
 import com.lifo.util.model.ChecklistCategory
 import com.lifo.util.model.ChecklistItem
 import com.lifo.util.model.RoutineStep
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,10 +34,10 @@ fun EnvironmentScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Il Tuo Ambiente") },
+                title = { Text(stringResource(Res.string.environment_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back_cd))
                     }
                 },
             )
@@ -112,7 +115,7 @@ private fun ChecklistTab(state: EnvironmentContract.State, onIntent: (Environmen
             ) {
                 Icon(Icons.Default.Add, contentDescription = null)
                 Spacer(Modifier.width(4.dp))
-                Text("Aggiungi elemento")
+                Text(stringResource(Res.string.environment_add_item))
             }
         }
     }
@@ -149,7 +152,7 @@ private fun ChecklistItemRow(
                 modifier = Modifier.weight(1f),
             )
             IconButton(onClick = onRemove) {
-                Icon(Icons.Default.Close, contentDescription = "Rimuovi", modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.environment_remove_cd), modifier = Modifier.size(18.dp))
             }
         }
     }
@@ -166,17 +169,17 @@ private fun AddChecklistDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Nuovo elemento") },
+        title = { Text(stringResource(Res.string.environment_new_item_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = text,
                     onValueChange = { text = it },
-                    label = { Text("Descrizione") },
+                    label = { Text(stringResource(Res.string.environment_description_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                 )
-                Text("Categoria", style = MaterialTheme.typography.labelMedium)
+                Text(stringResource(Res.string.environment_category_label), style = MaterialTheme.typography.labelMedium)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ChecklistCategory.entries.forEach { cat ->
                         FilterChip(
@@ -192,10 +195,10 @@ private fun AddChecklistDialog(
             TextButton(
                 onClick = { if (text.isNotBlank()) onAdd(text, category) },
                 enabled = text.isNotBlank(),
-            ) { Text("Aggiungi") }
+            ) { Text(stringResource(Res.string.environment_add_item)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Annulla") }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.cancel)) }
         },
     )
 }
@@ -327,11 +330,11 @@ private fun DetoxTab(state: EnvironmentContract.State, onIntent: (EnvironmentCon
                 onClick = { onIntent(EnvironmentContract.Intent.StopDetoxTimer) },
                 shape = RoundedCornerShape(16.dp),
             ) {
-                Text("Interrompi")
+                Text(stringResource(Res.string.environment_stop_detox))
             }
         } else {
             // Duration selector
-            Text("Durata: $detoxMinutes minuti", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(Res.string.environment_detox_duration, detoxMinutes), style = MaterialTheme.typography.titleMedium)
             Slider(
                 value = detoxMinutes.toFloat(),
                 onValueChange = { onIntent(EnvironmentContract.Intent.SetDetoxMinutes(it.toInt())) },
@@ -351,7 +354,7 @@ private fun DetoxTab(state: EnvironmentContract.State, onIntent: (EnvironmentCon
             ) {
                 Icon(Icons.Default.Timer, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Inizia Digital Detox", fontSize = 16.sp)
+                Text(stringResource(Res.string.environment_start_detox), fontSize = 16.sp)
             }
         }
     }

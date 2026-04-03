@@ -17,6 +17,9 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 /**
  * Brain Dump Screen — minimal journaling for mental unloading.
@@ -147,7 +150,7 @@ internal fun BrainDumpScreen(
                     onClick = onSaveClicked,
                     enabled = canSave
                 ) {
-                    Text("Salva e scarica")
+                    Text(stringResource(Res.string.brain_dump_save))
                 }
             }
         }

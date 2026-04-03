@@ -28,6 +28,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.koin.compose.viewmodel.koinViewModel
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 // ── Question definitions ─────────────────────────────────────────────────────
 
@@ -164,20 +167,16 @@ fun SnapshotScreen(
                 onSnapshotComplete()
             },
             icon = { Icon(Icons.Default.Check, contentDescription = null) },
-            title = { Text("Questionario Completato") },
+            title = { Text(stringResource(Res.string.home_snapshot_completed_title)) },
             text = {
-                Text(
-                    "Grazie per aver dedicato del tempo a te stesso. " +
-                        "Le tue risposte sono state salvate e verranno analizzate " +
-                        "per offrirti insight personalizzati sul tuo benessere."
-                )
+                Text(stringResource(Res.string.home_snapshot_completed_message))
             },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.resetForm()
                     onSnapshotComplete()
                 }) {
-                    Text("Perfetto")
+                    Text(stringResource(Res.string.home_snapshot_perfect))
                 }
             }
         )
@@ -188,9 +187,9 @@ fun SnapshotScreen(
             TopAppBar(
                 title = {
                     when (currentStep) {
-                        STEP_INTRO -> Text("Check-in Settimanale")
-                        STEP_NOTES -> Text("Ultime riflessioni")
-                        else -> Text("Domanda ${currentStep + 1} di $TOTAL_QUESTIONS")
+                        STEP_INTRO -> Text(stringResource(Res.string.home_checkin_title))
+                        STEP_NOTES -> Text(stringResource(Res.string.home_checkin_notes))
+                        else -> Text(stringResource(Res.string.home_checkin_question, currentStep + 1, TOTAL_QUESTIONS))
                     }
                 },
                 navigationIcon = {
@@ -205,7 +204,7 @@ fun SnapshotScreen(
                     }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Indietro"
+                            contentDescription = stringResource(Res.string.back_cd)
                         )
                     }
                 },
@@ -644,7 +643,7 @@ private fun NotesPage(
             value = notes,
             onValueChange = onNotesChange,
             modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("Opzionale — scrivi qui...") },
+            placeholder = { Text(stringResource(Res.string.optional_placeholder)) },
             minLines = 5,
             maxLines = 8,
             shape = MaterialTheme.shapes.medium

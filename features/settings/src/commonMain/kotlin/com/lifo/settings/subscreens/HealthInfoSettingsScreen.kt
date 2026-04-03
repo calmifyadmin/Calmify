@@ -19,6 +19,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.lifo.util.model.MentalHealthConcerns
 import com.lifo.util.model.MentalHealthHistory
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 /**
  * HealthInfoSettingsScreen - Edit mental health information
@@ -51,12 +54,12 @@ fun HealthInfoSettingsScreen(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
-                title = { Text("Mental Health Information") },
+                title = { Text(stringResource(Res.string.settings_hi_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(Res.string.back_cd)
                         )
                     }
                 }
@@ -78,7 +81,7 @@ fun HealthInfoSettingsScreen(
                         modifier = Modifier.weight(1f),
                         enabled = !isSaving
                     ) {
-                        Text("Cancel")
+                        Text(stringResource(Res.string.cancel))
                     }
 
                     Button(
@@ -101,7 +104,7 @@ fun HealthInfoSettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                         }
-                        Text(if (isSaving) "Saving..." else "Save Changes")
+                        Text(if (isSaving) stringResource(Res.string.settings_saving) else stringResource(Res.string.settings_save_changes))
                     }
                 }
             }
@@ -119,8 +122,8 @@ fun HealthInfoSettingsScreen(
             // Header
             ExpressiveStepHeader(
                 icon = Icons.Default.HealthAndSafety,
-                title = "Your Mental Health",
-                subtitle = "Update your mental health information"
+                title = stringResource(Res.string.settings_hi_your_health),
+                subtitle = stringResource(Res.string.settings_hi_update_subtitle)
             )
 
             // Privacy Info Card
@@ -141,7 +144,7 @@ fun HealthInfoSettingsScreen(
                         tint = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = "Your mental health information is confidential and securely stored. It will only be used to provide personalized insights.",
+                        text = stringResource(Res.string.settings_hi_description),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -152,13 +155,13 @@ fun HealthInfoSettingsScreen(
 
             // Section 1: Primary Concerns
             Text(
-                text = "What brings you here today?",
+                text = stringResource(Res.string.settings_hi_brings_you_here),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
 
             Text(
-                text = "Select all that apply",
+                text = stringResource(Res.string.settings_hi_select_all),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -181,13 +184,13 @@ fun HealthInfoSettingsScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Previous Diagnosis",
+                text = stringResource(Res.string.settings_hi_diagnosis_section),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
 
             Text(
-                text = "Have you been diagnosed with any mental health conditions?",
+                text = stringResource(Res.string.settings_hi_diagnosed_question),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -198,7 +201,7 @@ fun HealthInfoSettingsScreen(
                 value = selectedHistory,
                 onValueChange = { selectedHistory = it },
                 options = MentalHealthHistory.entries.map { it.displayName },
-                label = "Mental Health History",
+                label = stringResource(Res.string.settings_hi_history_label),
                 leadingIcon = Icons.Default.History,
                 enabled = !isSaving
             )
@@ -211,7 +214,7 @@ fun HealthInfoSettingsScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Current Treatment",
+                text = stringResource(Res.string.settings_hi_treatment_section),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -222,7 +225,7 @@ fun HealthInfoSettingsScreen(
             ExpressiveSwitch(
                 checked = inTherapy,
                 onCheckedChange = { inTherapy = it },
-                label = "Currently in therapy or counseling",
+                label = stringResource(Res.string.settings_hi_therapy_label),
                 icon = Icons.Default.Psychology,
                 enabled = !isSaving
             )
@@ -233,7 +236,7 @@ fun HealthInfoSettingsScreen(
             ExpressiveSwitch(
                 checked = takingMedication,
                 onCheckedChange = { takingMedication = it },
-                label = "Taking medication for mental health",
+                label = stringResource(Res.string.settings_hi_medication_label),
                 icon = Icons.Default.Medication,
                 enabled = !isSaving
             )
@@ -258,7 +261,7 @@ fun HealthInfoSettingsScreen(
                         tint = MaterialTheme.colorScheme.error
                     )
                     Text(
-                        text = "This app is not a substitute for professional medical advice, diagnosis, or treatment. If you're experiencing a mental health emergency, please contact emergency services immediately.",
+                        text = stringResource(Res.string.settings_hi_disclaimer),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )

@@ -54,6 +54,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.math.*
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
@@ -432,7 +435,7 @@ fun ChatInput(
                                             Box(contentAlignment = Alignment.Center) {
                                                 Icon(
                                                     imageVector = Icons.AutoMirrored.Filled.Send,
-                                                    contentDescription = "Invia",
+                                                    contentDescription = stringResource(Res.string.send),
                                                     modifier = Modifier.size(24.dp),
                                                     tint = MaterialTheme.colorScheme.onPrimary
                                                 )
@@ -467,7 +470,7 @@ fun ChatInput(
                                             Box(contentAlignment = Alignment.Center) {
                                                 Icon(
                                                     imageVector = Icons.Default.Mic,
-                                                    contentDescription = "Live Mode",
+                                                    contentDescription = stringResource(Res.string.chat_live_mode_cd),
                                                     modifier = Modifier.size(24.dp),
                                                     tint = MaterialTheme.colorScheme.onPrimaryContainer
                                                 )
@@ -494,7 +497,7 @@ fun ChatInput(
                             // Quick emotion buttons
                             QuickEmotionButton(
                                 icon = "😊",
-                                text = "Felice",
+                                text = stringResource(Res.string.chat_emotion_happy),
                                 onClick = {
                                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     onValueChange("Mi sento felice")
@@ -503,7 +506,7 @@ fun ChatInput(
 
                             QuickEmotionButton(
                                 icon = "💭",
-                                text = "Riflessivo",
+                                text = stringResource(Res.string.chat_emotion_reflective),
                                 onClick = {
                                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     onValueChange("Sto riflettendo su")
@@ -512,7 +515,7 @@ fun ChatInput(
 
                             QuickEmotionButton(
                                 icon = "💪",
-                                text = "Motivato",
+                                text = stringResource(Res.string.chat_emotion_motivated),
                                 onClick = {
                                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     onValueChange("Mi sento motivato")
@@ -610,7 +613,7 @@ private fun NaturalVoiceInputOverlay(
                     onClick = onDismiss,
                     shape = RoundedCornerShape(20.dp)
                 ) {
-                    Text("Annulla")
+                    Text(stringResource(Res.string.cancel))
                 }
 
                 if (transcribedText.isNotEmpty()) {
@@ -618,7 +621,7 @@ private fun NaturalVoiceInputOverlay(
                         onClick = onDismiss,
                         shape = RoundedCornerShape(20.dp)
                     ) {
-                        Text("Usa testo")
+                        Text(stringResource(Res.string.use_text))
                     }
                 }
             }
@@ -775,7 +778,7 @@ private fun StreamingIndicator(emotion: String) {
         Box(contentAlignment = Alignment.Center) {
             Icon(
                 imageVector = Icons.Default.AutoAwesome,
-                contentDescription = "Streaming",
+                contentDescription = stringResource(Res.string.chat_streaming_cd),
                 modifier = Modifier.size(24.dp),
                 tint = MaterialTheme.colorScheme.primary
             )
