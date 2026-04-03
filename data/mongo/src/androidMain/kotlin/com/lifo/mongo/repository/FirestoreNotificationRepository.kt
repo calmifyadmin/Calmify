@@ -11,6 +11,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import android.util.Log
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -51,7 +52,7 @@ class FirestoreNotificationRepository @Inject constructor(
             .limit(limit.toLong())
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    println("[$TAG] ERROR: Error getting notifications: ${error.message}")
+                    Log.e(TAG, "Error getting notifications: ${error.message}")
                     trySend(RequestState.Error(error))
                     return@addSnapshotListener
                 }
@@ -61,7 +62,7 @@ class FirestoreNotificationRepository @Inject constructor(
                         try {
                             docToNotification(doc)
                         } catch (e: Exception) {
-                            println("[$TAG] WARN: Skipping malformed notification ${doc.id}")
+                            Log.w(TAG, "Skipping malformed notification ${doc.id}")
                             null
                         }
                     }
@@ -83,7 +84,7 @@ class FirestoreNotificationRepository @Inject constructor(
             .whereEqualTo("isRead", false)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    println("[$TAG] WARN: Error getting unread count: ${error.message}")
+                    Log.w(TAG, "Error getting unread count: ${error.message}")
                     trySend(0)
                     return@addSnapshotListener
                 }
@@ -103,10 +104,10 @@ class FirestoreNotificationRepository @Inject constructor(
                 .update("isRead", true)
                 .await()
 
-            println("[$TAG] Notification $notificationId marked as read")
+            Log.d(TAG, "Notification $notificationId marked as read")
             RequestState.Success(true)
         } catch (e: Exception) {
-            println("[$TAG] ERROR: Error marking notification as read: ${e.message}")
+            Log.e(TAG, "Error marking notification as read: ${e.message}")
             RequestState.Error(e)
         }
     }
@@ -133,10 +134,10 @@ class FirestoreNotificationRepository @Inject constructor(
             }
             batch.commit().await()
 
-            println("[$TAG] Marked ${snapshot.size()} notifications as read for $userId")
+            Log.d(TAG, "Marked ${snapshot.size()} notifications as read for $userId")
             RequestState.Success(true)
         } catch (e: Exception) {
-            println("[$TAG] ERROR: Error marking all as read: ${e.message}")
+            Log.e(TAG, "Error marking all as read: ${e.message}")
             RequestState.Error(e)
         }
     }
@@ -165,7 +166,7 @@ class FirestoreNotificationRepository @Inject constructor(
             val docRef = notificationsCollection.add(data).await()
             RequestState.Success(docRef.id)
         } catch (e: Exception) {
-            println("[$TAG] ERROR: Error creating notification: ${e.message}")
+            Log.e(TAG, "Error creating notification: ${e.message}")
             RequestState.Error(e)
         }
     }

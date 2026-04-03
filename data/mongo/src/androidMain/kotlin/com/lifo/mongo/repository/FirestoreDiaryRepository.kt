@@ -1,5 +1,6 @@
 package com.lifo.mongo.repository
 
+import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.lifo.util.repository.MongoRepository
 import com.google.firebase.firestore.FirebaseFirestore
@@ -51,7 +52,7 @@ class FirestoreDiaryRepository @Inject constructor(
             .orderBy("date", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    println("[" + TAG + "] ERROR: " + "Error getting diaries")
+                    Log.e(TAG, "Error getting diaries", error)
                     trySend(RequestState.Error(error))
                     return@addSnapshotListener
                 }
@@ -72,7 +73,7 @@ class FirestoreDiaryRepository @Inject constructor(
 
                         trySend(RequestState.Success(grouped))
                     } catch (e: Exception) {
-                        println("[" + TAG + "] ERROR: " + "Error parsing diaries")
+                        Log.e(TAG, "Error parsing diaries", e)
                         trySend(RequestState.Error(e))
                     }
                 }
@@ -101,7 +102,7 @@ class FirestoreDiaryRepository @Inject constructor(
             .whereEqualTo("dayKey", dayKey) // Use dayKey for filtering (timezone-safe)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    println("[" + TAG + "] ERROR: " + "Error getting filtered diaries")
+                    Log.e(TAG, "Error getting filtered diaries", error)
                     trySend(RequestState.Error(error))
                     return@addSnapshotListener
                 }
@@ -122,7 +123,7 @@ class FirestoreDiaryRepository @Inject constructor(
 
                         trySend(RequestState.Success(grouped))
                     } catch (e: Exception) {
-                        println("[" + TAG + "] ERROR: " + "Error parsing filtered diaries")
+                        Log.e(TAG, "Error parsing filtered diaries", e)
                         trySend(RequestState.Error(e))
                     }
                 }
@@ -149,7 +150,7 @@ class FirestoreDiaryRepository @Inject constructor(
             .document(diaryId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    println("[" + TAG + "] ERROR: " + "Error getting diary")
+                    Log.e(TAG, "Error getting diary", error)
                     trySend(RequestState.Error(error))
                     return@addSnapshotListener
                 }
@@ -163,7 +164,7 @@ class FirestoreDiaryRepository @Inject constructor(
                             trySend(RequestState.Error(Exception("Diary not found or access denied")))
                         }
                     } catch (e: Exception) {
-                        println("[" + TAG + "] ERROR: " + "Error parsing diary")
+                        Log.e(TAG, "Error parsing diary", e)
                         trySend(RequestState.Error(e))
                     }
                 } else {
@@ -184,7 +185,7 @@ class FirestoreDiaryRepository @Inject constructor(
             ?: return RequestState.Error(UserNotAuthenticatedException())
 
         return try {
-            println("[" + TAG + "] " + "Inserting diary: ${diary.title}")
+            Log.d(TAG, "Inserting diary: ${diary.title}")
 
             // Imposta owner
             diary.ownerId = userId
@@ -196,10 +197,10 @@ class FirestoreDiaryRepository @Inject constructor(
             // Salva
             docRef.set(diary.toFirestoreMap()).await()
 
-            println("[" + TAG + "] " + "Diary inserted successfully: ${diary._id}")
+            Log.d(TAG, "Diary inserted successfully: ${diary._id}")
             RequestState.Success(diary)
         } catch (e: Exception) {
-            println("[" + TAG + "] ERROR: " + "Error inserting diary")
+            Log.e(TAG, "Error inserting diary", e)
             RequestState.Error(e)
         }
     }
@@ -212,7 +213,7 @@ class FirestoreDiaryRepository @Inject constructor(
             ?: return RequestState.Error(UserNotAuthenticatedException())
 
         return try {
-            println("[" + TAG + "] " + "Updating diary: ${diary._id}")
+            Log.d(TAG, "Updating diary: ${diary._id}")
 
             // Verifica ownership
             if (diary.ownerId != userId) {
@@ -225,10 +226,10 @@ class FirestoreDiaryRepository @Inject constructor(
                 .set(diary.toFirestoreMap())
                 .await()
 
-            println("[" + TAG + "] " + "Diary updated successfully")
+            Log.d(TAG, "Diary updated successfully")
             RequestState.Success(diary)
         } catch (e: Exception) {
-            println("[" + TAG + "] ERROR: " + "Error updating diary")
+            Log.e(TAG, "Error updating diary", e)
             RequestState.Error(e)
         }
     }
@@ -241,7 +242,7 @@ class FirestoreDiaryRepository @Inject constructor(
             ?: return RequestState.Error(UserNotAuthenticatedException())
 
         return try {
-            println("[" + TAG + "] " + "Deleting diary: $id")
+            Log.d(TAG, "Deleting diary: $id")
 
             // Verifica ownership prima di eliminare
             val doc = firestore.collection(COLLECTION_DIARIES).document(id).get().await()
@@ -254,10 +255,10 @@ class FirestoreDiaryRepository @Inject constructor(
             // Elimina
             firestore.collection(COLLECTION_DIARIES).document(id).delete().await()
 
-            println("[" + TAG + "] " + "Diary deleted successfully")
+            Log.d(TAG, "Diary deleted successfully")
             RequestState.Success(true)
         } catch (e: Exception) {
-            println("[" + TAG + "] ERROR: " + "Error deleting diary")
+            Log.e(TAG, "Error deleting diary", e)
             RequestState.Error(e)
         }
     }
@@ -270,7 +271,7 @@ class FirestoreDiaryRepository @Inject constructor(
             ?: return RequestState.Error(UserNotAuthenticatedException())
 
         return try {
-            println("[" + TAG + "] " + "Deleting all diaries for user: $userId")
+            Log.d(TAG, "Deleting all diaries for user: $userId")
 
             // Ottieni tutti i documenti
             val snapshot = firestore.collection(COLLECTION_DIARIES)
@@ -278,7 +279,7 @@ class FirestoreDiaryRepository @Inject constructor(
                 .get()
                 .await()
 
-            println("[" + TAG + "] " + "Found ${snapshot.size()} diaries to delete")
+            Log.d(TAG, "Found ${snapshot.size()} diaries to delete")
 
             // Elimina in batch (max 500 per batch)
             val batch = firestore.batch()
@@ -287,10 +288,10 @@ class FirestoreDiaryRepository @Inject constructor(
             }
             batch.commit().await()
 
-            println("[" + TAG + "] " + "All diaries deleted successfully")
+            Log.d(TAG, "All diaries deleted successfully")
             RequestState.Success(true)
         } catch (e: Exception) {
-            println("[" + TAG + "] ERROR: " + "Error deleting all diaries")
+            Log.e(TAG, "Error deleting all diaries", e)
             RequestState.Error(e)
         }
     }
@@ -305,7 +306,7 @@ class FirestoreDiaryRepository @Inject constructor(
             ?: return RequestState.Error(UserNotAuthenticatedException())
 
         return try {
-            println("[" + TAG + "] " + "Deleting ALL data for user: $userId")
+            Log.d(TAG, "Deleting ALL data for user: $userId")
 
             // Collections to delete (with ownerId field)
             val collections = listOf(
@@ -327,7 +328,7 @@ class FirestoreDiaryRepository @Inject constructor(
                         .get()
                         .await()
 
-                    println("[" + TAG + "] " + "Found ${snapshot.size()} documents in $collectionName")
+                    Log.d(TAG, "Found ${snapshot.size()} documents in $collectionName")
 
                     if (snapshot.size() > 0) {
                         val batch = firestore.batch()
@@ -338,7 +339,7 @@ class FirestoreDiaryRepository @Inject constructor(
                         totalDeleted += snapshot.size()
                     }
                 } catch (e: Exception) {
-                    println("[" + TAG + "] WARN: " + "Error deleting from $collectionName: ${e.message}")
+                    Log.w(TAG, "Error deleting from $collectionName: ${e.message}")
                     // Continue with other collections even if one fails
                 }
             }
@@ -353,10 +354,10 @@ class FirestoreDiaryRepository @Inject constructor(
                 if (profileSettingsDoc.exists()) {
                     profileSettingsDoc.reference.delete().await()
                     totalDeleted++
-                    println("[" + TAG + "] " + "Deleted profile_settings document")
+                    Log.d(TAG, "Deleted profile_settings document")
                 }
             } catch (e: Exception) {
-                println("[" + TAG + "] WARN: " + "Error deleting profile_settings: ${e.message}")
+                Log.w(TAG, "Error deleting profile_settings: ${e.message}")
                 // Continue even if this fails
             }
 
@@ -370,17 +371,17 @@ class FirestoreDiaryRepository @Inject constructor(
                 if (usersDoc.exists()) {
                     usersDoc.reference.delete().await()
                     totalDeleted++
-                    println("[" + TAG + "] " + "Deleted users document (FCM token)")
+                    Log.d(TAG, "Deleted users document (FCM token)")
                 }
             } catch (e: Exception) {
-                println("[" + TAG + "] WARN: " + "Error deleting users document: ${e.message}")
+                Log.w(TAG, "Error deleting users document: ${e.message}")
                 // Continue even if this fails
             }
 
-            println("[" + TAG + "] " + "All user data deleted successfully. Total: $totalDeleted documents")
+            Log.d(TAG, "All user data deleted successfully. Total: $totalDeleted documents")
             RequestState.Success(true)
         } catch (e: Exception) {
-            println("[" + TAG + "] ERROR: " + "Error deleting all user data")
+            Log.e(TAG, "Error deleting all user data", e)
             RequestState.Error(e)
         }
     }
@@ -392,11 +393,11 @@ class FirestoreDiaryRepository @Inject constructor(
         return try {
             val userId = currentUserId
             if (userId == null) {
-                println("[" + TAG + "] WARN: " + "Cannot save FCM token: user not authenticated")
+                Log.w(TAG, "Cannot save FCM token: user not authenticated")
                 return RequestState.Error(UserNotAuthenticatedException())
             }
 
-            println("[" + TAG + "] " + "Saving FCM token for user: $userId")
+            Log.d(TAG, "Saving FCM token for user: $userId")
 
             // Salva in Firestore users collection
             firestore.collection("users")
@@ -404,10 +405,10 @@ class FirestoreDiaryRepository @Inject constructor(
                 .set(mapOf("fcmToken" to token), com.google.firebase.firestore.SetOptions.merge())
                 .await()
 
-            println("[" + TAG + "] " + "FCM token saved successfully")
+            Log.d(TAG, "FCM token saved successfully")
             RequestState.Success(true)
         } catch (e: Exception) {
-            println("[" + TAG + "] ERROR: " + "Error saving FCM token")
+            Log.e(TAG, "Error saving FCM token", e)
             RequestState.Error(e)
         }
     }

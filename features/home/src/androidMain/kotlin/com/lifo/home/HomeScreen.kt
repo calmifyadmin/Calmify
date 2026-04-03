@@ -19,7 +19,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavHostController
 import com.lifo.home.components.*
 import com.lifo.util.repository.Diaries
 import com.lifo.ui.components.CalmifyTopBar
@@ -40,7 +39,6 @@ sealed class HomeScreenState {
 @Composable
 internal fun HomeScreen(
     diaries: Diaries,
-    navController: NavHostController? = null,
     drawerState: DrawerState,
     onMenuClicked: () -> Unit,
     onSignOutClicked: () -> Unit,

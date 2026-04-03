@@ -1,5 +1,6 @@
 package com.lifo.mongo.repository
 
+import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.lifo.util.model.ProfileSettings
@@ -43,7 +44,7 @@ class FirestoreProfileSettingsRepository @Inject constructor(
             .document(userId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    println("[" + TAG + "] ERROR: " + "Error getting profile settings")
+                    Log.e(TAG, "Error getting profile settings", error)
                     trySend(RequestState.Error(error))
                     return@addSnapshotListener
                 }
@@ -53,7 +54,7 @@ class FirestoreProfileSettingsRepository @Inject constructor(
                         val settings = snapshot.toProfileSettings()
                         trySend(RequestState.Success(settings))
                     } catch (e: Exception) {
-                        println("[" + TAG + "] ERROR: " + "Error parsing profile settings")
+                        Log.e(TAG, "Error parsing profile settings", e)
                         trySend(RequestState.Error(e))
                     }
                 } else {
@@ -71,11 +72,11 @@ class FirestoreProfileSettingsRepository @Inject constructor(
         return try {
             val userId = currentUserId
             if (userId == null) {
-                println("[" + TAG + "] WARN: " + "Cannot save profile settings: user not authenticated")
+                Log.w(TAG, "Cannot save profile settings: user not authenticated")
                 return RequestState.Error(UserNotAuthenticatedException())
             }
 
-            println("[" + TAG + "] " + "Saving profile settings for user: $userId")
+            Log.d(TAG, "Saving profile settings for user: $userId")
 
             // Set document ID to userId
             val settingsToSave = settings.copy(
@@ -89,10 +90,10 @@ class FirestoreProfileSettingsRepository @Inject constructor(
                 .set(settingsToSave.toFirestoreMap())
                 .await()
 
-            println("[" + TAG + "] " + "Profile settings saved successfully")
+            Log.d(TAG, "Profile settings saved successfully")
             RequestState.Success(true)
         } catch (e: Exception) {
-            println("[" + TAG + "] ERROR: " + "Error saving profile settings")
+            Log.e(TAG, "Error saving profile settings", e)
             RequestState.Error(e)
         }
     }
@@ -116,14 +117,14 @@ class FirestoreProfileSettingsRepository @Inject constructor(
                 RequestState.Success(false)
             }
         } catch (e: Exception) {
-            println("[" + TAG + "] ERROR: " + "Error checking onboarding status")
+            Log.e(TAG, "Error checking onboarding status", e)
             RequestState.Error(e)
         }
     }
 
     override suspend fun getProfileSettings(userId: String): RequestState<ProfileSettings?> {
         return try {
-            println("[" + TAG + "] " + "Getting profile settings for user: $userId")
+            Log.d(TAG, "Getting profile settings for user: $userId")
 
             val doc = firestore.collection(COLLECTION_PROFILE_SETTINGS)
                 .document(userId)
@@ -132,31 +133,31 @@ class FirestoreProfileSettingsRepository @Inject constructor(
 
             if (doc.exists()) {
                 val settings = doc.toProfileSettings()
-                println("[" + TAG + "] " + "Profile settings retrieved successfully")
+                Log.d(TAG, "Profile settings retrieved successfully")
                 RequestState.Success(settings)
             } else {
-                println("[" + TAG + "] " + "No profile settings found for user")
+                Log.d(TAG, "No profile settings found for user")
                 RequestState.Success(null)
             }
         } catch (e: Exception) {
-            println("[" + TAG + "] ERROR: " + "Error getting profile settings")
+            Log.e(TAG, "Error getting profile settings", e)
             RequestState.Error(e)
         }
     }
 
     override suspend fun deleteProfileSettings(userId: String): RequestState<Boolean> {
         return try {
-            println("[" + TAG + "] " + "Deleting profile settings for user: $userId")
+            Log.d(TAG, "Deleting profile settings for user: $userId")
 
             firestore.collection(COLLECTION_PROFILE_SETTINGS)
                 .document(userId)
                 .delete()
                 .await()
 
-            println("[" + TAG + "] " + "Profile settings deleted successfully")
+            Log.d(TAG, "Profile settings deleted successfully")
             RequestState.Success(true)
         } catch (e: Exception) {
-            println("[" + TAG + "] ERROR: " + "Error deleting profile settings")
+            Log.e(TAG, "Error deleting profile settings", e)
             RequestState.Error(e)
         }
     }
@@ -173,10 +174,10 @@ class FirestoreProfileSettingsRepository @Inject constructor(
                 .update("isOnboardingCompleted", true)
                 .await()
 
-            println("[" + TAG + "] " + "Onboarding marked as completed")
+            Log.d(TAG, "Onboarding marked as completed")
             RequestState.Success(true)
         } catch (e: Exception) {
-            println("[" + TAG + "] ERROR: " + "Error completing onboarding")
+            Log.e(TAG, "Error completing onboarding", e)
             RequestState.Error(e)
         }
     }

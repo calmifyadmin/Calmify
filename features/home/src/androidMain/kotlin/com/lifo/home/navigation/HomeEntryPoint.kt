@@ -75,7 +75,6 @@ fun HomeRouteContent(
 
     HomeScreen(
         diaries = diaries,
-        navController = null,
         drawerState = drawerState,
         onMenuClicked = {
             scope.launch {

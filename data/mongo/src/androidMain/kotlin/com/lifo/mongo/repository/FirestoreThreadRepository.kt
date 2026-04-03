@@ -11,6 +11,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import android.util.Log
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -50,7 +51,7 @@ class FirestoreThreadRepository @Inject constructor(
             .document(threadId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    println("[$TAG] ERROR: Error getting thread $threadId: ${error.message}")
+                    Log.e(TAG, "Error getting thread $threadId: ${error.message}")
                     trySend(RequestState.Error(error))
                     return@addSnapshotListener
                 }
@@ -60,7 +61,7 @@ class FirestoreThreadRepository @Inject constructor(
                         val thread = snapshotToThread(snapshot)
                         trySend(RequestState.Success(thread))
                     } catch (e: Exception) {
-                        println("[$TAG] ERROR: Error parsing thread: ${e.message}")
+                        Log.e(TAG, "Error parsing thread: ${e.message}")
                         trySend(RequestState.Error(e))
                     }
                 } else {
@@ -80,7 +81,7 @@ class FirestoreThreadRepository @Inject constructor(
             .limit(limit.toLong())
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    println("[$TAG] ERROR: Error getting threads by author: ${error.message}")
+                    Log.e(TAG, "Error getting threads by author: ${error.message}")
                     trySend(RequestState.Error(error))
                     return@addSnapshotListener
                 }
@@ -90,7 +91,7 @@ class FirestoreThreadRepository @Inject constructor(
                         try {
                             snapshotToThread(doc)
                         } catch (e: Exception) {
-                            println("[$TAG] WARN: Skipping malformed thread doc ${doc.id}")
+                            Log.w(TAG, "Skipping malformed thread doc ${doc.id}")
                             null
                         }
                     }
@@ -111,7 +112,7 @@ class FirestoreThreadRepository @Inject constructor(
             .orderBy("createdAt", Query.Direction.ASCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    println("[$TAG] ERROR: Error getting replies: ${error.message}")
+                    Log.e(TAG, "Error getting replies: ${error.message}")
                     trySend(RequestState.Error(error))
                     return@addSnapshotListener
                 }
@@ -167,10 +168,10 @@ class FirestoreThreadRepository @Inject constructor(
                 }
             }
 
-            println("[$TAG] Thread created: ${docRef.id}")
+            Log.d(TAG, "Thread created: ${docRef.id}")
             RequestState.Success(docRef.id)
         } catch (e: Exception) {
-            println("[$TAG] ERROR: Error creating thread: ${e.message}")
+            Log.e(TAG, "Error creating thread: ${e.message}")
             RequestState.Error(e)
         }
     }
@@ -194,10 +195,10 @@ class FirestoreThreadRepository @Inject constructor(
 
             threadsCollection.document(threadId).delete().await()
 
-            println("[$TAG] Thread deleted: $threadId")
+            Log.d(TAG, "Thread deleted: $threadId")
             RequestState.Success(true)
         } catch (e: Exception) {
-            println("[$TAG] ERROR: Error deleting thread: ${e.message}")
+            Log.e(TAG, "Error deleting thread: ${e.message}")
             RequestState.Error(e)
         }
     }
@@ -220,7 +221,7 @@ class FirestoreThreadRepository @Inject constructor(
             batch.update(threadsCollection.document(threadId), "likeCount", FieldValue.increment(1))
             batch.commit().await()
 
-            println("[$TAG] Thread $threadId liked by $userId")
+            Log.d(TAG, "Thread $threadId liked by $userId")
 
             // Send like notification to thread author
             val threadDoc = threadsCollection.document(threadId).get().await()
@@ -237,7 +238,7 @@ class FirestoreThreadRepository @Inject constructor(
 
             RequestState.Success(true)
         } catch (e: Exception) {
-            println("[$TAG] ERROR: Error liking thread: ${e.message}")
+            Log.e(TAG, "Error liking thread: ${e.message}")
             RequestState.Error(e)
         }
     }
@@ -259,10 +260,10 @@ class FirestoreThreadRepository @Inject constructor(
             batch.update(threadsCollection.document(threadId), "likeCount", FieldValue.increment(-1))
             batch.commit().await()
 
-            println("[$TAG] Thread $threadId unliked by $userId")
+            Log.d(TAG, "Thread $threadId unliked by $userId")
             RequestState.Success(true)
         } catch (e: Exception) {
-            println("[$TAG] ERROR: Error unliking thread: ${e.message}")
+            Log.e(TAG, "Error unliking thread: ${e.message}")
             RequestState.Error(e)
         }
     }
@@ -276,7 +277,7 @@ class FirestoreThreadRepository @Inject constructor(
                 .await()
             likeDoc.exists()
         } catch (e: Exception) {
-            println("[$TAG] WARN: Error checking like status: ${e.message}")
+            Log.w(TAG, "Error checking like status: ${e.message}")
             false
         }
     }
@@ -348,7 +349,7 @@ class FirestoreThreadRepository @Inject constructor(
             )
             notificationsCollection.add(data).await()
         } catch (e: Exception) {
-            println("[$TAG] WARN: Failed to create notification: ${e.message}")
+            Log.w(TAG, "Failed to create notification: ${e.message}")
         }
     }
 

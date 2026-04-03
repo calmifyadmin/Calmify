@@ -11,6 +11,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import android.util.Log
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -56,7 +57,7 @@ class FirestoreSocialMessagingRepository @Inject constructor(
             .orderBy("lastMessageAt", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    println("[$TAG] ERROR: Error getting conversations: ${error.message}")
+                    Log.e(TAG, "Error getting conversations: ${error.message}")
                     trySend(RequestState.Error(error))
                     return@addSnapshotListener
                 }
@@ -66,7 +67,7 @@ class FirestoreSocialMessagingRepository @Inject constructor(
                         try {
                             docToConversation(doc, userId)
                         } catch (e: Exception) {
-                            println("[$TAG] WARN: Skipping malformed conversation ${doc.id}")
+                            Log.w(TAG, "Skipping malformed conversation ${doc.id}")
                             null
                         }
                     }
@@ -91,7 +92,7 @@ class FirestoreSocialMessagingRepository @Inject constructor(
             .limit(limit.toLong())
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    println("[$TAG] ERROR: Error getting messages: ${error.message}")
+                    Log.e(TAG, "Error getting messages: ${error.message}")
                     trySend(RequestState.Error(error))
                     return@addSnapshotListener
                 }
@@ -146,10 +147,10 @@ class FirestoreSocialMessagingRepository @Inject constructor(
             // Clear typing indicator
             setTyping(conversationId, currentUserId, false)
 
-            println("[$TAG] Message sent in conversation $conversationId")
+            Log.d(TAG, "Message sent in conversation $conversationId")
             RequestState.Success(messageRef.id)
         } catch (e: Exception) {
-            println("[$TAG] ERROR: Error sending message: ${e.message}")
+            Log.e(TAG, "Error sending message: ${e.message}")
             RequestState.Error(e)
         }
     }
@@ -181,7 +182,7 @@ class FirestoreSocialMessagingRepository @Inject constructor(
                 }
 
                 if (existingConvo != null) {
-                    println("[$TAG] Existing conversation found: ${existingConvo.id}")
+                    Log.d(TAG, "Existing conversation found: ${existingConvo.id}")
                     return RequestState.Success(existingConvo.id)
                 }
             }
@@ -196,10 +197,10 @@ class FirestoreSocialMessagingRepository @Inject constructor(
             )
             docRef.set(conversationData).await()
 
-            println("[$TAG] Conversation created: ${docRef.id}")
+            Log.d(TAG, "Conversation created: ${docRef.id}")
             RequestState.Success(docRef.id)
         } catch (e: Exception) {
-            println("[$TAG] ERROR: Error creating conversation: ${e.message}")
+            Log.e(TAG, "Error creating conversation: ${e.message}")
             RequestState.Error(e)
         }
     }
@@ -233,10 +234,10 @@ class FirestoreSocialMessagingRepository @Inject constructor(
                 batch.commit().await()
             }
 
-            println("[$TAG] Marked $count messages as read in $conversationId")
+            Log.d(TAG, "Marked $count messages as read in $conversationId")
             RequestState.Success(true)
         } catch (e: Exception) {
-            println("[$TAG] ERROR: Error marking conversation read: ${e.message}")
+            Log.e(TAG, "Error marking conversation read: ${e.message}")
             RequestState.Error(e)
         }
     }
@@ -285,7 +286,7 @@ class FirestoreSocialMessagingRepository @Inject constructor(
             }
         } catch (e: Exception) {
             // Typing indicator failure is non-critical, don't propagate
-            println("[$TAG] WARN: Error setting typing status: ${e.message}")
+            Log.w(TAG, "Error setting typing status: ${e.message}")
         }
     }
 
