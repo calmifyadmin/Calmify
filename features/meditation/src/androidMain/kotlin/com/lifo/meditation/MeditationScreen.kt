@@ -114,6 +114,40 @@ fun MeditationScreen(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SetupContent(state: MeditationContract.State, onIntent: (MeditationContract.Intent) -> Unit) {
+    if (state.errorMessage != null) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ErrorOutline,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.error
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = state.errorMessage,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Button(
+                    onClick = { onIntent(MeditationContract.Intent.RetryLoadStats) },
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+                    Text("Riprova")
+                }
+            }
+        }
+        return
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()

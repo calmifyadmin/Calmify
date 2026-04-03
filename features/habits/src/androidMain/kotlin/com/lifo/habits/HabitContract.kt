@@ -13,6 +13,7 @@ object HabitContract {
         data object ShowAddDialog : Intent
         data object DismissAddDialog : Intent
         data class SaveNewHabit(val habit: Habit) : Intent
+        data object RetryLoad : Intent
     }
 
     data class State(
@@ -22,6 +23,7 @@ object HabitContract {
         val completionHistory: List<HabitCompletion> = emptyList(), // last 90 days, all habits
         val isLoading: Boolean = true,
         val showAddDialog: Boolean = false,
+        val errorMessage: String? = null,
     ) : MviContract.State
 
     sealed interface Effect : MviContract.Effect {

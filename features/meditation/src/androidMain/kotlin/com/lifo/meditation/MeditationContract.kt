@@ -26,6 +26,7 @@ object MeditationContract {
 
         // Stats
         data object LoadStats : Intent
+        data object RetryLoadStats : Intent
     }
 
     data class State(
@@ -52,6 +53,7 @@ object MeditationContract {
         val recentSessions: List<MeditationSession> = emptyList(),
 
         val isLoading: Boolean = false,
+        val errorMessage: String? = null,
     ) : MviContract.State
 
     enum class SessionPhase { SETUP, ACTIVE, COMPLETED }

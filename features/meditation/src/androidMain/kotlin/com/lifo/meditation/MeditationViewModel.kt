@@ -43,6 +43,10 @@ class MeditationViewModel(
             }
 
             is MeditationContract.Intent.LoadStats -> loadStats()
+            is MeditationContract.Intent.RetryLoadStats -> {
+                updateState { copy(errorMessage = null) }
+                loadStats()
+            }
         }
     }
 
@@ -182,13 +186,21 @@ class MeditationViewModel(
     private fun loadStats() {
         val userId = authProvider.currentUserId ?: return
         scope.launch {
-            val totalMin = repository.getTotalMinutes(userId)
-            val count = repository.getSessionCount(userId)
-            updateState { copy(totalMinutes = totalMin, sessionCount = count) }
+            try {
+                val totalMin = repository.getTotalMinutes(userId)
+                val count = repository.getSessionCount(userId)
+                updateState { copy(totalMinutes = totalMin, sessionCount = count, errorMessage = null) }
+            } catch (e: Exception) {
+                updateState { copy(errorMessage = "Impossibile caricare i dati. Verifica la connessione.") }
+            }
         }
         scope.launch {
-            repository.getRecentSessions(userId).collect { sessions ->
-                updateState { copy(recentSessions = sessions) }
+            try {
+                repository.getRecentSessions(userId).collect { sessions ->
+                    updateState { copy(recentSessions = sessions) }
+                }
+            } catch (e: Exception) {
+                updateState { copy(errorMessage = "Impossibile caricare i dati. Verifica la connessione.") }
             }
         }
     }
