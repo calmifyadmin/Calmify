@@ -10,6 +10,7 @@ import com.lifo.util.repository.ThreadRepository.Thread
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
+import android.util.Log
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -81,7 +82,7 @@ class FirestoreSearchRepository @Inject constructor(
 
             emit(RequestState.Success(matchingThreads))
         } catch (e: Exception) {
-            println("[$TAG] ERROR: Error searching threads: ${e.message}")
+            Log.e(TAG, "Error searching threads: ${e.message}")
             emit(RequestState.Error(e))
         }
     }
@@ -121,7 +122,7 @@ class FirestoreSearchRepository @Inject constructor(
 
             emit(RequestState.Success(users))
         } catch (e: Exception) {
-            println("[$TAG] ERROR: Error searching users: ${e.message}")
+            Log.e(TAG, "Error searching users: ${e.message}")
             emit(RequestState.Error(e))
         }
     }
@@ -133,7 +134,7 @@ class FirestoreSearchRepository @Inject constructor(
     override fun semanticSearch(query: String, limit: Int): Flow<RequestState<List<Thread>>> {
         // MVP: Delegate to keyword search. Same results.
         // Production: Generate embedding via Vertex AI, query Vector Search index
-        println("[$TAG] semanticSearch called — falling back to keyword search (MVP)")
+        Log.d(TAG, "semanticSearch called — falling back to keyword search (MVP)")
         return searchThreads(query, limit)
     }
 

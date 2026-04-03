@@ -1,5 +1,6 @@
 package com.lifo.mongo.repository
 
+import android.util.Log
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
 import app.cash.sqldelight.coroutines.mapToOneOrNull
@@ -92,7 +93,7 @@ class ChatRepositoryImpl(
                     RequestState.Error(Exception("Session not found"))
                 }
             } catch (e: Exception) {
-                println("[" + TAG + "] ERROR: " + "Error getting session")
+                Log.e(TAG, "Error getting session", e)
                 RequestState.Error(e)
             }
         }
@@ -125,7 +126,7 @@ class ChatRepositoryImpl(
                 )
                 RequestState.Success(session)
             } catch (e: Exception) {
-                println("[" + TAG + "] ERROR: " + "Error creating session")
+                Log.e(TAG, "Error creating session", e)
                 RequestState.Error(e)
             }
         }
@@ -149,7 +150,7 @@ class ChatRepositoryImpl(
                 )
                 RequestState.Success(Unit)
             } catch (e: Exception) {
-                println("[" + TAG + "] ERROR: " + "Error updating session")
+                Log.e(TAG, "Error updating session", e)
                 RequestState.Error(e)
             }
         }
@@ -162,7 +163,7 @@ class ChatRepositoryImpl(
                 chatSessionQueries.deleteSession(sessionId, currentUserId)
                 RequestState.Success(true)
             } catch (e: Exception) {
-                println("[" + TAG + "] ERROR: " + "Error deleting session")
+                Log.e(TAG, "Error deleting session", e)
                 RequestState.Error(e)
             }
         }
@@ -178,7 +179,7 @@ class ChatRepositoryImpl(
                 }
                 RequestState.Success(true)
             } catch (e: Exception) {
-                println("[" + TAG + "] ERROR: " + "Error deleting all sessions")
+                Log.e(TAG, "Error deleting all sessions", e)
                 RequestState.Error(e)
             }
         }
@@ -221,7 +222,7 @@ class ChatRepositoryImpl(
                 )
                 RequestState.Success(message)
             } catch (e: Exception) {
-                println("[" + TAG + "] ERROR: " + "Error sending message")
+                Log.e(TAG, "Error sending message", e)
                 RequestState.Error(e)
             }
         }
@@ -238,7 +239,7 @@ class ChatRepositoryImpl(
     ): RequestState<ChatMessage> {
         return withContext(Dispatchers.IO) {
             try {
-                println("[" + TAG + "] " + "💬 Saving Live message: ${content.take(50)}... (user: $isUser)")
+                Log.d(TAG, "Saving Live message: ${content.take(50)}... (user: $isUser)")
 
                 // Crea o aggiorna la sessione se necessario
                 ensureLiveSession(sessionId)
@@ -265,10 +266,10 @@ class ChatRepositoryImpl(
                     id = sessionId
                 )
 
-                println("[" + TAG + "] " + "✅ Live message saved successfully")
+                Log.d(TAG, "Live message saved successfully")
                 RequestState.Success(message)
             } catch (e: Exception) {
-                println("[" + TAG + "] ERROR: " + "❌ Error saving Live message")
+                Log.e(TAG, "Error saving Live message", e)
                 RequestState.Error(e)
             }
         }
@@ -283,7 +284,7 @@ class ChatRepositoryImpl(
                 .executeAsOneOrNull()
 
             if (existingSession == null) {
-                println("[" + TAG + "] " + "📱 Creating new Live session: $sessionId")
+                Log.d(TAG, "Creating new Live session: $sessionId")
 
                 val liveSession = ChatSession(
                     id = sessionId,
@@ -308,7 +309,7 @@ class ChatRepositoryImpl(
                     mood = null,
                     isLiveMode = 1L
                 )
-                println("[" + TAG + "] " + "✅ Live session created: ${liveSession.title}")
+                Log.d(TAG, "Live session created: ${liveSession.title}")
             } else {
                 // Aggiorna solo il timestamp dell'ultima attività
                 chatSessionQueries.updateLastMessage(
@@ -317,7 +318,7 @@ class ChatRepositoryImpl(
                 )
             }
         } catch (e: Exception) {
-            println("[" + TAG + "] ERROR: " + "❌ Error ensuring Live session")
+            Log.e(TAG, "Error ensuring Live session", e)
         }
     }
 
@@ -327,7 +328,7 @@ class ChatRepositoryImpl(
                 chatMessageQueries.deleteMessage(messageId)
                 RequestState.Success(true)
             } catch (e: Exception) {
-                println("[" + TAG + "] ERROR: " + "Error deleting message")
+                Log.e(TAG, "Error deleting message", e)
                 RequestState.Error(e)
             }
         }
@@ -357,7 +358,7 @@ class ChatRepositoryImpl(
 
                 RequestState.Success(message.copy(status = MessageStatus.SENT))
             } catch (e: Exception) {
-                println("[" + TAG + "] ERROR: " + "Error retrying message")
+                Log.e(TAG, "Error retrying message", e)
                 RequestState.Error(e)
             }
         }
@@ -369,11 +370,11 @@ class ChatRepositoryImpl(
         context: List<ChatMessage>
     ): Flow<RequestState<String>> = flow {
         try {
-            println("[" + TAG + "] " + "Starting AI response generation with diary context")
+            Log.d(TAG, "Starting AI response generation with diary context")
 
             // Recupera il contesto del diario
             val diaryContext = getDiaryContext()
-            println("[" + TAG + "] " + "Retrieved ${diaryContext.size} diary entries for context")
+            Log.d(TAG, "Retrieved ${diaryContext.size} diary entries for context")
 
             val userProfile = analyzeUserProfile(diaryContext)
             val currentMood = detectCurrentMood(diaryContext)
@@ -382,10 +383,10 @@ class ChatRepositoryImpl(
             val recentInsights = getRecentInsights()
             val insightContext = buildInsightContext(recentInsights)
 
-            println("[" + TAG + "] " + "User profile: $userProfile")
-            println("[" + TAG + "] " + "Current mood: $currentMood")
-            println("[" + TAG + "] " + "Themes: $recurringThemes")
-            println("[" + TAG + "] " + "AI insights: ${recentInsights.size} entries")
+            Log.d(TAG, "User profile: $userProfile")
+            Log.d(TAG, "Current mood: $currentMood")
+            Log.d(TAG, "Themes: $recurringThemes")
+            Log.d(TAG, "AI insights: ${recentInsights.size} entries")
 
             val prompt = buildPersonalizedPrompt(
                 userMessage = userMessage,
@@ -414,12 +415,12 @@ class ChatRepositoryImpl(
                 }
 
             } catch (e: Exception) {
-                println("[" + TAG + "] ERROR: " + "Error during AI generation")
+                Log.e(TAG, "Error during AI generation", e)
                 emit(RequestState.Error(e))
             }
 
         } catch (e: Exception) {
-            println("[" + TAG + "] ERROR: " + "Error generating AI response")
+            Log.e(TAG, "Error generating AI response", e)
             emit(RequestState.Error(e))
         }
     }.flowOn(Dispatchers.IO)
@@ -446,10 +447,10 @@ class ChatRepositoryImpl(
                     lastMessageAt = Clock.System.now().toEpochMilliseconds(),
                     id = sessionId
                 )
-                println("[" + TAG + "] " + "AI message saved")
+                Log.d(TAG, "AI message saved")
                 RequestState.Success(message)
             } catch (e: Exception) {
-                println("[" + TAG + "] ERROR: " + "Error saving AI message")
+                Log.e(TAG, "Error saving AI message", e)
                 RequestState.Error(e)
             }
         }
@@ -472,7 +473,7 @@ class ChatRepositoryImpl(
                 val diaryContent = buildEnhancedDiaryContent(session, messages)
                 RequestState.Success(diaryContent)
             } catch (e: Exception) {
-                println("[" + TAG + "] ERROR: " + "Error exporting session")
+                Log.e(TAG, "Error exporting session", e)
                 RequestState.Error(e)
             }
         }
@@ -496,22 +497,22 @@ class ChatRepositoryImpl(
                             .sortedByDescending { it.dateMillis }
                             .take(MAX_DIARY_ENTRIES)
 
-                        println("[" + TAG + "] " + "Found ${diaries.size} diary entries in the last $DIARY_CONTEXT_DAYS days")
+                        Log.d(TAG, "Found ${diaries.size} diary entries in the last $DIARY_CONTEXT_DAYS days")
 
                         diaries.firstOrNull()?.let { diary ->
-                            println("[" + TAG + "] " + "Latest diary: ${diary.title} - ${diary.description.take(100)}...")
+                            Log.d(TAG, "Latest diary: ${diary.title} - ${diary.description.take(100)}...")
                         }
 
                         diaries
                     }
                     is RequestState.Error -> {
-                        println("[" + TAG + "] ERROR: " + "Error getting diaries: ${diariesResult.error.message}")
+                        Log.e(TAG, "Error getting diaries: ${diariesResult.error.message}")
                         emptyList()
                     }
                     else -> emptyList()
                 }
             } catch (e: Exception) {
-                println("[" + TAG + "] ERROR: " + "Error getting diary context")
+                Log.e(TAG, "Error getting diary context", e)
                 emptyList()
             }
         }

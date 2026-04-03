@@ -12,6 +12,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import android.util.Log
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -107,7 +108,7 @@ class FirestoreFeedRepository @Inject constructor(
         val listenerRegistration = query
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    println("[$TAG] ERROR: Error getting ForYou feed: ${error.message}")
+                    Log.e(TAG, "Error getting ForYou feed: ${error.message}")
                     trySend(RequestState.Error(error))
                     return@addSnapshotListener
                 }
@@ -213,7 +214,7 @@ class FirestoreFeedRepository @Inject constructor(
             val listenerRegistration = query
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) {
-                        println("[$TAG] ERROR: Error getting Following feed: ${error.message}")
+                        Log.e(TAG, "Error getting Following feed: ${error.message}")
                         trySend(RequestState.Error(error))
                         return@addSnapshotListener
                     }
@@ -243,7 +244,7 @@ class FirestoreFeedRepository @Inject constructor(
 
             awaitClose { listenerRegistration.remove() }
         } catch (e: Exception) {
-            println("[$TAG] ERROR: Error setting up Following feed: ${e.message}")
+            Log.e(TAG, "Error setting up Following feed: ${e.message}")
             trySend(RequestState.Error(e))
             close()
         }

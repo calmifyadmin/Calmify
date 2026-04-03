@@ -1,5 +1,6 @@
 package com.lifo.mongo.repository
 
+import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -81,7 +82,7 @@ class FirestoreSocialGraphRepository @Inject constructor(
 
             batch.commit().await()
 
-            println("[$TAG] $followerId now follows $followeeId")
+            Log.d(TAG, "$followerId now follows $followeeId")
 
             // Send follow notification
             try {
@@ -94,12 +95,12 @@ class FirestoreSocialGraphRepository @Inject constructor(
                     "createdAt" to System.currentTimeMillis()
                 )).await()
             } catch (e: Exception) {
-                println("[$TAG] WARN: Failed to create follow notification: ${e.message}")
+                Log.w(TAG, "Failed to create follow notification: ${e.message}")
             }
 
             RequestState.Success(true)
         } catch (e: Exception) {
-            println("[$TAG] ERROR: Error following: ${e.message}")
+            Log.e(TAG, "Error following: ${e.message}")
             RequestState.Error(e)
         }
     }
@@ -131,10 +132,10 @@ class FirestoreSocialGraphRepository @Inject constructor(
 
             batch.commit().await()
 
-            println("[$TAG] $followerId unfollowed $followeeId")
+            Log.d(TAG, "$followerId unfollowed $followeeId")
             RequestState.Success(true)
         } catch (e: Exception) {
-            println("[$TAG] ERROR: Error unfollowing: ${e.message}")
+            Log.e(TAG, "Error unfollowing: ${e.message}")
             RequestState.Error(e)
         }
     }
@@ -170,10 +171,10 @@ class FirestoreSocialGraphRepository @Inject constructor(
 
             batch.commit().await()
 
-            println("[$TAG] $blockerId blocked $blockedId")
+            Log.d(TAG, "$blockerId blocked $blockedId")
             RequestState.Success(true)
         } catch (e: Exception) {
-            println("[$TAG] ERROR: Error blocking: ${e.message}")
+            Log.e(TAG, "Error blocking: ${e.message}")
             RequestState.Error(e)
         }
     }
@@ -186,10 +187,10 @@ class FirestoreSocialGraphRepository @Inject constructor(
                 .delete()
                 .await()
 
-            println("[$TAG] $blockerId unblocked $blockedId")
+            Log.d(TAG, "$blockerId unblocked $blockedId")
             RequestState.Success(true)
         } catch (e: Exception) {
-            println("[$TAG] ERROR: Error unblocking: ${e.message}")
+            Log.e(TAG, "Error unblocking: ${e.message}")
             RequestState.Error(e)
         }
     }
@@ -233,7 +234,7 @@ class FirestoreSocialGraphRepository @Inject constructor(
             .limit(limit.toLong())
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    println("[$TAG] ERROR: Error getting followers: ${error.message}")
+                    Log.e(TAG, "Error getting followers: ${error.message}")
                     trySend(RequestState.Error(error))
                     return@addSnapshotListener
                 }
@@ -266,7 +267,7 @@ class FirestoreSocialGraphRepository @Inject constructor(
             .limit(limit.toLong())
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    println("[$TAG] ERROR: Error getting following: ${error.message}")
+                    Log.e(TAG, "Error getting following: ${error.message}")
                     trySend(RequestState.Error(error))
                     return@addSnapshotListener
                 }
@@ -325,7 +326,7 @@ class FirestoreSocialGraphRepository @Inject constructor(
 
             emit(RequestState.Success(suggestions))
         } catch (e: Exception) {
-            println("[$TAG] ERROR: Error getting suggestions: ${e.message}")
+            Log.e(TAG, "Error getting suggestions: ${e.message}")
             emit(RequestState.Error(e))
         }
     }
@@ -385,10 +386,10 @@ class FirestoreSocialGraphRepository @Inject constructor(
             userProfilesCollection.document(userId)
                 .set(updates, com.google.firebase.firestore.SetOptions.merge())
                 .await()
-            println("[$TAG] Profile updated for $userId")
+            Log.d(TAG, "Profile updated for $userId")
             RequestState.Success(true)
         } catch (e: Exception) {
-            println("[$TAG] ERROR: Error updating profile: ${e.message}")
+            Log.e(TAG, "Error updating profile: ${e.message}")
             RequestState.Error(e)
         }
     }
@@ -402,7 +403,7 @@ class FirestoreSocialGraphRepository @Inject constructor(
                 .await()
             RequestState.Success(snapshot.isEmpty)
         } catch (e: Exception) {
-            println("[$TAG] ERROR: Error checking username availability: ${e.message}")
+            Log.e(TAG, "Error checking username availability: ${e.message}")
             RequestState.Error(e)
         }
     }
@@ -417,7 +418,7 @@ class FirestoreSocialGraphRepository @Inject constructor(
             val userId = snapshot.documents.firstOrNull()?.id
             RequestState.Success(userId)
         } catch (e: Exception) {
-            println("[$TAG] ERROR: Error resolving username: ${e.message}")
+            Log.e(TAG, "Error resolving username: ${e.message}")
             RequestState.Error(e)
         }
     }

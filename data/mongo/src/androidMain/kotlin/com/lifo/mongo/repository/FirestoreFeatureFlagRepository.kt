@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
+import android.util.Log
 
 /**
  * Firestore-based implementation of FeatureFlagRepository.
@@ -61,14 +62,14 @@ class FirestoreFeatureFlagRepository(
         // Start real-time listener
         flagsDocRef.addSnapshotListener { snapshot, error ->
             if (error != null) {
-                println("[$TAG] Error listening to flags: ${error.message}")
+                Log.e(TAG, "Error listening to flags: ${error.message}")
                 return@addSnapshotListener
             }
             if (snapshot != null && snapshot.exists()) {
                 @Suppress("UNCHECKED_CAST")
                 cachedData = snapshot.data ?: emptyMap()
                 _flags.value = buildFlagsSnapshot()
-                println("[$TAG] Flags updated: ${_flags.value}")
+                Log.d(TAG, "Flags updated: ${_flags.value}")
             }
         }
     }
@@ -84,11 +85,11 @@ class FirestoreFeatureFlagRepository(
             } else {
                 // Document doesn't exist yet — create with defaults
                 flagsDocRef.set(flagsToMap(FeatureFlags())).await()
-                println("[$TAG] Created default flags document")
+                Log.d(TAG, "Created default flags document")
                 false
             }
         } catch (e: Exception) {
-            println("[$TAG] Error fetching flags: ${e.message}")
+            Log.e(TAG, "Error fetching flags: ${e.message}")
             false
         }
     }
