@@ -140,4 +140,70 @@
     <string name="settings_privacy_policy">Privacy Policy</string>
     <string name="settings_terms_of_service">Terms of Service</string>
     <string name="settings_legal_section">Legal</string>
+
+    <!-- ============================================================ -->
+    <!-- Navigation labels -->
+    <!-- ============================================================ -->
+    <string name="nav_home">Home</string>
+    <string name="nav_activity">Activity</string>
+    <string name="nav_settings">Settings</string>
+    <string name="nav_write">Write</string>
+    <string name="nav_profile">Profile</string>
+    <string name="nav_avatar">Avatar</string>
+    <string name="nav_feed">Feed</string>
+    <string name="nav_journal">Journal</string>
+    <string name="nav_ai_chat">AI Chat</string>
+    <string name="nav_community">Community</string>
+    <string name="nav_journey">Journey</string>
+    <string name="nav_garden">Garden</string>
+
+    <!-- ============================================================ -->
+    <!-- Settings screen labels -->
+    <!-- ============================================================ -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_section_profile">Personal Profile</string>
+    <string name="settings_personal_info">Personal Information</string>
+    <string name="settings_personal_info_sub">Name, age, physical details, location</string>
+    <string name="settings_mental_health">Mental Health</string>
+    <string name="settings_mental_health_sub">Concerns, history, current treatment</string>
+    <string name="settings_lifestyle">Lifestyle</string>
+    <string name="settings_lifestyle_sub">Sleep, exercise, work, social support</string>
+    <string name="settings_goals">Goals &amp; Strategies</string>
+    <string name="settings_goals_sub">Wellness goals and coping strategies</string>
+    <string name="settings_section_ai">AI Preferences</string>
+    <string name="settings_ai_tone">Tone, reminders and topics</string>
+    <string name="settings_ai_tone_sub">Customize how Eve interacts with you</string>
+    <string name="settings_section_environment">Your Environment</string>
+    <string name="settings_env_design">Environment design</string>
+    <string name="settings_env_design_sub">Checklists, routines and digital detox</string>
+    <string name="settings_section_privacy">Privacy &amp; Data</string>
+    <string name="settings_privacy_research">Share Data for Research</string>
+    <string name="settings_privacy_research_sub">Help improve mental health research with anonymized data</string>
+    <string name="settings_privacy_insights">Advanced AI Insights</string>
+    <string name="settings_privacy_insights_sub">Enable detailed psychological analysis and recommendations</string>
+    <string name="settings_export_data">Export your data</string>
+    <string name="settings_section_developer">Developer</string>
+    <string name="settings_avatar_debug">Avatar Debug</string>
+    <string name="settings_avatar_debug_sub">Test animations, visemes and idle loop</string>
+    <string name="settings_section_account">Account</string>
+    <string name="settings_logout">Log out</string>
+    <string name="settings_delete_account_btn">Delete Account</string>
+    <string name="settings_user_fallback">User</string>
+    <string name="settings_no_location">No location set</string>
+    <string name="settings_years_old">%1$d years old</string>
+    <string name="settings_edit_profile_cd">Edit profile</string>
+    <string name="settings_back_cd">Back</string>
+    <string name="settings_profile_pic_cd">Profile picture</string>
+    <string name="settings_section_language">Language</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_sub">Change the app language</string>
+    <string name="settings_language_dialog_title">Select language</string>
+    <string name="settings_language_system">System</string>
+
+    <!-- ============================================================ -->
+    <!-- Common actions -->
+    <!-- ============================================================ -->
+    <string name="retry">Retry</string>
+    <string name="error_loading">Unable to load data</string>
+    <string name="error_connection">Check your connection</string>
 </resources>

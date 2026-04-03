@@ -31,6 +31,9 @@ import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
+import org.jetbrains.compose.resources.stringResource
 import kotlin.math.ln
 
 /**
@@ -130,6 +133,27 @@ open class NavigationDestination(
 }
 
 /**
+ * Returns the localized display label for a navigation destination.
+ * Falls back to the hardcoded [label] for unknown subclasses.
+ */
+@Composable
+fun NavigationDestination.localizedLabel(): String = when (this) {
+    NavigationDestination.Home -> stringResource(Res.string.nav_home)
+    NavigationDestination.History -> stringResource(Res.string.nav_activity)
+    NavigationDestination.Settings -> stringResource(Res.string.nav_settings)
+    NavigationDestination.Write -> stringResource(Res.string.nav_write)
+    NavigationDestination.Profile -> stringResource(Res.string.nav_profile)
+    NavigationDestination.Humanoid -> stringResource(Res.string.nav_avatar)
+    NavigationDestination.Feed -> stringResource(Res.string.nav_feed)
+    NavigationDestination.Journal -> stringResource(Res.string.nav_journal)
+    NavigationDestination.AIChat -> stringResource(Res.string.nav_ai_chat)
+    NavigationDestination.Community -> stringResource(Res.string.nav_community)
+    NavigationDestination.Journey -> stringResource(Res.string.nav_journey)
+    NavigationDestination.Garden -> stringResource(Res.string.nav_garden)
+    else -> label
+}
+
+/**
  * Material 3 Navigation Bar per Calmify
  */
 @Composable
@@ -201,7 +225,7 @@ fun CalmifyNavigationBar(
                 },
                 label = {
                     Text(
-                        text = destination.label,
+                        text = destination.localizedLabel(),
                         style = MaterialTheme.typography.labelMedium
                     )
                 },
@@ -265,7 +289,7 @@ fun CalmifyNavigationBarAnimated(
                         }
                     },
                     icon = if (selected) destination.selectedIcon else destination.unselectedIcon,
-                    label = destination.label,
+                    label = destination.localizedLabel(),
                     badge = destination.badge,
                     hasNews = destination.hasNews,
                     modifier = Modifier.weight(1f)
@@ -513,13 +537,13 @@ fun CalmifyBottomAppBar(
                             } else {
                                 destination.unselectedIcon
                             },
-                            contentDescription = destination.label
+                            contentDescription = destination.localizedLabel()
                         )
                     }
                 },
                 label = {
                     Text(
-                        text = destination.label,
+                        text = destination.localizedLabel(),
                         style = MaterialTheme.typography.labelMedium,
                         maxLines = 1
                     )
