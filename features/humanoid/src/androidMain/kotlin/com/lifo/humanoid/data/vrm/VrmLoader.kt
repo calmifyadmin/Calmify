@@ -224,10 +224,13 @@ class VrmLoader(private val context: Context) {
             ?.map { parseBlendShape(it.asJsonObject) }
             ?: emptyList()
 
+        // Extract nodes array early — needed for bone name resolution
+        val nodesArray = rootObject?.getAsJsonArray("nodes")
+
         // Parse spring bones
         val springBones = vrmObject.getAsJsonObject("secondaryAnimation")
             ?.getAsJsonArray("boneGroups")
-            ?.map { parseSpringBone(it.asJsonObject) }
+            ?.map { parseSpringBone(it.asJsonObject, nodesArray) }
             ?.flatten()
             ?: emptyList()
 
@@ -250,7 +253,6 @@ class VrmLoader(private val context: Context) {
         // Resolve eye bone node indices to actual glTF node NAMES
         // CRITICAL: Filament entity array indices ≠ glTF node indices!
         // We must search by name, not by index.
-        val nodesArray = rootObject?.getAsJsonArray("nodes")
         var leftEyeNodeName: String? = null
         var rightEyeNodeName: String? = null
 
@@ -411,7 +413,10 @@ class VrmLoader(private val context: Context) {
     /**
      * Parse spring bone group
      */
-    private fun parseSpringBone(boneGroupObject: JsonObject): List<SpringBoneData> {
+    private fun parseSpringBone(
+        boneGroupObject: JsonObject,
+        nodesArray: com.google.gson.JsonArray? = null
+    ): List<SpringBoneData> {
         val stiffness = boneGroupObject.get("stiffiness")?.asFloat ?: 0.5f // Note: typo in VRM spec
         val gravityPower = boneGroupObject.get("gravityPower")?.asFloat ?: 0.1f
         val dragForce = boneGroupObject.get("dragForce")?.asFloat ?: 0.4f
@@ -434,10 +439,14 @@ class VrmLoader(private val context: Context) {
             ?.map { it.asInt }
             ?: emptyList()
 
-        // Create spring bone data for each bone
+        // Create spring bone data for each bone, resolving actual node name from glTF nodes array
         return bones.map { boneIndex ->
+            val resolvedName = nodesArray
+                ?.get(boneIndex)?.asJsonObject?.get("name")?.asString
+                ?.takeIf { it.isNotBlank() }
+                ?: "bone_$boneIndex"
             SpringBoneData(
-                boneName = "bone_$boneIndex", // TODO: Resolve actual bone name from node index
+                boneName = resolvedName,
                 stiffness = stiffness,
                 gravityPower = gravityPower,
                 gravityDir = gravityDir,
