@@ -13,6 +13,7 @@ fun MessagingScreen(
     onIntent: (MessagingContract.Intent) -> Unit,
     onNavigateBack: () -> Unit,
     onUserClick: (String) -> Unit,
+    onPickImages: () -> Unit = {},
 ) {
     when {
         state.isInChatRoom -> {
@@ -21,7 +22,8 @@ fun MessagingScreen(
                 currentUserId = currentUserId,
                 onIntent = onIntent,
                 onNavigateBack = { onIntent(MessagingContract.Intent.CloseConversation) },
-                onUserClick = onUserClick
+                onUserClick = onUserClick,
+                onPickImages = onPickImages
             )
         }
         state.isUserPickerOpen -> {
@@ -41,6 +43,7 @@ fun MessagingScreen(
             ConversationListScreen(
                 conversations = state.conversations,
                 isLoading = state.isLoadingConversations,
+                participantProfiles = state.participantProfiles,
                 onConversationClick = { onIntent(MessagingContract.Intent.OpenConversation(it)) },
                 onNewConversation = { onIntent(MessagingContract.Intent.ShowUserPicker) }
             )

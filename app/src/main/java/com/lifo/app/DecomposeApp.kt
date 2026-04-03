@@ -75,7 +75,7 @@ import com.lifo.socialprofile.FollowListScreen
 import com.lifo.socialprofile.SocialProfileRouteContent
 import com.lifo.search.SearchRouteContent
 import com.lifo.notifications.NotificationsRouteContent
-import com.lifo.messaging.MessagingRouteContent
+import com.lifo.messaging.MessagingPickerRoute
 import com.lifo.subscription.SubscriptionRouteContent
 import com.lifo.threaddetail.ThreadDetailRouteContent
 import kotlinx.coroutines.Dispatchers
@@ -634,7 +634,7 @@ fun DecomposeApp(
                     }
 
                     is RootComponent.Child.Messaging -> {
-                        MessagingRouteContent(
+                        MessagingPickerRoute(
                             conversationId = instance.conversationId,
                             onNavigateBack = { rootComponent.navigateBack() },
                             onUserClick = { userId -> rootComponent.navigateToUserProfile(userId) },

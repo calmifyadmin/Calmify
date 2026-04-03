@@ -64,6 +64,7 @@ import com.lifo.util.repository.SocialMessagingRepository
 fun ConversationListScreen(
     conversations: List<SocialMessagingRepository.Conversation>,
     isLoading: Boolean,
+    participantProfiles: Map<String, MessagingContract.ParticipantProfile> = emptyMap(),
     onConversationClick: (String) -> Unit,
     onNewConversation: () -> Unit,
 ) {
@@ -210,8 +211,12 @@ fun ConversationListScreen(
                             val onClickStable = remember(conversation.id) {
                                 { onConversationClick(conversation.id) }
                             }
+                            val otherParticipantId = conversation.participantIds.firstOrNull().orEmpty()
+                            val profile = participantProfiles[otherParticipantId]
                             ConversationItem(
                                 conversation = conversation,
+                                displayName = profile?.displayName ?: otherParticipantId,
+                                avatarUrl = profile?.avatarUrl,
                                 onClick = onClickStable
                             )
                             HorizontalDivider(
@@ -229,10 +234,11 @@ fun ConversationListScreen(
 @Composable
 private fun ConversationItem(
     conversation: SocialMessagingRepository.Conversation,
+    displayName: String,
+    avatarUrl: String?,
     onClick: () -> Unit,
 ) {
     val lastMessage = conversation.lastMessage
-    val participantId = conversation.participantIds.firstOrNull().orEmpty()
     val unreadCount = conversation.unreadCount
 
     Row(
@@ -245,8 +251,8 @@ private fun ConversationItem(
         // Avatar with online indicator
         Box {
             UserAvatar(
-                avatarUrl = null, // No avatar URL in Conversation model; fallback to initial
-                displayName = participantId.ifEmpty { "?" },
+                avatarUrl = avatarUrl,
+                displayName = displayName.ifEmpty { "?" },
                 size = 52.dp,
                 showBorder = false,
             )
@@ -272,7 +278,7 @@ private fun ConversationItem(
         // Conversation info
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = participantId.ifEmpty { "Unknown" },
+                text = displayName.ifEmpty { "Unknown" },
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = if (unreadCount > 0) FontWeight.Bold else FontWeight.SemiBold,
                 maxLines = 1,

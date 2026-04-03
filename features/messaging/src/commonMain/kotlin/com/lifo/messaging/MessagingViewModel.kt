@@ -5,6 +5,7 @@ import com.lifo.util.auth.AuthProvider
 import com.lifo.util.model.RequestState
 import com.lifo.util.mvi.MviViewModel
 import com.lifo.util.repository.SearchRepository
+import com.lifo.util.repository.SocialGraphRepository
 import com.lifo.util.repository.SocialMessagingRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -22,6 +23,7 @@ class MessagingViewModel(
     private val messagingRepository: SocialMessagingRepository,
     private val authProvider: AuthProvider,
     private val searchRepository: SearchRepository,
+    private val socialGraphRepository: SocialGraphRepository,
 ) : MviViewModel<MessagingContract.Intent, MessagingContract.State, MessagingContract.Effect>(
     initialState = MessagingContract.State()
 ) {
@@ -54,6 +56,14 @@ class MessagingViewModel(
             is MessagingContract.Intent.ShowUserPicker -> updateState { copy(isUserPickerOpen = true, userPickerQuery = "", userPickerResults = emptyList()) }
             is MessagingContract.Intent.HideUserPicker -> updateState { copy(isUserPickerOpen = false, userPickerQuery = "", userPickerResults = emptyList()) }
             is MessagingContract.Intent.SearchUsers -> searchUsersForPicker(intent.query)
+            is MessagingContract.Intent.AddAttachments -> updateState {
+                copy(pendingAttachmentUris = pendingAttachmentUris + intent.uris)
+            }
+            is MessagingContract.Intent.RemoveAttachment -> updateState {
+                val updated = pendingAttachmentUris.toMutableList()
+                if (intent.index in updated.indices) updated.removeAt(intent.index)
+                copy(pendingAttachmentUris = updated)
+            }
         }
     }
 
@@ -80,6 +90,7 @@ class MessagingViewModel(
                                 error = null
                             )
                         }
+                        resolveParticipantProfiles(result.data)
                     }
                     is RequestState.Error -> {
                         updateState {
@@ -193,7 +204,8 @@ class MessagingViewModel(
 
     private fun sendMessage(text: String) {
         val trimmedText = text.trim()
-        if (trimmedText.isEmpty()) return
+        val attachments = currentState.pendingAttachmentUris
+        if (trimmedText.isEmpty() && attachments.isEmpty()) return
 
         val conversationId = currentState.currentConversationId ?: return
         val userId = currentUserId
@@ -209,13 +221,14 @@ class MessagingViewModel(
             val message = SocialMessagingRepository.Message(
                 senderId = userId,
                 text = trimmedText,
+                imageUrls = attachments,
                 createdAt = currentTimeMillis(),
                 isRead = false
             )
 
             when (val result = messagingRepository.sendMessage(conversationId, message)) {
                 is RequestState.Success -> {
-                    updateState { copy(draftText = "", isSending = false) }
+                    updateState { copy(draftText = "", isSending = false, pendingAttachmentUris = emptyList()) }
                     sendEffect(MessagingContract.Effect.MessageSent)
                 }
                 is RequestState.Error -> {
@@ -286,6 +299,31 @@ class MessagingViewModel(
 
         scope.launch {
             messagingRepository.markConversationRead(conversationId, userId)
+        }
+    }
+
+    private fun resolveParticipantProfiles(conversations: List<SocialMessagingRepository.Conversation>) {
+        val userId = currentUserId
+        val unresolved = conversations
+            .flatMap { it.participantIds }
+            .filter { it != userId && it !in currentState.participantProfiles }
+            .distinct()
+
+        for (participantId in unresolved) {
+            scope.launch {
+                socialGraphRepository.getProfile(participantId).collect { result ->
+                    if (result is RequestState.Success) {
+                        val user = result.data
+                        val profile = MessagingContract.ParticipantProfile(
+                            displayName = user.displayName ?: user.username ?: participantId,
+                            avatarUrl = user.avatarUrl
+                        )
+                        updateState {
+                            copy(participantProfiles = participantProfiles + (participantId to profile))
+                        }
+                    }
+                }
+            }
         }
     }
 

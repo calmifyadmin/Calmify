@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -24,13 +25,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.CameraAlt
@@ -54,9 +58,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import com.lifo.socialui.avatar.UserAvatar
 import com.lifo.util.repository.SocialMessagingRepository
 import kotlinx.datetime.Clock
@@ -78,8 +84,21 @@ fun ChatRoomScreen(
     onIntent: (MessagingContract.Intent) -> Unit,
     onNavigateBack: () -> Unit,
     onUserClick: (String) -> Unit,
+    onPickImages: () -> Unit = {},
 ) {
     val listState = rememberLazyListState()
+
+    // Resolve chat room title from participant profiles
+    val otherParticipantId = remember(state.currentConversationId, state.conversations) {
+        state.conversations
+            .find { it.id == state.currentConversationId }
+            ?.participantIds
+            ?.firstOrNull { it != currentUserId }
+            .orEmpty()
+    }
+    val chatTitle = state.participantProfiles[otherParticipantId]?.displayName
+        ?: otherParticipantId.take(12).ifEmpty { "Chat" }
+    val chatAvatarUrl = state.participantProfiles[otherParticipantId]?.avatarUrl
 
     // Scroll to bottom when new messages arrive or after sending
     LaunchedEffect(state.messages.size) {
@@ -91,7 +110,8 @@ fun ChatRoomScreen(
     Scaffold(
         topBar = {
             ChatRoomTopBar(
-                conversationId = state.currentConversationId.orEmpty(),
+                title = chatTitle,
+                avatarUrl = chatAvatarUrl,
                 onNavigateBack = onNavigateBack
             )
         },
@@ -99,12 +119,17 @@ fun ChatRoomScreen(
             ChatInputBar(
                 draftText = state.draftText,
                 isSending = state.isSending,
+                pendingAttachmentUris = state.pendingAttachmentUris,
                 onTextChange = { text ->
                     onIntent(MessagingContract.Intent.UpdateDraft(text))
                     onIntent(MessagingContract.Intent.SetTyping(text.isNotEmpty()))
                 },
                 onSend = {
                     onIntent(MessagingContract.Intent.SendMessage(state.draftText))
+                },
+                onPickImages = onPickImages,
+                onRemoveAttachment = { index ->
+                    onIntent(MessagingContract.Intent.RemoveAttachment(index))
                 }
             )
         }
@@ -142,17 +167,30 @@ fun ChatRoomScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ChatRoomTopBar(
-    conversationId: String,
+    title: String,
+    avatarUrl: String?,
     onNavigateBack: () -> Unit,
 ) {
     TopAppBar(
         title = {
-            Text(
-                text = conversationId.take(12).ifEmpty { "Chat" },
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                UserAvatar(
+                    avatarUrl = avatarUrl,
+                    displayName = title,
+                    size = 32.dp,
+                    showBorder = false
+                )
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         },
         navigationIcon = {
             IconButton(onClick = onNavigateBack) {
@@ -312,14 +350,55 @@ private fun GroupedMessageBubble(
             modifier = Modifier.widthIn(max = 280.dp)
         ) {
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                Text(
-                    text = message.text,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (isMine)
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    else
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                // Message text (only if non-blank)
+                if (message.text.isNotBlank()) {
+                    Text(
+                        text = message.text,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (isMine)
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // Attached images
+                if (message.imageUrls.isNotEmpty()) {
+                    if (message.text.isNotBlank()) Spacer(modifier = Modifier.height(6.dp))
+                    val imageUrls = message.imageUrls
+                    if (imageUrls.size == 1) {
+                        AsyncImage(
+                            model = imageUrls[0],
+                            contentDescription = "Image",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(4f / 3f)
+                                .clip(RoundedCornerShape(8.dp))
+                        )
+                    } else {
+                        // 2-column grid for multiple images
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            imageUrls.chunked(2).forEach { row ->
+                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    row.forEach { url ->
+                                        AsyncImage(
+                                            model = url,
+                                            contentDescription = "Image",
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .aspectRatio(1f)
+                                                .clip(RoundedCornerShape(6.dp))
+                                        )
+                                    }
+                                    // Fill empty slot if odd number
+                                    if (row.size == 1) Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    }
+                }
 
                 // Only show timestamp on last message of group
                 if (showTimestamp) {
@@ -457,97 +536,147 @@ private fun TypingDotsIndicator(modifier: Modifier = Modifier) {
 private fun ChatInputBar(
     draftText: String,
     isSending: Boolean,
+    pendingAttachmentUris: List<String>,
     onTextChange: (String) -> Unit,
     onSend: () -> Unit,
+    onPickImages: () -> Unit,
+    onRemoveAttachment: (Int) -> Unit,
 ) {
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
-            .padding(horizontal = 8.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
     ) {
-        // Attachment icon
-        IconButton(
-            onClick = { /* TODO: attachment picker */ },
-            modifier = Modifier.size(40.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.AttachFile,
-                contentDescription = "Attach file",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(22.dp)
-            )
+        // Pending attachments preview strip
+        if (pendingAttachmentUris.isNotEmpty()) {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                itemsIndexed(pendingAttachmentUris) { index, uri ->
+                    Box {
+                        AsyncImage(
+                            model = uri,
+                            contentDescription = "Attachment $index",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                        )
+                        // Remove button
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(2.dp)
+                                .size(18.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.errorContainer)
+                                .clickable { onRemoveAttachment(index) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Remove attachment",
+                                tint = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
+                    }
+                }
+            }
         }
 
-        // Camera icon
-        IconButton(
-            onClick = { /* TODO: camera capture */ },
-            modifier = Modifier.size(40.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.CameraAlt,
-                contentDescription = "Camera",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(22.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.width(4.dp))
-
-        // Text input
-        TextField(
-            value = draftText,
-            onValueChange = onTextChange,
-            modifier = Modifier.weight(1f),
-            placeholder = {
-                Text(
-                    text = "Type a message...",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            shape = RoundedCornerShape(24.dp),
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                disabledIndicatorColor = Color.Transparent
-            ),
-            singleLine = false,
-            maxLines = 4
-        )
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        // Send button
-        val canSend = draftText.isNotBlank() && !isSending
-        IconButton(
-            onClick = onSend,
-            enabled = canSend,
+        Row(
             modifier = Modifier
-                .size(44.dp)
-                .clip(CircleShape)
-                .background(
-                    if (canSend) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.surfaceVariant
-                )
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            if (isSending) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-            } else {
+            // Attachment icon — opens gallery picker
+            IconButton(
+                onClick = onPickImages,
+                modifier = Modifier.size(40.dp)
+            ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Send,
-                    contentDescription = "Send",
-                    tint = if (canSend)
-                        MaterialTheme.colorScheme.onPrimary
+                    imageVector = Icons.Outlined.AttachFile,
+                    contentDescription = "Attach image",
+                    tint = if (pendingAttachmentUris.isNotEmpty())
+                        MaterialTheme.colorScheme.primary
                     else
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp)
                 )
+            }
+
+            // Camera icon (reserved for future camera capture)
+            IconButton(
+                onClick = { /* camera capture — not yet implemented */ },
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.CameraAlt,
+                    contentDescription = "Camera",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(4.dp))
+
+            // Text input
+            TextField(
+                value = draftText,
+                onValueChange = onTextChange,
+                modifier = Modifier.weight(1f),
+                placeholder = {
+                    Text(
+                        text = "Type a message...",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                },
+                shape = RoundedCornerShape(24.dp),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    disabledIndicatorColor = Color.Transparent
+                ),
+                singleLine = false,
+                maxLines = 4
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // Send button — enabled with text OR pending attachments
+            val canSend = (draftText.isNotBlank() || pendingAttachmentUris.isNotEmpty()) && !isSending
+            IconButton(
+                onClick = onSend,
+                enabled = canSend,
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (canSend) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.surfaceVariant
+                    )
+            ) {
+                if (isSending) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Send,
+                        contentDescription = "Send",
+                        tint = if (canSend)
+                            MaterialTheme.colorScheme.onPrimary
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                }
             }
         }
     }

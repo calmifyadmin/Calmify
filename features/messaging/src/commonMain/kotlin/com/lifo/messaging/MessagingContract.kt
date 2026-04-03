@@ -7,6 +7,12 @@ import com.lifo.util.repository.SocialMessagingRepository
 
 object MessagingContract {
 
+    /** Resolved display info for a conversation participant. */
+    data class ParticipantProfile(
+        val displayName: String = "",
+        val avatarUrl: String? = null
+    )
+
     sealed interface Intent : MviContract.Intent {
         data object LoadConversations : Intent
         data class OpenConversation(val conversationId: String) : Intent
@@ -19,6 +25,10 @@ object MessagingContract {
         data object ShowUserPicker : Intent
         data object HideUserPicker : Intent
         data class SearchUsers(val query: String) : Intent
+        /** Adds image URIs selected from the gallery to the pending attachment list. */
+        data class AddAttachments(val uris: List<String>) : Intent
+        /** Removes a pending attachment by index. */
+        data class RemoveAttachment(val index: Int) : Intent
     }
 
     @Immutable
@@ -29,6 +39,8 @@ object MessagingContract {
         val messages: List<SocialMessagingRepository.Message> = emptyList(),
         val typingUsers: List<String> = emptyList(),
         val draftText: String = "",
+        val pendingAttachmentUris: List<String> = emptyList(),
+        val participantProfiles: Map<String, ParticipantProfile> = emptyMap(),
         val isLoadingConversations: Boolean = false,
         val isLoadingMessages: Boolean = false,
         val isSending: Boolean = false,

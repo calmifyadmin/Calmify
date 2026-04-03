@@ -25,6 +25,9 @@ kotlin {
             implementation libs.koin.compose.viewmodel
             implementation libs.kotlinx.datetime
             implementation compose.materialIconsExtended
+
+            // Image loading (Coil 3.x — KMP-compatible, used in ChatRoomScreen)
+            implementation libs.coil
         }
 
         androidMain {
@@ -32,7 +35,7 @@ kotlin {
             dependencies {
                 implementation libs.core.ktx
                 implementation libs.coroutines.android
-                implementation libs.coil
+                // Coil network backend (Android-specific OkHttp)
                 implementation libs.coil.network.okhttp
             }
         }

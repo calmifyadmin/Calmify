@@ -22,6 +22,7 @@ fun MessagingRouteContent(
     conversationId: String? = null,
     onNavigateBack: () -> Unit = {},
     onUserClick: (String) -> Unit = {},
+    onPickImages: () -> Unit = {},
 ) {
     val viewModel: MessagingViewModel = koinViewModel()
     val state by viewModel.state.collectAsState()
@@ -61,6 +62,7 @@ fun MessagingRouteContent(
         currentUserId = currentUserId,
         onIntent = viewModel::onIntent,
         onNavigateBack = onNavigateBack,
-        onUserClick = onUserClick
+        onUserClick = onUserClick,
+        onPickImages = onPickImages
     )
 }
