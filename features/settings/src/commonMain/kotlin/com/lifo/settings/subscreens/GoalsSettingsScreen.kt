@@ -17,6 +17,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.lifo.util.model.CopingStrategies
 import com.lifo.util.model.WellnessGoals
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 /**
  * GoalsSettingsScreen - Edit wellness goals and coping strategies
@@ -45,12 +48,12 @@ fun GoalsSettingsScreen(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
-                title = { Text("Wellness Goals") },
+                title = { Text(stringResource(Res.string.settings_gs_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(Res.string.back_cd)
                         )
                     }
                 }
@@ -72,7 +75,7 @@ fun GoalsSettingsScreen(
                         modifier = Modifier.weight(1f),
                         enabled = !isSaving
                     ) {
-                        Text("Cancel")
+                        Text(stringResource(Res.string.cancel))
                     }
 
                     Button(
@@ -93,7 +96,7 @@ fun GoalsSettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                         }
-                        Text(if (isSaving) "Saving..." else "Save Changes")
+                        Text(if (isSaving) stringResource(Res.string.settings_saving) else stringResource(Res.string.settings_save_changes))
                     }
                 }
             }
@@ -111,8 +114,8 @@ fun GoalsSettingsScreen(
             // Header
             ExpressiveStepHeader(
                 icon = Icons.Default.EmojiEvents,
-                title = "Your Wellness Goals",
-                subtitle = "Update your goals and coping strategies"
+                title = stringResource(Res.string.settings_gs_your_goals),
+                subtitle = stringResource(Res.string.settings_gs_update_subtitle)
             )
 
             // Motivational Card
@@ -133,7 +136,7 @@ fun GoalsSettingsScreen(
                         tint = MaterialTheme.colorScheme.tertiary
                     )
                     Text(
-                        text = "Setting clear goals and identifying effective coping strategies are key steps towards better mental health. Small, consistent steps lead to meaningful change.",
+                        text = stringResource(Res.string.settings_gs_description),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onTertiaryContainer
                     )
@@ -144,13 +147,13 @@ fun GoalsSettingsScreen(
 
             // Section 1: Primary Goals
             Text(
-                text = "What do you want to achieve?",
+                text = stringResource(Res.string.settings_gs_achieve_section),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
 
             Text(
-                text = "Select your primary wellness goals",
+                text = stringResource(Res.string.settings_gs_goals_hint),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -174,13 +177,13 @@ fun GoalsSettingsScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "How do you like to cope?",
+                text = stringResource(Res.string.settings_gs_cope_section),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
 
             Text(
-                text = "Select coping strategies that work for you",
+                text = stringResource(Res.string.settings_gs_strategies_hint),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -222,7 +225,7 @@ fun GoalsSettingsScreen(
                                 modifier = Modifier.size(20.dp)
                             )
                             Text(
-                                text = "Your Plan",
+                                text = stringResource(Res.string.settings_gs_your_plan),
                                 style = MaterialTheme.typography.titleSmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
@@ -230,7 +233,7 @@ fun GoalsSettingsScreen(
 
                         if (selectedGoals.isNotEmpty()) {
                             Text(
-                                text = "${selectedGoals.size} goal${if (selectedGoals.size > 1) "s" else ""} selected",
+                                text = stringResource(Res.string.settings_gs_goals_selected, selectedGoals.size),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
@@ -238,14 +241,14 @@ fun GoalsSettingsScreen(
 
                         if (selectedStrategies.isNotEmpty()) {
                             Text(
-                                text = "${selectedStrategies.size} coping strateg${if (selectedStrategies.size > 1) "ies" else "y"} selected",
+                                text = stringResource(Res.string.settings_gs_strategies_selected, selectedStrategies.size),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
 
                         Text(
-                            text = "Great! We'll use this to personalize your experience.",
+                            text = stringResource(Res.string.settings_gs_great_message),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                         )

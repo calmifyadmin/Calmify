@@ -26,6 +26,9 @@ import com.lifo.ui.components.loading.*
 import com.lifo.util.model.RequestState
 import com.lifo.util.model.HomeContentItem
 import java.time.ZonedDateTime
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 // Screen state management
 sealed class HomeScreenState {
@@ -95,7 +98,7 @@ internal fun HomeScreen(
                                 }
                             }
                         ) {
-                            Icon(Icons.Outlined.Notifications, contentDescription = "Notifiche")
+                            Icon(Icons.Outlined.Notifications, contentDescription = stringResource(Res.string.notifications_cd))
                         }
                     }
                 },

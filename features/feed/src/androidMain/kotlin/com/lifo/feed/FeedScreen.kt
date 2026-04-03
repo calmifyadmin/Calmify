@@ -30,6 +30,9 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.lifo.ui.components.CalmifyTopBar
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -116,7 +119,7 @@ fun FeedScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            CalmifyTopBar(title = "Community", scrollBehavior = scrollBehavior)
+            CalmifyTopBar(title = stringResource(Res.string.feed_title), scrollBehavior = scrollBehavior)
         },
         // FAB removed — handled by global contextual FAB in DecomposeApp
     ) { paddingValues ->
@@ -180,7 +183,7 @@ fun FeedScreen(
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    text = "Qualcosa e' andato storto",
+                                    text = stringResource(Res.string.error_generic),
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.error,
                                 )
@@ -212,7 +215,7 @@ fun FeedScreen(
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
-                                    text = "Nessun post ancora",
+                                    text = stringResource(Res.string.feed_empty),
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )

@@ -14,6 +14,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,10 +30,10 @@ fun InspirationScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Ispirazione") },
+                title = { Text(stringResource(Res.string.inspiration_title)) },
                 navigationIcon = {
                     IconButton(onClick = navigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back_cd))
                     }
                 },
             )
@@ -117,14 +120,14 @@ fun InspirationScreen(
                             ) {
                                 Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                                 Spacer(Modifier.width(8.dp))
-                                Text("Hai gia' annotato la bellezza di oggi!", style = MaterialTheme.typography.bodyMedium)
+                                Text(stringResource(Res.string.inspiration_already_noted), style = MaterialTheme.typography.bodyMedium)
                             }
                         }
                     } else {
                         OutlinedTextField(
                             value = state.beautyNote,
                             onValueChange = { onIntent(InspirationContract.Intent.UpdateBeautyNote(it)) },
-                            label = { Text("Un dettaglio, un colore, un gesto, un suono...") },
+                            label = { Text(stringResource(Res.string.inspiration_detail_label)) },
                             modifier = Modifier.fillMaxWidth(),
                             minLines = 3,
                         )

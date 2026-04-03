@@ -20,6 +20,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifo.util.model.ConnectionType
 import kotlinx.coroutines.delay
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -56,7 +59,7 @@ fun ConnectionScreen(
                 },
                 actions = {
                     TextButton(onClick = { onIntent(ConnectionContract.Intent.ShowReflection) }) {
-                        Text("Riflessione")
+                        Text(stringResource(Res.string.connection_reflection))
                     }
                 }
             )
@@ -167,7 +170,7 @@ fun ConnectionScreen(
                         OutlinedTextField(
                             value = state.personName,
                             onValueChange = { onIntent(ConnectionContract.Intent.UpdatePerson(it)) },
-                            label = { Text("Chi?") },
+                            label = { Text(stringResource(Res.string.connection_who_label)) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             shape = RoundedCornerShape(16.dp),
@@ -446,7 +449,7 @@ private fun ReflectionDialog(
                     OutlinedTextField(
                         value = nurturingInput,
                         onValueChange = { nurturingInput = it },
-                        label = { Text("Aggiungi persona") },
+                        label = { Text(stringResource(Res.string.connection_add_person_label)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         shape = RoundedCornerShape(16.dp),
@@ -485,7 +488,7 @@ private fun ReflectionDialog(
                     OutlinedTextField(
                         value = drainingInput,
                         onValueChange = { drainingInput = it },
-                        label = { Text("Aggiungi persona") },
+                        label = { Text(stringResource(Res.string.connection_add_person_label)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         shape = RoundedCornerShape(16.dp),
@@ -506,7 +509,7 @@ private fun ReflectionDialog(
                     OutlinedTextField(
                         value = state.intentionInput,
                         onValueChange = { onIntent(ConnectionContract.Intent.UpdateIntention(it)) },
-                        label = { Text("La tua intenzione per il prossimo mese") },
+                        label = { Text(stringResource(Res.string.connection_intention_label)) },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 2,
                         shape = RoundedCornerShape(16.dp),

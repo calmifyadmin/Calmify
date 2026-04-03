@@ -28,6 +28,9 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifo.ui.components.CalmifyTopBar
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 import com.lifo.ui.components.graphics.HabitHeatMap
 import com.lifo.ui.components.graphics.HeatMapDay
 import com.lifo.ui.components.graphics.ParticleConfig
@@ -101,7 +104,7 @@ private fun HabitListContent(
     Scaffold(
         topBar = {
             CalmifyTopBar(
-                title = "Le Tue Abitudini",
+                title = stringResource(Res.string.habits_title),
                 onBackClick = onBackPressed,
                 subtitle = if (totalCount > 0) "$completedCount/$totalCount completate oggi" else null,
             )
@@ -111,7 +114,7 @@ private fun HabitListContent(
                 onClick = { onIntent(HabitContract.Intent.ShowAddDialog) },
                 shape = RoundedCornerShape(20.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Nuova abitudine")
+                Icon(Icons.Default.Add, contentDescription = stringResource(Res.string.habits_new_cd))
             }
         },
     ) { paddingValues ->
@@ -154,7 +157,7 @@ private fun HabitListContent(
                         onClick = { onIntent(HabitContract.Intent.RetryLoad) },
                         shape = RoundedCornerShape(20.dp)
                     ) {
-                        Text("Riprova")
+                        Text(stringResource(Res.string.retry))
                     }
                 }
             }
@@ -188,7 +191,7 @@ private fun HabitListContent(
                     item(key = "heatmap_header") {
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            text = "Ultimi 90 giorni",
+                            text = stringResource(Res.string.habits_last_90_days),
                             style = MaterialTheme.typography.titleSmall.copy(
                                 fontWeight = FontWeight.SemiBold
                             ),
@@ -291,7 +294,7 @@ private fun HabitCard(
                 }
                 if (habit.anchorHabit != null) {
                     Text(
-                        text = "Dopo: ${habit.anchorHabit}",
+                        text = stringResource(Res.string.habits_after_anchor, habit.anchorHabit),
                         style = MaterialTheme.typography.labelSmall,
                         color = colorScheme.primary,
                     )
@@ -371,7 +374,7 @@ private fun EmptyHabitsContent(
         Spacer(Modifier.height(24.dp))
 
         Text(
-            text = "Nessuna abitudine ancora",
+            text = stringResource(Res.string.habits_empty_title),
             style = MaterialTheme.typography.headlineSmall.copy(
                 fontWeight = FontWeight.Bold,
                 letterSpacing = (-0.5).sp
@@ -381,7 +384,7 @@ private fun EmptyHabitsContent(
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "Parti piccolo. Un'abitudine alla volta.",
+            text = stringResource(Res.string.habits_empty_subtitle),
             style = MaterialTheme.typography.bodyLarge,
             color = colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
@@ -396,7 +399,7 @@ private fun EmptyHabitsContent(
         ) {
             Icon(Icons.Default.Add, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text("Aggiungi la prima", style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(Res.string.habits_add_first), style = MaterialTheme.typography.labelLarge)
         }
     }
 }
@@ -430,8 +433,8 @@ private fun AddHabitDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Nome") },
-                    placeholder = { Text("es. Meditazione mattutina") },
+                    label = { Text(stringResource(Res.string.habits_name_label)) },
+                    placeholder = { Text(stringResource(Res.string.habits_name_placeholder)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp)
@@ -439,8 +442,8 @@ private fun AddHabitDialog(
                 OutlinedTextField(
                     value = minimumAction,
                     onValueChange = { minimumAction = it },
-                    label = { Text("Azione minima") },
-                    placeholder = { Text("es. Siediti e chiudi gli occhi") },
+                    label = { Text(stringResource(Res.string.habits_min_action_label)) },
+                    placeholder = { Text(stringResource(Res.string.habits_min_action_placeholder)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp)
@@ -448,8 +451,8 @@ private fun AddHabitDialog(
                 OutlinedTextField(
                     value = anchorHabit,
                     onValueChange = { anchorHabit = it },
-                    label = { Text("Dopo cosa? (aggancio)") },
-                    placeholder = { Text("es. Dopo il caffe'") },
+                    label = { Text(stringResource(Res.string.habits_anchor_label)) },
+                    placeholder = { Text(stringResource(Res.string.habits_anchor_placeholder)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp)

@@ -29,23 +29,12 @@ import com.lifo.settings.components.SettingsSectionHeader
 import com.lifo.settings.components.SettingsActionButton
 
 /**
- * Supported app languages shown in the language selector.
- * Names are always in their native language (not translated).
- */
-data class AppLanguage(val code: String, val nativeName: String, val flagEmoji: String)
-
-val supportedLanguages = listOf(
-    AppLanguage("", "Sistema", "🌐"),
-    AppLanguage("it", "Italiano", "🇮🇹"),
-    AppLanguage("en", "English", "🇬🇧"),
-    AppLanguage("es", "Español", "🇪🇸"),
-    AppLanguage("fr", "Français", "🇫🇷"),
-    AppLanguage("de", "Deutsch", "🇩🇪"),
-    AppLanguage("pt", "Português", "🇧🇷"),
-)
-
-/**
  * Settings Screen - Navigation Hub for Profile Settings
+ *
+ * Clean, organized interface with:
+ * - Profile overview card
+ * - Navigation to detail screens
+ * - Account management
  *
  * Material3 Expressive Design 2025
  */
@@ -61,15 +50,12 @@ fun SettingsScreen(
     onNavigateToEnvironment: () -> Unit = {},
     onNavigateToAvatarDebug: () -> Unit = {},
     onLogout: () -> Unit,
-    currentLanguageCode: String = "",
-    onLanguageChanged: (String) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
     val uriHandler = LocalUriHandler.current
-    var showLanguageDialog by remember { mutableStateOf(false) }
 
     // Delete account confirmation dialog
     if (uiState.showDeleteAccountDialog) {
@@ -81,20 +67,6 @@ fun SettingsScreen(
                 viewModel.showDeleteAccountDialog(false)
             },
             isDeleting = uiState.isDeleting
-        )
-    }
-
-    // Language selection dialog
-    if (showLanguageDialog) {
-        LanguageSelectionDialog(
-            currentCode = currentLanguageCode,
-            onLanguageSelected = { code ->
-                showLanguageDialog = false
-                if (code != currentLanguageCode) {
-                    onLanguageChanged(code)
-                }
-            },
-            onDismiss = { showLanguageDialog = false }
         )
     }
 
@@ -122,6 +94,7 @@ fun SettingsScreen(
         modifier = modifier
     ) { paddingValues ->
         if (uiState.isLoading) {
+            // Loading state
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -149,7 +122,8 @@ fun SettingsScreen(
                 )
 
                 // Profile Settings Section
-                SettingsSectionHeader(title = stringResource(Res.string.settings_section_profile))
+                SettingsSectionHeader(title = stringResource(Res.string.settings_profile_section))
+
                 ProfileSettingsSection(
                     onNavigateToPersonalInfo = onNavigateToPersonalInfo,
                     onNavigateToHealthInfo = onNavigateToHealthInfo,
@@ -158,41 +132,31 @@ fun SettingsScreen(
                 )
 
                 // AI Preferences Section
-                SettingsSectionHeader(title = stringResource(Res.string.settings_section_ai))
+                SettingsSectionHeader(title = stringResource(Res.string.settings_ai_preferences_section))
                 SettingsNavigationItem(
-                    title = stringResource(Res.string.settings_ai_tone),
-                    subtitle = stringResource(Res.string.settings_ai_tone_sub),
+                    title = stringResource(Res.string.settings_ai_tone_topic),
+                    subtitle = stringResource(Res.string.settings_ai_tone_subtitle),
                     icon = Icons.Default.Psychology,
                     onClick = onNavigateToAiPreferences,
                 )
 
                 // Environment Design Section
-                SettingsSectionHeader(title = stringResource(Res.string.settings_section_environment))
+                SettingsSectionHeader(title = stringResource(Res.string.settings_environment_section))
                 SettingsNavigationItem(
-                    title = stringResource(Res.string.settings_env_design),
-                    subtitle = stringResource(Res.string.settings_env_design_sub),
+                    title = stringResource(Res.string.settings_environment_item_title),
+                    subtitle = stringResource(Res.string.settings_environment_item_subtitle),
                     icon = Icons.Default.Spa,
                     onClick = onNavigateToEnvironment,
                 )
 
-                // Language Section
-                SettingsSectionHeader(title = stringResource(Res.string.settings_section_language))
-                val currentLang = supportedLanguages.find { it.code == currentLanguageCode }
-                    ?: supportedLanguages.first()
-                SettingsNavigationItem(
-                    title = stringResource(Res.string.settings_language),
-                    subtitle = "${currentLang.flagEmoji} ${currentLang.nativeName}",
-                    icon = Icons.Outlined.Language,
-                    onClick = { showLanguageDialog = true },
-                )
-
                 // Privacy Section
-                SettingsSectionHeader(title = stringResource(Res.string.settings_section_privacy))
+                SettingsSectionHeader(title = stringResource(Res.string.settings_privacy_section))
                 PrivacySection(
                     profileSettings = uiState.profileSettings,
                     onUpdateSettings = viewModel::updatePrivacySettings,
                     isSaving = uiState.isSaving
                 )
+
                 SettingsActionButton(
                     title = stringResource(Res.string.settings_export_data),
                     icon = Icons.Default.Download,
@@ -204,7 +168,7 @@ fun SettingsScreen(
                 SettingsSectionHeader(title = stringResource(Res.string.settings_info_section))
                 HealthDisclaimerCard()
 
-                // Legal Section
+                // Legal Section — Privacy Policy & ToS
                 SettingsSectionHeader(title = stringResource(Res.string.settings_legal_section))
                 SettingsNavigationItem(
                     title = stringResource(Res.string.settings_privacy_policy),
@@ -220,16 +184,16 @@ fun SettingsScreen(
                 )
 
                 // Developer / Debug
-                SettingsSectionHeader(title = stringResource(Res.string.settings_section_developer))
+                SettingsSectionHeader(title = stringResource(Res.string.settings_developer_section))
                 SettingsNavigationItem(
                     title = stringResource(Res.string.settings_avatar_debug),
-                    subtitle = stringResource(Res.string.settings_avatar_debug_sub),
+                    subtitle = stringResource(Res.string.settings_avatar_debug_subtitle),
                     icon = Icons.Default.BugReport,
                     onClick = onNavigateToAvatarDebug,
                 )
 
                 // Account Actions Section
-                SettingsSectionHeader(title = stringResource(Res.string.settings_section_account))
+                SettingsSectionHeader(title = stringResource(Res.string.settings_account_section))
                 AccountActionsSection(
                     onLogout = { viewModel.logout(onLogout) },
                     onDeleteAccount = { viewModel.showDeleteAccountDialog(true) }
@@ -239,86 +203,6 @@ fun SettingsScreen(
             }
         }
     }
-}
-
-/**
- * Language selection dialog — names shown in native language, never translated.
- */
-@Composable
-private fun LanguageSelectionDialog(
-    currentCode: String,
-    onLanguageSelected: (String) -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = {
-            Icon(
-                imageVector = Icons.Outlined.Language,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-        },
-        title = {
-            Text(
-                text = stringResource(Res.string.settings_language_dialog_title),
-                style = MaterialTheme.typography.headlineSmall
-            )
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                supportedLanguages.forEach { lang ->
-                    val isSelected = lang.code == currentCode
-                    Surface(
-                        onClick = { onLanguageSelected(lang.code) },
-                        shape = MaterialTheme.shapes.medium,
-                        color = if (isSelected) {
-                            MaterialTheme.colorScheme.primaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.surface
-                        }
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = lang.flagEmoji,
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Text(
-                                text = lang.nativeName,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = if (isSelected) {
-                                    MaterialTheme.colorScheme.onPrimaryContainer
-                                } else {
-                                    MaterialTheme.colorScheme.onSurface
-                                },
-                                modifier = Modifier.weight(1f)
-                            )
-                            if (isSelected) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(Res.string.cancel))
-            }
-        }
-    )
 }
 
 /**
@@ -352,7 +236,7 @@ private fun SettingsTopBar(
             IconButton(onClick = onNavigateBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(Res.string.settings_back_cd)
+                    contentDescription = stringResource(Res.string.back_cd)
                 )
             }
         },
@@ -394,6 +278,7 @@ private fun ProfileOverviewCard(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Avatar with animated scale and user profile image
             Surface(
                 modifier = Modifier
                     .size(64.dp)
@@ -407,11 +292,12 @@ private fun ProfileOverviewCard(
                         error = painterResource(id = com.lifo.ui.R.drawable.google_logo_ic),
                         placeholder = painterResource(id = com.lifo.ui.R.drawable.google_logo_ic)
                     ),
-                    contentDescription = stringResource(Res.string.settings_profile_pic_cd),
+                    contentDescription = stringResource(Res.string.settings_profile_picture_cd),
                     modifier = Modifier.fillMaxSize()
                 )
             }
 
+            // User info
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -425,7 +311,7 @@ private fun ProfileOverviewCard(
                 val age = profileSettings.getAge()
                 if (age != null) {
                     Text(
-                        text = stringResource(Res.string.settings_years_old, age),
+                        text = stringResource(Res.string.settings_age_format, age),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -437,6 +323,7 @@ private fun ProfileOverviewCard(
                 )
             }
 
+            // Edit button
             FilledTonalIconButton(
                 onClick = onEditProfile,
                 colors = IconButtonDefaults.filledTonalIconButtonColors(
@@ -470,25 +357,28 @@ private fun ProfileSettingsSection(
     ) {
         SettingsNavigationItem(
             title = stringResource(Res.string.settings_personal_info),
-            subtitle = stringResource(Res.string.settings_personal_info_sub),
+            subtitle = stringResource(Res.string.settings_personal_info_subtitle),
             icon = Icons.Outlined.Person,
             onClick = onNavigateToPersonalInfo
         )
+
         SettingsNavigationItem(
             title = stringResource(Res.string.settings_mental_health),
-            subtitle = stringResource(Res.string.settings_mental_health_sub),
+            subtitle = stringResource(Res.string.settings_mental_health_subtitle),
             icon = Icons.Outlined.Psychology,
             onClick = onNavigateToHealthInfo
         )
+
         SettingsNavigationItem(
             title = stringResource(Res.string.settings_lifestyle),
-            subtitle = stringResource(Res.string.settings_lifestyle_sub),
+            subtitle = stringResource(Res.string.settings_lifestyle_subtitle),
             icon = Icons.Outlined.SelfImprovement,
             onClick = onNavigateToLifestyle
         )
+
         SettingsNavigationItem(
-            title = stringResource(Res.string.settings_goals),
-            subtitle = stringResource(Res.string.settings_goals_sub),
+            title = stringResource(Res.string.settings_goals_strategies),
+            subtitle = stringResource(Res.string.settings_goals_subtitle),
             icon = Icons.Outlined.EmojiEvents,
             onClick = onNavigateToGoals
         )
@@ -510,21 +400,23 @@ private fun PrivacySection(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         PrivacySwitchItem(
-            title = stringResource(Res.string.settings_privacy_research),
-            subtitle = stringResource(Res.string.settings_privacy_research_sub),
+            title = stringResource(Res.string.settings_share_research_title),
+            subtitle = stringResource(Res.string.settings_share_research_subtitle),
             icon = Icons.Outlined.Science,
             checked = profileSettings.shareDataForResearch,
             onCheckedChange = { onUpdateSettings(it, null) },
             enabled = !isSaving
         )
+
         PrivacySwitchItem(
-            title = stringResource(Res.string.settings_privacy_insights),
-            subtitle = stringResource(Res.string.settings_privacy_insights_sub),
+            title = stringResource(Res.string.settings_advanced_insights_title),
+            subtitle = stringResource(Res.string.settings_advanced_insights_subtitle),
             icon = Icons.Outlined.Psychology,
             checked = profileSettings.enableAdvancedInsights,
             onCheckedChange = { onUpdateSettings(null, it) },
             enabled = !isSaving
         )
+
         if (isSaving) {
             LinearProgressIndicator(
                 modifier = Modifier
@@ -576,6 +468,7 @@ private fun PrivacySwitchItem(
                 },
                 modifier = Modifier.size(24.dp)
             )
+
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -591,6 +484,7 @@ private fun PrivacySwitchItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+
             Switch(
                 checked = checked,
                 onCheckedChange = onCheckedChange,
@@ -619,12 +513,14 @@ private fun AccountActionsSection(
             onClick = onLogout,
             isDestructive = false
         )
+
         SettingsActionButton(
-            title = stringResource(Res.string.settings_delete_account_btn),
+            title = stringResource(Res.string.settings_delete_account),
             icon = Icons.Default.DeleteForever,
             onClick = onDeleteAccount,
             isDestructive = true
         )
+
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(

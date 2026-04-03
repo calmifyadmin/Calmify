@@ -17,6 +17,9 @@ import com.lifo.avatarcreator.presentation.components.SectionHeader
 import com.lifo.avatarcreator.presentation.components.SliderWithLabel
 import com.lifo.avatarcreator.presentation.components.TagPicker
 import com.lifo.util.model.AttachmentStyle
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 @Composable
 fun EmotionalSection(
@@ -65,7 +68,7 @@ fun EmotionalSection(
         OutlinedTextField(
             value = state.form.affectionStyle,
             onValueChange = { onIntent(Intent.UpdateAffectionStyle(it)) },
-            label = { Text("Come esprime affetto?") },
+            label = { Text(stringResource(Res.string.avatar_emotional_affection_label)) },
             placeholder = { Text("Es: Prese in giro, presenza silenziosa, gesti concreti...") },
             minLines = 2,
             maxLines = 3,
@@ -76,7 +79,7 @@ fun EmotionalSection(
         OutlinedTextField(
             value = state.form.vulnerabilityTriggers,
             onValueChange = { onIntent(Intent.UpdateVulnerabilityTriggers(it)) },
-            label = { Text("Cosa lo rende vulnerabile?") },
+            label = { Text(stringResource(Res.string.avatar_emotional_vulnerability_label)) },
             placeholder = { Text("Es: Essere ignorato, sentirsi inutile, il silenzio...") },
             minLines = 2,
             maxLines = 3,
@@ -87,7 +90,7 @@ fun EmotionalSection(
         OutlinedTextField(
             value = state.form.emotionalBarrier,
             onValueChange = { onIntent(Intent.UpdateEmotionalBarrier(it)) },
-            label = { Text("Come si protegge emotivamente?") },
+            label = { Text(stringResource(Res.string.avatar_emotional_barrier_label)) },
             placeholder = { Text("Es: Sarcasmo, distacco, cambia argomento...") },
             minLines = 2,
             maxLines = 3,

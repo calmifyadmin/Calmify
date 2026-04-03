@@ -23,6 +23,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lifo.util.model.ThoughtCategory
 import kotlinx.coroutines.delay
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 /**
  * Reframe Screen — "Laboratorio dei Pensieri" (CBT Lite)
@@ -52,7 +55,7 @@ internal fun ReframeScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("Laboratorio dei Pensieri", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(Res.string.reframe_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         Text(
                             "Passo ${state.currentStep + 1} di 3",
                             style = MaterialTheme.typography.bodySmall,
@@ -64,7 +67,7 @@ internal fun ReframeScreen(
                     IconButton(onClick = {
                         if (state.currentStep > 0) onIntent(ReframeContract.Intent.PrevStep) else onBackPressed()
                     }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back_cd))
                     }
                 },
                 actions = {
@@ -74,7 +77,7 @@ internal fun ReframeScreen(
                             enabled = state.canProceed && !state.isSaving
                         ) {
                             if (state.isSaving) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                            else Icon(Icons.Default.Check, contentDescription = "Salva", tint = MaterialTheme.colorScheme.primary)
+                            else Icon(Icons.Default.Check, contentDescription = stringResource(Res.string.reframe_save), tint = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
@@ -172,7 +175,7 @@ private fun StepCapture(state: ReframeContract.State, onIntent: (ReframeContract
     )
 
     // Category
-    Text("Che area riguarda?", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Text(stringResource(Res.string.reframe_category_label), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         ThoughtCategory.entries.forEach { cat ->
             FilterChip(
@@ -234,7 +237,7 @@ private fun StepReframe(state: ReframeContract.State, onIntent: (ReframeContract
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f))
     ) {
         Column(Modifier.padding(16.dp)) {
-            Text("Prima:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+            Text(stringResource(Res.string.reframe_before_label), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
             Text(
                 text = "\"${state.originalThought}\"",
                 style = MaterialTheme.typography.bodyMedium,
@@ -264,7 +267,7 @@ private fun StepReframe(state: ReframeContract.State, onIntent: (ReframeContract
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp)
     ) {
-        Text("Salva il reframing", Modifier.padding(vertical = 4.dp))
+        Text(stringResource(Res.string.reframe_save), Modifier.padding(vertical = 4.dp))
     }
 }
 

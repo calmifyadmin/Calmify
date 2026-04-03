@@ -15,6 +15,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,10 +29,10 @@ fun AweScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Momenti di Meraviglia") },
+                title = { Text(stringResource(Res.string.awe_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back_cd))
                     }
                 },
             )
@@ -85,7 +88,7 @@ fun AweScreen(
                     ) {
                         Icon(Icons.Default.NaturePeople, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
                         Column {
-                            Text("Challenge della Settimana", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                            Text(stringResource(Res.string.awe_weekly_challenge), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                             Text(state.currentChallenge, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
@@ -94,7 +97,7 @@ fun AweScreen(
 
             // New entry form
             item {
-                Text("Registra un Momento", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(stringResource(Res.string.awe_record_moment), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
 
             item {
@@ -102,7 +105,7 @@ fun AweScreen(
                     value = state.description,
                     onValueChange = { onIntent(AweContract.Intent.UpdateDescription(it)) },
                     modifier = Modifier.fillMaxWidth().height(120.dp),
-                    label = { Text("Cosa ti ha meravigliato?") },
+                    label = { Text(stringResource(Res.string.awe_what_amazed)) },
                     shape = RoundedCornerShape(16.dp),
                 )
             }
@@ -112,7 +115,7 @@ fun AweScreen(
                     value = state.context,
                     onValueChange = { onIntent(AweContract.Intent.UpdateContext(it)) },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Dove/quando? (opzionale)") },
+                    label = { Text(stringResource(Res.string.awe_where_when)) },
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true,
                 )
@@ -130,7 +133,7 @@ fun AweScreen(
                     } else {
                         Icon(Icons.Default.AutoAwesome, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Salva Momento")
+                        Text(stringResource(Res.string.awe_save_moment))
                     }
                 }
             }
@@ -139,7 +142,7 @@ fun AweScreen(
             if (state.entries.isNotEmpty()) {
                 item {
                     Spacer(Modifier.height(8.dp))
-                    Text("I Tuoi Momenti", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(stringResource(Res.string.awe_your_moments), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 }
 
                 items(state.entries, key = { it.id }) { entry ->

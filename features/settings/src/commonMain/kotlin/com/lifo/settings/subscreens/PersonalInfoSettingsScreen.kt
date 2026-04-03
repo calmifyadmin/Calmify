@@ -16,6 +16,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.lifo.util.model.Gender
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 import com.maxkeppeker.sheets.core.models.base.rememberSheetState
 import com.maxkeppeler.sheets.calendar.CalendarDialog
 import com.maxkeppeler.sheets.calendar.models.CalendarConfig
@@ -59,12 +62,12 @@ fun PersonalInfoSettingsScreen(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
-                title = { Text("Personal Information") },
+                title = { Text(stringResource(Res.string.settings_pi_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(Res.string.back_cd)
                         )
                     }
                 }
@@ -86,7 +89,7 @@ fun PersonalInfoSettingsScreen(
                         modifier = Modifier.weight(1f),
                         enabled = !isSaving
                     ) {
-                        Text("Cancel")
+                        Text(stringResource(Res.string.cancel))
                     }
 
                     Button(
@@ -111,7 +114,7 @@ fun PersonalInfoSettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                         }
-                        Text(if (isSaving) "Saving..." else "Save Changes")
+                        Text(if (isSaving) stringResource(Res.string.settings_saving) else stringResource(Res.string.settings_save_changes))
                     }
                 }
             }
@@ -128,8 +131,8 @@ fun PersonalInfoSettingsScreen(
         ) {
             // Header
             ExpressiveStepHeader(
-                title = "Let's get to know you",
-                subtitle = "Update your personal information",
+                title = stringResource(Res.string.settings_pi_header_title),
+                subtitle = stringResource(Res.string.settings_pi_header_subtitle),
                 icon = Icons.Outlined.Person
             )
 
@@ -137,8 +140,8 @@ fun PersonalInfoSettingsScreen(
             OutlinedTextField(
                 value = editedFullName,
                 onValueChange = { editedFullName = it },
-                label = { Text("Full Name") },
-                placeholder = { Text("Enter your full name") },
+                label = { Text(stringResource(Res.string.settings_pi_full_name_label)) },
+                placeholder = { Text(stringResource(Res.string.settings_pi_full_name_placeholder)) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Outlined.Person,
@@ -162,7 +165,7 @@ fun PersonalInfoSettingsScreen(
             ExpressiveDropdown(
                 value = editedGender,
                 onValueChange = { editedGender = it },
-                label = "Gender",
+                label = stringResource(Res.string.settings_pi_gender_label),
                 options = Gender.entries.map { it.name to it.displayName },
                 leadingIcon = Icons.Outlined.Wc,
                 enabled = !isSaving
@@ -179,7 +182,7 @@ fun PersonalInfoSettingsScreen(
                     onValueChange = {
                         editedHeight = it.toIntOrNull() ?: 0
                     },
-                    label = { Text("Height (cm)") },
+                    label = { Text(stringResource(Res.string.settings_pi_height_label)) },
                     placeholder = { Text("170") },
                     leadingIcon = {
                         Icon(
@@ -200,7 +203,7 @@ fun PersonalInfoSettingsScreen(
                     onValueChange = {
                         editedWeight = it.toFloatOrNull() ?: 0f
                     },
-                    label = { Text("Weight (kg)") },
+                    label = { Text(stringResource(Res.string.settings_pi_weight_label)) },
                     placeholder = { Text("70") },
                     leadingIcon = {
                         Icon(
@@ -220,8 +223,8 @@ fun PersonalInfoSettingsScreen(
             OutlinedTextField(
                 value = editedLocation,
                 onValueChange = { editedLocation = it },
-                label = { Text("Location (Optional)") },
-                placeholder = { Text("City, Country") },
+                label = { Text(stringResource(Res.string.settings_pi_location_label)) },
+                placeholder = { Text(stringResource(Res.string.settings_pi_location_placeholder)) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Outlined.LocationOn,
@@ -252,7 +255,7 @@ fun PersonalInfoSettingsScreen(
                         tint = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = "Your personal information helps us provide tailored insights and recommendations for your mental wellness journey.",
+                        text = stringResource(Res.string.settings_pi_description),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -348,8 +351,8 @@ private fun DateOfBirthPicker(
         value = formattedDate,
         onValueChange = {},
         readOnly = true,
-        label = { Text("Date of Birth") },
-        placeholder = { Text("Select your birth date") },
+        label = { Text(stringResource(Res.string.settings_pi_dob_label)) },
+        placeholder = { Text(stringResource(Res.string.settings_pi_dob_placeholder)) },
         leadingIcon = {
             Icon(
                 imageVector = Icons.Outlined.CalendarToday,
@@ -363,7 +366,7 @@ private fun DateOfBirthPicker(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.CalendarToday,
-                    contentDescription = "Select date"
+                    contentDescription = stringResource(Res.string.settings_pi_select_date_cd)
                 )
             }
         },

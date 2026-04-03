@@ -21,6 +21,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.lifo.util.model.ValuesDiscovery
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,10 +35,10 @@ fun ValuesScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("La Tua Bussola") },
+                title = { Text(stringResource(Res.string.values_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back_cd))
                     }
                 },
             )
@@ -178,7 +181,7 @@ private fun FinalQuestionStep(state: ValuesContract.State, onIntent: (ValuesCont
                 value = reflection,
                 onValueChange = { onIntent(ValuesContract.Intent.SetFinalReflection(it)) },
                 modifier = Modifier.fillMaxWidth().height(200.dp),
-                label = { Text("La tua riflessione...") },
+                label = { Text(stringResource(Res.string.values_reflection_label)) },
                 shape = RoundedCornerShape(16.dp),
             )
         }

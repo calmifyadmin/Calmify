@@ -16,6 +16,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.completed_cd
+import com.lifo.ui.resources.progress_percent
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Material 3 Expressive Stepper Component
@@ -153,7 +157,7 @@ private fun StepIndicator(
                 if (completed) {
                     Icon(
                         imageVector = Icons.Default.Check,
-                        contentDescription = "Completed",
+                        contentDescription = stringResource(Res.string.completed_cd),
                         tint = contentColor,
                         modifier = Modifier.size(if (collapsed) 18.dp else 24.dp)
                     )
@@ -252,7 +256,7 @@ fun ExpressiveProgressBar(
         )
 
         Text(
-            text = "${(animatedProgress * 100).toInt()}% Complete",
+            text = stringResource(Res.string.progress_percent, (animatedProgress * 100).toInt()),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

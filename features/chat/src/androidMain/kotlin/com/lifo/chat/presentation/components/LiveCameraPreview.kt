@@ -35,6 +35,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 @Composable
 fun LiveCameraPreview(
@@ -268,7 +271,7 @@ private fun CameraPreviewContent(
                         .padding(6.dp)
                 ) {
                     Text(
-                        text = "LIVE",
+                        text = stringResource(Res.string.chat_live_label),
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.White,
                         fontWeight = FontWeight.Bold
@@ -300,19 +303,19 @@ private fun PermissionRequestContent(
         )
         
         Text(
-            text = "Camera Permission Required",
+            text = stringResource(Res.string.chat_camera_permission_title),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        
+
         Text(
-            text = "Allow camera access to enhance Gemini's visual understanding",
+            text = stringResource(Res.string.chat_camera_permission_hint),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
         )
-        
+
         Button(onClick = onRequestPermission) {
-            Text("Grant Permission")
+            Text(stringResource(Res.string.chat_grant_permission))
         }
     }
 }
@@ -331,7 +334,7 @@ private fun CameraPlaceholderContent() {
         )
         
         Text(
-            text = "Camera Preview Disabled",
+            text = stringResource(Res.string.chat_camera_disabled),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
         )

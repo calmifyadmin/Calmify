@@ -26,6 +26,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.lifo.avatarcreator.presentation.AvatarCreatorContract.CreationStatus
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 @Composable
 fun CreationProgressScreen(
@@ -107,7 +110,7 @@ fun CreationProgressScreen(
             CreationStatus.READY -> {
                 Icon(
                     imageVector = Icons.Default.CheckCircle,
-                    contentDescription = "Completato",
+                    contentDescription = stringResource(Res.string.completed_cd),
                     modifier = Modifier.size(80.dp),
                     tint = MaterialTheme.colorScheme.primary,
                 )
@@ -127,7 +130,7 @@ fun CreationProgressScreen(
             CreationStatus.ERROR -> {
                 Icon(
                     imageVector = Icons.Default.Error,
-                    contentDescription = "Errore",
+                    contentDescription = stringResource(Res.string.avatar_creation_error_cd),
                     modifier = Modifier.size(80.dp),
                     tint = MaterialTheme.colorScheme.error,
                 )
@@ -148,7 +151,7 @@ fun CreationProgressScreen(
                 }
                 Spacer(modifier = Modifier.height(24.dp))
                 Button(onClick = onRetry) {
-                    Text("Riprova")
+                    Text(stringResource(Res.string.retry))
                 }
             }
 

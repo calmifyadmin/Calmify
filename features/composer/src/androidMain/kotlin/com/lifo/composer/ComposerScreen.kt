@@ -80,6 +80,9 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.lifo.socialui.thread.ThreadLine
 import com.lifo.socialui.avatar.UserAvatar
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -123,7 +126,7 @@ fun ComposerScreen(
                     }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(Res.string.back_cd),
                         )
                     }
                 },
@@ -196,7 +199,7 @@ fun ComposerScreen(
                                         ) {
                                             Icon(
                                                 Icons.Filled.Close,
-                                                contentDescription = "Cancel reply",
+                                                contentDescription = stringResource(Res.string.composer_cancel_reply_cd),
                                                 modifier = Modifier.size(16.dp),
                                                 tint = colorScheme.onSurfaceVariant,
                                             )
@@ -217,7 +220,7 @@ fun ComposerScreen(
                                             parentThread.mediaUrls.take(3).forEach { url ->
                                                 AsyncImage(
                                                     model = url,
-                                                    contentDescription = "Media",
+                                                    contentDescription = null,
                                                     contentScale = ContentScale.Crop,
                                                     modifier = Modifier
                                                         .size(56.dp)
@@ -258,13 +261,13 @@ fun ComposerScreen(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 Text(
-                                    text = "Rispondendo a @${state.replyToAuthorName}",
+                                    text = stringResource(Res.string.composer_reply_to, state.replyToAuthorName ?: ""),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = colorScheme.onSecondaryContainer,
                                 )
                                 Icon(
                                     Icons.Filled.Close,
-                                    contentDescription = "Cancel",
+                                    contentDescription = stringResource(Res.string.cancel),
                                     modifier = Modifier
                                         .size(16.dp)
                                         .clickable { onNavigateBack() },
@@ -289,7 +292,7 @@ fun ComposerScreen(
                     ) {
                         UserAvatar(
                             avatarUrl = null,
-                            displayName = "You",
+                            displayName = stringResource(Res.string.you),
                             size = 36.dp,
                             showBorder = true,
                         )
@@ -306,7 +309,7 @@ fun ComposerScreen(
                     // RIGHT COLUMN: Content
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "You",
+                            text = stringResource(Res.string.you),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
                             color = colorScheme.onSurface,
@@ -357,7 +360,7 @@ fun ComposerScreen(
                                 },
                                 modifier = Modifier.size(36.dp),
                             ) {
-                                Icon(Icons.Outlined.Image, contentDescription = "Add image", modifier = Modifier.size(20.dp), tint = toolbarTint)
+                                Icon(Icons.Outlined.Image, contentDescription = stringResource(Res.string.composer_add_image_cd), modifier = Modifier.size(20.dp), tint = toolbarTint)
                             }
                             IconButton(onClick = { }, modifier = Modifier.size(36.dp)) {
                                 Icon(Icons.Outlined.Gif, contentDescription = "GIF", modifier = Modifier.size(20.dp), tint = toolbarTint)
@@ -413,7 +416,7 @@ fun ComposerScreen(
                             ) {
                                 UserAvatar(
                                     avatarUrl = null,
-                                    displayName = "You",
+                                    displayName = stringResource(Res.string.you),
                                     size = 28.dp,
                                     showBorder = false,
                                 )
@@ -432,7 +435,7 @@ fun ComposerScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Text(
-                                        text = "You",
+                                        text = stringResource(Res.string.you),
                                         style = MaterialTheme.typography.titleSmall,
                                         fontWeight = FontWeight.SemiBold,
                                     )
@@ -442,7 +445,7 @@ fun ComposerScreen(
                                     ) {
                                         Icon(
                                             Icons.Filled.Close,
-                                            contentDescription = "Remove",
+                                            contentDescription = stringResource(Res.string.composer_remove_cd),
                                             modifier = Modifier.size(14.dp),
                                             tint = colorScheme.onSurfaceVariant,
                                         )
@@ -461,7 +464,7 @@ fun ComposerScreen(
                                         Box {
                                             if (draft.text.isEmpty()) {
                                                 Text(
-                                                    text = "Continua il thread...",
+                                                    text = stringResource(Res.string.composer_thread_continuation),
                                                     style = MaterialTheme.typography.bodyLarge,
                                                     color = colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                                 )
@@ -505,7 +508,7 @@ fun ComposerScreen(
                                 }
                             }
                             Text(
-                                text = "Aggiungi al thread",
+                                text = stringResource(Res.string.composer_add_to_thread),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             )
@@ -534,7 +537,7 @@ fun ComposerScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(
-                                    text = "Tipo",
+                                    text = stringResource(Res.string.composer_type_label),
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.SemiBold,
                                     color = colorScheme.onSurfaceVariant,
@@ -578,7 +581,7 @@ fun ComposerScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                text = "Mood",
+                                text = stringResource(Res.string.composer_mood_label),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = colorScheme.onSurfaceVariant,
@@ -716,7 +719,7 @@ fun ComposerScreen(
                             )
                         } else {
                             Text(
-                                text = "Pubblica",
+                                text = stringResource(Res.string.composer_publish),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.SemiBold,
                             )
@@ -751,7 +754,7 @@ fun ComposerScreen(
                             CircularProgressIndicator()
                             if (state.isUploading) {
                                 Text(
-                                    text = "Caricamento media...",
+                                    text = stringResource(Res.string.composer_loading_media),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = colorScheme.onSurface,
                                 )
@@ -791,7 +794,7 @@ private fun MediaPreviewRow(
             ) {
                 AsyncImage(
                     model = uri,
-                    contentDescription = "Media ${index + 1}",
+                    contentDescription = stringResource(Res.string.composer_media_cd, index + 1),
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize(),
                 )
@@ -825,7 +828,7 @@ private fun MediaPreviewRow(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Check,
-                            contentDescription = "Uploaded",
+                            contentDescription = stringResource(Res.string.composer_uploaded_cd),
                             modifier = Modifier.size(12.dp),
                             tint = MaterialTheme.colorScheme.onPrimary,
                         )
@@ -846,7 +849,7 @@ private fun MediaPreviewRow(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Close,
-                            contentDescription = "Remove",
+                            contentDescription = stringResource(Res.string.composer_remove_cd),
                             modifier = Modifier.size(14.dp),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
@@ -870,7 +873,7 @@ private fun MediaPreviewRow(
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Outlined.Add,
-                        contentDescription = "Add media",
+                        contentDescription = stringResource(Res.string.composer_add_media_cd),
                         modifier = Modifier.size(24.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

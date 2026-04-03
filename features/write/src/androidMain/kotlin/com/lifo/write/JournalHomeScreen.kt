@@ -49,6 +49,9 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Calendar
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 /**
  * Journal Home -- Diary list + activity pills for quick access to tools.
@@ -513,7 +516,7 @@ private fun DiaryPhotoCard(
             }
             DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                 DropdownMenuItem(
-                    text = { Text("Vai al diario") },
+                    text = { Text(stringResource(Res.string.journal_go_to_diary)) },
                     onClick = { showMenu = false; onDiaryClick() },
                     leadingIcon = { Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null) }
                 )

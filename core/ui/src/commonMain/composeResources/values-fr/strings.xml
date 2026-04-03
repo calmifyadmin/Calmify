@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <resources>
+    <!-- ============================================================ -->
     <!-- Common / Shared -->
+    <!-- ============================================================ -->
     <string name="app_name">Calmify</string>
     <string name="back">Retour</string>
     <string name="next">Suivant</string>
@@ -8,82 +10,73 @@
     <string name="cancel">Annuler</string>
     <string name="close">Fermer</string>
     <string name="ok">OK</string>
-    <string name="error_generic">Quelque chose s\'est mal passé</string>
+    <string name="error_generic">Une erreur s\'est produite</string>
     <string name="loading">Un instant...</string>
     <string name="yes">Oui</string>
     <string name="no">Non</string>
     <string name="confirm">Confirmer</string>
     <string name="delete">Supprimer</string>
-    <string name="retry">Réessayer</string>
-    <string name="error_loading">Impossible de charger les données</string>
-    <string name="error_connection">Vérifiez votre connexion</string>
 
-    <!-- Navigation labels -->
-    <string name="nav_home">Accueil</string>
-    <string name="nav_activity">Activité</string>
-    <string name="nav_settings">Paramètres</string>
-    <string name="nav_write">Écrire</string>
-    <string name="nav_profile">Profil</string>
-    <string name="nav_avatar">Avatar</string>
-    <string name="nav_feed">Fil</string>
-    <string name="nav_journal">Journal</string>
-    <string name="nav_ai_chat">Chat IA</string>
-    <string name="nav_community">Communauté</string>
-    <string name="nav_journey">Parcours</string>
-    <string name="nav_garden">Jardin</string>
-
+    <!-- ============================================================ -->
     <!-- Onboarding -->
+    <!-- ============================================================ -->
     <string name="onboarding_hello">Bonjour !</string>
-    <string name="onboarding_whats_your_name">Comment tu t\'appelles ?</string>
-    <string name="onboarding_name_label">Ton prénom</string>
-    <string name="onboarding_name_hint">Le nom que les autres verront</string>
+    <string name="onboarding_whats_your_name">Comment vous appelez-vous ?</string>
+    <string name="onboarding_name_label">Votre nom</string>
+    <string name="onboarding_name_hint">Le nom que verront les autres</string>
     <string name="onboarding_username_label">Nom d\'utilisateur</string>
-    <string name="onboarding_username_hint">Ton identifiant unique (optionnel)</string>
-    <string name="onboarding_username_taken">Nom d\'utilisateur déjà utilisé</string>
-    <string name="onboarding_username_error">Erreur lors de la vérification du nom d\'utilisateur</string>
-    <string name="onboarding_name_changeable">Tu peux changer ton nom et ton identifiant à tout moment</string>
-    <string name="onboarding_motivations_title">Qu\'est-ce qui t\'a amené ici ?</string>
-    <string name="onboarding_motivations_subtitle">Sélectionne tout ce qui résonne en toi</string>
+    <string name="onboarding_username_hint">Votre identifiant unique (optionnel)</string>
+    <string name="onboarding_username_taken">Nom d\'utilisateur déjà pris</string>
+    <string name="onboarding_username_error">Erreur de vérification du nom d\'utilisateur</string>
+    <string name="onboarding_name_changeable">Vous pouvez changer votre nom et votre pseudo à tout moment</string>
+
+    <string name="onboarding_motivations_title">Qu\'est-ce qui vous a amené ici ?</string>
+    <string name="onboarding_motivations_subtitle">Sélectionnez tout ce qui vous parle</string>
     <string name="motivation_anxiety">Réduire l\'anxiété</string>
     <string name="motivation_emotions">Comprendre mes émotions</string>
-    <string name="motivation_growth">Croissance personnelle</string>
+    <string name="motivation_growth">Développement personnel</string>
     <string name="motivation_journaling">Journal quotidien</string>
     <string name="motivation_mindfulness">Pleine conscience</string>
     <string name="motivation_sleep">Mieux dormir</string>
     <string name="motivation_stress">Gérer le stress</string>
-    <string name="onboarding_preference_title">Comment préfères-tu t\'exprimer ?</string>
-    <string name="onboarding_preference_subtitle">Tu pourras toujours changer d\'avis</string>
+
+    <string name="onboarding_preference_title">Comment préférez-vous vous exprimer ?</string>
+    <string name="onboarding_preference_subtitle">Vous pouvez toujours changer d\'avis</string>
     <string name="preference_write_title">Écrire</string>
-    <string name="preference_write_desc">Je préfère coucher mes pensées sur papier</string>
+    <string name="preference_write_desc">Je préfère coucher mes pensées par écrit</string>
     <string name="preference_speak_title">Parler</string>
-    <string name="preference_speak_desc">Je me sens mieux en parlant à voix haute</string>
+    <string name="preference_speak_desc">Je me sens plus à l\'aise en parlant</string>
     <string name="preference_both_title">Les deux</string>
-    <string name="preference_both_desc">Ça dépend du moment</string>
-    <string name="disclosure_title">Tes données, ton choix</string>
-    <string name="disclosure_subtitle">Avant de commencer, nous souhaitons être transparents sur la façon dont nous traitons tes données.</string>
+    <string name="preference_both_desc">Cela dépend du moment</string>
+
+    <string name="disclosure_title">Vos données, votre choix</string>
+    <string name="disclosure_subtitle">Avant de commencer, nous souhaitons être transparents sur la façon dont nous traitons vos données.</string>
     <string name="disclosure_wellness_title">Données de bien-être</string>
-    <string name="disclosure_wellness_desc">Nous collectons des données sur l\'humeur, les émotions et les habitudes de journaling pour te fournir des insights personnalisés et améliorer ton expérience.</string>
+    <string name="disclosure_wellness_desc">Nous collectons des données sur l\'humeur, les émotions et les habitudes de journal pour vous fournir des informations personnalisées et améliorer votre expérience.</string>
     <string name="disclosure_diary_title">Contenu du journal</string>
-    <string name="disclosure_diary_desc">Les textes que tu écris dans ton journal sont analysés localement et via l\'IA pour t\'offrir des réflexions et des suggestions. Ils ne sont jamais partagés avec des tiers.</string>
+    <string name="disclosure_diary_desc">Les textes que vous écrivez dans le journal sont analysés localement et via IA pour vous proposer des réflexions et des suggestions. Ils ne sont jamais partagés avec des tiers.</string>
     <string name="disclosure_voice_title">Données vocales</string>
-    <string name="disclosure_voice_desc">Si tu utilises le chat vocal, l\'audio est traité en temps réel pour la conversation IA et n\'est pas enregistré sur nos serveurs.</string>
-    <string name="disclosure_consent_text">J\'ai lu et j\'accepte la collecte et le traitement de mes données de bien-être tels que décrits ci-dessus.</string>
-    <string name="disclosure_revoke_hint">Tu peux révoquer ton consentement et supprimer tes données à tout moment depuis les Paramètres.</string>
+    <string name="disclosure_voice_desc">Si vous utilisez le chat vocal, l\'audio est traité en temps réel pour la conversation IA et n\'est pas stocké sur nos serveurs.</string>
+    <string name="disclosure_consent_text">J\'ai lu et consens à la collecte et au traitement de mes données de bien-être telles que décrites ci-dessus.</string>
+    <string name="disclosure_revoke_hint">Vous pouvez révoquer votre consentement et supprimer vos données à tout moment depuis les Paramètres.</string>
+
     <string name="onboarding_saving">Enregistrement...</string>
     <string name="onboarding_start">C\'est parti !</string>
     <string name="onboarding_exit_title">Quitter ?</string>
-    <string name="onboarding_exit_message">Tu devras terminer la configuration pour utiliser l\'app.</string>
+    <string name="onboarding_exit_message">Vous devrez terminer la configuration pour utiliser l\'application.</string>
     <string name="onboarding_exit_stay">Rester</string>
     <string name="onboarding_exit_leave">Quitter</string>
 
+    <!-- ============================================================ -->
     <!-- Paywall / Subscription -->
+    <!-- ============================================================ -->
     <string name="paywall_title">Calmify Pro</string>
-    <string name="paywall_subtitle">Libère tout le potentiel de ton parcours</string>
-    <string name="paywall_compare_plans">Comparer les plans</string>
+    <string name="paywall_subtitle">Débloquez le plein potentiel de votre parcours</string>
+    <string name="paywall_compare_plans">Comparer les formules</string>
     <string name="paywall_features">Fonctionnalités</string>
     <string name="paywall_free">Gratuit</string>
     <string name="paywall_pro">Pro</string>
-    <string name="paywall_current_plan">Plan actuel</string>
+    <string name="paywall_current_plan">Formule actuelle</string>
     <string name="paywall_subscribe">S\'abonner</string>
     <string name="paywall_join_waitlist">Rejoindre la liste d\'attente</string>
     <string name="paywall_indicative_prices">Prix indicatifs</string>
@@ -105,74 +98,493 @@
     <string name="paywall_default_desc">Tout illimité : journaux, chat IA, avatar, insights, social</string>
     <string name="paywall_default_price">4,99 €/mois</string>
 
+    <!-- ============================================================ -->
     <!-- Waitlist Dialog -->
+    <!-- ============================================================ -->
     <string name="waitlist_title_pending">PRO arrive bientôt !</string>
-    <string name="waitlist_title_done">Tu es sur la liste !</string>
-    <string name="waitlist_description">Nous préparons Calmify PRO avec des fonctionnalités exclusives. Inscris-toi pour un accès prioritaire et une remise spéciale au lancement.</string>
-    <string name="waitlist_done_description">Nous te préviendrons dès que PRO sera disponible. Merci de croire en Calmify !</string>
-    <string name="waitlist_email_label">Ton email</string>
+    <string name="waitlist_title_done">Vous êtes sur la liste !</string>
+    <string name="waitlist_description">Nous préparons Calmify PRO avec des fonctionnalités exclusives. Inscrivez-vous pour un accès prioritaire et une remise spéciale au lancement.</string>
+    <string name="waitlist_done_description">Nous vous préviendrons dès que PRO sera disponible. Merci de croire en Calmify !</string>
+    <string name="waitlist_email_label">Votre adresse e-mail</string>
     <string name="waitlist_submit">M\'inscrire</string>
     <string name="waitlist_done">Parfait !</string>
     <string name="waitlist_not_now">Pas maintenant</string>
 
+    <!-- ============================================================ -->
     <!-- Subscription Toasts -->
+    <!-- ============================================================ -->
     <string name="toast_subscription_activated">Abonnement activé !</string>
     <string name="toast_subscription_restored">Abonnement restauré !</string>
     <string name="toast_no_subscription_found">Aucun abonnement trouvé</string>
-    <string name="toast_waitlist_success">Inscription réalisée !</string>
-    <string name="toast_unable_to_purchase">Impossible de lancer l\'achat</string>
+    <string name="toast_waitlist_success">Inscription effectuée !</string>
+    <string name="toast_unable_to_purchase">Impossible de démarrer l\'achat</string>
 
+    <!-- ============================================================ -->
     <!-- Settings / Health -->
+    <!-- ============================================================ -->
     <string name="settings_info_section">Informations</string>
-    <string name="health_disclaimer_title">Avertissement santé</string>
-    <string name="health_disclaimer_text">Calmify N\'EST PAS un dispositif médical et ne fournit PAS de diagnostic, de traitement ni de conseil médical. Les fonctionnalités de bien-être (suivi de l\'humeur, journal, chat IA) sont des outils d\'autoréflexion et ne remplacent PAS l\'avis d\'un professionnel de santé. Si tu vis une crise, contacte ton médecin ou les services d\'urgence.</string>
+    <string name="health_disclaimer_title">Avis de santé</string>
+    <string name="health_disclaimer_text">Calmify N\'EST PAS un dispositif médical et NE fournit PAS de diagnostic, traitement ou conseil médical. Les fonctionnalités de bien-être (suivi de l\'humeur, journal, chat IA) sont des outils d\'auto-réflexion et NE remplacent PAS l\'avis d\'un professionnel de santé. Si vous traversez une crise, contactez votre médecin ou les services d\'urgence.</string>
     <string name="settings_delete_account">Supprimer le compte</string>
     <string name="settings_delete_confirm_title">Supprimer le compte ?</string>
-    <string name="settings_delete_confirm_message">Toutes tes données seront supprimées définitivement. Cette action est irréversible.</string>
-    <string name="settings_delete_warning">La suppression de ton compte effacera définitivement toutes tes données. Cette action est irréversible.</string>
+    <string name="settings_delete_confirm_message">Toutes vos données seront définitivement supprimées. Cette action est irréversible.</string>
+    <string name="settings_delete_warning">La suppression du compte effacera définitivement toutes vos données. Cette action est irréversible.</string>
     <string name="settings_deleting">Suppression...</string>
     <string name="settings_privacy_policy">Politique de confidentialité</string>
     <string name="settings_terms_of_service">Conditions d\'utilisation</string>
     <string name="settings_legal_section">Mentions légales</string>
 
-    <!-- Settings screen labels -->
-    <string name="settings_title">Paramètres</string>
-    <string name="settings_section_profile">Profil personnel</string>
-    <string name="settings_personal_info">Informations personnelles</string>
-    <string name="settings_personal_info_sub">Nom, âge, détails physiques, lieu</string>
-    <string name="settings_mental_health">Santé mentale</string>
-    <string name="settings_mental_health_sub">Problèmes, historique, traitement actuel</string>
-    <string name="settings_lifestyle">Mode de vie</string>
-    <string name="settings_lifestyle_sub">Sommeil, exercice, travail, soutien social</string>
-    <string name="settings_goals">Objectifs et stratégies</string>
-    <string name="settings_goals_sub">Objectifs de bien-être et stratégies d\'adaptation</string>
-    <string name="settings_section_ai">Préférences IA</string>
-    <string name="settings_ai_tone">Ton, rappels et sujets</string>
-    <string name="settings_ai_tone_sub">Personnalise la façon dont Eve interagit avec toi</string>
-    <string name="settings_section_environment">Ton environnement</string>
-    <string name="settings_env_design">Conception de ton environnement</string>
-    <string name="settings_env_design_sub">Listes de tâches, routines et détox numérique</string>
-    <string name="settings_section_privacy">Confidentialité et données</string>
-    <string name="settings_privacy_research">Partager les données pour la recherche</string>
-    <string name="settings_privacy_research_sub">Aide à améliorer la recherche en santé mentale avec des données anonymisées</string>
-    <string name="settings_privacy_insights">Insights IA avancés</string>
-    <string name="settings_privacy_insights_sub">Active l\'analyse psychologique détaillée et les recommandations</string>
-    <string name="settings_export_data">Exporter tes données</string>
-    <string name="settings_section_developer">Développeur</string>
+    <!-- ============================================================ -->
+    <!-- Common Actions -->
+    <!-- ============================================================ -->
+    <string name="retry">Réessayer</string>
+    <string name="write_action">Écrire</string>
+    <string name="send">Envoyer</string>
+    <string name="publish">Publier</string>
+    <string name="share">Partager</string>
+    <string name="thanks_no">Non, merci</string>
+    <string name="add">Ajouter</string>
+    <string name="remove">Supprimer</string>
+    <string name="back_cd">Retour</string>
+    <string name="menu_cd">Menu</string>
+    <string name="notifications_cd">Notifications</string>
+    <string name="search_cd">Rechercher</string>
+    <string name="clear_cd">Effacer la recherche</string>
+    <string name="edit_cd">Modifier</string>
+    <string name="coming_soon">Bientôt disponible</string>
+    <string name="you">Vous</string>
+    <string name="optional_placeholder">Facultatif — écrivez ici...</string>
+    <string name="dismiss">Fermer</string>
+    <string name="copy">Copier</string>
+    <string name="use_text">Utiliser le texte</string>
+    <string name="no_results">Aucun résultat</string>
+    <string name="type_to_search">Écrivez pour rechercher...</string>
+
+    <!-- ============================================================ -->
+    <!-- Home -->
+    <!-- ============================================================ -->
+    <string name="home_talk_to_eve">Parler à Eve</string>
+    <string name="home_voice_ai">Voix IA</string>
+    <string name="home_new_diary">Nouveau journal</string>
+    <string name="home_like_cd">J\'aime</string>
+    <string name="home_replies_cd">Réponses</string>
+    <string name="home_photo_cd">Photo de %1$s</string>
+    <string name="home_snapshot_completed_title">Questionnaire Terminé</string>
+    <string name="home_snapshot_completed_message">Merci de prendre du temps pour vous. Vos réponses ont été enregistrées et seront analysées pour vous offrir des insights personnalisés sur votre bien-être.</string>
+    <string name="home_snapshot_perfect">Parfait</string>
+    <string name="home_checkin_title">Bilan Hebdomadaire</string>
+    <string name="home_checkin_notes">Dernières réflexions</string>
+    <string name="home_checkin_question">Question %1$d sur %2$d</string>
+
+    <!-- ============================================================ -->
+    <!-- Habits -->
+    <!-- ============================================================ -->
+    <string name="habits_title">Vos Habitudes</string>
+    <string name="habits_new_cd">Nouvelle habitude</string>
+    <string name="habits_last_90_days">90 derniers jours</string>
+    <string name="habits_empty_title">Pas encore d\'habitudes</string>
+    <string name="habits_empty_subtitle">Commencez petit. Une habitude à la fois.</string>
+    <string name="habits_add_first">Ajouter la première</string>
+    <string name="habits_name_label">Nom</string>
+    <string name="habits_name_placeholder">ex. Méditation matinale</string>
+    <string name="habits_min_action_label">Action minimale</string>
+    <string name="habits_min_action_placeholder">ex. Asseyez-vous et fermez les yeux</string>
+    <string name="habits_anchor_label">Après quoi ? (ancrage)</string>
+    <string name="habits_anchor_placeholder">ex. Après le café</string>
+    <string name="habits_after_anchor">Après : %1$s</string>
+
+    <!-- ============================================================ -->
+    <!-- History -->
+    <!-- ============================================================ -->
+    <string name="history_title">Activité</string>
+    <string name="history_empty_title">Pas encore d\'activité</string>
+    <string name="history_empty_subtitle">Vos journaux et conversations apparaîtront ici</string>
+    <string name="history_loading_error">Erreur de chargement</string>
+    <string name="history_search_placeholder">Rechercher journaux et chats...</string>
+    <string name="history_search_chats_placeholder">Rechercher dans les chats...</string>
+    <string name="history_search_diaries_placeholder">Rechercher dans les journaux...</string>
+    <string name="history_no_chat_yet">Pas encore de conversations</string>
+    <string name="history_no_diary_yet">Pas encore d\'entrées de journal</string>
+    <string name="history_view_insights_cd">Voir les Insights</string>
+    <string name="history_more_options_cd">Plus d\'options</string>
+
+    <!-- ============================================================ -->
+    <!-- Feed -->
+    <!-- ============================================================ -->
+    <string name="feed_title">Community</string>
+    <string name="feed_empty">Pas encore de publications</string>
+
+    <!-- ============================================================ -->
+    <!-- Chat -->
+    <!-- ============================================================ -->
+    <string name="chat_title">AI Chat</string>
+    <string name="chat_daily_limit_title">Vous avez atteint la limite quotidienne</string>
+    <string name="chat_daily_limit_message">Avec Calmify Pro, vous bénéficiez de conversations illimitées avec Eve, d\'insights avancés et bien plus encore.</string>
+    <string name="chat_greeting">Bonjour%1$s</string>
+    <string name="chat_how_can_i_help">Comment puis-je vous aider aujourd\'hui ?</string>
+    <string name="chat_voice_hint">Démarrez une conversation pour découvrir la voix naturelle</string>
+    <string name="chat_vad_active">VAD: Actif</string>
+    <string name="chat_vad_paused">VAD: En pause</string>
+    <string name="chat_ai_label">IA</string>
+    <string name="chat_calmify_ai_cd">Calmify AI</string>
+    <string name="chat_live_mode_cd">Live Mode</string>
+    <string name="chat_emotion_happy">Heureux</string>
+    <string name="chat_emotion_reflective">Réflexif</string>
+    <string name="chat_emotion_motivated">Motivé</string>
+    <string name="chat_session_ended_title">Session terminée</string>
+    <string name="chat_session_ended_message">Avec Calmify Pro, vous bénéficiez de sessions en direct jusqu\'à 15 minutes avec Eve et bien plus encore.</string>
+    <string name="chat_audio_output">Audio Output</string>
+    <string name="chat_no_devices">Aucun appareil disponible</string>
+    <string name="chat_gemini_live">Gemini Live</string>
+    <string name="chat_camera_permission_title">Autorisation caméra requise</string>
+    <string name="chat_camera_permission_hint">Autorisez l\'accès à la caméra pour améliorer la compréhension visuelle de Gemini</string>
+    <string name="chat_grant_permission">Accorder l\'autorisation</string>
+    <string name="chat_camera_disabled">Aperçu caméra désactivé</string>
+    <string name="chat_live_label">LIVE</string>
+    <string name="chat_streaming_cd">Streaming</string>
+    <string name="chat_sending_frames">Envoi d\'images toutes les 3s</string>
+
+    <!-- ============================================================ -->
+    <!-- Composer -->
+    <!-- ============================================================ -->
+    <string name="composer_reply_to">En réponse à @%1$s</string>
+    <string name="composer_thread_continuation">Continuer le fil...</string>
+    <string name="composer_add_to_thread">Ajouter au fil</string>
+    <string name="composer_type_label">Type</string>
+    <string name="composer_mood_label">Mood</string>
+    <string name="composer_publish">Publier</string>
+    <string name="composer_loading_media">Chargement des médias...</string>
+    <string name="composer_media_cd">Média %1$d</string>
+    <string name="composer_uploaded_cd">Téléchargé</string>
+    <string name="composer_add_image_cd">Ajouter une image</string>
+    <string name="composer_add_media_cd">Ajouter un média</string>
+    <string name="composer_remove_cd">Supprimer</string>
+    <string name="composer_cancel_reply_cd">Annuler la réponse</string>
+
+    <!-- ============================================================ -->
+    <!-- Settings (extended) -->
+    <!-- ============================================================ -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_profile_section">Profile Settings</string>
+    <string name="settings_ai_preferences_section">Préférences IA</string>
+    <string name="settings_ai_tone_topic">Ton, rappels et sujets</string>
+    <string name="settings_ai_tone_subtitle">Personnalisez la façon dont Eve interagit avec vous</string>
+    <string name="settings_environment_section">Votre Environnement</string>
+    <string name="settings_environment_item_title">Conception de votre environnement</string>
+    <string name="settings_environment_item_subtitle">Liste de tâches, routines et détox numérique</string>
+    <string name="settings_privacy_section">Confidentialité &amp; Données</string>
+    <string name="settings_export_data">Exporter vos données</string>
+    <string name="settings_developer_section">Developer</string>
     <string name="settings_avatar_debug">Avatar Debug</string>
-    <string name="settings_avatar_debug_sub">Tester les animations, visèmes et boucle inactive</string>
-    <string name="settings_section_account">Compte</string>
-    <string name="settings_logout">Se déconnecter</string>
-    <string name="settings_delete_account_btn">Supprimer le compte</string>
-    <string name="settings_user_fallback">Utilisateur</string>
-    <string name="settings_no_location">Aucun lieu défini</string>
-    <string name="settings_years_old">%1$d ans</string>
+    <string name="settings_avatar_debug_subtitle">Tester les animations, visèmes et boucle inactive</string>
+    <string name="settings_account_section">Compte</string>
+    <string name="settings_profile_picture_cd">Photo de profil</string>
+    <string name="settings_age_format">%1$d ans</string>
+    <string name="settings_no_location">Aucune localisation définie</string>
     <string name="settings_edit_profile_cd">Modifier le profil</string>
-    <string name="settings_back_cd">Retour</string>
-    <string name="settings_profile_pic_cd">Photo de profil</string>
-    <string name="settings_section_language">Langue</string>
-    <string name="settings_language">Langue</string>
-    <string name="settings_language_sub">Changer la langue de l\'application</string>
-    <string name="settings_language_dialog_title">Sélectionner la langue</string>
-    <string name="settings_language_system">Système</string>
+    <string name="settings_personal_info">Informations personnelles</string>
+    <string name="settings_personal_info_subtitle">Nom, âge, détails physiques, localisation</string>
+    <string name="settings_mental_health">Santé mentale</string>
+    <string name="settings_mental_health_subtitle">Préoccupations, antécédents, traitement en cours</string>
+    <string name="settings_lifestyle">Mode de vie</string>
+    <string name="settings_lifestyle_subtitle">Sommeil, exercice, travail, soutien social</string>
+    <string name="settings_goals_strategies">Objectifs &amp; Stratégies</string>
+    <string name="settings_goals_subtitle">Objectifs de bien-être et stratégies d\'adaptation</string>
+    <string name="settings_share_research_title">Partager des données pour la recherche</string>
+    <string name="settings_share_research_subtitle">Aidez à améliorer la recherche en santé mentale avec des données anonymisées</string>
+    <string name="settings_advanced_insights_title">Insights IA avancés</string>
+    <string name="settings_advanced_insights_subtitle">Activez l\'analyse psychologique détaillée et les recommandations</string>
+    <string name="settings_logout">Logout</string>
+    <string name="settings_user_fallback">Utilisateur</string>
+
+    <!-- Settings — Personal Info -->
+    <string name="settings_pi_full_name_label">Nom complet</string>
+    <string name="settings_pi_full_name_placeholder">Entrez votre nom complet</string>
+    <string name="settings_pi_height_label">Taille (cm)</string>
+    <string name="settings_pi_weight_label">Poids (kg)</string>
+    <string name="settings_pi_location_label">Localisation (Facultatif)</string>
+    <string name="settings_pi_location_placeholder">Ville, Pays</string>
+    <string name="settings_pi_description">Vos informations personnelles nous aident à vous fournir des insights et recommandations personnalisés.</string>
+    <string name="settings_pi_dob_label">Date de naissance</string>
+    <string name="settings_pi_dob_placeholder">Sélectionnez votre date de naissance</string>
+
+    <!-- Settings — Lifestyle -->
+    <string name="settings_ls_title">Informations sur le mode de vie</string>
+    <string name="settings_ls_your_lifestyle">Votre mode de vie</string>
+    <string name="settings_ls_update_subtitle">Mettez à jour vos habitudes et routines quotidiennes</string>
+    <string name="settings_ls_description">Des facteurs tels que le sommeil, l\'exercice et le soutien social influencent votre bien-être.</string>
+    <string name="settings_ls_occupation_section">Profession</string>
+    <string name="settings_ls_occupation_label">Profession actuelle</string>
+    <string name="settings_ls_sleep_section">Sommeil</string>
+    <string name="settings_ls_sleep_hours">Moyenne d\'heures par nuit</string>
+    <string name="settings_ls_activity_section">Activité physique</string>
+    <string name="settings_ls_exercise_question">À quelle fréquence faites-vous de l\'exercice ?</string>
+    <string name="settings_ls_exercise_label">Fréquence d\'exercice</string>
+    <string name="settings_ls_social_section">Soutien social</string>
+    <string name="settings_ls_social_question">Comment décririez-vous votre réseau de soutien social ?</string>
+    <string name="settings_ls_social_label">Niveau de soutien social</string>
+    <string name="settings_ls_hours_unit">heures</string>
+
+    <!-- Settings — Mental Health Info -->
+    <string name="settings_hi_title">Informations sur la santé mentale</string>
+    <string name="settings_hi_your_health">Votre santé mentale</string>
+    <string name="settings_hi_update_subtitle">Mettez à jour vos informations sur la santé mentale</string>
+    <string name="settings_hi_description">Vos informations sur la santé mentale sont confidentielles et utilisées uniquement pour personnaliser votre expérience.</string>
+    <string name="settings_hi_brings_you_here">Qu\'est-ce qui vous amène ici aujourd\'hui ?</string>
+    <string name="settings_hi_select_all">Sélectionnez tout ce qui s\'applique</string>
+    <string name="settings_hi_diagnosis_section">Diagnostic antérieur</string>
+    <string name="settings_hi_diagnosed_question">Avez-vous reçu un diagnostic de troubles de santé mentale ?</string>
+    <string name="settings_hi_history_label">Historique de santé mentale</string>
+    <string name="settings_hi_treatment_section">Traitement actuel</string>
+    <string name="settings_hi_therapy_label">Actuellement en thérapie ou conseil</string>
+    <string name="settings_hi_medication_label">Je prends des médicaments pour la santé mentale</string>
+    <string name="settings_hi_disclaimer">Cette application ne remplace pas les conseils médicaux professionnels.</string>
+
+    <!-- Settings — Goals &amp; Strategies -->
+    <string name="settings_gs_title">Objectifs de bien-être</string>
+    <string name="settings_gs_your_goals">Vos objectifs de bien-être</string>
+    <string name="settings_gs_update_subtitle">Mettez à jour vos objectifs et stratégies d\'adaptation</string>
+    <string name="settings_gs_description">Définir des objectifs clairs et identifier des stratégies d\'adaptation efficaces vous aide à progresser.</string>
+    <string name="settings_gs_achieve_section">Que souhaitez-vous accomplir ?</string>
+    <string name="settings_gs_goals_hint">Sélectionnez vos principaux objectifs de bien-être</string>
+    <string name="settings_gs_cope_section">Comment aimez-vous faire face aux difficultés ?</string>
+    <string name="settings_gs_strategies_hint">Sélectionnez les stratégies d\'adaptation qui fonctionnent pour vous</string>
+    <string name="settings_gs_your_plan">Votre plan</string>
+    <string name="settings_gs_goals_selected">%1$d objectif(s) sélectionné(s)</string>
+    <string name="settings_gs_strategies_selected">%1$d stratégie(s) d\'adaptation sélectionnée(s)</string>
+    <string name="settings_gs_great_message">Parfait ! Nous utiliserons cela pour personnaliser votre expérience.</string>
+
+    <!-- ============================================================ -->
+    <!-- AI Preferences -->
+    <!-- ============================================================ -->
+    <string name="ai_pref_title">Préférences IA</string>
+    <string name="ai_pref_tone_section">Ton de l\'IA</string>
+    <string name="ai_pref_tone_label">Comment souhaitez-vous qu\'Eve vous parle ?</string>
+    <string name="ai_pref_tone_dropdown">Ton</string>
+    <string name="ai_pref_reminders_section">Rappels</string>
+    <string name="ai_pref_reminders_label">À quelle fréquence souhaitez-vous recevoir un rappel pour écrire ?</string>
+    <string name="ai_pref_frequency_dropdown">Fréquence</string>
+    <string name="ai_pref_topics_section">Sujets à éviter</string>
+    <string name="ai_pref_topics_desc">Eve n\'abordera pas ces sujets à moins que vous ne le fassiez en premier.</string>
+    <string name="ai_pref_save">Enregistrer les préférences</string>
+
+    <!-- ============================================================ -->
+    <!-- Environment -->
+    <!-- ============================================================ -->
+    <string name="environment_title">Votre Environnement</string>
+    <string name="environment_add_item">Ajouter un élément</string>
+    <string name="environment_remove_cd">Supprimer</string>
+    <string name="environment_new_item_title">Nouvel élément</string>
+    <string name="environment_description_label">Description</string>
+    <string name="environment_category_label">Catégorie</string>
+    <string name="environment_stop_detox">Arrêter</string>
+    <string name="environment_start_detox">Démarrer la Détox Numérique</string>
+    <string name="environment_detox_duration">Durée : %1$d minutes</string>
+
+    <!-- ============================================================ -->
+    <!-- Misc UI -->
+    <!-- ============================================================ -->
+    <string name="error_ui_occurred">Une erreur s\'est produite dans l\'interface</string>
+    <string name="coach_skip">Passer</string>
+    <string name="coach_got_it">Compris</string>
+    <string name="completed_cd">Terminé</string>
+    <string name="info_tooltip_cd">Info : %1$s</string>
+    <string name="progress_percent">%1$d%% Terminé</string>
+    <string name="google_logo_cd">Logo Google</string>
+    <string name="alert_yes">Oui</string>
+    <string name="alert_no">Non</string>
+
+    <!-- ============================================================ -->
+    <!-- Write feature -->
+    <!-- ============================================================ -->
+    <string name="write_diary_placeholder">Mon journal...</string>
+    <string name="write_mood_placeholder">Aujourd\'hui je me sens...</string>
+    <string name="write_entry_saved_title">Enregistré !</string>
+    <string name="write_share_prompt">Souhaitez-vous partager votre ressenti avec la communauté ?</string>
+
+    <!-- Awe screen -->
+    <string name="awe_title">Moments d\'Émerveillement</string>
+    <string name="awe_weekly_challenge">Défi de la Semaine</string>
+    <string name="awe_record_moment">Enregistrer un Moment</string>
+    <string name="awe_what_amazed">Qu\'est-ce qui vous a émerveillé ?</string>
+    <string name="awe_where_when">Où/quand ? (optionnel)</string>
+    <string name="awe_save_moment">Sauvegarder le Moment</string>
+    <string name="awe_your_moments">Vos Moments</string>
+
+    <!-- Block screen -->
+    <string name="block_title">Qu\'est-ce qui Vous Bloque ?</string>
+    <string name="block_placeholder">Qu\'est-ce qui vous bloque en ce moment ?</string>
+    <string name="block_analyze">Analyser</string>
+    <string name="block_type_label">Type de blocage</string>
+    <string name="block_register_proceed">Enregistrer et continuer</string>
+    <string name="block_back_to_diary">Retour au journal</string>
+    <string name="block_active">Blocages actifs</string>
+    <string name="block_overcome">Blocages surmontés</string>
+    <string name="block_mark_overcome">Marquer comme surmonté</string>
+    <string name="block_history_cd">Historique</string>
+
+    <!-- Brain dump -->
+    <string name="brain_dump_save">Sauvegarder et vider</string>
+
+    <!-- Connection screen -->
+    <string name="connection_reflection">Réflexion</string>
+    <string name="connection_who_label">Qui ?</string>
+    <string name="connection_intention_label">Votre intention pour le prochain mois</string>
+    <string name="connection_add_person_label">Ajouter une personne</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_title">Votre Terrain</string>
+
+    <!-- Ikigai screen -->
+    <string name="ikigai_title">Votre Ikigai</string>
+    <string name="ikigai_add_placeholder">Ajouter...</string>
+
+    <!-- Inspiration screen -->
+    <string name="inspiration_title">Inspiration</string>
+    <string name="inspiration_already_noted">Vous avez déjà noté la beauté d\'aujourd\'hui !</string>
+    <string name="inspiration_detail_label">Un détail, une couleur, un geste, un son...</string>
+
+    <!-- Movement screen -->
+    <string name="movement_record">Enregistrer le mouvement</string>
+    <string name="movement_notes_placeholder">Notes (optionnel)</string>
+
+    <!-- Recurring thoughts -->
+    <string name="recurring_thoughts_title">Vos Circuits</string>
+    <string name="recurring_thoughts_reframing">Recadrage</string>
+    <string name="recurring_thoughts_resolved">Résolu</string>
+
+    <!-- Reframe screen -->
+    <string name="reframe_title">Laboratoire de Pensées</string>
+    <string name="reframe_area_label">Quel domaine cela concerne-t-il ?</string>
+    <string name="reframe_before_label">Avant :</string>
+    <string name="reframe_save">Sauvegarder le recadrage</string>
+
+    <!-- Silence screen -->
+    <string name="silence_title">Pratique du Silence</string>
+    <string name="silence_placeholder">Les mots viendront d\'eux-mêmes...</string>
+
+    <!-- Values screen -->
+    <string name="values_title">Votre Boussole</string>
+    <string name="values_reflection_label">Votre réflexion...</string>
+
+    <!-- Journal home screen -->
+    <string name="journal_go_to_diary">Aller au journal</string>
+
+    <!-- ============================================================ -->
+    <!-- Messaging feature -->
+    <!-- ============================================================ -->
+    <string name="messaging_search_placeholder">Rechercher</string>
+    <string name="messaging_inbox_tab">Boîte de réception</string>
+    <string name="messaging_requests_tab">Demandes</string>
+    <string name="messaging_start_conversation">Démarrer une conversation</string>
+    <string name="messaging_new_message_title">Nouveau message</string>
+    <string name="messaging_search_user_placeholder">Rechercher un utilisateur...</string>
+
+    <!-- ============================================================ -->
+    <!-- Search feature -->
+    <!-- ============================================================ -->
+    <string name="search_title">Rechercher</string>
+    <string name="search_all_tab">Tout</string>
+    <string name="search_threads_tab">Fils</string>
+    <string name="search_users_tab">Utilisateurs</string>
+    <string name="search_all_moods">Tous les moods</string>
+
+    <!-- ============================================================ -->
+    <!-- Notifications feature -->
+    <!-- ============================================================ -->
+    <string name="notifications_all_tab">Toutes</string>
+    <string name="notifications_follows_tab">Abonnements</string>
+    <string name="notifications_replies_tab">Réponses</string>
+    <string name="notifications_mentions_tab">Mentions</string>
+
+    <!-- ============================================================ -->
+    <!-- Avatar Creator feature -->
+    <!-- ============================================================ -->
+    <string name="avatar_creator_title">Créez votre Avatar</string>
+    <string name="avatar_creator_create">Créer Avatar</string>
+    <string name="avatar_creator_create_cd">Créer Avatar</string>
+    <string name="avatar_list_title">Mes Avatars</string>
+    <string name="avatar_creation_completed_cd">Terminé</string>
+    <string name="avatar_creation_error_cd">Erreur</string>
+
+    <!-- Avatar creator sections -->
+    <string name="avatar_emotional_affection_label">Comment exprime-t-il l\'affection ?</string>
+    <string name="avatar_emotional_affection_placeholder">Ex : Taquineries, présence silencieuse, gestes concrets...</string>
+    <string name="avatar_emotional_vulnerable_label">Qu\'est-ce qui le rend vulnérable ?</string>
+    <string name="avatar_emotional_vulnerable_placeholder">Ex : Être ignoré, se sentir inutile, le silence...</string>
+    <string name="avatar_emotional_protect_label">Comment se protège-t-il émotionnellement ?</string>
+    <string name="avatar_emotional_protect_placeholder">Ex : Sarcasme, détachement, change de sujet...</string>
+    <string name="avatar_identity_name_label">Comment s\'appelle votre avatar ?</string>
+    <string name="avatar_identity_name_placeholder">Ex : Ren, Luna, Kai...</string>
+    <string name="avatar_needs_hopes_label">Qu\'espère-t-il obtenir des conversations ?</string>
+    <string name="avatar_needs_hopes_placeholder">Ex : Mieux se comprendre, avoir quelqu\'un qui l\'écoute...</string>
+    <string name="avatar_needs_avoid_label">Que ne veut-il JAMAIS s\'entendre dire ?</string>
+    <string name="avatar_needs_avoid_placeholder">Ex : Ne jugez pas mes choix, ne parlez pas de...</string>
+    <string name="avatar_values_nonneg_label">Qu\'est-ce qui est absolument non négociable pour lui/elle ?</string>
+    <string name="avatar_values_nonneg_placeholder">Ex : L\'honnêteté, la liberté personnelle, le respect...</string>
+    <string name="avatar_values_misunderstood_label">Qu\'est-ce qui lui fait se sentir incompris(e) ?</string>
+    <string name="avatar_values_misunderstood_placeholder">La blessure qui ne se referme jamais tout à fait...</string>
+    <string name="avatar_values_strength_label">Quelle est sa vraie force ?</string>
+    <string name="avatar_values_strength_placeholder">Cette chose qu\'il sait faire mieux que quiconque...</string>
+    <string name="avatar_values_cultural_label">Contexte culturel qui l\'influence</string>
+    <string name="avatar_values_cultural_placeholder">Ex : Élevé dans une famille du sud de l\'Italie...</string>
+    <string name="avatar_values_inspiration_label">Personnage/œuvre qui l\'inspire</string>
+    <string name="avatar_values_inspiration_placeholder">Ex : Spike Spiegel, Amélie Poulain, Naruto...</string>
+
+    <!-- ============================================================ -->
+    <!-- Social Profile feature -->
+    <!-- ============================================================ -->
+    <string name="social_edit_profile_title">Modifier le profil</string>
+    <string name="social_username_label">Nom d\'utilisateur</string>
+    <string name="social_username_prefix">@</string>
+    <string name="social_display_name_label">Nom affiché</string>
+    <string name="social_bio_label">Biographie</string>
+    <string name="social_website_label">Site web / Lien</string>
+    <string name="social_add_interest_label">Ajouter un intérêt</string>
+    <string name="social_save_changes">Sauvegarder les modifications</string>
+    <string name="social_edit_profile_button">Modifier le profil</string>
+    <string name="social_followed">Abonné</string>
+    <string name="social_follow">Suivre</string>
+    <string name="social_followers_tab">Abonnés</string>
+    <string name="social_following_tab">Abonnements</string>
+
+    <!-- ============================================================ -->
+    <!-- Insight feature -->
+    <!-- ============================================================ -->
+    <string name="insight_loading">Chargement des insights...</string>
+    <string name="insight_feedback_title">Qu\'est-ce qui n\'est pas correct ?</string>
+    <string name="insight_feedback_placeholder">Décrivez ce qui devrait être amélioré...</string>
+    <string name="insight_feedback_send">Envoyer</string>
+    <string name="insight_helpful">Utile</string>
+    <string name="insight_not_helpful">Pas utile</string>
+
+    <!-- ============================================================ -->
+    <!-- Meditation feature -->
+    <!-- ============================================================ -->
+    <string name="meditation_start">Commencer la pratique</string>
+    <string name="meditation_notes_placeholder">Écrivez vos ressentis... (optionnel)</string>
+    <string name="meditation_save_session">Sauvegarder la session</string>
+    <string name="meditation_discard">Ignorer et revenir</string>
+
+    <!-- ============================================================ -->
+    <!-- Coach marks / Tutorials -->
+    <!-- ============================================================ -->
+    <string name="tutorial_home_title">Bon retour, ami</string>
+    <string name="tutorial_home_desc">Voici votre page d\'accueil. Chaque jour vous y trouverez un message personnalisé et un résumé de votre parcours.</string>
+    <string name="tutorial_actions_title">Vos activités rapides</string>
+    <string name="tutorial_actions_desc">Accédez en un geste au journal, à la méditation, au chat avec Eve et bien plus.</string>
+    <string name="tutorial_write_title">Votre journal personnel</string>
+    <string name="tutorial_write_desc">Écrivez ce que vous ressentez, analysez vos pensées et construisez votre conscience au fil du temps.</string>
+    <string name="tutorial_chat_title">Parlez avec Eve</string>
+    <string name="tutorial_chat_desc">Eve est votre compagne IA. Elle écoute, réfléchit et vous aide à explorer vos émotions.</string>
+    <string name="tutorial_mood_title">Votre humeur aujourd\'hui</string>
+    <string name="tutorial_mood_desc">Enregistrez votre ressenti chaque jour pour découvrir des schémas et tendances dans votre bien-être.</string>
+    <string name="tutorial_insights_title">Vos insights</string>
+    <string name="tutorial_insights_desc">Des analyses profondes basées sur vos journaux et conversations. Découvrez ce qui vous anime vraiment.</string>
+    <string name="tutorial_habits_title">Vos habitudes</string>
+    <string name="tutorial_habits_desc">Construisez des routines positives, un petit pas à la fois. Suivi, pas traqué.</string>
+    <string name="tutorial_profile_title">Votre parcours</string>
+    <string name="tutorial_profile_desc">Voyez comment vous avez évolué au fil du temps. Données, graphiques et réflexions sur votre voyage.</string>
+    <string name="tutorial_social_title">La communauté</string>
+    <string name="tutorial_social_desc">Connectez-vous avec d\'autres explorateurs intérieurs. Partagez ce que vous souhaitez, gardez le reste pour vous.</string>
 </resources>

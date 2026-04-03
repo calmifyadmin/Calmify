@@ -17,6 +17,9 @@ import com.lifo.avatarcreator.presentation.components.SectionHeader
 import com.lifo.avatarcreator.presentation.components.TagPicker
 import com.lifo.util.model.EngagementFrequency
 import com.lifo.util.model.PrimaryNeed
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 @Composable
 fun NeedsSection(
@@ -37,7 +40,7 @@ fun NeedsSection(
 
         // Primary Need
         Text(
-            text = "Qual e' il suo bisogno principale?",
+            text = stringResource(Res.string.avatar_needs_primary_label),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = 8.dp, bottom = 8.dp),
         )
@@ -56,7 +59,7 @@ fun NeedsSection(
         OutlinedTextField(
             value = state.form.goals,
             onValueChange = { onIntent(Intent.UpdateGoals(it)) },
-            label = { Text("Cosa spera di ottenere dalle conversazioni?") },
+            label = { Text(stringResource(Res.string.avatar_needs_goals_label)) },
             placeholder = { Text("Es: Capire meglio se stesso, avere qualcuno che lo ascolti...") },
             minLines = 2,
             maxLines = 4,
@@ -67,7 +70,7 @@ fun NeedsSection(
         OutlinedTextField(
             value = state.form.avoidTopics,
             onValueChange = { onIntent(Intent.UpdateAvoidTopics(it)) },
-            label = { Text("Cosa NON vuole mai sentirsi dire?") },
+            label = { Text(stringResource(Res.string.avatar_needs_avoid_label)) },
             placeholder = { Text("Es: Non giudicare le mie scelte, non parlare di...") },
             minLines = 2,
             maxLines = 3,
@@ -76,7 +79,7 @@ fun NeedsSection(
 
         // Engagement Frequency
         Text(
-            text = "Con che frequenza vuole interagire?",
+            text = stringResource(Res.string.avatar_needs_frequency_label),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
         )

@@ -25,6 +25,9 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Warning
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 /**
  * Loading state representation
@@ -463,7 +466,7 @@ private fun ErrorStateComponent(
                     onClick = onRetry,
                     modifier = Modifier.fillMaxWidth(0.5f)
                 ) {
-                    Text("Try Again")
+                    Text(stringResource(Res.string.retry))
                 }
             }
         }

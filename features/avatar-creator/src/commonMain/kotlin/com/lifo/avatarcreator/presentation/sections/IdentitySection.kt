@@ -17,6 +17,9 @@ import com.lifo.avatarcreator.presentation.components.SectionHeader
 import com.lifo.avatarcreator.presentation.components.SliderWithLabel
 import com.lifo.avatarcreator.presentation.components.TagPicker
 import com.lifo.util.model.GenderIdentity
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 private val AVAILABLE_LANGUAGES = listOf(
     "Italiano", "English", "Espanol", "Francais", "Deutsch", "Portugues", "Japanese", "Korean",
@@ -43,7 +46,7 @@ fun IdentitySection(
         OutlinedTextField(
             value = state.form.name,
             onValueChange = { onIntent(Intent.UpdateName(it)) },
-            label = { Text("Come si chiama il tuo avatar?") },
+            label = { Text(stringResource(Res.string.avatar_identity_name_label)) },
             placeholder = { Text("Es: Ren, Luna, Kai...") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -62,7 +65,7 @@ fun IdentitySection(
 
         // Gender
         Text(
-            text = "Come si identifica?",
+            text = stringResource(Res.string.avatar_identity_gender_label),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
         )

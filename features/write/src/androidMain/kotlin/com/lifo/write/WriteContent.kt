@@ -51,6 +51,9 @@ import com.lifo.write.wizard.EnergyLevelStep
 import com.lifo.write.wizard.StressLevelStep
 import com.lifo.write.wizard.TriggerSelectionStep
 import com.lifo.write.wizard.WizardColors
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 
 private const val STEP_MOOD = 0
@@ -322,7 +325,7 @@ private fun TitleInputStep(
         OutlinedTextField(
             value = title,
             onValueChange = onTitleChanged,
-            placeholder = { Text("Il mio diario...") },
+            placeholder = { Text(stringResource(Res.string.write_diary_placeholder)) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             singleLine = true,
@@ -367,7 +370,7 @@ private fun DescriptionInputStep(
         OutlinedTextField(
             value = description,
             onValueChange = onDescriptionChanged,
-            placeholder = { Text("Oggi mi sento...") },
+            placeholder = { Text(stringResource(Res.string.write_mood_placeholder)) },
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 180.dp),

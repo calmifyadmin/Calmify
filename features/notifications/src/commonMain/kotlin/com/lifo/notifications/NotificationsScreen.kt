@@ -57,6 +57,9 @@ import com.lifo.socialui.avatar.UserAvatar
 import com.lifo.util.repository.NotificationRepository
 import com.lifo.util.repository.NotificationRepository.NotificationType
 import com.lifo.util.currentTimeMillis
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,7 +74,7 @@ fun NotificationsScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Notifiche",
+                        text = stringResource(Res.string.notifications_title),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -80,7 +83,7 @@ fun NotificationsScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Navigate back",
+                            contentDescription = stringResource(Res.string.back_cd),
                         )
                     }
                 },
@@ -91,7 +94,7 @@ fun NotificationsScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.DoneAll,
-                                contentDescription = "Mark all as read",
+                                contentDescription = stringResource(Res.string.notifications_mark_all_read_cd),
                                 tint = MaterialTheme.colorScheme.primary,
                             )
                         }

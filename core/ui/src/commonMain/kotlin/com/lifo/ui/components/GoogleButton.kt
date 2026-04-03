@@ -17,7 +17,10 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.google_logo_cd
 import com.lifo.ui.theme.CalmifySpacing
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun GoogleButton(
@@ -61,7 +64,7 @@ fun GoogleButton(
         ) {
             Icon(
                 painter = iconPainter,
-                contentDescription = "Google Logo",
+                contentDescription = stringResource(Res.string.google_logo_cd),
                 tint = Color.Unspecified
             )
             Spacer(modifier = Modifier.width(CalmifySpacing.sm))

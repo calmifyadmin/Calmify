@@ -21,6 +21,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.lifo.ui.components.CalmifyTopBar
 import org.koin.compose.viewmodel.koinViewModel
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 import com.lifo.ui.emotion.MiniMoodShape
 import com.lifo.util.model.HomeContentItem
 import java.time.Instant
@@ -61,7 +64,7 @@ internal fun DiaryHistoryFullScreen(
         Box(modifier = Modifier.fillMaxSize()) {
             if (diaryHistory.isEmpty() && searchQuery.isBlank()) {
                 EmptyHistoryContent(
-                    message = "No diary entries yet",
+                    message = stringResource(Res.string.history_no_diary_yet),
                     modifier = Modifier.padding(paddingValues)
                 )
             } else {
@@ -107,7 +110,7 @@ internal fun DiaryHistoryFullScreen(
                     query = searchQuery,
                     onQueryChange = { searchQuery = it },
                     onClearSearch = { searchQuery = "" },
-                    placeholder = "Search diaries...",
+                    placeholder = stringResource(Res.string.history_search_diaries_placeholder),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -184,7 +187,7 @@ private fun DiaryHistoryFullItem(
             ) {
                 Icon(
                     imageVector = Icons.Default.Lightbulb,
-                    contentDescription = "View Insights",
+                    contentDescription = stringResource(Res.string.history_view_insights_cd),
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.tertiary
                 )
@@ -197,7 +200,7 @@ private fun DiaryHistoryFullItem(
             ) {
                 Icon(
                     imageVector = Icons.Default.MoreVert,
-                    contentDescription = "More options",
+                    contentDescription = stringResource(Res.string.history_more_options_cd),
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -259,7 +262,7 @@ private fun EmptySearchResults() {
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
             )
             Text(
-                text = "No results found",
+                text = stringResource(Res.string.no_results),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -307,7 +310,7 @@ private fun HistorySearchBar(
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Search,
-                            contentDescription = "Search",
+                            contentDescription = stringResource(Res.string.search_cd),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     },
@@ -316,7 +319,7 @@ private fun HistorySearchBar(
                             IconButton(onClick = onClearSearch) {
                                 Icon(
                                     imageVector = Icons.Default.Clear,
-                                    contentDescription = "Clear search",
+                                    contentDescription = stringResource(Res.string.clear_cd),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -343,7 +346,7 @@ private fun HistorySearchBar(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Type to search...",
+                    text = stringResource(Res.string.type_to_search),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

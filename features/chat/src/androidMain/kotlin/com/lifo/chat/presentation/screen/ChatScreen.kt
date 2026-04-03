@@ -67,6 +67,9 @@ import com.lifo.chat.domain.model.ConnectionStatus
 import com.lifo.chat.domain.model.TurnState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -267,7 +270,7 @@ fun ChatScreen(
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Text(
-                                    text = "🤖 Gemini Live",
+                                    text = "🤖 ${stringResource(Res.string.chat_gemini_live)}",
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                                 )
@@ -374,8 +377,8 @@ fun ChatScreen(
                     if (uiState.showFreeLimitReached) {
                         item(key = "paywall_card") {
                             InlinePaywallCard(
-                                title = "Hai raggiunto il limite giornaliero",
-                                message = "Con Calmify Pro hai conversazioni illimitate con Eve, insight avanzati e molto altro.",
+                                title = stringResource(Res.string.chat_daily_limit_title),
+                                message = stringResource(Res.string.chat_daily_limit_message),
                                 ctaText = "Scopri Pro",
                                 onUpgradeClick = { navigateToPaywall() },
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -413,13 +416,13 @@ private fun MinimalTopBar(
 ) {
     TopAppBar(
         title = {
-            Text("AI Chat")
+            Text(stringResource(Res.string.chat_title))
         },
         navigationIcon = {
             IconButton(onClick = onNavigateBack) {
                 Icon(
                     imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Back"
+                    contentDescription = stringResource(Res.string.back_cd)
                 )
             }
         },
@@ -447,7 +450,7 @@ private fun StreamingMessage(
         // AI Avatar
         Image(
             painter = painterResource(id = UiR.mipmap.calmify_logo_foreground),
-            contentDescription = "Calmify AI",
+            contentDescription = stringResource(Res.string.chat_calmify_ai_cd),
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
@@ -563,7 +566,7 @@ private fun NaturalAnimatedEmptyState(
     ) {
         // Animated greeting with name
         Text(
-            text = "Ciao${userName?.let { " $it" } ?: ""}",
+            text = stringResource(Res.string.chat_greeting, userName?.let { " $it" } ?: ""),
             style = MaterialTheme.typography.displayMedium.copy(
                 fontSize = 42.sp,
                 letterSpacing = (-0.5).sp
@@ -597,13 +600,13 @@ private fun NaturalAnimatedEmptyState(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Come posso aiutarti oggi?",
+            text = stringResource(Res.string.chat_how_can_i_help),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         Text(
-            text = "Inizia una conversazione per sperimentare la voce naturale",
+            text = stringResource(Res.string.chat_voice_hint),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
             textAlign = TextAlign.Center
@@ -662,11 +665,11 @@ private fun LiveChatMuteUnmuteSection(
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             TextButton(onClick = onClearError) {
-                                Text("Dismiss")
+                                Text(stringResource(Res.string.dismiss))
                             }
                             if (connectionStatus == ConnectionStatus.Error) {
                                 TextButton(onClick = onRetryConnection) {
-                                    Text("Retry")
+                                    Text(stringResource(Res.string.retry))
                                 }
                             }
                         }
@@ -864,7 +867,7 @@ private fun LiveChatMuteUnmuteSection(
                     )
 
                     Text(
-                        text = "VAD: ${if (!isMuted) "Attivo" else "In pausa"}",
+                        text = if (!isMuted) stringResource(Res.string.chat_vad_active) else stringResource(Res.string.chat_vad_paused),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -892,7 +895,7 @@ private fun LiveChatMuteUnmuteSection(
                                 )
                         )
                         Text(
-                            text = "Tu",
+                            text = stringResource(Res.string.you),
                             style = MaterialTheme.typography.labelSmall,
                             color = if (turnState == TurnState.UserTurn)
                                 MaterialTheme.colorScheme.primary
@@ -918,7 +921,7 @@ private fun LiveChatMuteUnmuteSection(
                                 )
                         )
                         Text(
-                            text = "AI",
+                            text = stringResource(Res.string.chat_ai_label),
                             style = MaterialTheme.typography.labelSmall,
                             color = if (turnState == TurnState.AgentTurn)
                                 MaterialTheme.colorScheme.secondary

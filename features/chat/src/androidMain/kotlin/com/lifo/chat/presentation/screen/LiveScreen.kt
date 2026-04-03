@@ -55,6 +55,9 @@ import com.lifo.chat.presentation.components.AiAwakeningOverlay
 import com.lifo.chat.presentation.components.GeminiLiquidVisualizer
 import com.lifo.chat.presentation.components.SimpleLiveCameraPreview
 import com.lifo.chat.presentation.viewmodel.LiveChatViewModel
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 /**
  * Dedicated Live Screen with minimalist UI inspired by Gemini Live
@@ -411,9 +414,8 @@ fun LiveScreen(
                 .padding(horizontal = 24.dp)
         ) {
             com.lifo.ui.components.InlinePaywallCard(
-                title = "Sessione terminata",
-                message = "Con Calmify Pro hai sessioni live fino a 15 minuti con Eve, " +
-                    "avatar 3D, insight avanzati e molto altro.",
+                title = stringResource(Res.string.chat_session_ended_title),
+                message = stringResource(Res.string.chat_session_ended_message),
                 ctaText = "Scopri Pro",
                 onUpgradeClick = { onClose() }, // Navigate back, then user can go to subscription
                 modifier = Modifier.fillMaxWidth()
@@ -907,7 +909,7 @@ private fun AudioDeviceSelectorSheet(
                 .padding(bottom = 32.dp)
         ) {
             Text(
-                text = "Audio Output",
+                text = stringResource(Res.string.chat_audio_output),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
@@ -915,7 +917,7 @@ private fun AudioDeviceSelectorSheet(
 
             if (devices.isEmpty()) {
                 Text(
-                    text = "No devices available",
+                    text = stringResource(Res.string.chat_no_devices),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)

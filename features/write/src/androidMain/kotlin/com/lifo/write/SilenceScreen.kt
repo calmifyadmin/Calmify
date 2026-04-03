@@ -20,6 +20,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.PI
 import kotlin.math.sin
+import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.resources.Res
+import com.lifo.ui.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,10 +35,10 @@ fun SilenceScreen(
         topBar = {
             if (state.phase != SilenceContract.Phase.ACTIVE) {
                 TopAppBar(
-                    title = { Text("Pratica del Silenzio") },
+                    title = { Text(stringResource(Res.string.silence_title)) },
                     navigationIcon = {
                         IconButton(onClick = onBackPressed) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back_cd))
                         }
                     },
                 )
@@ -197,7 +200,7 @@ private fun JournalPhase(
             value = state.journalText,
             onValueChange = { onIntent(SilenceContract.Intent.UpdateJournal(it)) },
             modifier = Modifier.fillMaxWidth().weight(1f),
-            placeholder = { Text("Le parole verranno da sole...") },
+            placeholder = { Text(stringResource(Res.string.silence_journal_placeholder)) },
             shape = RoundedCornerShape(16.dp),
         )
 
@@ -221,7 +224,7 @@ private fun JournalPhase(
                 shape = RoundedCornerShape(16.dp),
                 enabled = state.journalText.isNotBlank(),
             ) {
-                Text("Salva")
+                Text(stringResource(Res.string.silence_save))
             }
         }
     }
