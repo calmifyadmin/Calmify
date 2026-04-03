@@ -1,108 +1,197 @@
-# Calmify i18n Guide
+# I18N_GUIDE.md — Internationalisation in Calmify
 
-## Rule: no hardcoded strings in UI code
+## Overview
 
-Every user-visible string shown in Compose UI **must** come from a string resource.
-The `checkHardcodedStrings` Gradle task enforces this automatically before every compilation.
+Calmify is a KMP project targeting Android (and eventually iOS / Web).
+All user-visible strings must live in `core/ui/src/commonMain/composeResources/values/strings.xml` (and its translations) so that:
+
+- the app can be localised without touching Kotlin code
+- the `lintHardcodedStrings` Gradle task can detect regressions automatically
 
 ---
 
-## Quick reference
+## String Resource Location
 
-### Correct usage
+| Path | Purpose |
+|------|---------|
+| `core/ui/src/commonMain/composeResources/values/strings.xml` | Default locale (currently Italian) |
+| `core/ui/src/commonMain/composeResources/values-en/strings.xml` | English translation |
+| `core/ui/src/commonMain/composeResources/values-XX/strings.xml` | Add new locales here |
+
+---
+
+## How to Add a String
+
+### 1. Define it in strings.xml
+
+```xml
+<!-- core/ui/src/commonMain/composeResources/values/strings.xml -->
+<string name="home_greeting_title">Ciao, %1$s!</string>
+```
+
+Group strings by screen/feature using comment banners:
+
+```xml
+<!-- ============================================================ -->
+<!-- Home Screen -->
+<!-- ============================================================ -->
+<string name="home_greeting_title">Ciao, %1$s!</string>
+<string name="home_no_entries">Ancora nessuna voce. Inizia a scrivere!</string>
+```
+
+### 2. Access it in Compose (commonMain)
 
 ```kotlin
-// Single string
-Text(stringResource(R.string.my_key))
+import org.jetbrains.compose.resources.stringResource
+import calmify.core.ui.generated.resources.Res
+import calmify.core.ui.generated.resources.home_greeting_title
 
-// With format arguments
-Text(stringResource(R.string.greeting, userName))
+// Simple string
+Text(stringResource(Res.string.home_greeting_title))
 
-// Named parameter
-OutlinedTextField(
-    label = { Text(stringResource(R.string.email_label)) },
-    placeholder = { Text(stringResource(R.string.email_placeholder)) }
-)
-
-// TopAppBar title
-CalmifyTopBar(title = stringResource(R.string.settings_title))
+// Parametrised string
+Text(stringResource(Res.string.home_greeting_title, userName))
 ```
 
-### Adding a new string
+The accessor is generated at build time from `composeResources/`. Always import the
+specific key (`Res.string.xxx`) — do not use the Android `R.string.xxx` API.
 
-1. Open `core/ui/src/commonMain/composeResources/values-en/strings.xml`
-2. Add your key inside `<resources>` using the naming convention below
-3. Reference it in Kotlin with `stringResource(R.string.your_key)`
-4. Optionally add translations in `values-de/`, `values-es/`, `values-fr/`, `values-pt/`, `values/` (Italian default)
+### 3. Add English translation
 
----
-
-## String key naming convention
-
-| Prefix | Where used | Example |
-|--------|-----------|---------|
-| `home_` | Home feature | `home_talk_to_eve` |
-| `chat_` | Chat / Live screen | `chat_daily_limit_title` |
-| `habits_` | Habits feature | `habits_empty_title` |
-| `history_` | History screen | `history_search_placeholder` |
-| `insight_` | Insight screen | `insight_empty_title` |
-| `profile_` | Profile screen | `profile_loading` |
-| `settings_` | Settings screens | `settings_logout` |
-| `onboarding_` | Onboarding flow | `onboarding_skip` |
-| `feed_` | Community feed | `feed_empty` |
-| `nav_` | Navigation bar labels | `nav_home` |
-| `error_` | Error / empty states | `error_loading` |
-| `tutorial_` | Coach-mark tooltips | `tutorial_home_title` |
-| *(none)* | Global actions | `save`, `cancel`, `retry` |
+```xml
+<!-- core/ui/src/commonMain/composeResources/values-en/strings.xml -->
+<string name="home_greeting_title">Hello, %1$s!</string>
+```
 
 ---
 
-## Skipping the check (use sparingly)
+## Naming Conventions
 
-Append the suppression comment to a single line:
+```
+<screen>_<element>_<variant>
+```
+
+| Pattern | Example |
+|---------|---------|
+| `<screen>_<noun>` | `home_greeting_title`, `chat_input_hint` |
+| `<action>_<noun>` | `delete_confirm_message`, `save_success_toast` |
+| Common verbs | `back`, `next`, `save`, `cancel`, `close`, `ok`, `confirm`, `delete` |
+| Feature-prefixed | `habit_streak_label`, `meditation_duration_minutes` |
+
+Avoid:
+- Generic names like `text1`, `string_1`
+- Screen-unscoped names that collide across features
+
+---
+
+## Plurals
+
+Use `<plurals>` for count-dependent strings:
+
+```xml
+<plurals name="habit_streak_days">
+    <item quantity="one">%1$d giorno</item>
+    <item quantity="other">%1$d giorni</item>
+</plurals>
+```
 
 ```kotlin
-Text("debug_only_string")  // noinspection HardcodedStringInCompose
-```
+import org.jetbrains.compose.resources.pluralStringResource
 
-Do **not** suppress entire files or functions — fix them instead.
+Text(pluralStringResource(Res.plurals.habit_streak_days, count, count))
+```
 
 ---
 
-## Running the check manually
+## Non-Translatable Strings
+
+Do NOT put these in strings.xml:
+
+- Log / debug messages → use string literals directly in `Log.d()`
+- Firestore collection paths, map keys, API field names
+- Test tags (`Modifier.testTag("...")`)
+- Assertion messages (`require(...)`, `check(...)`, `error(...)`)
+- Format tokens (`"%d"`, `"yyyy-MM-dd"`)
+- Empty strings `""`
+
+---
+
+## Running the Lint Check
 
 ```bash
-./gradlew checkHardcodedStrings
+# From project root
+./gradlew lintHardcodedStrings
+
+# Report location
+build/reports/hardcoded-strings.txt
 ```
 
-The check runs automatically before any `compileKotlin` task.
-To run a full build without the check (CI escape hatch only):
+The task scans all `*.kt` files under `features/`, `app/`, and `core/` for
+patterns like `Text("literal")`, `title = "literal"`, `placeholder = "literal"`, etc.
+
+It does **not** fail the build by default — it warns and writes a report.
+To enforce a clean state in CI, add this to your workflow:
 
 ```bash
-./gradlew assembleDebug -x checkHardcodedStrings
+./gradlew lintHardcodedStrings
+count=$(grep -c "^  features\|^  app\|^  core" build/reports/hardcoded-strings.txt || true)
+if [ "$count" -gt "0" ]; then
+  echo "ERROR: $count hardcoded string(s) found. See I18N_GUIDE.md."
+  exit 1
+fi
 ```
 
 ---
 
-## Language files
+## Fixing a Hardcoded String (step-by-step)
 
-| File | Locale |
-|------|--------|
-| `values-en/strings.xml` | English (primary source of truth) |
-| `values/strings.xml` | Italian (app default) |
-| `values-de/strings.xml` | German |
-| `values-es/strings.xml` | Spanish |
-| `values-fr/strings.xml` | French |
-| `values-pt/strings.xml` | Portuguese |
+Given a finding like:
 
-Translation stubs for DE/ES/FR/PT are pre-populated — translate missing strings before shipping to those locales.
+```
+features/home/src/androidMain/kotlin/com/lifo/home/HomeContent.kt:42
+    Text("Benvenuto!")
+```
+
+1. Open `core/ui/src/commonMain/composeResources/values/strings.xml`
+2. Add `<string name="home_welcome">Benvenuto!</string>`
+3. Add the English counterpart to `values-en/strings.xml`
+4. Replace the hardcoded call:
+   ```kotlin
+   // Before
+   Text("Benvenuto!")
+   // After
+   Text(stringResource(Res.string.home_welcome))
+   ```
+5. Run `./gradlew lintHardcodedStrings` to confirm no remaining findings
 
 ---
 
-## Dynamic locale switching
+## KMP Source Set Rules
 
-The app supports runtime locale switching via **Settings → Language**.
-Implementation lives in:
-- `features/settings/src/androidMain/.../navigation/SettingsEntryPoint.kt` — `applyLocaleToContext()` + `applyAndSaveLanguage()`
-- `app/src/main/java/com/lifo/calmifyapp/MainActivity.kt` — `attachBaseContext()` override
-- Locale preference stored in `SharedPreferences` key `language_code`
+| Source set | Import allowed |
+|------------|---------------|
+| `commonMain` | `org.jetbrains.compose.resources.stringResource` — YES |
+| `commonMain` | `android.content.res.Resources` — NO |
+| `androidMain` | Both allowed, but prefer compose-resources for UI strings |
+
+`stringResource()` from Compose Resources resolves at runtime based on the
+device locale, exactly like Android's `getString(R.string.xxx)`.
+
+---
+
+## Adding a New Locale
+
+1. Create `core/ui/src/commonMain/composeResources/values-XX/strings.xml`
+   (e.g., `values-fr` for French, `values-es` for Spanish)
+2. Copy all `<string>` keys from `values/strings.xml`
+3. Translate the values — do not translate the `name` attributes
+4. Rebuild — the Compose Resources generator picks up the new file automatically
+
+---
+
+## Checklist Before Merging a PR
+
+- [ ] No new `Text("literal")` calls — use `stringResource(Res.string.xxx)`
+- [ ] New string keys added to `values/strings.xml` AND `values-en/strings.xml`
+- [ ] String names follow the `<screen>_<element>` convention
+- [ ] `./gradlew lintHardcodedStrings` shows no new findings
