@@ -121,9 +121,13 @@ class SubscriptionViewModel(
             // Load available products
             when (val productsResult = subscriptionRepository.getAvailableProducts()) {
                 is RequestState.Success -> {
+                    // Detect waitlist mode: WaitlistSubscriptionRepository prefixes all
+                    // product IDs with "waitlist_" to signal that prices are placeholder only.
+                    val isWaitlist = productsResult.data.any { it.productId.startsWith("waitlist_") }
                     updateState {
                         copy(
                             availableProducts = productsResult.data,
+                            isWaitlistMode = isWaitlist,
                             isLoading = false,
                         )
                     }

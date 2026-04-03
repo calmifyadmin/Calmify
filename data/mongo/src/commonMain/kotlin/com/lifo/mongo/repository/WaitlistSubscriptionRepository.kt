@@ -28,20 +28,25 @@ class WaitlistSubscriptionRepository : SubscriptionRepository {
     }
 
     override suspend fun getAvailableProducts(): RequestState<List<ProductInfo>> {
-        // Show mock products so the paywall UI renders correctly
+        // PLACEHOLDER prices — NOT real Play Store products.
+        // These are shown only during waitlist mode (premium_enabled = false) so the
+        // PaywallScreen renders something meaningful. Prices are indicative only and
+        // will be replaced by real Play Store SKUs once premium_enabled = true.
+        // The "waitlist_" prefix in productId is used by SubscriptionViewModel to detect
+        // waitlist mode and render appropriate UI (no real purchase button).
         return RequestState.Success(
             listOf(
                 ProductInfo(
-                    productId = "calmify_pro_monthly",
-                    title = "Calmify PRO",
+                    productId = "waitlist_calmify_pro_monthly",
+                    title = "Calmify PRO (Waitlist Preview)",
                     description = "Accesso illimitato a tutte le funzionalità",
                     price = "€5,99/mese",
                     priceMicros = 5_990_000,
                     currencyCode = "EUR",
                 ),
                 ProductInfo(
-                    productId = "calmify_pro_yearly",
-                    title = "Calmify PRO Annuale",
+                    productId = "waitlist_calmify_pro_yearly",
+                    title = "Calmify PRO Annuale (Waitlist Preview)",
                     description = "Risparmia 30% con il piano annuale",
                     price = "€49,99/anno",
                     priceMicros = 49_990_000,

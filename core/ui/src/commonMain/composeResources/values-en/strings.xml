@@ -83,6 +83,8 @@
     <string name="paywall_pro">Pro</string>
     <string name="paywall_current_plan">Current plan</string>
     <string name="paywall_subscribe">Subscribe</string>
+    <string name="paywall_join_waitlist">Join the Waitlist</string>
+    <string name="paywall_indicative_prices">Indicative prices</string>
     <string name="paywall_restore">Restore purchases</string>
     <string name="paywall_included">Included</string>
     <string name="paywall_not_included">Not included</string>
