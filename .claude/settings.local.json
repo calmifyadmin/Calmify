@@ -124,7 +124,8 @@
       "Bash(mkdir -p c:/Users/lifoe/AndroidStudioProjects/CalmifyAppAndroid/core/ui/src/commonMain/composeResources/values-en)",
       "Bash(__NEW_LINE_dfd51a2ecf4ea7d8__ echo:*)",
       "Bash(__NEW_LINE_b3c1dd04b2a050a5__ echo:*)",
-      "Bash(__NEW_LINE_702b9976a97656d0__ echo:*)"
+      "Bash(__NEW_LINE_702b9976a97656d0__ echo:*)",
+      "Read(//c/Users/lifoe/Downloads/**)"
     ],
     "deny": []
   }
