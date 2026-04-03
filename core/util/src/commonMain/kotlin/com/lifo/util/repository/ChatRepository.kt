@@ -40,4 +40,12 @@ interface ChatRepository {
         content: String,
         isUser: Boolean
     ): RequestState<ChatMessage>
+
+    // Cross-session context: fetches recent messages from the "other" session type
+    // (fromLiveSessions=true → get recent Live messages for text chat context, and vice versa)
+    suspend fun getCrossSessionContext(
+        currentSessionId: String,
+        fromLiveSessions: Boolean,
+        maxMessages: Int = 8
+    ): String
 }

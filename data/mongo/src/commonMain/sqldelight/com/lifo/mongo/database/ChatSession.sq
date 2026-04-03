@@ -43,3 +43,9 @@ updateLastMessage:
 UPDATE chat_sessions
 SET lastMessageAt = ?
 WHERE id = ?;
+
+getRecentSessionsByMode:
+SELECT * FROM chat_sessions
+WHERE ownerId = ? AND isLiveMode = ?
+ORDER BY lastMessageAt DESC
+LIMIT ?;
