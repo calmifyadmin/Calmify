@@ -38,6 +38,8 @@ import com.lifo.ui.components.CalmifyTopBar
 import com.lifo.ui.components.graphics.GraphEdge
 import com.lifo.ui.components.graphics.GraphNode
 import com.lifo.ui.components.graphics.InteractiveNodeGraph
+import com.lifo.ui.components.tooltips.InfoTooltip
+import com.lifo.ui.components.tooltips.TooltipContent
 import com.lifo.util.formatDecimal
 import com.lifo.util.model.PsychologicalProfile
 import com.lifo.util.model.Trend
@@ -581,7 +583,12 @@ private fun WeeklyReflectionCard(profile: PsychologicalProfile, chartData: Perco
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.SemiBold
                     ),
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
+                )
+                InfoTooltip(
+                    title       = TooltipContent.selfDeterminationTheory.first,
+                    description = TooltipContent.selfDeterminationTheory.second,
                 )
             }
 
@@ -665,11 +672,21 @@ private fun JourneyLineCard(chartData: PercorsoChartData) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Il tuo percorso",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(
+                        text = "Il tuo percorso",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    InfoTooltip(
+                        title       = TooltipContent.wellbeingTrend.first,
+                        description = TooltipContent.wellbeingTrend.second,
+                    )
+                }
                 val latest = chartData.moodLine.lastOrNull()
                 if (latest != null) {
                     Surface(
@@ -901,6 +918,25 @@ private fun ResilienceGaugeCard(profile: PsychologicalProfile) {
 private fun StatsGrid(profile: PsychologicalProfile) {
     val colorScheme = MaterialTheme.colorScheme
 
+    Column(modifier = Modifier.fillMaxWidth()) {
+    // Section header with sleep-mood correlation tooltip
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+    ) {
+        Text(
+            text = "Le tue metriche",
+            style = MaterialTheme.typography.labelLarge,
+            color = colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+        InfoTooltip(
+            title       = TooltipContent.sleepMoodCorrelation.first,
+            description = TooltipContent.sleepMoodCorrelation.second,
+        )
+    }
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -943,6 +979,7 @@ private fun StatsGrid(profile: PsychologicalProfile) {
             icon = Icons.Default.EditNote
         )
     }
+    } // end Column wrapping StatsGrid
 }
 
 @Composable

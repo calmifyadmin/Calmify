@@ -1,6 +1,8 @@
 package com.lifo.insight
 
 import com.lifo.util.formatDecimal
+import com.lifo.ui.components.tooltips.InfoTooltip
+import com.lifo.ui.components.tooltips.TooltipContent
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
@@ -400,7 +402,13 @@ private fun CognitivePatternsCard(patterns: List<CognitivePattern>) {
                     text = "Schemi di pensiero",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                InfoTooltip(
+                    title       = TooltipContent.cognitivePatterns.first,
+                    description = TooltipContent.cognitivePatterns.second,
                 )
             }
 
@@ -429,13 +437,11 @@ private fun PatternItem(pattern: CognitivePattern) {
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium
             )
-            IconButton(onClick = { /* Show pattern explanation */ }) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = "Info",
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+            InfoTooltip(
+                title       = TooltipContent.cognitivePatterns.first,
+                description = TooltipContent.cognitivePatterns.second,
+                modifier    = Modifier.padding(8.dp),
+            )
         }
         Text(
             text = pattern.description,
