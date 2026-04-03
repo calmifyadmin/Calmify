@@ -28,6 +28,12 @@ import com.lifo.home.domain.model.*
 import com.lifo.home.presentation.components.dashboard.*
 import com.lifo.home.presentation.components.common.*
 import com.lifo.home.presentation.components.expressive.*
+import com.lifo.ui.components.coaching.CoachMarkKeys
+import com.lifo.ui.components.coaching.CoachMarkOverlay
+import com.lifo.ui.components.coaching.ScreenTutorials
+import com.lifo.ui.components.coaching.coachMarkTarget
+import com.lifo.ui.components.coaching.rememberCoachMarkState
+import com.lifo.ui.onboarding.OnboardingManager
 import com.lifo.util.model.Diary
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
@@ -35,6 +41,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.todayIn
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,6 +70,15 @@ internal fun HomeContent(
     var isRefreshing by remember { mutableStateOf(false) }
     val pullToRefreshState = rememberPullToRefreshState()
     val coroutineScope = rememberCoroutineScope()
+
+    // ── Coach marks ──────────────────────────────────────────────────────────
+    val onboardingManager: OnboardingManager = koinInject()
+    val coachState = rememberCoachMarkState(ScreenTutorials.home)
+    LaunchedEffect(Unit) {
+        if (onboardingManager.shouldShowTutorial(ScreenTutorials.KEY_HOME)) {
+            coachState.start()
+        }
+    }
 
     // Redesign state
     val homeRedesignState by viewModel.homeRedesignState.collectAsState()
@@ -141,6 +157,7 @@ internal fun HomeContent(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .staggeredEntrance(index = 0, baseDelayMs = 80)
+                                    .coachMarkTarget(coachState, CoachMarkKeys.HOME_GREETING)
                             )
                         }
 
@@ -155,6 +172,7 @@ internal fun HomeContent(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .staggeredEntrance(index = 1, baseDelayMs = 80)
+                                    .coachMarkTarget(coachState, CoachMarkKeys.HOME_QUICK_ACTIONS)
                             )
                         }
 
@@ -207,6 +225,7 @@ internal fun HomeContent(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .staggeredEntrance(index = 5, baseDelayMs = 80)
+                                        .coachMarkTarget(coachState, CoachMarkKeys.HOME_MOOD)
                                 )
                             }
                         }
@@ -241,6 +260,12 @@ internal fun HomeContent(
                 }
             }
         }
+
+        // ── Coach mark overlay (above everything) ────────────────────────────
+        CoachMarkOverlay(
+            state     = coachState,
+            onFinished = { onboardingManager.markTutorialSeen(ScreenTutorials.KEY_HOME) },
+        )
     }
 }
 

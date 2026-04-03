@@ -30,6 +30,9 @@ import com.lifo.threaddetail.di.threadDetailKoinModule
 import com.lifo.avatarcreator.di.avatarCreatorKoinModule
 import com.lifo.habits.di.habitKoinModule
 import com.lifo.meditation.di.meditationKoinModule
+import com.lifo.ui.onboarding.OnboardingManager
+import com.lifo.ui.onboarding.TutorialStorage
+import com.lifo.ui.onboarding.TutorialStorageImpl
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
@@ -54,6 +57,12 @@ val databaseModule = module {
     single<ConnectivityObserver> { NetworkConnectivityObserver(androidContext()) }
 }
 
+// OnboardingManager + TutorialStorage singleton
+val onboardingUiModule = module {
+    single<TutorialStorage> { TutorialStorageImpl(androidContext()) }
+    single { OnboardingManager(get()) }
+}
+
 // Network module: Ktor HttpClient (future, for social API calls)
 val networkModule = module {
     // Will be populated when core-network module is created
@@ -67,6 +76,7 @@ val socialModule = module {
 
 val allKoinModules = listOf(
     databaseModule,
+    onboardingUiModule,
     firebaseModule,
     repositoryModule,
     networkModule,
