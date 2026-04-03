@@ -18,6 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.lifo.ui.components.tooltips.InfoTooltip
+import com.lifo.ui.components.tooltips.TooltipContent
 import com.lifo.util.model.BodySensation
 import com.lifo.util.model.Trigger
 
@@ -105,44 +107,47 @@ fun PsychologicalMetricsSheet(
 
                     // Emotion Intensity Slider
                     MetricSlider(
-                        label = "Intensità Emotiva",
-                        value = emotionIntensity,
+                        label       = "Intensità Emotiva",
+                        value       = emotionIntensity,
                         onValueChange = { onEmotionIntensityChanged(it.toInt()) },
-                        minLabel = "Debole",
-                        maxLabel = "Intensa"
+                        minLabel    = "Debole",
+                        maxLabel    = "Intensa",
+                        tooltip     = TooltipContent.emotionalIntensity,
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // Stress Level Slider
                     MetricSlider(
-                        label = "Livello di Stress",
-                        value = stressLevel,
+                        label       = "Livello di Stress",
+                        value       = stressLevel,
                         onValueChange = { onStressLevelChanged(it.toInt()) },
-                        minLabel = "Nessuno",
-                        maxLabel = "Estremo"
+                        minLabel    = "Nessuno",
+                        maxLabel    = "Estremo",
+                        tooltip     = TooltipContent.stressLevel,
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // Energy Level Slider
                     MetricSlider(
-                        label = "Livello di Energia",
-                        value = energyLevel,
+                        label       = "Livello di Energia",
+                        value       = energyLevel,
                         onValueChange = { onEnergyLevelChanged(it.toInt()) },
-                        minLabel = "Esausto",
-                        maxLabel = "Energico"
+                        minLabel    = "Esausto",
+                        maxLabel    = "Energico",
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // Calm/Anxiety Level Slider
                     MetricSlider(
-                        label = "Calma/Ansia",
-                        value = calmAnxietyLevel,
+                        label       = "Calma/Ansia",
+                        value       = calmAnxietyLevel,
                         onValueChange = { onCalmAnxietyLevelChanged(it.toInt()) },
-                        minLabel = "Ansioso",
-                        maxLabel = "Calmo"
+                        minLabel    = "Ansioso",
+                        maxLabel    = "Calmo",
+                        tooltip     = TooltipContent.calmAnxietyLevel,
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -199,7 +204,8 @@ private fun MetricSlider(
     value: Int,
     onValueChange: (Float) -> Unit,
     minLabel: String,
-    maxLabel: String
+    maxLabel: String,
+    tooltip: Pair<String, String>? = null,
 ) {
     Column {
         Row(
@@ -207,11 +213,22 @@ private fun MetricSlider(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                )
+                if (tooltip != null) {
+                    InfoTooltip(
+                        title       = tooltip.first,
+                        description = tooltip.second,
+                    )
+                }
+            }
             Surface(
                 color = MaterialTheme.colorScheme.primaryContainer,
                 shape = MaterialTheme.shapes.small
