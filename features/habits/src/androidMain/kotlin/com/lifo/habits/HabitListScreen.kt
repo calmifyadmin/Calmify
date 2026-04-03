@@ -143,6 +143,42 @@ private fun HabitListContent(
             return@Scaffold
         }
 
+        if (state.errorMessage != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ErrorOutline,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = colorScheme.error
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = state.errorMessage,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(
+                        onClick = { onIntent(HabitContract.Intent.RetryLoad) },
+                        shape = RoundedCornerShape(20.dp)
+                    ) {
+                        Text("Riprova")
+                    }
+                }
+            }
+            return@Scaffold
+        }
+
         if (state.habits.isEmpty()) {
             EmptyHabitsContent(
                 onAddClick = { onIntent(HabitContract.Intent.ShowAddDialog) },

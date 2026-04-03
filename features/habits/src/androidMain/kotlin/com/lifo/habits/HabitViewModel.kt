@@ -40,44 +40,58 @@ class HabitViewModel(
             is HabitContract.Intent.ShowAddDialog -> updateState { copy(showAddDialog = true) }
             is HabitContract.Intent.DismissAddDialog -> updateState { copy(showAddDialog = false) }
             is HabitContract.Intent.SaveNewHabit -> handleSaveHabit(intent.habit)
+            is HabitContract.Intent.RetryLoad -> {
+                updateState { copy(errorMessage = null, isLoading = true) }
+                handleLoadHabits()
+            }
         }
     }
 
     private fun handleLoadHabits() {
         scope.launch {
-            combine(
-                repository.getActiveHabits(),
-                repository.getCompletionsForDay(todayKey)
-            ) { habitsResult, completionsResult ->
-                Pair(habitsResult, completionsResult)
-            }.collectLatest { (habitsResult, completionsResult) ->
-                val habits = when (habitsResult) {
-                    is RequestState.Success -> habitsResult.data
-                    else -> emptyList()
-                }
-                val completedIds = when (completionsResult) {
-                    is RequestState.Success -> completionsResult.data.map { it.habitId }.toSet()
-                    else -> emptySet()
-                }
-
-                // Calculate streaks for each habit
-                val streaks = habits.associate { it.id to calculateStreak(it.id, completedIds) }
-
-                // Load 90-day completion history across all habits (best-effort, non-blocking)
-                val history = habits.flatMap { habit ->
-                    when (val r = repository.getCompletionsForHabit(habit.id, 90).first()) {
-                        is RequestState.Success -> r.data
+            try {
+                combine(
+                    repository.getActiveHabits(),
+                    repository.getCompletionsForDay(todayKey)
+                ) { habitsResult, completionsResult ->
+                    Pair(habitsResult, completionsResult)
+                }.collectLatest { (habitsResult, completionsResult) ->
+                    val habits = when (habitsResult) {
+                        is RequestState.Success -> habitsResult.data
                         else -> emptyList()
                     }
-                }
+                    val completedIds = when (completionsResult) {
+                        is RequestState.Success -> completionsResult.data.map { it.habitId }.toSet()
+                        else -> emptySet()
+                    }
 
+                    // Calculate streaks for each habit
+                    val streaks = habits.associate { it.id to calculateStreak(it.id, completedIds) }
+
+                    // Load 90-day completion history across all habits (best-effort, non-blocking)
+                    val history = habits.flatMap { habit ->
+                        when (val r = repository.getCompletionsForHabit(habit.id, 90).first()) {
+                            is RequestState.Success -> r.data
+                            else -> emptyList()
+                        }
+                    }
+
+                    updateState {
+                        copy(
+                            habits = habits,
+                            todayCompletions = completedIds,
+                            streaks = streaks,
+                            completionHistory = history,
+                            isLoading = false,
+                            errorMessage = null,
+                        )
+                    }
+                }
+            } catch (e: Exception) {
                 updateState {
                     copy(
-                        habits = habits,
-                        todayCompletions = completedIds,
-                        streaks = streaks,
-                        completionHistory = history,
                         isLoading = false,
+                        errorMessage = "Impossibile caricare i dati. Verifica la connessione.",
                     )
                 }
             }
