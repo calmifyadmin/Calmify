@@ -17,7 +17,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Accessibility
 import androidx.compose.material.icons.outlined.Air
@@ -36,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lifo.ui.components.CalmifyTopBar
 import com.lifo.util.model.BreathingPattern
 import com.lifo.util.model.MeditationType
 import kotlinx.coroutines.delay
@@ -50,40 +50,26 @@ fun MeditationScreen(
     onIntent: (MeditationContract.Intent) -> Unit,
     onBackPressed: () -> Unit,
 ) {
+    val meditationTitle = when (state.phase) {
+        MeditationContract.SessionPhase.SETUP -> "Meditazione"
+        MeditationContract.SessionPhase.ACTIVE -> if (state.selectedType == MeditationType.BREATHING) "Respirazione" else "Meditazione"
+        MeditationContract.SessionPhase.COMPLETED -> "Sessione completata"
+    }
+    val meditationSubtitle = when (state.phase) {
+        MeditationContract.SessionPhase.SETUP -> "Configura la tua pratica"
+        MeditationContract.SessionPhase.ACTIVE -> "In corso..."
+        MeditationContract.SessionPhase.COMPLETED -> "Ben fatto!"
+    }
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            when (state.phase) {
-                                MeditationContract.SessionPhase.SETUP -> "Meditazione"
-                                MeditationContract.SessionPhase.ACTIVE -> if (state.selectedType == MeditationType.BREATHING) "Respirazione" else "Meditazione"
-                                MeditationContract.SessionPhase.COMPLETED -> "Sessione completata"
-                            },
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            when (state.phase) {
-                                MeditationContract.SessionPhase.SETUP -> "Configura la tua pratica"
-                                MeditationContract.SessionPhase.ACTIVE -> "In corso..."
-                                MeditationContract.SessionPhase.COMPLETED -> "Ben fatto!"
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = {
-                        if (state.phase == MeditationContract.SessionPhase.ACTIVE) {
-                            onIntent(MeditationContract.Intent.StopSession)
-                        } else {
-                            onBackPressed()
-                        }
-                    }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+            CalmifyTopBar(
+                title = meditationTitle,
+                subtitle = meditationSubtitle,
+                onBackClick = {
+                    if (state.phase == MeditationContract.SessionPhase.ACTIVE) {
+                        onIntent(MeditationContract.Intent.StopSession)
+                    } else {
+                        onBackPressed()
                     }
                 },
             )
