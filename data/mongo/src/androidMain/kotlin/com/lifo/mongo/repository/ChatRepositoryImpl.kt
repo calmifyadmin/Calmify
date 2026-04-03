@@ -13,9 +13,11 @@ import com.lifo.mongo.database.Chat_sessions
 import com.lifo.util.model.ChatMessage
 import com.lifo.util.model.ChatSession
 import com.lifo.util.model.Diary
+import com.lifo.util.model.DiaryInsight
 import com.lifo.util.model.MessageStatus
 import com.lifo.util.model.RequestState
 import com.lifo.util.repository.ChatRepository
+import com.lifo.util.repository.InsightRepository
 import com.lifo.util.repository.MongoRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -29,7 +31,8 @@ import java.util.UUID
 class ChatRepositoryImpl(
     private val database: CalmifyDatabase,
     private val auth: FirebaseAuth,
-    private val diaryRepository: MongoRepository
+    private val diaryRepository: MongoRepository,
+    private val insightRepository: InsightRepository
 ) : ChatRepository {
 
     private val chatSessionQueries get() = database.chatSessionQueries
@@ -40,6 +43,8 @@ class ChatRepositoryImpl(
         private const val STREAMING_BUFFER_SIZE = 10
         private const val DIARY_CONTEXT_DAYS = 30
         private const val MAX_DIARY_ENTRIES = 20
+        private const val INSIGHT_CONTEXT_DAYS = 7
+        private const val MAX_INSIGHTS = 10
     }
 
     // Firebase AI - No Ktor dependencies required!
@@ -372,9 +377,13 @@ class ChatRepositoryImpl(
             val currentMood = detectCurrentMood(diaryContext)
             val recurringThemes = extractRecurringThemes(diaryContext)
 
+            val recentInsights = getRecentInsights()
+            val insightContext = buildInsightContext(recentInsights)
+
             println("[" + TAG + "] " + "User profile: $userProfile")
             println("[" + TAG + "] " + "Current mood: $currentMood")
             println("[" + TAG + "] " + "Themes: $recurringThemes")
+            println("[" + TAG + "] " + "AI insights: ${recentInsights.size} entries")
 
             val prompt = buildPersonalizedPrompt(
                 userMessage = userMessage,
@@ -382,7 +391,8 @@ class ChatRepositoryImpl(
                 diaryContext = diaryContext,
                 userProfile = userProfile,
                 currentMood = currentMood,
-                recurringThemes = recurringThemes
+                recurringThemes = recurringThemes,
+                insightContext = insightContext
             )
 
             val responseBuffer = StringBuilder()
@@ -625,7 +635,8 @@ class ChatRepositoryImpl(
         diaryContext: List<Diary>,
         userProfile: UserProfile,
         currentMood: String,
-        recurringThemes: List<String>
+        recurringThemes: List<String>,
+        insightContext: String = ""
     ): String {
         val userName = auth.currentUser?.displayName?.split(" ")?.firstOrNull() ?: ""
 
@@ -676,6 +687,7 @@ class ChatRepositoryImpl(
         - Risposte generiche che potresti dare a chiunque
 
         $diaryInsights
+        ${if (insightContext.isNotBlank()) "\n        $insightContext" else ""}
 
         Conversazione recente:
         $conversationHistory
@@ -684,6 +696,76 @@ class ChatRepositoryImpl(
 
         Rispondi come Eve — 1-3 frasi, dirette, personali, come un'amica che ti conosce davvero.
     """.trimIndent()
+    }
+
+    private suspend fun getRecentInsights(): List<DiaryInsight> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val cutoffMillis = kotlinx.datetime.Clock.System.now().toEpochMilliseconds() -
+                    (INSIGHT_CONTEXT_DAYS.toLong() * 24 * 60 * 60 * 1000)
+                val result = kotlinx.coroutines.withTimeoutOrNull(3000L) {
+                    insightRepository.getAllInsights().first()
+                }
+                when (result) {
+                    is RequestState.Success -> result.data
+                        .filter { it.generatedAtMillis > cutoffMillis }
+                        .sortedByDescending { it.generatedAtMillis }
+                        .take(MAX_INSIGHTS)
+                    else -> emptyList()
+                }
+            } catch (e: Exception) {
+                println("[" + TAG + "] ERROR: Error getting AI insights: ${e.message}")
+                emptyList()
+            }
+        }
+    }
+
+    private fun buildInsightContext(insights: List<DiaryInsight>): String {
+        if (insights.isEmpty()) return ""
+
+        val topPatterns = insights
+            .flatMap { it.cognitivePatterns }
+            .groupingBy { it.patternType }
+            .eachCount()
+            .entries
+            .sortedByDescending { it.value }
+            .take(3)
+            .map { it.key }
+
+        val topTopics = insights
+            .flatMap { it.topics }
+            .groupingBy { it }
+            .eachCount()
+            .entries
+            .sortedByDescending { it.value }
+            .take(4)
+            .map { it.key }
+
+        val avgPolarity = insights.map { it.sentimentPolarity.toDouble() }.average()
+        val sentimentTrend = when {
+            avgPolarity > 0.3 -> "in miglioramento"
+            avgPolarity < -0.3 -> "in peggioramento"
+            else -> "stabile"
+        }
+
+        val areasSuggested = insights
+            .flatMap { it.suggestedPrompts }
+            .distinct()
+            .take(2)
+
+        return buildString {
+            append("Analisi AI recente dell'utente (ultimi $INSIGHT_CONTEXT_DAYS giorni):")
+            if (topPatterns.isNotEmpty()) {
+                append(" Pattern cognitivi: ${topPatterns.joinToString(", ")}.")
+            }
+            if (topTopics.isNotEmpty()) {
+                append(" Temi ricorrenti: ${topTopics.joinToString(", ")}.")
+            }
+            append(" Trend sentimento: $sentimentTrend.")
+            if (areasSuggested.isNotEmpty()) {
+                append(" Aree di forza/attenzione: ${areasSuggested.joinToString("; ")}.")
+            }
+        }
     }
 
     private fun generatePersonalizedSessionTitle(): String {
