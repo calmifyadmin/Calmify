@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Add
@@ -84,6 +85,7 @@ import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import com.lifo.util.auth.AuthProvider
+import com.lifo.util.repository.FeatureFlagRepository
 import com.lifo.util.repository.NotificationRepository
 import com.lifo.util.repository.ProfileSettingsRepository
 
@@ -115,7 +117,7 @@ fun DecomposeApp(
     // ── Auth state observer — kickout on sign-out/token revocation ──
     val authProvider: AuthProvider = koinInject()
     val profileSettingsRepository: ProfileSettingsRepository = koinInject()
-    val featureFlagRepository: com.lifo.util.repository.FeatureFlagRepository = koinInject()
+    val featureFlagRepository: FeatureFlagRepository = koinInject()
     val featureFlags by featureFlagRepository.flags.collectAsState()
     val authUserId by authProvider.authStateFlow.collectAsState()
 
@@ -545,7 +547,9 @@ fun DecomposeApp(
                     // === Social Features (Wave 7) ===
 
                     is RootComponent.Child.Feed -> {
-                        FeedRouteContent(
+                        if (!featureFlags.socialEnabled || !featureFlags.feedEnabled) {
+                            FeatureUnavailableScreen(onBack = { rootComponent.navigateBack() })
+                        } else FeedRouteContent(
                             onThreadClick = { threadId -> rootComponent.navigateToThreadDetail(threadId) },
                             onUserClick = { userId -> rootComponent.navigateToUserProfile(userId) },
                             onComposeClick = { rootComponent.navigateToComposer() },
@@ -570,7 +574,9 @@ fun DecomposeApp(
                     }
 
                     is RootComponent.Child.UserProfile -> {
-                        SocialProfileRouteContent(
+                        if (!featureFlags.socialEnabled) {
+                            FeatureUnavailableScreen(onBack = { rootComponent.navigateBack() })
+                        } else SocialProfileRouteContent(
                             userId = instance.userId,
                             onNavigateBack = { rootComponent.navigateBack() },
                             onThreadClick = { threadId -> rootComponent.navigateToThreadDetail(threadId) },
@@ -581,14 +587,18 @@ fun DecomposeApp(
                     }
 
                     is RootComponent.Child.EditProfile -> {
-                        EditProfileRouteContent(
+                        if (!featureFlags.socialEnabled) {
+                            FeatureUnavailableScreen(onBack = { rootComponent.navigateBack() })
+                        } else EditProfileRouteContent(
                             userId = instance.userId,
                             onNavigateBack = { rootComponent.navigateBack() },
                         )
                     }
 
                     is RootComponent.Child.FollowList -> {
-                        FollowListScreen(
+                        if (!featureFlags.socialEnabled) {
+                            FeatureUnavailableScreen(onBack = { rootComponent.navigateBack() })
+                        } else FollowListScreen(
                             userId = instance.userId,
                             showFollowers = instance.showFollowers,
                             onNavigateBack = { rootComponent.navigateBack() },
@@ -597,7 +607,9 @@ fun DecomposeApp(
                     }
 
                     is RootComponent.Child.Composer -> {
-                        ComposerRouteContent(
+                        if (!featureFlags.socialEnabled || !featureFlags.feedEnabled) {
+                            FeatureUnavailableScreen(onBack = { rootComponent.navigateBack() })
+                        } else ComposerRouteContent(
                             onNavigateBack = { rootComponent.navigateBack() },
                             onPostCreated = { rootComponent.navigateBack() },
                             parentThreadId = instance.parentThreadId,
@@ -607,7 +619,9 @@ fun DecomposeApp(
                     }
 
                     is RootComponent.Child.Search -> {
-                        SearchRouteContent(
+                        if (!featureFlags.socialEnabled) {
+                            FeatureUnavailableScreen(onBack = { rootComponent.navigateBack() })
+                        } else SearchRouteContent(
                             onNavigateBack = { rootComponent.navigateBack() },
                             onThreadClick = { threadId -> rootComponent.navigateToThreadDetail(threadId) },
                             onUserClick = { userId -> rootComponent.navigateToUserProfile(userId) },
@@ -615,7 +629,9 @@ fun DecomposeApp(
                     }
 
                     is RootComponent.Child.Notifications -> {
-                        NotificationsRouteContent(
+                        if (!featureFlags.socialEnabled) {
+                            FeatureUnavailableScreen(onBack = { rootComponent.navigateBack() })
+                        } else NotificationsRouteContent(
                             onNavigateBack = { rootComponent.navigateBack() },
                             onThreadClick = { threadId -> rootComponent.navigateToThreadDetail(threadId) },
                             onUserClick = { userId -> rootComponent.navigateToUserProfile(userId) },
@@ -625,7 +641,9 @@ fun DecomposeApp(
                     // === Social Features (Wave 8) ===
 
                     is RootComponent.Child.ThreadDetail -> {
-                        ThreadDetailRouteContent(
+                        if (!featureFlags.socialEnabled) {
+                            FeatureUnavailableScreen(onBack = { rootComponent.navigateBack() })
+                        } else ThreadDetailRouteContent(
                             threadId = instance.threadId,
                             onNavigateBack = { rootComponent.navigateBack() },
                             onUserClick = { userId -> rootComponent.navigateToUserProfile(userId) },
@@ -634,7 +652,9 @@ fun DecomposeApp(
                     }
 
                     is RootComponent.Child.Messaging -> {
-                        MessagingPickerRoute(
+                        if (!featureFlags.socialEnabled || !featureFlags.messagingEnabled) {
+                            FeatureUnavailableScreen(onBack = { rootComponent.navigateBack() })
+                        } else MessagingPickerRoute(
                             conversationId = instance.conversationId,
                             onNavigateBack = { rootComponent.navigateBack() },
                             onUserClick = { userId -> rootComponent.navigateToUserProfile(userId) },
@@ -1072,6 +1092,47 @@ fun DecomposeApp(
                 }
             }
         )
+    }
+}
+
+/**
+ * Placeholder screen shown when a feature is disabled via feature flags.
+ * Displays a message and a back button so the user can navigate away.
+ */
+@Composable
+private fun FeatureUnavailableScreen(onBack: () -> Unit) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Groups,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+            )
+            Text(
+                text = "Funzionalità non ancora disponibile",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 32.dp)
+            )
+            Text(
+                text = "Questa sezione sarà disponibile a breve.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 40.dp)
+            )
+            OutlinedButton(onClick = onBack) {
+                Text("Torna indietro")
+            }
+        }
     }
 }
 
