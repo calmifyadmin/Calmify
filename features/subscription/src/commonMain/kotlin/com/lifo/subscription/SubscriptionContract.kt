@@ -23,6 +23,8 @@ object SubscriptionContract {
         val showWaitlistDialog: Boolean = false,
         val waitlistEmail: String = "",
         val waitlistSubmitted: Boolean = false,
+        /** True when products are placeholder waitlist previews (premium_enabled = false). */
+        val isWaitlistMode: Boolean = false,
     ) : MviContract.State {
         val isPro: Boolean
             get() = subscriptionTier == SubscriptionRepository.SubscriptionTier.PRO

@@ -140,6 +140,7 @@ fun PaywallScreen(
                 ProProductCard(
                     product = proProduct,
                     isCurrentTier = state.isPro,
+                    isWaitlistMode = state.isWaitlistMode,
                     onPurchase = {
                         val productId = proProduct?.productId ?: "calmify_pro"
                         onIntent(SubscriptionContract.Intent.PurchaseSubscription(productId))
@@ -529,6 +530,7 @@ private fun FeatureCell(
 private fun ProProductCard(
     product: SubscriptionRepository.ProductInfo?,
     isCurrentTier: Boolean,
+    isWaitlistMode: Boolean,
     onPurchase: () -> Unit,
 ) {
     val primaryColor = MaterialTheme.colorScheme.primary
@@ -640,21 +642,30 @@ private fun ProProductCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = displayProduct.price,
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = (-0.5).sp,
-                    ),
-                    color = primaryColor,
-                )
+                Column {
+                    Text(
+                        text = displayProduct.price,
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = (-0.5).sp,
+                        ),
+                        color = primaryColor,
+                    )
+                    if (isWaitlistMode) {
+                        Text(
+                            text = stringResource(Res.string.paywall_indicative_prices),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
 
                 Button(
                     onClick = onPurchase,
                     enabled = !isCurrentTier,
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = primaryColor,
+                        containerColor = if (isWaitlistMode) MaterialTheme.colorScheme.secondary else primaryColor,
                     ),
                     modifier = Modifier
                         .height(44.dp)
@@ -672,6 +683,12 @@ private fun ProProductCard(
                     if (isCurrentTier) {
                         Text(
                             text = stringResource(Res.string.paywall_current_plan),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    } else if (isWaitlistMode) {
+                        Text(
+                            text = stringResource(Res.string.paywall_join_waitlist),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold,
                         )
