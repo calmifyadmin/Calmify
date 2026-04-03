@@ -20,6 +20,7 @@ import com.lifo.util.repository.FeedRepository
 import com.lifo.util.repository.MongoRepository
 import com.lifo.util.repository.ThreadHydrator
 import com.lifo.util.repository.ThreadRepository
+import com.lifo.util.repository.ProfileSettingsRepository
 import com.lifo.util.repository.SocialGraphRepository
 import com.lifo.util.repository.UnifiedContentRepository
 import kotlinx.coroutines.*
@@ -154,7 +155,8 @@ internal class HomeViewModel constructor(
     private val getAchievementsUseCase: GetAchievementsUseCase,
     private val feedRepository: FeedRepository,
     private val threadHydrator: ThreadHydrator,
-    private val socialGraphRepository: SocialGraphRepository
+    private val socialGraphRepository: SocialGraphRepository,
+    private val profileSettingsRepository: ProfileSettingsRepository
 ) : MviViewModel<HomeContract.Intent, HomeContract.State, HomeContract.Effect>(
     initialState = HomeContract.State()
 ) {
@@ -267,6 +269,7 @@ internal class HomeViewModel constructor(
 
     init {
         restoreState()
+        loadProfileSettings()
         loadSocialAvatar()
 
         // Observe network connectivity
@@ -385,6 +388,17 @@ internal class HomeViewModel constructor(
     // Synchronous value getters (not intents — they return values directly)
 
     private var cachedSocialProfile: SocialGraphRepository.SocialUser? = null
+    private var cachedProfileDisplayName: String? = null
+
+    private fun loadProfileSettings() {
+        scope.launch {
+            profileSettingsRepository.getProfileSettings().collect { result ->
+                if (result is RequestState.Success) {
+                    cachedProfileDisplayName = result.data?.displayName?.takeIf { it.isNotBlank() }
+                }
+            }
+        }
+    }
 
     private fun loadSocialAvatar() {
         val userId = authProvider.currentUserId ?: return
@@ -409,6 +423,7 @@ internal class HomeViewModel constructor(
     fun getUserFirstName(): String {
         return UserIdentityResolver.resolveFirstName(
             socialProfile = cachedSocialProfile,
+            profileDisplayName = cachedProfileDisplayName,
             authDisplayName = authProvider.currentUserDisplayName,
             authEmail = authProvider.currentUserEmail,
         )
@@ -880,6 +895,7 @@ internal class HomeViewModel constructor(
 
                 val userName = UserIdentityResolver.resolveDisplayName(
                     socialProfile = cachedSocialProfile,
+                    profileDisplayName = cachedProfileDisplayName,
                     authDisplayName = authProvider.currentUserDisplayName,
                     authEmail = authProvider.currentUserEmail,
                 )

@@ -25,8 +25,8 @@ val homeKoinModule = module {
     //   diaryRepository, insightRepository, savedStateHandle,
     //   calculateMoodDistributionUseCase, aggregateCognitivePatternsUseCase,
     //   calculateTopicsFrequencyUseCase, calculateTodayPulseUseCase, getAchievementsUseCase,
-    //   feedRepository, threadHydrator, socialGraphRepository)
-    viewModel { HomeViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
+    //   feedRepository, threadHydrator, socialGraphRepository, profileSettingsRepository)
+    viewModel { HomeViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
 
     // SnapshotViewModel(wellbeingRepository, auth)
     viewModel { SnapshotViewModel(get(), get()) }
