@@ -25,6 +25,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.lifo.ui.theme.CalmifyRadius
+import com.lifo.ui.theme.CalmifySpacing
 
 /**
  * Compact inline paywall card shown contextually when a free user hits a limit.
@@ -45,7 +47,7 @@ fun InlinePaywallCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(CalmifyRadius.lg),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
         ),
@@ -53,7 +55,7 @@ fun InlinePaywallCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(CalmifySpacing.lg),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -64,7 +66,7 @@ fun InlinePaywallCard(
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.primary,
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(CalmifySpacing.sm))
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleSmall,
@@ -73,7 +75,7 @@ fun InlinePaywallCard(
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(CalmifySpacing.sm))
 
             Text(
                 text = message,
@@ -81,7 +83,7 @@ fun InlinePaywallCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(CalmifySpacing.md))
 
             Button(
                 onClick = onUpgradeClick,

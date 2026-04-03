@@ -11,6 +11,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.lifo.ui.theme.CalmifyRadius
+import com.lifo.ui.theme.CalmifySpacing
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
@@ -28,9 +30,9 @@ fun GlassCard(
     modifier: Modifier = Modifier,
     tintColor: Color = Color.Unspecified,
     tintAlpha: Float = 0.15f,
-    shape: Shape = RoundedCornerShape(20.dp),
+    shape: Shape = RoundedCornerShape(CalmifyRadius.xl),
     elevation: Dp = 0.dp,
-    contentPadding: PaddingValues = PaddingValues(16.dp),
+    contentPadding: PaddingValues = PaddingValues(CalmifySpacing.lg),
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val resolvedTint = if (tintColor == Color.Unspecified) {
