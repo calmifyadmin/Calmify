@@ -23,11 +23,10 @@ class IdleRotationController(
      */
     private val idleAnimations = listOf(
         WeightedAnimation(VrmaAnimationLoader.AnimationAsset.IDLE_LOOP, 55),           // 55% - default principale
-        WeightedAnimation(VrmaAnimationLoader.AnimationAsset.IDLE_BASIC, 45),          // 45% - variante comune
-        // TODO: Riabilitare quando le animazioni sono fixate
-        // WeightedAnimation(VrmaAnimationLoader.AnimationAsset.IDLE_VARIANT, 20),        // variante
-        // WeightedAnimation(VrmaAnimationLoader.AnimationAsset.IDLE_LOOKING_AROUND, 12), // guarda intorno
-        // WeightedAnimation(VrmaAnimationLoader.AnimationAsset.IDLE_LOOK_FINGERS, 8)     // guarda le dita
+        WeightedAnimation(VrmaAnimationLoader.AnimationAsset.IDLE_BASIC, 35),          // 35% - variante comune
+        WeightedAnimation(VrmaAnimationLoader.AnimationAsset.IDLE_VARIANT, 20),        // 14% - variante
+        WeightedAnimation(VrmaAnimationLoader.AnimationAsset.IDLE_LOOKING_AROUND, 20), // 14% - guarda intorno
+        WeightedAnimation(VrmaAnimationLoader.AnimationAsset.IDLE_LOOK_FINGERS, 10)    //  7% - guarda le dita
     )
 
     private val totalWeight = idleAnimations.sumOf { it.weight }
