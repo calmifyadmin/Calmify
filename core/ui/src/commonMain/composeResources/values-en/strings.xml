@@ -548,4 +548,36 @@
     <string name="tutorial_profile_desc">See how you\'ve grown over time. Data, charts and reflections on your journey.</string>
     <string name="tutorial_social_title">The community</string>
     <string name="tutorial_social_desc">Connect with other inner explorers. Share what you want, hide the rest.</string>
+
+    <!-- ============================================================ -->
+    <!-- Navigation labels -->
+    <!-- ============================================================ -->
+    <string name="nav_home">Home</string>
+    <string name="nav_activity">Activity</string>
+    <string name="nav_settings">Settings</string>
+    <string name="nav_write">Write</string>
+    <string name="nav_profile">Profile</string>
+    <string name="nav_avatar">Avatar</string>
+    <string name="nav_feed">Feed</string>
+    <string name="nav_journal">Journal</string>
+    <string name="nav_ai_chat">AI Chat</string>
+    <string name="nav_community">Community</string>
+    <string name="nav_journey">Journey</string>
+    <string name="nav_garden">Garden</string>
+
+    <!-- ============================================================ -->
+    <!-- Language settings -->
+    <!-- ============================================================ -->
+    <string name="settings_section_language">Language</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_sub">Change the app language</string>
+    <string name="settings_language_dialog_title">Select language</string>
+    <string name="settings_language_system">System</string>
+
+    <!-- ============================================================ -->
+    <!-- Error / connection states -->
+    <!-- ============================================================ -->
+    <string name="error_loading">Unable to load data</string>
+    <string name="error_connection">Check your connection</string>
+
 </resources>

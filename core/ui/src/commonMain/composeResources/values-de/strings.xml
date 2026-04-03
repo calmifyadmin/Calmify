@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources>
+    <!-- Common / Shared -->
+    <string name="app_name">Calmify</string>
+    <string name="back">Zurück</string>
+    <string name="next">Weiter</string>
+    <string name="save">Speichern</string>
+    <string name="cancel">Abbrechen</string>
+    <string name="close">Schließen</string>
+    <string name="ok">OK</string>
+    <string name="error_generic">Etwas ist schiefgelaufen</string>
+    <string name="loading">Einen Moment...</string>
+    <string name="yes">Ja</string>
+    <string name="no">Nein</string>
+    <string name="confirm">Bestätigen</string>
+    <string name="delete">Löschen</string>
+    <string name="retry">Erneut versuchen</string>
+    <string name="error_loading">Daten konnten nicht geladen werden</string>
+    <string name="error_connection">Verbindung prüfen</string>
+
+    <!-- Navigation labels -->
+    <string name="nav_home">Start</string>
+    <string name="nav_activity">Aktivität</string>
+    <string name="nav_settings">Einstellungen</string>
+    <string name="nav_write">Schreiben</string>
+    <string name="nav_profile">Profil</string>
+    <string name="nav_avatar">Avatar</string>
+    <string name="nav_feed">Feed</string>
+    <string name="nav_journal">Tagebuch</string>
+    <string name="nav_ai_chat">KI-Chat</string>
+    <string name="nav_community">Community</string>
+    <string name="nav_journey">Reise</string>
+    <string name="nav_garden">Garten</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_hello">Hallo!</string>
+    <string name="onboarding_whats_your_name">Wie heißt du?</string>
+    <string name="onboarding_name_label">Dein Name</string>
+    <string name="onboarding_name_hint">Der Name, den andere sehen werden</string>
+    <string name="onboarding_username_label">Benutzername</string>
+    <string name="onboarding_username_hint">Deine eindeutige Kennung (optional)</string>
+    <string name="onboarding_username_taken">Benutzername bereits vergeben</string>
+    <string name="onboarding_username_error">Fehler bei der Überprüfung des Benutzernamens</string>
+    <string name="onboarding_name_changeable">Du kannst deinen Namen und Benutzernamen jederzeit ändern</string>
+    <string name="onboarding_motivations_title">Was hat dich hierher gebracht?</string>
+    <string name="onboarding_motivations_subtitle">Wähle alles aus, was mit dir resoniert</string>
+    <string name="motivation_anxiety">Angst reduzieren</string>
+    <string name="motivation_emotions">Meine Gefühle verstehen</string>
+    <string name="motivation_growth">Persönliches Wachstum</string>
+    <string name="motivation_journaling">Tägliches Journaling</string>
+    <string name="motivation_mindfulness">Achtsamkeit</string>
+    <string name="motivation_sleep">Besser schlafen</string>
+    <string name="motivation_stress">Stress bewältigen</string>
+    <string name="onboarding_preference_title">Wie drückst du dich am liebsten aus?</string>
+    <string name="onboarding_preference_subtitle">Du kannst deine Meinung jederzeit ändern</string>
+    <string name="preference_write_title">Schreiben</string>
+    <string name="preference_write_desc">Ich lege meine Gedanken lieber schriftlich nieder</string>
+    <string name="preference_speak_title">Sprechen</string>
+    <string name="preference_speak_desc">Ich fühle mich wohler, wenn ich laut rede</string>
+    <string name="preference_both_title">Beides</string>
+    <string name="preference_both_desc">Je nach Situation</string>
+    <string name="disclosure_title">Deine Daten, deine Wahl</string>
+    <string name="disclosure_subtitle">Bevor wir beginnen, möchten wir transparent sein, wie wir mit deinen Daten umgehen.</string>
+    <string name="disclosure_wellness_title">Wohlbefindensdaten</string>
+    <string name="disclosure_wellness_desc">Wir erfassen Daten über Stimmung, Emotionen und Journaling-Gewohnheiten, um dir personalisierte Einblicke zu geben und deine Erfahrung zu verbessern.</string>
+    <string name="disclosure_diary_title">Tagebuchinhalte</string>
+    <string name="disclosure_diary_desc">Deine Tagebucheinträge werden lokal und per KI analysiert, um dir Reflexionen und Vorschläge anzubieten. Sie werden nie an Dritte weitergegeben.</string>
+    <string name="disclosure_voice_title">Sprachdaten</string>
+    <string name="disclosure_voice_desc">Wenn du den Sprach-Chat verwendest, wird Audio in Echtzeit für das KI-Gespräch verarbeitet und nicht auf unseren Servern gespeichert.</string>
+    <string name="disclosure_consent_text">Ich habe die Erfassung und Verarbeitung meiner Wohlbefindensdaten wie oben beschrieben gelesen und stimme zu.</string>
+    <string name="disclosure_revoke_hint">Du kannst deine Einwilligung jederzeit widerrufen und deine Daten in den Einstellungen löschen.</string>
+    <string name="onboarding_saving">Wird gespeichert...</string>
+    <string name="onboarding_start">Los geht\'s!</string>
+    <string name="onboarding_exit_title">Beenden?</string>
+    <string name="onboarding_exit_message">Du musst die Einrichtung abschließen, um die App zu nutzen.</string>
+    <string name="onboarding_exit_stay">Bleiben</string>
+    <string name="onboarding_exit_leave">Verlassen</string>
+
+    <!-- Paywall / Subscription -->
+    <string name="paywall_title">Calmify Pro</string>
+    <string name="paywall_subtitle">Entfalte das volle Potenzial deiner Reise</string>
+    <string name="paywall_compare_plans">Pläne vergleichen</string>
+    <string name="paywall_features">Funktionen</string>
+    <string name="paywall_free">Kostenlos</string>
+    <string name="paywall_pro">Pro</string>
+    <string name="paywall_current_plan">Aktueller Plan</string>
+    <string name="paywall_subscribe">Abonnieren</string>
+    <string name="paywall_join_waitlist">Warteliste beitreten</string>
+    <string name="paywall_indicative_prices">Richtwerte</string>
+    <string name="paywall_restore">Käufe wiederherstellen</string>
+    <string name="paywall_included">Enthalten</string>
+    <string name="paywall_not_included">Nicht enthalten</string>
+    <string name="feature_diary">Tagebuch</string>
+    <string name="feature_diary_free">3 pro Tag</string>
+    <string name="feature_chat_ai">KI-Chat</string>
+    <string name="feature_chat_ai_free">5 Nachrichten</string>
+    <string name="feature_mood_tracking">Stimmungstracking</string>
+    <string name="feature_unlimited_diaries">Unbegrenzte Tagebücher</string>
+    <string name="feature_unlimited_chat">Unbegrenzter KI-Chat</string>
+    <string name="feature_custom_avatar">Personalisierter Avatar</string>
+    <string name="feature_advanced_insights">Erweiterte Einblicke</string>
+    <string name="feature_social_messages">Soziale Nachrichten</string>
+    <string name="feature_priority_support">Prioritätssupport</string>
+    <string name="feature_early_access">Frühzeitiger Zugang</string>
+    <string name="paywall_default_desc">Alles unbegrenzt: Tagebücher, KI-Chat, Avatar, Einblicke, Social</string>
+    <string name="paywall_default_price">4,99 €/Monat</string>
+
+    <!-- Waitlist Dialog -->
+    <string name="waitlist_title_pending">PRO kommt bald!</string>
+    <string name="waitlist_title_done">Du bist auf der Liste!</string>
+    <string name="waitlist_description">Wir bereiten Calmify PRO mit exklusiven Funktionen vor. Melde dich für Prioritätszugang und einen Sonderrabatt beim Start an.</string>
+    <string name="waitlist_done_description">Wir benachrichtigen dich, sobald PRO verfügbar ist. Danke, dass du an Calmify glaubst!</string>
+    <string name="waitlist_email_label">Deine E-Mail</string>
+    <string name="waitlist_submit">Anmelden</string>
+    <string name="waitlist_done">Perfekt!</string>
+    <string name="waitlist_not_now">Nicht jetzt</string>
+
+    <!-- Subscription Toasts -->
+    <string name="toast_subscription_activated">Abonnement aktiviert!</string>
+    <string name="toast_subscription_restored">Abonnement wiederhergestellt!</string>
+    <string name="toast_no_subscription_found">Kein Abonnement gefunden</string>
+    <string name="toast_waitlist_success">Anmeldung abgeschlossen!</string>
+    <string name="toast_unable_to_purchase">Kauf konnte nicht gestartet werden</string>
+
+    <!-- Settings / Health -->
+    <string name="settings_info_section">Informationen</string>
+    <string name="health_disclaimer_title">Gesundheitshinweis</string>
+    <string name="health_disclaimer_text">Calmify ist KEIN medizinisches Gerät und gibt KEINE Diagnosen, Behandlungen oder medizinischen Ratschläge. Die Wohlbefindensfunktionen (Stimmungstracking, Tagebuch, KI-Chat) sind Selbstreflexionswerkzeuge und ersetzen NICHT den Rat eines Gesundheitsfachmanns. Wenn du dich in einer Krise befindest, wende dich an deinen Arzt oder den Notfalldienst.</string>
+    <string name="settings_delete_account">Konto löschen</string>
+    <string name="settings_delete_confirm_title">Konto löschen?</string>
+    <string name="settings_delete_confirm_message">Alle deine Daten werden dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.</string>
+    <string name="settings_delete_warning">Das Löschen deines Kontos entfernt dauerhaft alle deine Daten. Diese Aktion kann nicht rückgängig gemacht werden.</string>
+    <string name="settings_deleting">Wird gelöscht...</string>
+    <string name="settings_privacy_policy">Datenschutzrichtlinie</string>
+    <string name="settings_terms_of_service">Nutzungsbedingungen</string>
+    <string name="settings_legal_section">Rechtliches</string>
+
+    <!-- Settings screen labels -->
+    <string name="settings_title">Einstellungen</string>
+    <string name="settings_section_profile">Persönliches Profil</string>
+    <string name="settings_personal_info">Persönliche Daten</string>
+    <string name="settings_personal_info_sub">Name, Alter, körperliche Details, Standort</string>
+    <string name="settings_mental_health">Psychische Gesundheit</string>
+    <string name="settings_mental_health_sub">Anliegen, Geschichte, aktuelle Behandlung</string>
+    <string name="settings_lifestyle">Lebensstil</string>
+    <string name="settings_lifestyle_sub">Schlaf, Sport, Arbeit, soziale Unterstützung</string>
+    <string name="settings_goals">Ziele und Strategien</string>
+    <string name="settings_goals_sub">Wohlbefindensziele und Bewältigungsstrategien</string>
+    <string name="settings_section_ai">KI-Einstellungen</string>
+    <string name="settings_ai_tone">Ton, Erinnerungen und Themen</string>
+    <string name="settings_ai_tone_sub">Passe an, wie Eve mit dir interagiert</string>
+    <string name="settings_section_environment">Deine Umgebung</string>
+    <string name="settings_env_design">Umgebungsgestaltung</string>
+    <string name="settings_env_design_sub">Checklisten, Routinen und digitale Entgiftung</string>
+    <string name="settings_section_privacy">Datenschutz und Daten</string>
+    <string name="settings_privacy_research">Daten für Forschung teilen</string>
+    <string name="settings_privacy_research_sub">Hilf, die psychische Gesundheitsforschung mit anonymisierten Daten zu verbessern</string>
+    <string name="settings_privacy_insights">Erweiterte KI-Einblicke</string>
+    <string name="settings_privacy_insights_sub">Aktiviere detaillierte psychologische Analyse und Empfehlungen</string>
+    <string name="settings_export_data">Daten exportieren</string>
+    <string name="settings_section_developer">Entwickler</string>
+    <string name="settings_avatar_debug">Avatar Debug</string>
+    <string name="settings_avatar_debug_sub">Animationen, Viseme und Leerlaufschleife testen</string>
+    <string name="settings_section_account">Konto</string>
+    <string name="settings_logout">Abmelden</string>
+    <string name="settings_delete_account_btn">Konto löschen</string>
+    <string name="settings_user_fallback">Benutzer</string>
+    <string name="settings_no_location">Kein Standort festgelegt</string>
+    <string name="settings_years_old">%1$d Jahre alt</string>
+    <string name="settings_edit_profile_cd">Profil bearbeiten</string>
+    <string name="settings_back_cd">Zurück</string>
+    <string name="settings_profile_pic_cd">Profilbild</string>
+    <string name="settings_section_language">Sprache</string>
+    <string name="settings_language">Sprache</string>
+    <string name="settings_language_sub">App-Sprache ändern</string>
+    <string name="settings_language_dialog_title">Sprache auswählen</string>
+    <string name="settings_language_system">System</string>
+</resources>
