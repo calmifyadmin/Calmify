@@ -18,7 +18,6 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -417,7 +416,6 @@ private fun EmptyDashboardState(
 private data class DailyAction(
     val icon: ImageVector,
     val label: String,
-    val color: Color,
     val onClick: () -> Unit
 )
 
@@ -434,11 +432,11 @@ internal fun ExpressiveDailyActions(
 
     val actions = remember(onGratitudeClick, onEnergyClick, onSleepClick, onHabitsClick, onMeditationClick) {
         listOf(
-            DailyAction(Icons.Outlined.Favorite, "Gratitudine", Color(0xFFE91E63), onGratitudeClick),
-            DailyAction(Icons.Outlined.BatteryChargingFull, "Energia", Color(0xFFFF9800), onEnergyClick),
-            DailyAction(Icons.Outlined.Bedtime, "Sonno", Color(0xFF5C6BC0), onSleepClick),
-            DailyAction(Icons.Outlined.CheckCircle, "Abitudini", Color(0xFF26A69A), onHabitsClick),
-            DailyAction(Icons.Outlined.SelfImprovement, "Meditazione", Color(0xFF7E57C2), onMeditationClick),
+            DailyAction(Icons.Outlined.Favorite, "Gratitudine", onGratitudeClick),
+            DailyAction(Icons.Outlined.BatteryChargingFull, "Energia", onEnergyClick),
+            DailyAction(Icons.Outlined.Bedtime, "Sonno", onSleepClick),
+            DailyAction(Icons.Outlined.CheckCircle, "Abitudini", onHabitsClick),
+            DailyAction(Icons.Outlined.SelfImprovement, "Meditazione", onMeditationClick),
         )
     }
 
@@ -458,7 +456,6 @@ internal fun ExpressiveDailyActions(
                 ExpressiveDailyChip(
                     icon = action.icon,
                     label = action.label,
-                    accentColor = action.color,
                     onClick = action.onClick
                 )
             }
@@ -470,7 +467,6 @@ internal fun ExpressiveDailyActions(
 private fun ExpressiveDailyChip(
     icon: ImageVector,
     label: String,
-    accentColor: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -480,8 +476,8 @@ private fun ExpressiveDailyChip(
         shape = RoundedCornerShape(20.dp),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
         colors = ButtonDefaults.filledTonalButtonColors(
-            containerColor = accentColor.copy(alpha = 0.1f),
-            contentColor = accentColor
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
         )
     ) {
         Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
