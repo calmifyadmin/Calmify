@@ -3,6 +3,7 @@ package com.lifo.humanoid.data.vrm
 import android.content.Context
 import com.google.android.filament.gltfio.FilamentAsset
 import com.google.gson.Gson
+import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -224,10 +225,13 @@ class VrmLoader(private val context: Context) {
             ?.map { parseBlendShape(it.asJsonObject) }
             ?: emptyList()
 
-        // Parse spring bones
+        // Resolve glTF nodes array early — needed for bone name resolution
+        val nodesArray = rootObject?.getAsJsonArray("nodes")
+
+        // Parse spring bones, passing nodesArray so each bone index is resolved to its real name
         val springBones = vrmObject.getAsJsonObject("secondaryAnimation")
             ?.getAsJsonArray("boneGroups")
-            ?.map { parseSpringBone(it.asJsonObject) }
+            ?.map { parseSpringBone(it.asJsonObject, nodesArray) }
             ?.flatten()
             ?: emptyList()
 
@@ -250,7 +254,6 @@ class VrmLoader(private val context: Context) {
         // Resolve eye bone node indices to actual glTF node NAMES
         // CRITICAL: Filament entity array indices ≠ glTF node indices!
         // We must search by name, not by index.
-        val nodesArray = rootObject?.getAsJsonArray("nodes")
         var leftEyeNodeName: String? = null
         var rightEyeNodeName: String? = null
 
@@ -409,9 +412,10 @@ class VrmLoader(private val context: Context) {
     }
 
     /**
-     * Parse spring bone group
+     * Parse spring bone group.
+     * [nodesArray] is the glTF top-level `nodes` array used to resolve each bone's real name.
      */
-    private fun parseSpringBone(boneGroupObject: JsonObject): List<SpringBoneData> {
+    private fun parseSpringBone(boneGroupObject: JsonObject, nodesArray: JsonArray?): List<SpringBoneData> {
         val stiffness = boneGroupObject.get("stiffiness")?.asFloat ?: 0.5f // Note: typo in VRM spec
         val gravityPower = boneGroupObject.get("gravityPower")?.asFloat ?: 0.1f
         val dragForce = boneGroupObject.get("dragForce")?.asFloat ?: 0.4f
@@ -429,15 +433,20 @@ class VrmLoader(private val context: Context) {
             ?.map { it.asInt.toString() }
             ?: emptyList()
 
-        // Get bones in this group
+        // Get bones in this group — each value is a glTF node index
         val bones = boneGroupObject.getAsJsonArray("bones")
             ?.map { it.asInt }
             ?: emptyList()
 
-        // Create spring bone data for each bone
+        // Create spring bone data for each bone, resolving the actual node name from the glTF nodes array
         return bones.map { boneIndex ->
+            val resolvedName = try {
+                nodesArray?.get(boneIndex)?.asJsonObject?.get("name")?.asString
+            } catch (e: Exception) {
+                null
+            } ?: "bone_$boneIndex"
             SpringBoneData(
-                boneName = "bone_$boneIndex", // TODO: Resolve actual bone name from node index
+                boneName = resolvedName,
                 stiffness = stiffness,
                 gravityPower = gravityPower,
                 gravityDir = gravityDir,
