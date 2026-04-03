@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.lifo.ui.components.CalmifyTopBar
 import org.koin.compose.viewmodel.koinViewModel
 import com.lifo.ui.emotion.MiniMoodShape
 import com.lifo.util.model.HomeContentItem
@@ -50,23 +51,10 @@ internal fun DiaryHistoryFullScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Diaries",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                scrollBehavior = scrollBehavior
+            CalmifyTopBar(
+                title = "Diaries",
+                onBackClick = onBackClick,
+                scrollBehavior = scrollBehavior,
             )
         }
     ) { paddingValues ->

@@ -32,6 +32,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lifo.ui.components.CalmifyTopBar
 import org.koin.compose.viewmodel.koinViewModel
 import com.lifo.util.model.PsychologicalProfile
 import com.lifo.util.model.Trend
@@ -50,9 +51,7 @@ fun ProfileDashboard(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
-            TopAppBar(
-                title = { Text("Il Mio Percorso") }
-            )
+            CalmifyTopBar(title = "Il Mio Percorso")
         }
     ) { paddingValues ->
         Box(

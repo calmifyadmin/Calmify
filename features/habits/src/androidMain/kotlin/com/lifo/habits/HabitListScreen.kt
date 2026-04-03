@@ -10,7 +10,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.FitnessCenter
@@ -28,6 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lifo.ui.components.CalmifyTopBar
 import com.lifo.ui.components.graphics.HabitHeatMap
 import com.lifo.ui.components.graphics.HeatMapDay
 import com.lifo.ui.components.graphics.ParticleConfig
@@ -96,32 +96,14 @@ private fun HabitListContent(
             .sortedBy { it.dayKey }
     }
 
+    val completedCount = state.todayCompletions.size
+    val totalCount = state.habits.size
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = "Le Tue Abitudini",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        val completedCount = state.todayCompletions.size
-                        val totalCount = state.habits.size
-                        if (totalCount > 0) {
-                            Text(
-                                text = "$completedCount/$totalCount completate oggi",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackPressed) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
-                    }
-                }
+            CalmifyTopBar(
+                title = "Le Tue Abitudini",
+                onBackClick = onBackPressed,
+                subtitle = if (totalCount > 0) "$completedCount/$totalCount completate oggi" else null,
             )
         },
         floatingActionButton = {

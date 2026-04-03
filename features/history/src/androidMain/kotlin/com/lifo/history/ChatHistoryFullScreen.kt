@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.lifo.ui.components.CalmifyTopBar
 import org.koin.compose.viewmodel.koinViewModel
 import com.lifo.util.model.HomeContentItem
 import java.time.Instant
@@ -46,23 +47,10 @@ internal fun ChatHistoryFullScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Chat History",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                scrollBehavior = scrollBehavior
+            CalmifyTopBar(
+                title = "Chat History",
+                onBackClick = onBackClick,
+                scrollBehavior = scrollBehavior,
             )
         }
     ) { paddingValues ->

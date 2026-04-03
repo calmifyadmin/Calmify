@@ -1,7 +1,9 @@
 package com.lifo.ui.components
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -16,11 +18,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 
 /**
- * Unified top bar for all main tab screens.
+ * Unified top bar for all screens.
  *
  * - Title: headlineSmall SemiBold
- * - Navigation icon: hamburger menu only when [onMenuClick] is provided (Home only)
- * - Scroll behavior: pass [scrollBehavior] to enable enterAlways hide-on-scroll (YouTube-style).
+ * - Subtitle: bodySmall onSurfaceVariant, shown below title when provided
+ * - Navigation icon priority: back arrow ([onBackClick]) > hamburger menu ([onMenuClick]) > none
+ * - Scroll behavior: pass [scrollBehavior] to enable enterAlways hide-on-scroll.
  *   The caller must also apply `Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)` to the Scaffold.
  * - containerColor: Transparent (inherits from Scaffold background)
  */
@@ -29,20 +32,40 @@ import androidx.compose.ui.text.font.FontWeight
 fun CalmifyTopBar(
     title: String,
     onMenuClick: (() -> Unit)? = null,
+    onBackClick: (() -> Unit)? = null,
+    subtitle: String? = null,
     scrollBehavior: TopAppBarScrollBehavior? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     TopAppBar(
         title = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
+            if (subtitle != null) {
+                Column {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
         },
         navigationIcon = {
-            if (onMenuClick != null) {
-                IconButton(onClick = onMenuClick) {
+            when {
+                onBackClick != null -> IconButton(onClick = onBackClick) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                }
+                onMenuClick != null -> IconButton(onClick = onMenuClick) {
                     Icon(Icons.Default.Menu, contentDescription = "Menu")
                 }
             }
