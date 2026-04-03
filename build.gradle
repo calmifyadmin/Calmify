@@ -13,6 +13,98 @@ plugins {
     alias(libs.plugins.app.cash.sqldelight) apply false
 }
 
+// ---------------------------------------------------------------------------
+// lintHardcodedStrings — scans Kotlin Compose sources for UI strings that
+// should live in composeResources/values/strings.xml instead of being
+// hardcoded. Run with: ./gradlew lintHardcodedStrings
+// Report written to: build/reports/hardcoded-strings.txt
+// ---------------------------------------------------------------------------
+tasks.register("lintHardcodedStrings") {
+    description = "Report hardcoded UI strings in Kotlin Compose sources."
+    group = "verification"
+
+    // Patterns that flag potential hardcoded UI strings (Groovy ~// = regex literal)
+    def uiPatterns = [
+        // Compose Text() / AnnotatedString() with a non-empty literal
+        ~/\bText\(\s*"([^"]{2,})"\s*[,)]/,
+        ~/\bAnnotatedString\(\s*"([^"]{2,})"\s*[,)]/,
+        // Named params: title/label/placeholder/hint/subtitle/message/description = "..."
+        ~/\b(?:title|label|placeholder|hint|subtitle|message|description)\s*=\s*"([^"]{2,})"/,
+        // SnackbarHostState.showSnackbar("...")
+        ~/\.showSnackbar\(\s*"([^"]{2,})"\s*[,)]/,
+        // AlertDialog title/text with literal
+        ~/\b(?:confirmButton|dismissButton|title|text)\s*=\s*\{[^}]*Text\(\s*"([^"]{2,})"\s*\)/,
+    ]
+
+    // Lines matching any of these patterns are skipped (not UI strings)
+    def skipPatterns = [
+        ~/^\s*\/\//,                     // comment line
+        ~/\bLog\.[dveiw]\s*\(/,          // Android Log call
+        ~/\bprintln\s*\(/,               // debug print
+        ~/\brequire(?:NotNull)?\s*\(/,   // assertion
+        ~/\bcheck(?:NotNull)?\s*\(/,     // assertion
+        ~/\berror\s*\(/,                 // Kotlin error()
+        ~/\bthrow\b/,                    // throw statement
+        ~/\bTODO\s*\(/,                  // TODO marker
+        ~/\btestTag\s*\(/,               // Compose test tag
+        ~/\bModifier\.[a-z]/,            // Modifier chains (usually not UI text)
+        ~/stringResource\s*\(/,          // already using string resource
+        ~/@Suppress/,                    // suppression annotation
+        ~/^\s*\*/,                       // KDoc line
+    ]
+
+    doLast {
+        def findings = []
+
+        fileTree(projectDir) {
+            include "**/*.kt"
+            exclude "**/build/**"
+            exclude "**/.claude/**"
+            exclude "**/.idea/**"
+            exclude "**/test/**"
+            exclude "**/androidTest/**"
+            exclude "**/buildSrc/**"
+            exclude "**/build-logic/**"
+        }.each { ktFile ->
+            ktFile.eachLine { line, lineNum ->
+                boolean skip = skipPatterns.any { line =~ it }
+                if (!skip) {
+                    uiPatterns.each { pat ->
+                        if (line =~ pat) {
+                            findings << sprintf("  %s:%d\n    %s",
+                                ktFile.path.replace(projectDir.absolutePath + File.separator, ""),
+                                lineNum,
+                                line.trim())
+                        }
+                    }
+                }
+            }
+        }
+
+        def reportDir = file("${buildDir}/reports")
+        reportDir.mkdirs()
+        def reportFile = new File(reportDir, "hardcoded-strings.txt")
+
+        def header = """\
+Hardcoded String Lint Report
+Generated : ${new Date()}
+Project   : ${projectDir.absolutePath}
+Findings  : ${findings.size()}
+Guide     : I18N_GUIDE.md
+${"-" * 72}
+"""
+        reportFile.text = header + (findings ? findings.join("\n\n") + "\n" : "No findings — all UI strings use string resources.\n")
+
+        if (findings) {
+            logger.warn "\n[lintHardcodedStrings] ${findings.size()} potential hardcoded string(s) found."
+            logger.warn "Full report: ${reportFile.absolutePath}"
+            logger.warn "See I18N_GUIDE.md for how to fix them."
+        } else {
+            logger.lifecycle "[lintHardcodedStrings] No hardcoded strings found."
+        }
+    }
+}
+
 // Force Material3 to 1.3.1 — aligns with Compose Multiplatform 1.7.1
 // Without this, the app BOM resolves Material3 to 1.4.0+ which has breaking API changes
 // (ExposedDropdownMenuBox signature changed). Remove when upgrading CMP to 1.8+.
