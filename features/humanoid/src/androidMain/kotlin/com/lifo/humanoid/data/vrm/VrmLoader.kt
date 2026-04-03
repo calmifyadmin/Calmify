@@ -3,6 +3,7 @@ package com.lifo.humanoid.data.vrm
 import android.content.Context
 import com.google.android.filament.gltfio.FilamentAsset
 import com.google.gson.Gson
+import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -224,10 +225,10 @@ class VrmLoader(private val context: Context) {
             ?.map { parseBlendShape(it.asJsonObject) }
             ?: emptyList()
 
-        // Extract nodes array early — needed for bone name resolution
+        // Resolve glTF nodes array early — needed for bone name resolution
         val nodesArray = rootObject?.getAsJsonArray("nodes")
 
-        // Parse spring bones
+        // Parse spring bones, passing nodesArray so each bone index is resolved to its real name
         val springBones = vrmObject.getAsJsonObject("secondaryAnimation")
             ?.getAsJsonArray("boneGroups")
             ?.map { parseSpringBone(it.asJsonObject, nodesArray) }
@@ -411,12 +412,10 @@ class VrmLoader(private val context: Context) {
     }
 
     /**
-     * Parse spring bone group
+     * Parse spring bone group.
+     * [nodesArray] is the glTF top-level `nodes` array used to resolve each bone's real name.
      */
-    private fun parseSpringBone(
-        boneGroupObject: JsonObject,
-        nodesArray: com.google.gson.JsonArray? = null
-    ): List<SpringBoneData> {
+    private fun parseSpringBone(boneGroupObject: JsonObject, nodesArray: JsonArray? = null): List<SpringBoneData> {
         val stiffness = boneGroupObject.get("stiffiness")?.asFloat ?: 0.5f // Note: typo in VRM spec
         val gravityPower = boneGroupObject.get("gravityPower")?.asFloat ?: 0.1f
         val dragForce = boneGroupObject.get("dragForce")?.asFloat ?: 0.4f
@@ -434,17 +433,19 @@ class VrmLoader(private val context: Context) {
             ?.map { it.asInt.toString() }
             ?: emptyList()
 
-        // Get bones in this group
+        // Get bones in this group — each value is a glTF node index
         val bones = boneGroupObject.getAsJsonArray("bones")
             ?.map { it.asInt }
             ?: emptyList()
 
-        // Create spring bone data for each bone, resolving actual node name from glTF nodes array
+        // Create spring bone data for each bone, resolving the actual node name from the glTF nodes array
         return bones.map { boneIndex ->
-            val resolvedName = nodesArray
-                ?.get(boneIndex)?.asJsonObject?.get("name")?.asString
-                ?.takeIf { it.isNotBlank() }
-                ?: "bone_$boneIndex"
+            val resolvedName = try {
+                nodesArray?.get(boneIndex)?.asJsonObject?.get("name")?.asString
+                    ?.takeIf { it.isNotBlank() }
+            } catch (e: Exception) {
+                null
+            } ?: "bone_$boneIndex"
             SpringBoneData(
                 boneName = resolvedName,
                 stiffness = stiffness,
