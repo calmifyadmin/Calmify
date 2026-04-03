@@ -30,6 +30,7 @@ interface SocialMessagingRepository {
         val id: String = "",
         val senderId: String = "",
         val text: String = "",
+        val imageUrls: List<String> = emptyList(),
         val createdAt: Long = 0,
         val isRead: Boolean = false
     )

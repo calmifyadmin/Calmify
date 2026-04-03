@@ -136,9 +136,14 @@ class FirestoreSocialMessagingRepository @Inject constructor(
             batch.set(messageRef, messageToMap(messageWithId))
 
             // Update conversation metadata
+            val lastMessagePreview = when {
+                messageWithId.text.isNotBlank() -> messageWithId.text
+                messageWithId.imageUrls.isNotEmpty() -> "[Photo]"
+                else -> ""
+            }
             val conversationRef = conversationsCollection.document(conversationId)
             batch.update(conversationRef, mapOf(
-                "lastMessage" to messageWithId.text,
+                "lastMessage" to lastMessagePreview,
                 "lastMessageAt" to messageWithId.createdAt
             ))
 
@@ -308,11 +313,13 @@ class FirestoreSocialMessagingRepository @Inject constructor(
         )
     }
 
+    @Suppress("UNCHECKED_CAST")
     private fun docToMessage(doc: com.google.firebase.firestore.DocumentSnapshot): Message {
         return Message(
             id = doc.id,
             senderId = doc.getString("senderId") ?: "",
             text = doc.getString("text") ?: "",
+            imageUrls = doc.get("imageUrls") as? List<String> ?: emptyList(),
             createdAt = doc.getLong("createdAt") ?: 0,
             isRead = doc.getBoolean("isRead") ?: false
         )
@@ -322,6 +329,7 @@ class FirestoreSocialMessagingRepository @Inject constructor(
         return mapOf(
             "senderId" to message.senderId,
             "text" to message.text,
+            "imageUrls" to message.imageUrls,
             "createdAt" to message.createdAt,
             "isRead" to message.isRead
         )
