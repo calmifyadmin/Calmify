@@ -24,10 +24,10 @@ fun MeditationRouteContent(
                     navigateBack()
                 }
                 is MeditationContract.Effect.SessionCompleted -> {
-                    // Bell sound would play here — for now just a toast
+                    MeditationBellPlayer.play()
                 }
                 is MeditationContract.Effect.PlayBell -> {
-                    // TODO: play bell sound asset
+                    MeditationBellPlayer.play()
                 }
                 is MeditationContract.Effect.Error -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
