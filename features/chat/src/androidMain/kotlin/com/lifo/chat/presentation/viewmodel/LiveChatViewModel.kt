@@ -1042,7 +1042,15 @@ class LiveChatViewModel constructor(
                 // Recupera gli ultimi 4 diari per il context
                 val diariesSummary = getDiariesSummary()
 
-                Pair(userName, diariesSummary)
+                // Aggiunge contesto dalle chat testuali recenti per continuità cross-sessione
+                val textChatContext = getRecentTextChatContext()
+                val fullContext = if (textChatContext.isNotBlank()) {
+                    "$diariesSummary\n\nConversazioni testuali recenti (per continuità di contesto):\n$textChatContext"
+                } else {
+                    diariesSummary
+                }
+
+                Pair(userName, fullContext)
             } catch (e: Exception) {
                 println("[LiveChatViewModel] ERROR: Error getting user data: ${e.message}")
                 Pair("Utente", "Nessun diario disponibile")
@@ -1095,6 +1103,24 @@ class LiveChatViewModel constructor(
         } catch (e: Exception) {
             println("[LiveChatViewModel] ERROR: Error getting diaries summary: ${e.message}")
             "Errore nel recuperare i diari"
+        }
+    }
+
+    /**
+     * Recupera un riassunto delle conversazioni testuali recenti per il contesto cross-sessione
+     */
+    private suspend fun getRecentTextChatContext(): String {
+        return try {
+            // currentLiveSessionId è null prima che la sessione live venga creata,
+            // quindi "" non escluderà nulla (corretto: vogliamo TUTTE le sessioni testuali)
+            chatRepository.getCrossSessionContext(
+                currentSessionId = "",
+                fromLiveSessions = false,
+                maxMessages = 8
+            )
+        } catch (e: Exception) {
+            println("[LiveChatViewModel] ERROR: Error getting text chat context: ${e.message}")
+            ""
         }
     }
 

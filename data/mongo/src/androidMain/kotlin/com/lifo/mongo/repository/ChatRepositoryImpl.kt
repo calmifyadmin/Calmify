@@ -48,6 +48,8 @@ class ChatRepositoryImpl(
         private const val MAX_DIARY_ENTRIES = 20
         private const val INSIGHT_CONTEXT_DAYS = 7
         private const val MAX_INSIGHTS = 10
+        private const val CROSS_SESSION_MAX_SESSIONS = 3L
+        private const val CROSS_SESSION_MAX_MESSAGES = 8
     }
 
     // Firebase AI - No Ktor dependencies required!
@@ -383,10 +385,17 @@ class ChatRepositoryImpl(
             val recentInsights = getRecentInsights()
             val insightContext = buildInsightContext(recentInsights)
 
+            val liveSessionContext = getCrossSessionContext(
+                currentSessionId = sessionId,
+                fromLiveSessions = true,
+                maxMessages = CROSS_SESSION_MAX_MESSAGES
+            )
+
             Log.d(TAG, "User profile: $userProfile")
             Log.d(TAG, "Current mood: $currentMood")
             Log.d(TAG, "Themes: $recurringThemes")
             Log.d(TAG, "AI insights: ${recentInsights.size} entries")
+            Log.d(TAG, "Live session context available: ${liveSessionContext.isNotBlank()}")
 
             val prompt = buildPersonalizedPrompt(
                 userMessage = userMessage,
@@ -395,7 +404,8 @@ class ChatRepositoryImpl(
                 userProfile = userProfile,
                 currentMood = currentMood,
                 recurringThemes = recurringThemes,
-                insightContext = insightContext
+                insightContext = insightContext,
+                crossSessionContext = liveSessionContext
             )
 
             val responseBuffer = StringBuilder()
@@ -639,7 +649,8 @@ class ChatRepositoryImpl(
         userProfile: UserProfile,
         currentMood: String,
         recurringThemes: List<String>,
-        insightContext: String = ""
+        insightContext: String = "",
+        crossSessionContext: String = ""
     ): String {
         val userName = auth.currentUser?.displayName?.split(" ")?.firstOrNull() ?: ""
 
@@ -693,6 +704,7 @@ class ChatRepositoryImpl(
 
         $diaryInsights
         ${if (insightContext.isNotBlank()) "\n        $insightContext" else ""}
+        ${if (crossSessionContext.isNotBlank()) "\n        Conversazioni vocali precedenti (per continuità di contesto):\n        $crossSessionContext" else ""}
 
         Conversazione recente:
         $conversationHistory
@@ -802,6 +814,51 @@ class ChatRepositoryImpl(
             append(" Trend sentimento: $sentimentTrend.")
             if (areasSuggested.isNotEmpty()) {
                 append(" Aree di forza/attenzione: ${areasSuggested.joinToString("; ")}.")
+            }
+        }
+    }
+
+    override suspend fun getCrossSessionContext(
+        currentSessionId: String,
+        fromLiveSessions: Boolean,
+        maxMessages: Int
+    ): String {
+        return withContext(Dispatchers.IO) {
+            try {
+                val isLiveModeTarget = if (fromLiveSessions) 1L else 0L
+                val recentSessions = chatSessionQueries
+                    .getRecentSessionsByMode(currentUserId, isLiveModeTarget, CROSS_SESSION_MAX_SESSIONS)
+                    .executeAsList()
+                    .filter { it.id != currentSessionId }
+
+                if (recentSessions.isEmpty()) return@withContext ""
+
+                val collectedMessages = mutableListOf<Chat_messages>()
+                for (session in recentSessions) {
+                    val msgs = chatMessageQueries.getMessagesForSession(session.id)
+                        .executeAsList()
+                        .takeLast(6)
+                    collectedMessages.addAll(msgs)
+                    if (collectedMessages.size >= maxMessages) break
+                }
+
+                if (collectedMessages.isEmpty()) return@withContext ""
+
+                val sessionType = if (fromLiveSessions) "vocale" else "testuale"
+                val lines = collectedMessages
+                    .sortedByDescending { it.timestamp }
+                    .take(maxMessages)
+                    .reversed()
+                    .joinToString("\n") { msg ->
+                        val role = if (msg.isUser != 0L) "Tu" else "Eve"
+                        "$role: ${msg.content.take(200)}"
+                    }
+
+                Log.d(TAG, "Cross-session ($sessionType) context: ${collectedMessages.size} messages")
+                lines
+            } catch (e: Exception) {
+                Log.e(TAG, "Error getting cross-session context", e)
+                ""
             }
         }
     }
