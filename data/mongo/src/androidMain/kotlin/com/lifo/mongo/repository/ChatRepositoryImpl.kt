@@ -10,10 +10,12 @@ import com.google.firebase.auth.FirebaseAuth
 import com.lifo.mongo.database.CalmifyDatabase
 import com.lifo.mongo.database.Chat_messages
 import com.lifo.mongo.database.Chat_sessions
+import com.lifo.util.model.BodySensation
 import com.lifo.util.model.ChatMessage
 import com.lifo.util.model.ChatSession
 import com.lifo.util.model.Diary
 import com.lifo.util.model.MessageStatus
+import com.lifo.util.model.Trigger
 import com.lifo.util.model.RequestState
 import com.lifo.util.repository.ChatRepository
 import com.lifo.util.repository.MongoRepository
@@ -634,11 +636,13 @@ class ChatRepositoryImpl(
             val diaryList = recentDiaries.mapIndexed { i, d ->
                 "  ${i + 1}. [${d.mood}] ${d.title.ifBlank { "Senza titolo" }} — ${d.description.take(150)}"
             }.joinToString("\n")
+            val psychMetrics = extractPsychologicalMetrics(diaryContext)
             """
         CONTESTO PERSONALE${if (userName.isNotBlank()) " di $userName" else ""}:
         - Mood attuale: $currentMood
         - Temi ricorrenti: ${recurringThemes.take(3).joinToString(", ").ifBlank { "nessuno ancora" }}
         - Stile di scrittura: ${userProfile.writingStyle}
+        ${if (psychMetrics.isNotEmpty()) "- $psychMetrics" else ""}
         - Ultimi diari:
         $diaryList
         """.trimIndent()
@@ -684,6 +688,39 @@ class ChatRepositoryImpl(
 
         Rispondi come Eve — 1-3 frasi, dirette, personali, come un'amica che ti conosce davvero.
     """.trimIndent()
+    }
+
+    private fun extractPsychologicalMetrics(diaries: List<Diary>): String {
+        val recent = diaries.take(3)
+        if (recent.isEmpty()) return ""
+
+        val avgStress = recent.map { it.stressLevel }.average().toInt()
+        val avgEnergy = recent.map { it.energyLevel }.average().toInt()
+        val avgIntensity = recent.map { it.emotionIntensity }.average().toInt()
+        val avgCalm = recent.map { it.calmAnxietyLevel }.average().toInt()
+
+        val dominantTrigger = recent
+            .map { runCatching { Trigger.valueOf(it.primaryTrigger) }.getOrDefault(Trigger.NONE) }
+            .filter { it != Trigger.NONE }
+            .groupingBy { it }.eachCount()
+            .maxByOrNull { it.value }?.key
+
+        val dominantSensation = recent
+            .map { runCatching { BodySensation.valueOf(it.dominantBodySensation) }.getOrDefault(BodySensation.NONE) }
+            .filter { it != BodySensation.NONE }
+            .groupingBy { it }.eachCount()
+            .maxByOrNull { it.value }?.key
+
+        val parts = mutableListOf(
+            "Stress ${avgStress}/10",
+            "Energia ${avgEnergy}/10",
+            "Intensità emotiva ${avgIntensity}/10",
+            "Livello calma/ansia ${avgCalm}/10"
+        )
+        dominantTrigger?.let { parts.add("Trigger principale: ${it.displayName.lowercase()}") }
+        dominantSensation?.let { parts.add("Sensazione corporea: ${it.displayName.lowercase()}") }
+
+        return "Metriche recenti dell'utente: ${parts.joinToString(", ")}"
     }
 
     private fun generatePersonalizedSessionTitle(): String {
