@@ -10,6 +10,7 @@ import com.arkivanov.decompose.router.stack.bringToFront
 import com.arkivanov.decompose.router.stack.replaceAll
 import com.arkivanov.decompose.value.Value
 import com.arkivanov.decompose.router.stack.ChildStack
+import com.lifo.util.repository.FeatureFlagRepository
 
 /**
  * Root navigation component for Calmify.
@@ -20,10 +21,31 @@ import com.arkivanov.decompose.router.stack.ChildStack
  */
 class RootComponent(
     componentContext: ComponentContext,
+    private val featureFlagRepository: FeatureFlagRepository,
     initialDestination: RootDestination = RootDestination.Auth,
 ) : ComponentContext by componentContext {
 
     private val navigation = StackNavigation<RootDestination>()
+
+    /**
+     * Returns true if navigation to [destination] is blocked by a feature flag.
+     * Social destinations are gated by SOCIAL_ENABLED, FEED_ENABLED, MESSAGING_ENABLED.
+     */
+    private fun isBlocked(destination: RootDestination): Boolean {
+        val flags = featureFlagRepository.flags.value
+        return when (destination) {
+            is RootDestination.Feed,
+            is RootDestination.Composer,
+            is RootDestination.ThreadDetail -> !flags.socialEnabled || !flags.feedEnabled
+            is RootDestination.UserProfile,
+            is RootDestination.Search,
+            is RootDestination.Notifications,
+            is RootDestination.EditProfile,
+            is RootDestination.FollowList -> !flags.socialEnabled
+            is RootDestination.Messaging -> !flags.socialEnabled || !flags.messagingEnabled
+            else -> false
+        }
+    }
 
     val childStack: Value<ChildStack<RootDestination, Child>> =
         childStack(
@@ -35,6 +57,16 @@ class RootComponent(
         )
 
     private fun createChild(
+        destination: RootDestination,
+        context: ComponentContext,
+    ): Child {
+        // Defense-in-depth: if a blocked destination appears in the stack (e.g. restored
+        // from saved state after a flag was toggled), render Home instead.
+        if (isBlocked(destination)) return Child.Home(context)
+        return createChildUnchecked(destination, context)
+    }
+
+    private fun createChildUnchecked(
         destination: RootDestination,
         context: ComponentContext,
     ): Child = when (destination) {
@@ -97,6 +129,11 @@ class RootComponent(
 
     @OptIn(DelicateDecomposeApi::class)
     fun navigateTo(destination: RootDestination) {
+        // Deep links and programmatic navigation: redirect blocked destinations to Home
+        if (isBlocked(destination)) {
+            navigation.push(RootDestination.Home)
+            return
+        }
         navigation.push(destination)
     }
 
@@ -117,6 +154,8 @@ class RootComponent(
      * Maintains stack history so back button navigates to previous tab naturally.
      */
     fun switchTab(destination: RootDestination) {
+        // Silently ignore tab switches to blocked destinations
+        if (isBlocked(destination)) return
         navigation.bringToFront(destination)
     }
 
