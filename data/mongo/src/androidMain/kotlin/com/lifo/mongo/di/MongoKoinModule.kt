@@ -123,7 +123,7 @@ val firebaseModule = module {
 val repositoryModule = module {
     // Repositories
     single<MongoRepository> { FirestoreDiaryRepository(get(), get()) }
-    single<ChatRepository> { ChatRepositoryImpl(get(), get(), get()) }
+    single<ChatRepository> { ChatRepositoryImpl(get(), get(), get(), get()) }
     single<UnifiedContentRepository> { UnifiedContentRepositoryImpl(get(), get()) }
     single<WellbeingRepository> { FirestoreWellbeingRepository(get(), get()) }
     single<GratitudeRepository> { FirestoreGratitudeRepository(get(), get()) }
