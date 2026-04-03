@@ -115,6 +115,8 @@ fun DecomposeApp(
     // ── Auth state observer — kickout on sign-out/token revocation ──
     val authProvider: AuthProvider = koinInject()
     val profileSettingsRepository: ProfileSettingsRepository = koinInject()
+    val featureFlagRepository: com.lifo.util.repository.FeatureFlagRepository = koinInject()
+    val featureFlags by featureFlagRepository.flags.collectAsState()
     val authUserId by authProvider.authStateFlow.collectAsState()
 
     LaunchedEffect(authUserId) {
@@ -908,14 +910,16 @@ fun DecomposeApp(
                         else -> {}
                     }
                 } }
-                val destinations = remember {
-                    listOf(
-                        NavigationDestination.Home,
-                        NavigationDestination.Garden,
-                        NavigationDestination.Journal,
-                        NavigationDestination.Community,
-                        NavigationDestination.Journey,
-                    )
+                val destinations = remember(featureFlags.socialEnabled, featureFlags.feedEnabled) {
+                    buildList {
+                        add(NavigationDestination.Home)
+                        add(NavigationDestination.Garden)
+                        add(NavigationDestination.Journal)
+                        if (featureFlags.socialEnabled && featureFlags.feedEnabled) {
+                            add(NavigationDestination.Community)
+                        }
+                        add(NavigationDestination.Journey)
+                    }
                 }
                 DecomposeBottomBar(
                     activeDestination = activeDestination,

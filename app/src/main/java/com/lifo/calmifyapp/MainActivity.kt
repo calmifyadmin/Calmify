@@ -164,6 +164,7 @@ class MainActivity : ComponentActivity() {
         // it will call replaceAll() to navigate to the correct screen.
         rootComponent = RootComponent(
             componentContext = defaultComponentContext(),
+            featureFlagRepository = featureFlagRepository,
             initialDestination = RootDestination.Auth
         )
 
