@@ -16,6 +16,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lifo.home.domain.model.Badge
+import com.lifo.ui.theme.CalmifyRadius
+import com.lifo.ui.theme.CalmifySpacing
 import com.lifo.home.domain.model.BadgeRarity
 import com.lifo.home.util.EmotionAwareColors
 
@@ -88,7 +90,7 @@ fun BadgeCard(
                     scaleX = newBadgeScale
                     scaleY = newBadgeScale
                 },
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(CalmifyRadius.lg),
             colors = CardDefaults.cardColors(
                 containerColor = if (badge.earnedAt != null) {
                     MaterialTheme.colorScheme.surface
@@ -109,8 +111,8 @@ fun BadgeCard(
             onClick = onClick
         ) {
             Row(
-                modifier = Modifier.padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.padding(CalmifySpacing.lg),
+                horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.md),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Badge icon
@@ -140,7 +142,7 @@ fun BadgeCard(
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.sm),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
@@ -232,7 +234,7 @@ private fun RarityBadge(rarity: BadgeRarity) {
     val rarityColor = EmotionAwareColors.AchievementColors.getRarityColor(rarity)
 
     Surface(
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(CalmifyRadius.sm),
         color = rarityColor.copy(alpha = 0.15f)
     ) {
         Text(
@@ -240,7 +242,7 @@ private fun RarityBadge(rarity: BadgeRarity) {
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Medium,
             color = rarityColor,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+            modifier = Modifier.padding(horizontal = CalmifySpacing.sm, vertical = CalmifySpacing.xs)
         )
     }
 }
@@ -257,7 +259,7 @@ fun CompactBadge(
 
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(CalmifyRadius.md),
         color = if (badge.earnedAt != null) {
             rarityColor.copy(alpha = 0.15f)
         } else {
@@ -265,7 +267,7 @@ fun CompactBadge(
         }
     ) {
         Box(
-            modifier = Modifier.padding(8.dp),
+            modifier = Modifier.padding(CalmifySpacing.sm),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -299,12 +301,12 @@ fun BadgeGrid(
 ) {
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(CalmifySpacing.sm)
     ) {
         badges.chunked(columns).forEach { rowBadges ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.sm)
             ) {
                 rowBadges.forEach { badge ->
                     CompactBadge(

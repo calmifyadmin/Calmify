@@ -28,6 +28,8 @@ import com.lifo.home.domain.model.DominantMood
 import com.lifo.home.domain.model.MoodDistribution
 import com.lifo.home.domain.model.TimeRange
 
+import com.lifo.ui.theme.CalmifyRadius
+import com.lifo.ui.theme.CalmifySpacing
 import com.lifo.ui.theme.Sage
 import com.lifo.ui.theme.SageSoft
 import com.lifo.ui.theme.SageMedium
@@ -308,11 +310,11 @@ private fun MoodMetricChip(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(CalmifyRadius.lg),
         color = accentColor.copy(alpha = 0.12f)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
+            modifier = Modifier.padding(CalmifySpacing.md),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {

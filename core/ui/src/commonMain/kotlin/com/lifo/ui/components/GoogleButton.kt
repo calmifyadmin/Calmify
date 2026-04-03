@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.lifo.ui.theme.CalmifySpacing
 
 @Composable
 fun GoogleButton(
@@ -48,7 +49,7 @@ fun GoogleButton(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp)
+                .padding(CalmifySpacing.md)
                 .animateContentSize(
                     animationSpec = tween(
                         durationMillis = 300,
@@ -63,13 +64,13 @@ fun GoogleButton(
                 contentDescription = "Google Logo",
                 tint = Color.Unspecified
             )
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(CalmifySpacing.sm))
             Text(
                 text = buttonText,
                 style = TextStyle(fontSize = MaterialTheme.typography.bodyMedium.fontSize)
             )
             if (loadingState) {
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(CalmifySpacing.lg))
                 CircularProgressIndicator(
                     modifier = Modifier
                         .size(16.dp),
