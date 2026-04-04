@@ -26,6 +26,8 @@ import androidx.compose.ui.unit.sp
 import com.lifo.home.domain.model.DominantMood
 import com.lifo.home.domain.model.MoodDistribution
 import com.lifo.home.domain.model.TimeRange
+import com.lifo.ui.components.tooltips.InfoTooltip
+import com.lifo.ui.components.tooltips.TooltipContent
 import com.lifo.ui.theme.Sage
 import com.lifo.ui.theme.SageMedium
 import com.lifo.ui.theme.SageSoft
@@ -57,12 +59,21 @@ internal fun ExpressiveMoodCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Il tuo mood",
-                    style = MaterialTheme.typography.titleSmall.copy(
-                        fontWeight = FontWeight.SemiBold
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "Il tuo mood",
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = FontWeight.SemiBold
+                        )
                     )
-                )
+                    InfoTooltip(
+                        title = TooltipContent.wellbeingTrend.first,
+                        description = TooltipContent.wellbeingTrend.second
+                    )
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     TimeRange.entries.forEach { range ->
                         FilterChip(

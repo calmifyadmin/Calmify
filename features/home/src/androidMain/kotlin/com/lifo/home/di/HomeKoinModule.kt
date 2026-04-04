@@ -2,12 +2,17 @@ package com.lifo.home.di
 
 import com.lifo.home.HomeViewModel
 import com.lifo.home.SnapshotViewModel
+import com.lifo.home.domain.aggregator.WellbeingAggregator
 import com.lifo.home.domain.usecase.AggregateCognitivePatternsUseCase
 import com.lifo.home.domain.usecase.CalculateMoodDistributionUseCase
 import com.lifo.home.domain.usecase.CalculateStreaksUseCase
 import com.lifo.home.domain.usecase.CalculateTodayPulseUseCase
 import com.lifo.home.domain.usecase.CalculateTopicsFrequencyUseCase
 import com.lifo.home.domain.usecase.GetAchievementsUseCase
+import com.lifo.home.domain.usecase.GetActivityImpactUseCase
+import com.lifo.home.domain.usecase.GetGrowthProgressUseCase
+import com.lifo.home.domain.usecase.GetSleepMoodCorrelationUseCase
+import com.lifo.home.domain.usecase.GetWellbeingTrendUseCase
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
@@ -19,6 +24,17 @@ val homeKoinModule = module {
     factory { CalculateStreaksUseCase() }
     factory { CalculateTodayPulseUseCase() }
     factory { GetAchievementsUseCase(get()) }
+    factory { GetSleepMoodCorrelationUseCase() }
+    factory { GetActivityImpactUseCase() }
+    factory { GetGrowthProgressUseCase() }
+    factory { GetWellbeingTrendUseCase() }
+    factory {
+        WellbeingAggregator(
+            get(), get(), get(), get(), get(), get(), get(),
+            get(), get(), get(), get(), get(), get(),
+            get(), get(), get(), get()
+        )
+    }
 
     // ViewModels
     // HomeViewModel(connectivity, auth, storage, imageToDeleteDao, unifiedContentRepository,

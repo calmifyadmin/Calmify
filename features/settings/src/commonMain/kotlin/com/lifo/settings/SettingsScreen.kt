@@ -2,6 +2,7 @@ package com.lifo.settings
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -50,6 +51,8 @@ fun SettingsScreen(
     onNavigateToEnvironment: () -> Unit = {},
     onNavigateToAvatarDebug: () -> Unit = {},
     onLogout: () -> Unit,
+    currentLanguageCode: String = "",
+    onLanguageSelected: (String) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = koinViewModel()
 ) {
@@ -147,6 +150,13 @@ fun SettingsScreen(
                     subtitle = stringResource(Res.string.settings_environment_item_subtitle),
                     icon = Icons.Default.Spa,
                     onClick = onNavigateToEnvironment,
+                )
+
+                // Language Section
+                SettingsSectionHeader(title = "Lingua / Language")
+                LanguageSection(
+                    currentCode = currentLanguageCode,
+                    onLanguageSelected = onLanguageSelected
                 )
 
                 // Privacy Section
@@ -605,6 +615,86 @@ private fun DeleteAccountConfirmationDialog(
             }
         }
     )
+}
+
+/**
+ * Language picker section — shows current language and opens a selection dialog.
+ */
+@Composable
+private fun LanguageSection(
+    currentCode: String,
+    onLanguageSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var showDialog by remember { mutableStateOf(false) }
+
+    val languages = listOf(
+        Triple("it", "\uD83C\uDDEE\uD83C\uDDF9", "Italiano"),
+        Triple("en", "\uD83C\uDDEC\uD83C\uDDE7", "English"),
+        Triple("es", "\uD83C\uDDEA\uD83C\uDDF8", "Español"),
+        Triple("fr", "\uD83C\uDDEB\uD83C\uDDF7", "Français"),
+        Triple("de", "\uD83C\uDDE9\uD83C\uDDEA", "Deutsch"),
+        Triple("pt", "\uD83C\uDDE7\uD83C\uDDF7", "Português")
+    )
+
+    val currentDisplay = languages.find { it.first == currentCode }
+        ?.let { "${it.second} ${it.third}" }
+        ?: "\uD83C\uDDEE\uD83C\uDDF9 Italiano"
+
+    SettingsNavigationItem(
+        title = "Lingua",
+        subtitle = currentDisplay,
+        icon = Icons.Default.Language,
+        onClick = { showDialog = true },
+        modifier = modifier
+    )
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("Seleziona lingua") },
+            text = {
+                Column {
+                    languages.forEach { (code, flag, name) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onLanguageSelected(code)
+                                    showDialog = false
+                                }
+                                .padding(vertical = 12.dp, horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = flag,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                text = name,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (code == currentCode) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text("Chiudi")
+                }
+            }
+        )
+    }
 }
 
 /**
