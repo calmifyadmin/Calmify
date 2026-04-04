@@ -7,13 +7,11 @@ import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import androidx.activity.ComponentActivity
-import com.lifo.settings.navigation.applyLocaleToContext
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
@@ -61,7 +59,7 @@ sealed class AppState {
     data class Error(val message: String, val retry: () -> Unit) : AppState()
 }
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
 
     private val imageToUploadQueries: ImageToUploadQueries by inject()
     private val imageToDeleteQueries: ImageToDeleteQueries by inject()
@@ -99,10 +97,6 @@ class MainActivity : ComponentActivity() {
         } else {
             println("[MainActivity] WARNING: Notification permission denied")
         }
-    }
-
-    override fun attachBaseContext(newBase: Context) {
-        super.attachBaseContext(applyLocaleToContext(newBase))
     }
 
     @OptIn(ExperimentalAnimationApi::class)

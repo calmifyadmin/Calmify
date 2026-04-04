@@ -1,10 +1,9 @@
 package com.lifo.settings.navigation
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.content.res.Configuration
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -12,6 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
+import androidx.core.os.LocaleListCompat
 import org.koin.compose.viewmodel.koinViewModel
 import androidx.compose.runtime.collectAsState
 import com.lifo.settings.SettingsContract
@@ -19,28 +19,28 @@ import com.lifo.settings.SettingsScreen
 import com.lifo.settings.SettingsViewModel
 import com.lifo.settings.subscreens.*
 import java.io.File
-import java.util.Locale
 
 private const val SETTINGS_VM_KEY = "settings_shared_vm"
-private const val PREFS_NAME = "calmify_prefs"
-private const val KEY_LANGUAGE = "language_code"
 
 /**
- * Reads the saved language code from SharedPreferences.
+ * Reads the currently active language code via AppCompatDelegate.
+ * Returns the first tag (e.g. "it", "en") or "" for system default.
  */
-private fun Context.getSavedLanguageCode(): String =
-    getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        .getString(KEY_LANGUAGE, "") ?: ""
+private fun getCurrentLanguageCode(): String {
+    val locales = AppCompatDelegate.getApplicationLocales()
+    if (locales.isEmpty) return ""
+    return locales[0]?.language ?: ""
+}
 
 /**
- * Saves language code and restarts the activity to apply the new locale.
+ * Applies the selected locale immediately via AppCompatDelegate.
+ * This is the modern approach: handles storage, resource update, and activity recreation
+ * automatically on API 26+ (AppCompat backport) and API 33+ (system API).
  */
-private fun Context.applyAndSaveLanguage(code: String) {
-    getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        .edit()
-        .putString(KEY_LANGUAGE, code)
-        .apply()
-    (this as? Activity)?.recreate()
+private fun applyLanguage(code: String) {
+    val localeList = if (code.isEmpty()) LocaleListCompat.getEmptyLocaleList()
+    else LocaleListCompat.forLanguageTags(code)
+    AppCompatDelegate.setApplicationLocales(localeList)
 }
 
 /**
@@ -60,7 +60,7 @@ fun SettingsMainRouteContent(
 ) {
     val viewModel: SettingsViewModel = koinViewModel(key = SETTINGS_VM_KEY)
     val context = LocalContext.current
-    val currentLanguageCode by remember { mutableStateOf(context.getSavedLanguageCode()) }
+    val currentLanguageCode by remember { mutableStateOf(getCurrentLanguageCode()) }
 
     LaunchedEffect(Unit) {
         viewModel.effects.collect { effect ->
@@ -105,23 +105,9 @@ fun SettingsMainRouteContent(
         onNavigateToAvatarDebug = onNavigateToAvatarDebug,
         onLogout = onLogout,
         currentLanguageCode = currentLanguageCode,
-        onLanguageSelected = { code -> context.applyAndSaveLanguage(code) },
+        onLanguageSelected = { code -> applyLanguage(code) },
         viewModel = viewModel
     )
-}
-
-/**
- * Applies a saved locale to a base Context. Call this in Activity.attachBaseContext.
- */
-fun applyLocaleToContext(base: Context): Context {
-    val langCode = base.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        .getString(KEY_LANGUAGE, "") ?: ""
-    if (langCode.isEmpty()) return base
-    val locale = Locale.forLanguageTag(langCode)
-    Locale.setDefault(locale)
-    val config = Configuration(base.resources.configuration)
-    config.setLocale(locale)
-    return base.createConfigurationContext(config)
 }
 
 // ─── Sub-screen entry points ────────────────────────────────────────────────

@@ -132,6 +132,7 @@ dependencies {
     debugImplementation libs.compose.ui.test.manifest
 
     // Core Android
+    implementation libs.appcompat
     implementation libs.core.ktx
     implementation libs.lifecycle.runtime.ktx
     implementation libs.lifecycle.runtime.compose
