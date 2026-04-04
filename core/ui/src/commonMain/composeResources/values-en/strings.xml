@@ -279,6 +279,10 @@
     <string name="settings_environment_section">Your Environment</string>
     <string name="settings_environment_item_title">Your environment design</string>
     <string name="settings_environment_item_subtitle">Checklist, routines and digital detox</string>
+    <string name="settings_language_section">Lingua / Language</string>
+    <string name="settings_language_item_title">App language</string>
+    <string name="settings_language_item_subtitle">Choose your preferred language</string>
+    <string name="settings_language_dialog_title">Select language</string>
     <string name="settings_privacy_section">Privacy &amp; Data</string>
     <string name="settings_export_data">Export your data</string>
     <string name="settings_developer_section">Developer</string>
@@ -590,11 +594,7 @@
     <!-- ============================================================ -->
     <!-- Language settings -->
     <!-- ============================================================ -->
-    <string name="settings_section_language">Language</string>
-    <string name="settings_language">Language</string>
-    <string name="settings_language_sub">Change the app language</string>
-    <string name="settings_language_dialog_title">Select language</string>
-    <string name="settings_language_system">System</string>
+
 
     <!-- ============================================================ -->
     <!-- Error / connection states -->

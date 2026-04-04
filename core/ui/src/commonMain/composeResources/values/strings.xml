@@ -279,6 +279,10 @@
     <string name="settings_environment_section">Il Tuo Ambiente</string>
     <string name="settings_environment_item_title">Design del tuo ambiente</string>
     <string name="settings_environment_item_subtitle">Checklist, routine e digital detox</string>
+    <string name="settings_language_section">Lingua / Language</string>
+    <string name="settings_language_item_title">Lingua dell\'app</string>
+    <string name="settings_language_item_subtitle">Scegli la lingua preferita</string>
+    <string name="settings_language_dialog_title">Seleziona lingua</string>
     <string name="settings_privacy_section">Privacy &amp; Dati</string>
     <string name="settings_export_data">Esporta i tuoi dati</string>
     <string name="settings_developer_section">Developer</string>

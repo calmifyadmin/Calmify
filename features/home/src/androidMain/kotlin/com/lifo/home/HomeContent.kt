@@ -33,6 +33,8 @@ import com.lifo.ui.components.coaching.CoachMarkOverlay
 import com.lifo.ui.components.coaching.ScreenTutorials
 import com.lifo.ui.components.coaching.coachMarkTarget
 import com.lifo.ui.components.coaching.rememberCoachMarkState
+import com.lifo.ui.components.tooltips.InfoTooltip
+import com.lifo.ui.components.tooltips.TooltipContent
 import com.lifo.ui.onboarding.OnboardingManager
 import com.lifo.util.model.Diary
 import kotlinx.datetime.Clock
@@ -181,14 +183,34 @@ internal fun HomeContent(
 
                         // 3. Weekly Activity Strip (with streak)
                         item(key = "week_strip") {
-                            ExpressiveWeekStrip(
-                                dailyInsights = dailyInsights,
-                                weeklyGoal = achievementsState?.weeklyGoal,
-                                streakDays = achievementsState?.streak?.currentStreak ?: 0,
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .staggeredEntrance(index = 2, baseDelayMs = 80)
-                            )
+                                    .staggeredEntrance(index = 2, baseDelayMs = 80),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Questa settimana",
+                                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    InfoTooltip(
+                                        title = TooltipContent.habitStacking.first,
+                                        description = TooltipContent.habitStacking.second
+                                    )
+                                }
+                                ExpressiveWeekStrip(
+                                    dailyInsights = dailyInsights,
+                                    weeklyGoal = achievementsState?.weeklyGoal,
+                                    streakDays = achievementsState?.streak?.currentStreak ?: 0,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
                         }
 
                         // 4. Daily Quick Actions (horizontal scroll)
@@ -220,16 +242,37 @@ internal fun HomeContent(
                         // 6. Mood Distribution (centered donut + pills)
                         if (moodDistribution != null && dominantMood != null) {
                             item(key = "mood") {
-                                ExpressiveMoodCard(
-                                    distribution = moodDistribution!!,
-                                    dominantMood = dominantMood!!,
-                                    timeRange = selectedTimeRange,
-                                    onTimeRangeChange = { viewModel.updateTimeRange(it) },
+                                Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .staggeredEntrance(index = 5, baseDelayMs = 80)
-                                        .coachMarkTarget(coachState, CoachMarkKeys.HOME_MOOD)
-                                )
+                                        .staggeredEntrance(index = 5, baseDelayMs = 80),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Umore",
+                                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        InfoTooltip(
+                                            title = TooltipContent.wellbeingTrend.first,
+                                            description = TooltipContent.wellbeingTrend.second
+                                        )
+                                    }
+                                    ExpressiveMoodCard(
+                                        distribution = moodDistribution!!,
+                                        dominantMood = dominantMood!!,
+                                        timeRange = selectedTimeRange,
+                                        onTimeRangeChange = { viewModel.updateTimeRange(it) },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .coachMarkTarget(coachState, CoachMarkKeys.HOME_MOOD)
+                                    )
+                                }
                             }
                         }
 
@@ -469,13 +512,23 @@ internal fun ExpressiveDailyActions(
     }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(
-            text = "Azioni quotidiane",
-            style = MaterialTheme.typography.titleSmall.copy(
-                fontWeight = FontWeight.SemiBold
-            ),
-            color = colorScheme.onSurface,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Azioni quotidiane",
+                style = MaterialTheme.typography.titleSmall.copy(
+                    fontWeight = FontWeight.SemiBold
+                ),
+                color = colorScheme.onSurface,
+            )
+            InfoTooltip(
+                title = TooltipContent.minimumAction.first,
+                description = TooltipContent.minimumAction.second
+            )
+        }
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             contentPadding = PaddingValues(horizontal = 0.dp)

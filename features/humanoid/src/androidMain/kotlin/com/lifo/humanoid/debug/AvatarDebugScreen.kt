@@ -132,9 +132,10 @@ fun AvatarDebugScreen(
                 ) {
                     // Section tabs
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.horizontalScroll(rememberScrollState())
                     ) {
-                        listOf("animations" to "Animations", "visemes" to "Visemes", "idle" to "Idle").forEach { (key, label) ->
+                        listOf("animations" to "Animations", "visemes" to "Visemes", "idle" to "Idle", "lighting" to "Lighting").forEach { (key, label) ->
                             FilterChip(
                                 selected = activeSection == key,
                                 onClick = { activeSection = key },
@@ -159,6 +160,10 @@ fun AvatarDebugScreen(
                         "idle" -> IdlePanel(
                             humanoidViewModel = humanoidViewModel,
                             humanoidController = humanoidController,
+                            onTriggered = { lastTriggered = it }
+                        )
+                        "lighting" -> LightingPanel(
+                            humanoidViewModel = humanoidViewModel,
                             onTriggered = { lastTriggered = it }
                         )
                     }
@@ -359,5 +364,130 @@ private fun IdlePanel(
                 }
             }) { Text("Blink") }
         }
+    }
+}
+
+@Composable
+private fun LightingPanel(
+    humanoidViewModel: HumanoidViewModel,
+    onTriggered: (String) -> Unit
+) {
+    val renderer = humanoidViewModel.getFilamentRenderer()
+
+    // Current values (defaults from setupLighting)
+    var sunIntensity by remember { mutableFloatStateOf(109_210f) }
+    var sunDirX by remember { mutableFloatStateOf(0.1f) }
+    var sunDirY by remember { mutableFloatStateOf(-0.85f) }
+    var sunDirZ by remember { mutableFloatStateOf(0.25f) }
+    var fillIntensity by remember { mutableFloatStateOf(35_001f) }
+    var rimIntensity by remember { mutableFloatStateOf(46_214f) }
+    var indirectIntensity by remember { mutableFloatStateOf(15_869f) }
+    var shBase by remember { mutableFloatStateOf(0.64f) }
+    var exposure by remember { mutableFloatStateOf(0.45f) }
+    var contrast by remember { mutableFloatStateOf(1.08f) }
+
+    val scrollState = rememberScrollState()
+    Column(
+        modifier = Modifier
+            .heightIn(max = 280.dp)
+            .verticalScroll(scrollState),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text("Lighting Controls", style = MaterialTheme.typography.labelLarge)
+
+        if (renderer == null) {
+            Text("Renderer not ready", style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error)
+            return@Column
+        }
+
+        LightingSlider("SUN", sunIntensity, 0f..150_000f, { "%.0f".format(it) }) {
+            sunIntensity = it; renderer.updateSunIntensity(it)
+        }
+        LightingSlider("Sun X", sunDirX, -1f..1f, { "%.2f".format(it) }) {
+            sunDirX = it; renderer.updateSunDirection(sunDirX, sunDirY, sunDirZ)
+        }
+        LightingSlider("Sun Y", sunDirY, -1f..0f, { "%.2f".format(it) }) {
+            sunDirY = it; renderer.updateSunDirection(sunDirX, sunDirY, sunDirZ)
+        }
+        LightingSlider("Sun Z", sunDirZ, -1f..1f, { "%.2f".format(it) }) {
+            sunDirZ = it; renderer.updateSunDirection(sunDirX, sunDirY, sunDirZ)
+        }
+        LightingSlider("Fill", fillIntensity, 0f..60_000f, { "%.0f".format(it) }) {
+            fillIntensity = it; renderer.updateFillIntensity(it)
+        }
+        LightingSlider("Rim", rimIntensity, 0f..80_000f, { "%.0f".format(it) }) {
+            rimIntensity = it; renderer.updateRimIntensity(it)
+        }
+        LightingSlider("Indirect", indirectIntensity, 0f..60_000f, { "%.0f".format(it) }) {
+            indirectIntensity = it; renderer.updateIndirectIntensity(it)
+        }
+        LightingSlider("SH Base", shBase, 0f..1f, { "%.2f".format(it) }) {
+            shBase = it; renderer.updateIndirectSHBase(it)
+        }
+        LightingSlider("Exposure", exposure, 0f..2f, { "%.2f".format(it) }) {
+            exposure = it; renderer.updateColorGrading(it, contrast)
+        }
+        LightingSlider("Contrast", contrast, 0.5f..2f, { "%.2f".format(it) }) {
+            contrast = it; renderer.updateColorGrading(exposure, it)
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+        Text("Face Material Override", style = MaterialTheme.typography.labelLarge)
+
+        var faceRoughness by remember { mutableFloatStateOf(0.9f) }
+        var faceMetallic by remember { mutableFloatStateOf(0.0f) }
+
+        LightingSlider("Face Rough", faceRoughness, 0f..1f, { "%.2f".format(it) }) {
+            faceRoughness = it; renderer.overrideFaceMaterial(it, faceMetallic)
+        }
+        LightingSlider("Face Metal", faceMetallic, 0f..1f, { "%.2f".format(it) }) {
+            faceMetallic = it; renderer.overrideFaceMaterial(faceRoughness, it)
+        }
+
+        FilledTonalButton(
+            onClick = {
+                renderer.dumpFaceMaterialInfo()
+                onTriggered("Material info dumped to logcat")
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) { Text("Dump Face Material") }
+
+        FilledTonalButton(
+            onClick = {
+                val values = "SUN=%.0f Dir=(%.2f,%.2f,%.2f) Fill=%.0f Rim=%.0f Ind=%.0f SH=%.2f Exp=%.2f Con=%.2f".format(
+                    sunIntensity, sunDirX, sunDirY, sunDirZ, fillIntensity, rimIntensity, indirectIntensity, shBase, exposure, contrast
+                )
+                println("[LightingDebug] $values")
+                onTriggered(values)
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) { Text("Log Values") }
+    }
+}
+
+@Composable
+private fun LightingSlider(
+    label: String,
+    value: Float,
+    range: ClosedFloatingPointRange<Float>,
+    format: (Float) -> String,
+    onValueChange: (Float) -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = "$label: ${format(value)}",
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.width(120.dp)
+        )
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = range,
+            modifier = Modifier.weight(1f)
+        )
     }
 }

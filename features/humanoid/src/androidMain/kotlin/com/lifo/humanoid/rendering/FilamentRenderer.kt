@@ -149,6 +149,8 @@ class FilamentRenderer(
 
     // Lighting components
     private var sunEntity: Int = 0
+    private var fillLightEntity: Int = 0
+    private var rimLightEntity: Int = 0
 
     // Camera manipulator for interactive orbit/pan/zoom
     private var manipulator: Manipulator? = null
@@ -237,7 +239,13 @@ class FilamentRenderer(
         try {
             FilamentNativeLoader.ensureLoaded()
 
+            // Force OpenGL backend: Adreno GPU drivers (Samsung, Qualcomm) have
+            // known bugs with morph targets under Vulkan that cause flat/cartoon
+            // rendering and texture distortion. See:
+            // - https://github.com/google/filament/discussions/6479
+            // - https://github.com/google/filament/issues/6482
             val newEngine = Engine.Builder()
+                .backend(Engine.Backend.OPENGL)
                 .config(Engine.Config().apply {
                     minCommandBufferSizeMB = 16  // Default ~7MB too small for complex VRM models
                 })
@@ -367,20 +375,61 @@ class FilamentRenderer(
         val eng = engine ?: return
         val scn = scene ?: return
 
+        // ── Key Light (SUN) ── overhead, slightly front — natural window light
         sunEntity = EntityManager.get().create()
-
         LightManager.Builder(LightManager.Type.SUN)
-            .color(1.0f, 1.0f, 0.95f)
-            .intensity(120000.0f)
-            .direction(0.3f, -1.0f, -0.5f)
+            .color(1.0f, 0.97f, 0.92f)          // warm dayligh
+            .intensity(109_210.0f)
+            .direction(0.25f, -0.75f, 0.25f)    // upper-right, slightly lower    // overhead, slightly front-right
             .castShadows(true)
+            .shadowOptions(LightManager.ShadowOptions().apply {
+                mapSize = 2048
+            })
             .build(eng, sunEntity)
-
         scn.addEntity(sunEntity)
 
+        // ── Fill Light ── opposite side, cooler and softer, no shadows
+        fillLightEntity = EntityManager.get().create()
+        LightManager.Builder(LightManager.Type.DIRECTIONAL)
+            .color(0.85f, 0.90f, 1.0f)           // cool blue-ish fill
+            .intensity(35_001.0f)
+            .direction(-0.3f, -0.5f, -0.2f)       // from upper-left, softer angle        // from upper-left, facing front
+            .castShadows(false)
+            .build(eng, fillLightEntity)
+        scn.addEntity(fillLightEntity)
+
+        // ── Rim / Back Light ── edge separation from background
+        rimLightEntity = EntityManager.get().create()
+        LightManager.Builder(LightManager.Type.DIRECTIONAL)
+            .color(1.0f, 0.98f, 0.95f)           // neutral warm
+            .intensity(46_214.0f)
+            .direction(0.0f, -0.3f, -0.8f)        // from behind the avatar
+            .castShadows(false)
+            .build(eng, rimLightEntity)
+        scn.addEntity(rimLightEntity)
+
+        // ── Indirect Light with Spherical Harmonics ──
+        // 3-band SH (9 coefficients): warm above, cool below → natural sky-ground gradient
+        val harmonics = floatArrayOf(
+            // L0: base ambient
+            0.64f,  0.60f,  0.58f,
+            // L1: vertical gradient
+            0.0f,   0.18f,  0.14f,   // +Y (warm sky)
+            0.0f,   0.0f,   0.0f,    // Z
+            -0.05f, -0.03f,  0.02f,   // -Y (cool ground bounce)
+            // L2: directional variation
+            0.06f,  0.04f,  0.03f,
+            0.0f,   0.0f,   0.0f,
+            0.0f,   0.0f,   0.0f,
+            -0.03f, -0.03f, -0.02f,
+            0.0f,   0.0f,   0.0f,
+        )
         scn.indirectLight = IndirectLight.Builder()
-            .intensity(60000.0f)
+            .irradiance(3, harmonics)            // 3-band spherical harmonics
+            .intensity(15_869.0f)
             .build(eng)
+
+        println("[FilamentRenderer] 3-point lighting + SH indirect light configured")
     }
 
     private fun configureView() {
@@ -391,19 +440,167 @@ class FilamentRenderer(
         v.antiAliasing = View.AntiAliasing.FXAA
         v.ambientOcclusion = View.AmbientOcclusion.SSAO
 
+        // SSAO: deeper contact shadows for realism
+        v.ambientOcclusionOptions = v.ambientOcclusionOptions.apply {
+            radius = 0.35f       // world-space AO radius
+            bias = 0.0005f       // prevent self-occlusion artifacts
+            power = 1.5f         // darken AO for more depth
+            intensity = 0.8f     // visible but not overdone
+        }
+
         v.bloomOptions = v.bloomOptions.apply {
             enabled = true
-            strength = 0.08f
+            strength = 0.06f     // slightly subtler bloom
             levels = 4
             threshold = true
         }
 
         v.colorGrading = ColorGrading.Builder()
             .toneMapping(ColorGrading.ToneMapping.ACES)
-            .exposure(0.6f)
-            .contrast(1.03f)
-            .saturation(1.02f)
+            .exposure(0.45f)     // darker exposure → more dramatic, less washed out
+            .contrast(1.08f)     // stronger contrast for depth
+            .saturation(1.03f)
             .build(eng)
+    }
+
+    // ==================== Debug: Live Lighting Controls ====================
+
+    /** Update key light (SUN) intensity at runtime */
+    fun updateSunIntensity(intensity: Float) {
+        val eng = engine ?: return
+        if (sunEntity == 0) return
+        val lm = eng.lightManager
+        val inst = lm.getInstance(sunEntity)
+        if (inst != 0) lm.setIntensity(inst, intensity)
+    }
+
+    /** Update key light (SUN) direction at runtime */
+    fun updateSunDirection(x: Float, y: Float, z: Float) {
+        val eng = engine ?: return
+        if (sunEntity == 0) return
+        val lm = eng.lightManager
+        val inst = lm.getInstance(sunEntity)
+        if (inst != 0) lm.setDirection(inst, x, y, z)
+    }
+
+    /** Update fill light intensity at runtime */
+    fun updateFillIntensity(intensity: Float) {
+        val eng = engine ?: return
+        if (fillLightEntity == 0) return
+        val lm = eng.lightManager
+        val inst = lm.getInstance(fillLightEntity)
+        if (inst != 0) lm.setIntensity(inst, intensity)
+    }
+
+    /** Update rim light intensity at runtime */
+    fun updateRimIntensity(intensity: Float) {
+        val eng = engine ?: return
+        if (rimLightEntity == 0) return
+        val lm = eng.lightManager
+        val inst = lm.getInstance(rimLightEntity)
+        if (inst != 0) lm.setIntensity(inst, intensity)
+    }
+
+    /** Update indirect light intensity at runtime */
+    fun updateIndirectIntensity(intensity: Float) {
+        val scn = scene ?: return
+        scn.indirectLight?.intensity = intensity
+    }
+
+    /** Rebuild indirect light with new SH base (L0) coefficient */
+    fun updateIndirectSHBase(l0: Float) {
+        val eng = engine ?: return
+        val scn = scene ?: return
+        val harmonics = floatArrayOf(
+            l0, l0 * 0.94f, l0 * 0.91f,
+            0.0f, l0 * 0.51f, l0 * 0.40f,
+            0.0f, 0.0f, 0.0f,
+            -0.05f, -0.03f, 0.02f,
+            l0 * 0.17f, l0 * 0.11f, l0 * 0.09f,
+            0.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 0.0f,
+            -0.03f, -0.03f, -0.02f,
+            0.0f, 0.0f, 0.0f,
+        )
+        val currentIntensity = scn.indirectLight?.intensity ?: 15_000f
+        scn.indirectLight = IndirectLight.Builder()
+            .irradiance(3, harmonics)
+            .intensity(currentIntensity)
+            .build(eng)
+    }
+
+    /** Update exposure and contrast via color grading rebuild */
+    fun updateColorGrading(exposure: Float, contrast: Float) {
+        val v = view ?: return
+        val eng = engine ?: return
+        v.colorGrading = ColorGrading.Builder()
+            .toneMapping(ColorGrading.ToneMapping.ACES)
+            .exposure(exposure)
+            .contrast(contrast)
+            .saturation(1.03f)
+            .build(eng)
+    }
+
+    // ==================== Debug: Face Material Diagnostics ====================
+
+    /**
+     * Dump material info for all entities that have morph targets (= face mesh).
+     * Logs material name, primitive count, and each primitive's material properties.
+     */
+    fun dumpFaceMaterialInfo() {
+        val eng = engine ?: return
+        val asset = currentAsset ?: return
+        val rm = eng.renderableManager
+
+        asset.entities.forEach { entity ->
+            val inst = rm.getInstance(entity)
+            if (inst == 0) return@forEach
+            val morphCount = rm.getMorphTargetCount(inst)
+            if (morphCount == 0) return@forEach
+
+            val name = try { asset.getName(entity) } catch (_: Exception) { "unknown" }
+            val primCount = rm.getPrimitiveCount(inst)
+            println("[FaceMaterial] entity=$entity name='$name' morphTargets=$morphCount primitives=$primCount")
+
+            for (prim in 0 until primCount) {
+                try {
+                    val mi = rm.getMaterialInstanceAt(inst, prim)
+                    val mat = mi.material
+                    println("[FaceMaterial]   prim=$prim material='${mat.name}' " +
+                            "paramCount=${mat.parameters.size} " +
+                            "params=${mat.parameters.map { "${it.name}(${it.type})" }.take(15)}")
+                } catch (e: Exception) {
+                    println("[FaceMaterial]   prim=$prim ERROR: ${e.message}")
+                }
+            }
+        }
+    }
+
+    /**
+     * Override roughness/metallic on ALL face mesh primitives.
+     * Call with roughness=0.9 metallic=0.0 to restore defaults.
+     */
+    fun overrideFaceMaterial(roughness: Float, metallic: Float) {
+        val eng = engine ?: return
+        val asset = currentAsset ?: return
+        val rm = eng.renderableManager
+
+        asset.entities.forEach { entity ->
+            val inst = rm.getInstance(entity)
+            if (inst == 0) return@forEach
+            if (rm.getMorphTargetCount(inst) == 0) return@forEach
+
+            val primCount = rm.getPrimitiveCount(inst)
+            for (prim in 0 until primCount) {
+                try {
+                    val mi = rm.getMaterialInstanceAt(inst, prim)
+                    mi.setParameter("roughnessFactor", roughness)
+                    mi.setParameter("metallicFactor", metallic)
+                } catch (e: Exception) {
+                    // Parameter might not exist — silently skip
+                }
+            }
+        }
     }
 
     /**
@@ -524,25 +721,25 @@ class FilamentRenderer(
             val lower = name.lowercase()
             when {
                 leftEyeEntity == 0 && (
-                    lower == "lefteye" ||
-                    lower.contains("j_adj_l_faceeye") ||  // VRoid Studio
-                    lower.contains("j_bip_l_eye") ||
-                    lower.contains("left_eye") ||
-                    lower.contains("eye_l") ||
-                    lower == "eye.l"
-                ) -> {
+                        lower == "lefteye" ||
+                                lower.contains("j_adj_l_faceeye") ||  // VRoid Studio
+                                lower.contains("j_bip_l_eye") ||
+                                lower.contains("left_eye") ||
+                                lower.contains("eye_l") ||
+                                lower == "eye.l"
+                        ) -> {
                     leftEyeEntity = entity
                     println("[FilamentRenderer] Eye bone (pattern): leftEye '$name' → entity=$entity")
                 }
 
                 rightEyeEntity == 0 && (
-                    lower == "righteye" ||
-                    lower.contains("j_adj_r_faceeye") ||  // VRoid Studio
-                    lower.contains("j_bip_r_eye") ||
-                    lower.contains("right_eye") ||
-                    lower.contains("eye_r") ||
-                    lower == "eye.r"
-                ) -> {
+                        lower == "righteye" ||
+                                lower.contains("j_adj_r_faceeye") ||  // VRoid Studio
+                                lower.contains("j_bip_r_eye") ||
+                                lower.contains("right_eye") ||
+                                lower.contains("eye_r") ||
+                                lower == "eye.r"
+                        ) -> {
                     rightEyeEntity = entity
                     println("[FilamentRenderer] Eye bone (pattern): rightEye '$name' → entity=$entity")
                 }
@@ -868,6 +1065,29 @@ class FilamentRenderer(
                 val finalProgress = resLoader.asyncGetLoadProgress()
                 if (finalProgress < 1.0f) {
                     println("[FilamentRenderer] WARNING: Resource loading incomplete: ${(finalProgress * 100).toInt()}% after ${maxWaitMs}ms")
+                    // Force-pump remaining resources
+                    while (resLoader.asyncGetLoadProgress() < 1.0f && !isDestroyed.get()) {
+                        resLoader.asyncUpdateLoad()
+                        Thread.sleep(8)
+                    }
+                    println("[FilamentRenderer] Force-pump complete: ${(resLoader.asyncGetLoadProgress() * 100).toInt()}%")
+                }
+
+                // CRITICAL: Release source data to finalize materials and free upload buffers.
+                // Without this, materials may not be fully compiled on first render.
+                asset.releaseSourceData()
+                println("[FilamentRenderer] Source data released — materials finalized")
+
+                // Log built-in animation count — if >0, the Animator might auto-apply
+                // morph weights that conflict with our blend shape controller
+                val animInstance = asset.getInstance()
+                val animAnimator = animInstance?.animator
+                val animCount = animAnimator?.animationCount ?: 0
+                println("[FilamentRenderer] ANIM DIAG: asset has $animCount built-in animations")
+                for (i in 0 until animCount) {
+                    val animName = animAnimator?.getAnimationName(i) ?: "?"
+                    val animDuration = animAnimator?.getAnimationDuration(i) ?: 0f
+                    println("[FilamentRenderer] ANIM DIAG:   [$i] name='$animName' duration=${animDuration}s")
                 }
 
                 scn.addEntities(asset.entities)
@@ -1006,10 +1226,16 @@ class FilamentRenderer(
             if (instance != 0) {
                 val morphTargetCount = renderableManager.getMorphTargetCount(instance)
                 if (morphTargetCount > 0) {
+                    val name = try { asset.getName(entity) } catch (_: Exception) { null } ?: "entity_$index"
                     entitiesWithMorphTargets.add(Triple(entity, index, morphTargetCount))
+                    println("[FilamentRenderer] MORPH DIAG: entity=$entity name='$name' " +
+                            "morphTargets=$morphTargetCount index=$index")
                 }
             }
         }
+
+        println("[FilamentRenderer] MORPH DIAG: ${entitiesWithMorphTargets.size} entities have morph targets " +
+                "(total entities: ${asset.entities.size})")
 
         if (entitiesWithMorphTargets.isNotEmpty()) {
             val (targetEntity, _, targetMorphCount) = entitiesWithMorphTargets.first()
@@ -1053,12 +1279,17 @@ class FilamentRenderer(
         return nodeNames
     }
 
+    // Track which morph targets are currently active so we can reset them to zero
+    private val activeMorphTargets = mutableSetOf<Pair<Int, Int>>() // (entity, morphTargetIndex)
+
     fun updateBlendShapes(blendShapes: Map<String, Float>) {
         if (isDestroyed.get() || !isInitialized) return
-        if (blendShapes.isEmpty() || blendShapeMapping.isEmpty()) return
+        if (blendShapeMapping.isEmpty()) return
 
         val eng = engine ?: return
         val renderableManager = eng.renderableManager
+
+        val newActive = mutableSetOf<Pair<Int, Int>>()
 
         blendShapes.forEach { (name, weight) ->
             if (isDestroyed.get()) return
@@ -1076,12 +1307,33 @@ class FilamentRenderer(
                             floatArrayOf(targetWeight),
                             morphTargetIndex
                         )
+                        if (targetWeight > 0.0001f) {
+                            newActive.add(Pair(entity, morphTargetIndex))
+                        }
                     }
                 } catch (e: Exception) {
                     // Ignore - likely during cleanup
                 }
             }
         }
+
+        // Reset morph targets that were active but are no longer in the map
+        val toReset = activeMorphTargets - newActive
+        toReset.forEach { (entity, morphTargetIndex) ->
+            try {
+                val instance = renderableManager.getInstance(entity)
+                if (instance != 0 && !isDestroyed.get()) {
+                    renderableManager.setMorphWeights(
+                        instance,
+                        floatArrayOf(0f),
+                        morphTargetIndex
+                    )
+                }
+            } catch (_: Exception) { }
+        }
+
+        activeMorphTargets.clear()
+        activeMorphTargets.addAll(newActive)
     }
 
     fun cleanup() {
@@ -1166,12 +1418,14 @@ class FilamentRenderer(
                 }
             }
 
-            // Destroy lighting
-            if (eng != null && sunEntity != 0) {
+            // Destroy lighting (3-point setup)
+            if (eng != null) {
                 try {
-                    eng.destroyEntity(sunEntity)
+                    if (sunEntity != 0) eng.destroyEntity(sunEntity)
+                    if (fillLightEntity != 0) eng.destroyEntity(fillLightEntity)
+                    if (rimLightEntity != 0) eng.destroyEntity(rimLightEntity)
                 } catch (e: Exception) {
-                    println("[FilamentRenderer] ERROR: Error destroying sun: ${e.message}")
+                    println("[FilamentRenderer] ERROR: Error destroying lights: ${e.message}")
                 }
             }
 

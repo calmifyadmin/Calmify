@@ -236,6 +236,9 @@ class HumanoidViewModel constructor(
     // Reference to FilamentRenderer for animation
     private var filamentRenderer: FilamentRenderer? = null
 
+    /** Debug-only: access renderer for live lighting tweaks */
+    fun getFilamentRenderer(): FilamentRenderer? = filamentRenderer
+
     // Animation player (initialized when model is loaded)
     private var vrmaAnimationPlayer: VrmaAnimationPlayer? = null
 

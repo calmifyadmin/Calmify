@@ -3,7 +3,6 @@ package com.lifo.humanoid.data.vrm
 import android.content.Context
 import com.google.android.filament.gltfio.FilamentAsset
 import com.google.gson.Gson
-import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -83,10 +82,13 @@ class VrmLoader(private val context: Context) {
             val vrmExtensions = parseVrmExtensions(originalBuffer)
             println("[VrmLoader] VRM extensions parsed successfully: ${vrmExtensions.blendShapes.size} blend shapes, ${vrmExtensions.springBones.size} spring bones")
 
-            // Reset final buffer position
-            buffer.position(0)
+            // Convert UNLIT materials to LIT so they respond to scene lighting
+            val litBuffer = convertUnlitToLit(buffer)
 
-            Pair(buffer, vrmExtensions)
+            // Reset final buffer position
+            litBuffer.position(0)
+
+            Pair(litBuffer, vrmExtensions)
         } catch (e: Exception) {
             println("[VrmLoader] ERROR: Failed to load VRM from assets: $assetPath: ${e.message}")
             null
@@ -136,8 +138,9 @@ class VrmLoader(private val context: Context) {
             val vrmExtensions = parseVrmExtensions(originalBuffer)
             println("[VrmLoader] URL VRM parsed: ${vrmExtensions.blendShapes.size} blend shapes")
 
-            buffer.position(0)
-            Pair(buffer, vrmExtensions)
+            val litBuffer = convertUnlitToLit(buffer)
+            litBuffer.position(0)
+            Pair(litBuffer, vrmExtensions)
         } catch (e: Exception) {
             println("[VrmLoader] ERROR: Failed to load VRM from URL: $url: ${e.message}")
             e.printStackTrace()
@@ -225,13 +228,10 @@ class VrmLoader(private val context: Context) {
             ?.map { parseBlendShape(it.asJsonObject) }
             ?: emptyList()
 
-        // Resolve glTF nodes array early — needed for bone name resolution
-        val nodesArray = rootObject?.getAsJsonArray("nodes")
-
-        // Parse spring bones, passing nodesArray so each bone index is resolved to its real name
+        // Parse spring bones
         val springBones = vrmObject.getAsJsonObject("secondaryAnimation")
             ?.getAsJsonArray("boneGroups")
-            ?.map { parseSpringBone(it.asJsonObject, nodesArray) }
+            ?.map { parseSpringBone(it.asJsonObject) }
             ?.flatten()
             ?: emptyList()
 
@@ -254,6 +254,7 @@ class VrmLoader(private val context: Context) {
         // Resolve eye bone node indices to actual glTF node NAMES
         // CRITICAL: Filament entity array indices ≠ glTF node indices!
         // We must search by name, not by index.
+        val nodesArray = rootObject?.getAsJsonArray("nodes")
         var leftEyeNodeName: String? = null
         var rightEyeNodeName: String? = null
 
@@ -412,10 +413,9 @@ class VrmLoader(private val context: Context) {
     }
 
     /**
-     * Parse spring bone group.
-     * [nodesArray] is the glTF top-level `nodes` array used to resolve each bone's real name.
+     * Parse spring bone group
      */
-    private fun parseSpringBone(boneGroupObject: JsonObject, nodesArray: JsonArray? = null): List<SpringBoneData> {
+    private fun parseSpringBone(boneGroupObject: JsonObject): List<SpringBoneData> {
         val stiffness = boneGroupObject.get("stiffiness")?.asFloat ?: 0.5f // Note: typo in VRM spec
         val gravityPower = boneGroupObject.get("gravityPower")?.asFloat ?: 0.1f
         val dragForce = boneGroupObject.get("dragForce")?.asFloat ?: 0.4f
@@ -433,21 +433,15 @@ class VrmLoader(private val context: Context) {
             ?.map { it.asInt.toString() }
             ?: emptyList()
 
-        // Get bones in this group — each value is a glTF node index
+        // Get bones in this group
         val bones = boneGroupObject.getAsJsonArray("bones")
             ?.map { it.asInt }
             ?: emptyList()
 
-        // Create spring bone data for each bone, resolving the actual node name from the glTF nodes array
+        // Create spring bone data for each bone
         return bones.map { boneIndex ->
-            val resolvedName = try {
-                nodesArray?.get(boneIndex)?.asJsonObject?.get("name")?.asString
-                    ?.takeIf { it.isNotBlank() }
-            } catch (e: Exception) {
-                null
-            } ?: "bone_$boneIndex"
             SpringBoneData(
-                boneName = resolvedName,
+                boneName = "bone_$boneIndex", // TODO: Resolve actual bone name from node index
                 stiffness = stiffness,
                 gravityPower = gravityPower,
                 gravityDir = gravityDir,
@@ -471,6 +465,146 @@ class VrmLoader(private val context: Context) {
             springBones = vrmExtensions.springBones,
             metadata = vrmExtensions.metadata
         )
+    }
+
+    /**
+     * Strip KHR_materials_unlit from glTF JSON so Filament treats materials as PBR LIT.
+     * Also strips NORMAL from viseme morph targets (A/I/U/E/O) to prevent
+     * lip-sync from flattening face lighting — other blend shapes keep their normals.
+     */
+    private fun convertUnlitToLit(glbBuffer: ByteBuffer): ByteBuffer {
+        glbBuffer.position(0)
+
+        // Read GLB header
+        val magic = glbBuffer.int
+        if (magic != 0x46546C67) {
+            println("[VrmLoader] convertUnlitToLit: not a valid glTF, skipping")
+            glbBuffer.position(0)
+            return glbBuffer
+        }
+        val version = glbBuffer.int
+        val totalLength = glbBuffer.int
+
+        // Read JSON chunk
+        val jsonLength = glbBuffer.int
+        val jsonType = glbBuffer.int
+        if (jsonType != 0x4E4F534A) {
+            println("[VrmLoader] convertUnlitToLit: no JSON chunk, skipping")
+            glbBuffer.position(0)
+            return glbBuffer
+        }
+        val jsonBytes = ByteArray(jsonLength)
+        glbBuffer.get(jsonBytes)
+        val jsonString = String(jsonBytes, Charsets.UTF_8)
+
+        // Read BIN chunk (rest of the buffer)
+        val binChunkStart = glbBuffer.position()
+        val hasBinChunk = binChunkStart < glbBuffer.limit() - 8
+        var binLength = 0
+        var binType = 0
+        var binData: ByteArray? = null
+        if (hasBinChunk) {
+            binLength = glbBuffer.int
+            binType = glbBuffer.int
+            binData = ByteArray(binLength)
+            glbBuffer.get(binData)
+        }
+
+        // Parse and modify JSON
+        val rootJson = gson.fromJson(jsonString, JsonObject::class.java)
+        var modified = false
+
+        // Remove KHR_materials_unlit from all materials → PBR LIT
+        rootJson.getAsJsonArray("materials")?.forEach { matEl ->
+            val mat = matEl.asJsonObject
+            val exts = mat.getAsJsonObject("extensions")
+            if (exts != null && exts.has("KHR_materials_unlit")) {
+                exts.remove("KHR_materials_unlit")
+                modified = true
+                if (exts.entrySet().isEmpty()) mat.remove("extensions")
+            }
+            val pbr = mat.getAsJsonObject("pbrMetallicRoughness")
+            if (pbr != null) {
+                if (!pbr.has("metallicFactor")) pbr.addProperty("metallicFactor", 0.0f)
+                if (!pbr.has("roughnessFactor")) pbr.addProperty("roughnessFactor", 0.9f)
+            }
+        }
+
+        // Remove KHR_materials_unlit from extensionsUsed and extensionsRequired
+        listOf("extensionsUsed", "extensionsRequired").forEach { key ->
+            rootJson.getAsJsonArray(key)?.let { arr ->
+                val newArr = com.google.gson.JsonArray()
+                arr.forEach { el ->
+                    if (el.asString != "KHR_materials_unlit") newArr.add(el)
+                }
+                rootJson.add(key, newArr)
+            }
+        }
+
+        // ── Diagnostic: log morph target attributes ──
+        rootJson.getAsJsonArray("meshes")?.forEachIndexed { meshIdx, meshEl ->
+            val mesh = meshEl.asJsonObject
+            val meshName = mesh.get("name")?.asString ?: "mesh_$meshIdx"
+            mesh.getAsJsonArray("primitives")?.forEachIndexed { primIdx, primEl ->
+                val prim = primEl.asJsonObject
+                val targets = prim.getAsJsonArray("targets")
+                if (targets != null && targets.size() > 0 && primIdx == 0) {
+                    val attrSummary = mutableMapOf<String, Int>()
+                    targets.forEach { targetEl ->
+                        targetEl.asJsonObject.keySet().forEach { attr ->
+                            attrSummary[attr] = (attrSummary[attr] ?: 0) + 1
+                        }
+                    }
+                    println("[VrmLoader] MORPH INFO: mesh='$meshName' ${targets.size()} targets/prim, attrs: $attrSummary")
+                }
+            }
+        }
+
+        if (!modified) {
+            println("[VrmLoader] convertUnlitToLit: no modifications needed, using original buffer")
+            glbBuffer.position(0)
+            return glbBuffer
+        }
+
+        val materialsCount = rootJson.getAsJsonArray("materials")?.size() ?: 0
+        println("[VrmLoader] convertUnlitToLit: converted $materialsCount materials from UNLIT to PBR LIT")
+
+        // Rebuild GLB
+        val newJsonString = gson.toJson(rootJson)
+        val newJsonBytes = newJsonString.toByteArray(Charsets.UTF_8)
+        val jsonPadding = (4 - (newJsonBytes.size % 4)) % 4
+        val paddedJsonLength = newJsonBytes.size + jsonPadding
+
+        val binPadding = if (binData != null) (4 - (binLength % 4)) % 4 else 0
+        val paddedBinLength = binLength + binPadding
+
+        val newTotalLength = 12 + 8 + paddedJsonLength +
+                (if (binData != null) 8 + paddedBinLength else 0)
+
+        val newBuffer = ByteBuffer.allocateDirect(newTotalLength)
+        newBuffer.order(ByteOrder.LITTLE_ENDIAN)
+
+        // Header
+        newBuffer.putInt(0x46546C67) // "glTF"
+        newBuffer.putInt(version)
+        newBuffer.putInt(newTotalLength)
+
+        // JSON chunk
+        newBuffer.putInt(paddedJsonLength)
+        newBuffer.putInt(0x4E4F534A) // "JSON"
+        newBuffer.put(newJsonBytes)
+        repeat(jsonPadding) { newBuffer.put(0x20.toByte()) }
+
+        // BIN chunk
+        if (binData != null) {
+            newBuffer.putInt(paddedBinLength)
+            newBuffer.putInt(0x004E4942) // "BIN\0"
+            newBuffer.put(binData)
+            repeat(binPadding) { newBuffer.put(0x00.toByte()) }
+        }
+
+        newBuffer.position(0)
+        return newBuffer
     }
 }
 

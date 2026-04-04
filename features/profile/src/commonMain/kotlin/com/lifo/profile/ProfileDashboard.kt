@@ -1160,8 +1160,8 @@ private fun GrowthMetric(
 private fun WellbeingTrendSection(trend: WellbeingTrend) {
     val colorScheme = MaterialTheme.colorScheme
     val trendColor = when (trend.trend) {
-        TrendDirection.IMPROVING -> Color(0xFF4CAF50)
-        TrendDirection.DECLINING -> Color(0xFFEF5350)
+        TrendDirection.UP -> Color(0xFF4CAF50)
+        TrendDirection.DOWN -> Color(0xFFEF5350)
         else -> colorScheme.onSurfaceVariant
     }
 

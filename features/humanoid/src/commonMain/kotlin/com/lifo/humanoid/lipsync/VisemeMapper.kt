@@ -82,6 +82,9 @@ object VisemeMapper {
     /**
      * VRM blend shape names for each viseme
      */
+    /**
+     * VRM blend shape names for each viseme
+     */
     private val VISEME_TO_VRM = mapOf(
         Viseme.SILENCE to emptyMap<String, Float>(),
         Viseme.AA to mapOf("a" to 1.0f),

@@ -244,9 +244,9 @@ fun FilamentView(
         }
     }
 
-    // Update blend shapes
+    // Update blend shapes (including empty map to reset all morph targets to zero)
     LaunchedEffect(blendShapeWeights) {
-        if (blendShapeWeights.isNotEmpty() && !isLayoutChanging) {
+        if (!isLayoutChanging) {
             renderer?.let { r ->
                 if (r.canRender()) {
                     r.updateBlendShapes(blendShapeWeights)
