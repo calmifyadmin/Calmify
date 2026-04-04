@@ -1,12 +1,6 @@
 package com.lifo.profile
 
 import com.lifo.util.formatDecimal
-import com.lifo.home.domain.model.GrowthProgress
-import com.lifo.home.domain.model.SleepMoodCorrelation
-import com.lifo.home.domain.model.ActivityImpact
-import com.lifo.home.domain.model.TrendDirection
-import com.lifo.home.domain.model.WellbeingAggregationResult
-import com.lifo.home.domain.model.WellbeingTrend
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -22,6 +16,7 @@ import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,6 +33,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lifo.ui.tutorial.CoachMark
+import com.lifo.ui.tutorial.CoachMarkStep
+import com.lifo.ui.tutorial.InfoTooltip
+import com.lifo.util.tutorial.OnboardingManager
+import com.lifo.util.tutorial.TutorialKey
+import org.koin.compose.koinInject
+import com.lifo.home.domain.model.ActivityImpact
+import com.lifo.home.domain.model.GrowthProgress
+import com.lifo.home.domain.model.SleepMoodCorrelation
+import com.lifo.home.domain.model.TrendDirection
+import com.lifo.home.domain.model.WellbeingAggregationResult
+import com.lifo.home.domain.model.WellbeingTrend
 import com.lifo.ui.components.CalmifyTopBar
 import org.koin.compose.viewmodel.koinViewModel
 import com.lifo.util.model.PsychologicalProfile
@@ -53,6 +60,29 @@ fun ProfileDashboard(
     viewModel: ProfileViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    val onboardingManager = koinInject<OnboardingManager>()
+    var showPercorsoCoach by rememberSaveable {
+        mutableStateOf(!onboardingManager.isTutorialSeen(TutorialKey.PERCORSO))
+    }
+    val percorsoCoachSteps = remember {
+        listOf(
+            CoachMarkStep(
+                title = "Le tue correlazioni personali",
+                description = "Qui vedi come le tue abitudini si influenzano a vicenda: come il sonno impatta l'umore, o l'attività fisica sull'energia. Sono pattern tuoi, non regole universali.",
+            ),
+            CoachMarkStep(
+                title = "Il tuo trend di benessere",
+                description = "Questo grafico mostra l'evoluzione del tuo benessere nel tempo, basato sulla Self-Determination Theory. Un percorso — non una performance.",
+            ),
+            CoachMarkStep(
+                title = "Forze e aree di crescita",
+                description = "Ogni settimana identifichi i tuoi punti di forza e le aree su cui lavorare. Piccoli passi, direzione chiara.",
+            ),
+        )
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
@@ -80,6 +110,17 @@ fun ProfileDashboard(
             }
         }
     }
+
+    CoachMark(
+        visible = showPercorsoCoach,
+        steps = percorsoCoachSteps,
+        onComplete = {
+            onboardingManager.markTutorialSeen(TutorialKey.PERCORSO)
+            showPercorsoCoach = false
+        },
+    )
+
+    } // end Box
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -190,7 +231,7 @@ private fun EmptyState() {
 private fun SuccessState(
     profiles: List<PsychologicalProfile>,
     chartData: ChartData,
-    aggregation: WellbeingAggregationResult? = null
+    aggregation: WellbeingAggregationResult?
 ) {
     val latestProfile = profiles.firstOrNull() ?: return
 
@@ -221,13 +262,12 @@ private fun SuccessState(
         // 6. Data quality
         DataQualityFooter(latestProfile)
 
-        // 7–9. Wellbeing Aggregator sections (always shown, placeholder when no data)
-        CorrelationsSection(
-            sleepMood = aggregation?.sleepMoodCorrelation,
-            activityImpact = aggregation?.activityImpact
-        )
-        GrowthSection(aggregation?.growthProgress)
-        aggregation?.wellbeingTrend?.let { WellbeingTrendSection(it) }
+        // 7-9. Cross-domain insights (arrive after background aggregation)
+        aggregation?.let { agg ->
+            CorrelationsSection(agg.sleepMoodCorrelation, agg.activityImpact)
+            GrowthSection(agg.growthProgress)
+            agg.wellbeingTrend?.let { WellbeingTrendSection(it) }
+        }
 
         Spacer(Modifier.height(80.dp))
     }
@@ -965,83 +1005,100 @@ private fun CorrelationsSection(
     sleepMood: SleepMoodCorrelation?,
     activityImpact: ActivityImpact?
 ) {
-    val colorScheme = MaterialTheme.colorScheme
+    if (sleepMood == null && activityImpact == null) return
 
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = colorScheme.surfaceContainerLow
-    ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 4.dp),
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Surface(
-                    shape = CircleShape,
-                    color = colorScheme.tertiary.copy(alpha = 0.15f),
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Default.Psychology,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = colorScheme.tertiary
-                        )
-                    }
-                }
-                Text(
-                    text = "Correlazioni",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
+            Text(
+                text = "Correlazioni personali",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            InfoTooltip(
+                title = "Correlazione sonno-umore",
+                description = "Quando dormi bene, il tuo cervello elabora meglio le emozioni. " +
+                    "Questa correlazione mostra quante ore di sonno coincidono con i tuoi giorni di umore più positivo — " +
+                    "è il tuo pattern personale, non una regola universale.",
+            )
+        }
 
-            if (sleepMood == null && activityImpact == null) {
-                NarrativeChip(
-                    "Registra sonno e umore per scoprire le correlazioni nel tuo benessere.",
-                    colorScheme.tertiary
-                )
-            } else {
-                sleepMood?.let {
-                    NarrativeChip(it.narrative, colorScheme.primary)
-                }
-                activityImpact?.let {
-                    NarrativeChip(it.narrative, colorScheme.secondary)
-                }
-            }
+        sleepMood?.let { sm ->
+            CorrelationCard(
+                icon = Icons.Default.Hotel,
+                iconColor = Color(0xFF7986CB),
+                narrative = sm.narrative,
+                badge = "+${sm.improvementPercent.toInt()}%",
+                badgeColor = Color(0xFF7986CB)
+            )
+        }
+
+        activityImpact?.let { ai ->
+            CorrelationCard(
+                icon = Icons.Default.FitnessCenter,
+                iconColor = Color(0xFF66BB6A),
+                narrative = ai.narrative,
+                badge = "+${ai.energyBoostPercent.toInt()}%",
+                badgeColor = Color(0xFF66BB6A)
+            )
         }
     }
 }
 
 @Composable
-private fun NarrativeChip(text: String, accentColor: Color) {
+private fun CorrelationCard(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconColor: Color,
+    narrative: String,
+    badge: String,
+    badgeColor: Color
+) {
     Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = accentColor.copy(alpha = 0.08f),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .size(6.dp)
-                    .clip(CircleShape)
-                    .background(accentColor)
-            )
+            Surface(
+                shape = CircleShape,
+                color = iconColor.copy(alpha = 0.12f),
+                modifier = Modifier.size(40.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = iconColor
+                    )
+                }
+            }
+
             Text(
-                text = text,
+                text = narrative,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
-                lineHeight = 20.sp
+                lineHeight = 20.sp,
+                modifier = Modifier.weight(1f)
             )
+
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = badgeColor.copy(alpha = 0.15f)
+            ) {
+                Text(
+                    text = badge,
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                    color = badgeColor,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                )
+            }
         }
     }
 }
@@ -1051,13 +1108,11 @@ private fun NarrativeChip(text: String, accentColor: Color) {
 // ══════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun GrowthSection(growth: GrowthProgress?) {
-    val colorScheme = MaterialTheme.colorScheme
-
+private fun GrowthSection(growth: GrowthProgress) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = colorScheme.surfaceContainerLow
+        color = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -1069,15 +1124,15 @@ private fun GrowthSection(growth: GrowthProgress?) {
             ) {
                 Surface(
                     shape = CircleShape,
-                    color = Color(0xFF4CAF50).copy(alpha = 0.15f),
+                    color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f),
                     modifier = Modifier.size(32.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            Icons.AutoMirrored.Filled.TrendingUp,
+                            imageVector = Icons.Default.Spa,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
-                            tint = Color(0xFF4CAF50)
+                            tint = MaterialTheme.colorScheme.tertiary
                         )
                     }
                 }
@@ -1086,43 +1141,123 @@ private fun GrowthSection(growth: GrowthProgress?) {
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
+                InfoTooltip(
+                    title = "Pattern cognitivi",
+                    description = "I pattern cognitivi sono i modi abituali con cui interpreti le situazioni. " +
+                        "Identificarli ti aiuta a riconoscere quando un pensiero non è un fatto, ma un'abitudine mentale. " +
+                        "Esempio: pensare 'ho fallito' invece di 'ho sbagliato qualcosa — posso imparare'.",
+                )
             }
 
-            if (growth == null) {
-                NarrativeChip(
-                    "Inizia a registrare abitudini, gratitudine e riflessioni per sbloccare i tuoi progressi.",
-                    colorScheme.primary
-                )
-            } else {
-                // Metrics row
+            // Habit completion bar
+            val completionPercent = (growth.habitCompletionRate7d * 100).toInt()
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    GrowthMetric(
-                        modifier = Modifier.weight(1f),
-                        label = "Abitudini",
-                        value = "${(growth.habitCompletionRate7d * 100).toInt()}%",
-                        color = Color(0xFF4CAF50)
+                    Text(
+                        text = "Abitudini (7 giorni)",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    GrowthMetric(
-                        modifier = Modifier.weight(1f),
-                        label = "Gratitudine",
-                        value = "${growth.gratitudeDays7d}g",
-                        color = colorScheme.primary
-                    )
-                    GrowthMetric(
-                        modifier = Modifier.weight(1f),
-                        label = "Reframe",
-                        value = "${growth.reframesCompleted}",
-                        color = colorScheme.secondary
+                    Text(
+                        text = "$completionPercent%",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
+                val animW = remember { Animatable(0f) }
+                LaunchedEffect(growth.habitCompletionRate7d) {
+                    animW.animateTo(growth.habitCompletionRate7d.coerceIn(0f, 1f), tween(900))
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(animW.value)
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(MaterialTheme.colorScheme.primary)
+                    )
+                }
+            }
 
-                // Suggestions
-                if (growth.suggestions.isNotEmpty()) {
+            // Quick stats
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                GrowthChip(
+                    modifier = Modifier.weight(1f),
+                    value = "${growth.gratitudeDays7d}/7",
+                    label = "Giorni grati",
+                    color = Color(0xFF7986CB)
+                )
+                GrowthChip(
+                    modifier = Modifier.weight(1f),
+                    value = "${growth.reframesCompleted}",
+                    label = "Reframe",
+                    color = Color(0xFF66BB6A)
+                )
+                GrowthChip(
+                    modifier = Modifier.weight(1f),
+                    value = "${growth.blocksResolved}",
+                    label = "Blocchi risolti",
+                    color = Color(0xFFFFCA28)
+                )
+            }
+
+            // Strengths
+            if (growth.strengths.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    growth.strengths.take(3).forEach { strength ->
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp).padding(top = 2.dp),
+                                tint = Color(0xFF4CAF50)
+                            )
+                            Text(
+                                text = strength,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Suggestions
+            if (growth.suggestions.isNotEmpty()) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     growth.suggestions.take(2).forEach { suggestion ->
-                        NarrativeChip(suggestion, colorScheme.primary)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Lightbulb,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp).padding(top = 2.dp),
+                                tint = Color(0xFFFFCA28)
+                            )
+                            Text(
+                                text = suggestion,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
@@ -1131,25 +1266,25 @@ private fun GrowthSection(growth: GrowthProgress?) {
 }
 
 @Composable
-private fun GrowthMetric(
+private fun GrowthChip(
     modifier: Modifier = Modifier,
-    label: String,
     value: String,
+    label: String,
     color: Color
 ) {
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
-        color = color.copy(alpha = 0.08f)
+        color = color.copy(alpha = 0.10f)
     ) {
         Column(
             modifier = Modifier.padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Text(
                 text = value,
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                 color = color
             )
             Text(
@@ -1168,17 +1303,21 @@ private fun GrowthMetric(
 
 @Composable
 private fun WellbeingTrendSection(trend: WellbeingTrend) {
-    val colorScheme = MaterialTheme.colorScheme
     val trendColor = when (trend.trend) {
         TrendDirection.UP -> Color(0xFF4CAF50)
         TrendDirection.DOWN -> Color(0xFFEF5350)
-        else -> colorScheme.onSurfaceVariant
+        TrendDirection.STABLE -> MaterialTheme.colorScheme.primary
+    }
+    val trendIcon = when (trend.trend) {
+        TrendDirection.UP -> Icons.AutoMirrored.Filled.TrendingUp
+        TrendDirection.DOWN -> Icons.AutoMirrored.Filled.TrendingDown
+        TrendDirection.STABLE -> Icons.AutoMirrored.Filled.TrendingFlat
     }
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = colorScheme.surfaceContainerLow
+        color = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -1195,12 +1334,12 @@ private fun WellbeingTrendSection(trend: WellbeingTrend) {
                 ) {
                     Surface(
                         shape = CircleShape,
-                        color = trendColor.copy(alpha = 0.15f),
+                        color = trendColor.copy(alpha = 0.12f),
                         modifier = Modifier.size(32.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
-                                Icons.Default.Spa,
+                                imageVector = Icons.Default.Psychology,
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp),
                                 tint = trendColor
@@ -1208,55 +1347,129 @@ private fun WellbeingTrendSection(trend: WellbeingTrend) {
                         }
                     }
                     Text(
-                        text = "Benessere",
+                        text = "Benessere SDT",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
-                }
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = trendColor.copy(alpha = 0.12f)
-                ) {
-                    Text(
-                        text = formatDecimal(1, trend.currentScore),
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                        color = trendColor,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                    InfoTooltip(
+                        title = "Self-Determination Theory",
+                        description = "La SDT è una teoria psicologica che identifica tre bisogni fondamentali per il benessere reale: " +
+                            "autonomia (scegliere la tua vita), competenza (sentirti capace) e connessione (sentirti legato agli altri). " +
+                            "Quando questi tre sono soddisfatti, stai bene davvero — non solo 'funzioni'.",
                     )
                 }
-            }
 
-            Text(
-                text = trend.narrative,
-                style = MaterialTheme.typography.bodyMedium,
-                color = colorScheme.onSurfaceVariant,
-                lineHeight = 22.sp
-            )
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (trend.dominantStrength.isNotBlank()) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFF4CAF50).copy(alpha = 0.10f)
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = trendColor.copy(alpha = 0.12f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Icon(
+                            imageVector = trendIcon,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = trendColor
+                        )
                         Text(
-                            text = "\u2b50 ${trend.dominantStrength}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color(0xFF4CAF50),
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            text = formatDecimal(1, trend.currentScore),
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            color = trendColor
                         )
                     }
                 }
-                if (trend.areaToImprove.isNotBlank()) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = colorScheme.primary.copy(alpha = 0.10f)
+            }
+
+            // Mini sparkline
+            if (trend.recentScores.size >= 2) {
+                val lineColor = trendColor
+                val animP = remember { Animatable(0f) }
+                LaunchedEffect(trend.recentScores) {
+                    animP.snapTo(0f)
+                    animP.animateTo(1f, tween(800))
+                }
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp)
+                ) {
+                    val pts = trend.recentScores
+                    val w = size.width
+                    val h = size.height
+                    val spacing = w / (pts.size - 1)
+                    fun toY(v: Float) = h * (1 - (v / 10f).coerceIn(0f, 1f))
+                    fun toX(i: Int) = spacing * i
+
+                    val vc = (pts.size * animP.value).toInt().coerceAtLeast(2)
+                    val path = Path().apply {
+                        moveTo(toX(0), toY(pts[0]))
+                        for (i in 1 until vc) lineTo(toX(i), toY(pts[i]))
+                    }
+                    drawPath(
+                        path, lineColor.copy(alpha = 0.7f),
+                        style = Stroke(4f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+                    )
+                    val cx = toX(vc - 1); val cy = toY(pts[vc - 1])
+                    drawCircle(Color.White, 7f, Offset(cx, cy))
+                    drawCircle(lineColor, 5f, Offset(cx, cy))
+                }
+            }
+
+            // Narrative
+            Text(
+                text = trend.narrative,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                lineHeight = 20.sp
+            )
+
+            // Strength / area chips
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Surface(
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFF4CAF50).copy(alpha = 0.10f)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         Text(
-                            text = "\u2192 ${trend.areaToImprove}",
+                            text = "Punto di forza",
                             style = MaterialTheme.typography.labelSmall,
-                            color = colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = trend.dominantStrength,
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                            color = Color(0xFF4CAF50)
+                        )
+                    }
+                }
+                Surface(
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFFFFCA28).copy(alpha = 0.10f)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Text(
+                            text = "Area di crescita",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = trend.areaToImprove,
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                            color = Color(0xFFFFCA28)
                         )
                     }
                 }

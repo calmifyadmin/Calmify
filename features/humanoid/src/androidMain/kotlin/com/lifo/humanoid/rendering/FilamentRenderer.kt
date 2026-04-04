@@ -412,17 +412,17 @@ class FilamentRenderer(
         // 3-band SH (9 coefficients): warm above, cool below → natural sky-ground gradient
         val harmonics = floatArrayOf(
             // L0: base ambient
-            0.64f,  0.60f,  0.58f,
+             0.64f,  0.60f,  0.58f,
             // L1: vertical gradient
-            0.0f,   0.18f,  0.14f,   // +Y (warm sky)
-            0.0f,   0.0f,   0.0f,    // Z
+             0.0f,   0.18f,  0.14f,   // +Y (warm sky)
+             0.0f,   0.0f,   0.0f,    // Z
             -0.05f, -0.03f,  0.02f,   // -Y (cool ground bounce)
             // L2: directional variation
-            0.06f,  0.04f,  0.03f,
-            0.0f,   0.0f,   0.0f,
-            0.0f,   0.0f,   0.0f,
+             0.06f,  0.04f,  0.03f,
+             0.0f,   0.0f,   0.0f,
+             0.0f,   0.0f,   0.0f,
             -0.03f, -0.03f, -0.02f,
-            0.0f,   0.0f,   0.0f,
+             0.0f,   0.0f,   0.0f,
         )
         scn.indirectLight = IndirectLight.Builder()
             .irradiance(3, harmonics)            // 3-band spherical harmonics
@@ -721,25 +721,25 @@ class FilamentRenderer(
             val lower = name.lowercase()
             when {
                 leftEyeEntity == 0 && (
-                        lower == "lefteye" ||
-                                lower.contains("j_adj_l_faceeye") ||  // VRoid Studio
-                                lower.contains("j_bip_l_eye") ||
-                                lower.contains("left_eye") ||
-                                lower.contains("eye_l") ||
-                                lower == "eye.l"
-                        ) -> {
+                    lower == "lefteye" ||
+                    lower.contains("j_adj_l_faceeye") ||  // VRoid Studio
+                    lower.contains("j_bip_l_eye") ||
+                    lower.contains("left_eye") ||
+                    lower.contains("eye_l") ||
+                    lower == "eye.l"
+                ) -> {
                     leftEyeEntity = entity
                     println("[FilamentRenderer] Eye bone (pattern): leftEye '$name' → entity=$entity")
                 }
 
                 rightEyeEntity == 0 && (
-                        lower == "righteye" ||
-                                lower.contains("j_adj_r_faceeye") ||  // VRoid Studio
-                                lower.contains("j_bip_r_eye") ||
-                                lower.contains("right_eye") ||
-                                lower.contains("eye_r") ||
-                                lower == "eye.r"
-                        ) -> {
+                    lower == "righteye" ||
+                    lower.contains("j_adj_r_faceeye") ||  // VRoid Studio
+                    lower.contains("j_bip_r_eye") ||
+                    lower.contains("right_eye") ||
+                    lower.contains("eye_r") ||
+                    lower == "eye.r"
+                ) -> {
                     rightEyeEntity = entity
                     println("[FilamentRenderer] Eye bone (pattern): rightEye '$name' → entity=$entity")
                 }

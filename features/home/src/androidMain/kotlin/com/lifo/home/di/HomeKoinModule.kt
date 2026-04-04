@@ -17,7 +17,7 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val homeKoinModule = module {
-    // Use cases — factory (new instance each time, equivalent to @ViewModelScoped)
+    // Use cases
     factory { CalculateMoodDistributionUseCase() }
     factory { AggregateCognitivePatternsUseCase() }
     factory { CalculateTopicsFrequencyUseCase() }
@@ -28,11 +28,27 @@ val homeKoinModule = module {
     factory { GetActivityImpactUseCase() }
     factory { GetGrowthProgressUseCase() }
     factory { GetWellbeingTrendUseCase() }
-    factory {
+
+    // WellbeingAggregator — single (stateless, safe to share across VMs)
+    single {
         WellbeingAggregator(
-            get(), get(), get(), get(), get(), get(), get(),
-            get(), get(), get(), get(), get(), get(),
-            get(), get(), get(), get()
+            authProvider = get(),
+            sleepRepository = get(),
+            energyRepository = get(),
+            movementRepository = get(),
+            gratitudeRepository = get(),
+            habitRepository = get(),
+            wellbeingRepository = get(),
+            insightRepository = get(),
+            blockRepository = get(),
+            ikigaiRepository = get(),
+            valuesRepository = get(),
+            recurringThoughtRepository = get(),
+            reframeRepository = get(),
+            sleepMoodUseCase = get(),
+            activityImpactUseCase = get(),
+            growthProgressUseCase = get(),
+            wellbeingTrendUseCase = get(),
         )
     }
 

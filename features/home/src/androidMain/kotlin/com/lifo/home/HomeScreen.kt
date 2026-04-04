@@ -25,6 +25,11 @@ import com.lifo.ui.components.CalmifyTopBar
 import com.lifo.ui.components.loading.*
 import com.lifo.util.model.RequestState
 import com.lifo.util.model.HomeContentItem
+import com.lifo.ui.tutorial.CoachMark
+import com.lifo.ui.tutorial.CoachMarkStep
+import com.lifo.util.tutorial.OnboardingManager
+import com.lifo.util.tutorial.TutorialKey
+import org.koin.compose.koinInject
 import java.time.ZonedDateTime
 import org.jetbrains.compose.resources.stringResource
 import com.lifo.ui.resources.Res
@@ -73,6 +78,33 @@ internal fun HomeScreen(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+
+    val onboardingManager = koinInject<OnboardingManager>()
+    var showHomeCoach by rememberSaveable {
+        mutableStateOf(!onboardingManager.isTutorialSeen(TutorialKey.HOME))
+    }
+    val homeCoachSteps = remember {
+        listOf(
+            CoachMarkStep(
+                title = "Benvenuto in Calmify!",
+                description = "Questo è il tuo spazio personale. Ogni giorno troverai qui un riflesso di come stai — senza giudizi, solo ascolto.",
+            ),
+            CoachMarkStep(
+                title = "Azioni rapide",
+                description = "Con un tocco puoi scrivere nel diario, parlare con Eve, o registrare gratitudine ed energia. Ogni piccolo gesto conta.",
+            ),
+            CoachMarkStep(
+                title = "Il tuo umore nel tempo",
+                description = "Vedi come si evolve il tuo benessere settimana dopo settimana. La costanza — anche solo 5 minuti al giorno — fa la differenza.",
+            ),
+            CoachMarkStep(
+                title = "Il tuo avatar",
+                description = "Eve è la tua compagna di riflessione. Puoi scriverle o parlarle in modalità Live — ti risponde con cura e senza fretta.",
+            ),
+        )
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
 
     Scaffold(
         modifier = Modifier
@@ -186,6 +218,17 @@ internal fun HomeScreen(
             }
         }
     )
+
+    CoachMark(
+        visible = showHomeCoach,
+        steps = homeCoachSteps,
+        onComplete = {
+            onboardingManager.markTutorialSeen(TutorialKey.HOME)
+            showHomeCoach = false
+        },
+    )
+
+    } // end Box
 }
 
 @Composable

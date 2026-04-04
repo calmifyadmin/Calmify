@@ -109,6 +109,13 @@ object VrmBlendShapePresets {
         intensity: Float,
         availablePresets: Set<String>
     ): Map<String, Float> {
+        // "neutral" means no expression — don't activate any morph target.
+        // The VRM "neutral" morph target resets the face to rest pose, but under
+        // PBR lighting it deforms the geometry in ways that break the 3D look.
+        if (emotionName.equals("neutral", ignoreCase = true)) {
+            return emptyMap()
+        }
+
         val candidates = EMOTION_TO_VRM[emotionName.lowercase()] ?: listOf(emotionName.lowercase())
         val matchedPreset = findAvailablePreset(availablePresets, candidates)
 

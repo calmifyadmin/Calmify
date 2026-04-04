@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifo.ui.components.CalmifyTopBar
+import com.lifo.ui.tutorial.InfoTooltip
 import com.lifo.util.model.BreathingPattern
 import com.lifo.util.model.MeditationType
 import kotlinx.coroutines.delay
@@ -392,6 +393,12 @@ private fun PatternSelectorCard(
                         fontWeight = FontWeight.SemiBold
                     ),
                     color = colorScheme.onSurface
+                )
+                InfoTooltip(
+                    title = "Respirazione guidata",
+                    description = "La respirazione guidata usa ritmi specifici (inspiro, pausa, espiro) per attivare il sistema nervoso parasimpatico — " +
+                        "quello che ci calma. Bastano pochi minuti per abbassare la frequenza cardiaca e ridurre il cortisolo. " +
+                        "È una delle tecniche più studiate e accessibili per gestire ansia e stress.",
                 )
             }
 

@@ -286,7 +286,8 @@ fun MetricValueBadge(
 fun WizardStepTitle(
     title: String,
     description: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    titleTrailing: @Composable (() -> Unit)? = null,
 ) {
     val bounceScale = rememberBounceAnimation()
 
@@ -299,12 +300,27 @@ fun WizardStepTitle(
             },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center
-        )
+        if (titleTrailing != null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center
+                )
+                titleTrailing()
+            }
+        } else {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center
+            )
+        }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = description,

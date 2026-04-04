@@ -33,6 +33,8 @@ import com.lifo.meditation.di.meditationKoinModule
 import com.lifo.ui.onboarding.OnboardingManager
 import com.lifo.ui.onboarding.TutorialStorage
 import com.lifo.ui.onboarding.TutorialStorageImpl
+import com.lifo.util.tutorial.OnboardingManager as TutorialOnboardingManager
+import com.lifo.util.tutorial.SharedPrefsOnboardingManager
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
@@ -55,6 +57,7 @@ val databaseModule = module {
     single { get<CalmifyDatabase>().imageToDeleteQueries }
     single { get<CalmifyDatabase>().cachedThreadQueries }
     single<ConnectivityObserver> { NetworkConnectivityObserver(androidContext()) }
+    single<TutorialOnboardingManager> { SharedPrefsOnboardingManager(androidContext()) }
 }
 
 // OnboardingManager + TutorialStorage singleton

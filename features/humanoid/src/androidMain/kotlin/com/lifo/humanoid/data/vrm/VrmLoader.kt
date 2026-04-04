@@ -579,7 +579,7 @@ class VrmLoader(private val context: Context) {
         val paddedBinLength = binLength + binPadding
 
         val newTotalLength = 12 + 8 + paddedJsonLength +
-                (if (binData != null) 8 + paddedBinLength else 0)
+            (if (binData != null) 8 + paddedBinLength else 0)
 
         val newBuffer = ByteBuffer.allocateDirect(newTotalLength)
         newBuffer.order(ByteOrder.LITTLE_ENDIAN)

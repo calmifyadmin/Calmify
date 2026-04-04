@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lifo.ui.tutorial.InfoTooltip
 import com.lifo.util.model.BodySensation
 import com.lifo.util.model.Trigger
 import kotlin.math.sin
@@ -97,7 +98,15 @@ fun EmotionIntensityStep(
 
         WizardStepTitle(
             title = "Intensita' Emotiva",
-            description = "Quanto intensamente stai provando le tue emozioni?"
+            description = "Quanto intensamente stai provando le tue emozioni?",
+            titleTrailing = {
+                InfoTooltip(
+                    title = "Intensità emotiva",
+                    description = "L'intensità emotiva misura quanto un'emozione ti coinvolge — non se è positiva o negativa. " +
+                        "Un'emozione molto intensa (gioia, rabbia, tristezza) occupa più spazio mentale. " +
+                        "Riconoscerla aiuta a rispondervi con più consapevolezza invece di reagire d'impulso.",
+                )
+            }
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -160,7 +169,15 @@ fun StressLevelStep(
 
         WizardStepTitle(
             title = "Livello di Stress",
-            description = "Quanto stress stai percependo in questo momento?"
+            description = "Quanto stress stai percependo in questo momento?",
+            titleTrailing = {
+                InfoTooltip(
+                    title = "Livello di stress",
+                    description = "Il livello di stress indica quanto ti senti sotto pressione in questo momento. " +
+                        "Registrarlo regolarmente rivela pattern: certi giorni, orari o situazioni che alzano il tuo livello. " +
+                        "La consapevolezza è già il primo passo per gestirlo meglio.",
+                )
+            }
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -385,7 +402,15 @@ fun CalmAnxietyStep(
 
         WizardStepTitle(
             title = "Calma / Ansia",
-            description = "Come ti senti interiormente in questo momento?"
+            description = "Come ti senti interiormente in questo momento?",
+            titleTrailing = {
+                InfoTooltip(
+                    title = "Calma e ansia",
+                    description = "Calma e ansia sono due poli dello stesso continuum. " +
+                        "L'ansia ci avvisa di qualcosa che sentiamo importante; la calma ci permette di rispondervi con lucidità. " +
+                        "Né l'una né l'altra è sbagliata — entrambe hanno un messaggio da darti.",
+                )
+            }
         )
 
         Spacer(modifier = Modifier.height(8.dp))

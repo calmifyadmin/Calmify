@@ -35,6 +35,7 @@ import com.lifo.ui.components.graphics.HabitHeatMap
 import com.lifo.ui.components.graphics.HeatMapDay
 import com.lifo.ui.components.graphics.ParticleConfig
 import com.lifo.ui.components.graphics.ParticleSystem
+import com.lifo.ui.tutorial.InfoTooltip
 import com.lifo.util.model.Habit
 import com.lifo.util.model.HabitCategory
 import com.lifo.util.model.HabitFrequency
@@ -285,19 +286,37 @@ private fun HabitCard(
                     )
                 }
                 if (habit.minimumAction.isNotBlank()) {
-                    Text(
-                        text = habit.minimumAction,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (isCompleted) colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                        else colorScheme.onSurfaceVariant,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = habit.minimumAction,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (isCompleted) colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            else colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        InfoTooltip(
+                            title = "Azione minima",
+                            description = "L'azione minima (o 'regola dei 2 minuti') significa impegnarsi nella versione più piccola di un'abitudine. " +
+                                "Invece di 'correre 30 minuti', dici 'metto le scarpe da corsa'. " +
+                                "Spesso iniziare è il passo più difficile — il minimo lo rende possibile ogni giorno.",
+                        )
+                    }
                 }
                 if (habit.anchorHabit != null) {
-                    Text(
-                        text = stringResource(Res.string.habits_after_anchor, habit.anchorHabit!!),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = colorScheme.primary,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = stringResource(Res.string.habits_after_anchor, habit.anchorHabit!!),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = colorScheme.primary,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        InfoTooltip(
+                            title = "Habit stacking",
+                            description = "L'habit stacking consiste nell'agganciare un'abitudine nuova a una che fai già automaticamente. " +
+                                "Es: 'Dopo il caffè del mattino, scrivo tre cose per cui sono grato'. " +
+                                "Il cervello usa la routine esistente come ancora per costruire quella nuova.",
+                        )
+                    }
                 }
             }
 
