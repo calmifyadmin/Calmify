@@ -205,9 +205,7 @@ fun CoachMarkOverlay(
                     enter    = fadeIn(tween(250)) + slideInVertically(tween(300)) { it / 2 },
                     exit     = fadeOut(tween(150)) + slideOutVertically(tween(200)) { it / 2 },
                     modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .navigationBarsPadding()
-                        .padding(bottom = 80.dp),
+                        .align(Alignment.Center),
                 ) {
                     CoachMarkCard(
                         step        = step,
