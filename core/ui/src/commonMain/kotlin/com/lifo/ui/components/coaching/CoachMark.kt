@@ -18,6 +18,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,6 +28,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -177,7 +179,7 @@ fun CoachMarkOverlay(
     ) {
         val spotlight = state.currentSpotlight
 
-        Box(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 // Consume all touches so nothing behind fires
@@ -187,6 +189,8 @@ fun CoachMarkOverlay(
                     onClick             = { /* block pass-through */ }
                 )
         ) {
+            val screenHeightPx = constraints.maxHeight.toFloat()
+
             // ── Dark overlay with optional spotlight cutout ──────────────────
             if (spotlight != null) {
                 SpotlightCanvas(rect = spotlight)
@@ -198,14 +202,24 @@ fun CoachMarkOverlay(
                 )
             }
 
-            // ── Tooltip card ─────────────────────────────────────────────────
+            // ── Tooltip card positioned near the spotlight ───────────────────
+            // If spotlight is in the top 55% of screen → card at bottom edge.
+            // If spotlight is in the bottom 45% → card at top edge.
             state.currentStep?.let { step ->
+                val cardBelow = spotlight == null ||
+                        spotlight.center.y < screenHeightPx * 0.55f
                 AnimatedVisibility(
                     visible  = state.isVisible,
-                    enter    = fadeIn(tween(250)) + slideInVertically(tween(300)) { it / 2 },
-                    exit     = fadeOut(tween(150)) + slideOutVertically(tween(200)) { it / 2 },
+                    enter    = fadeIn(tween(250)) +
+                            slideInVertically(tween(300)) { if (cardBelow) it / 2 else -it / 2 },
+                    exit     = fadeOut(tween(150)) +
+                            slideOutVertically(tween(200)) { if (cardBelow) it / 2 else -it / 2 },
                     modifier = Modifier
-                        .align(Alignment.Center),
+                        .align(if (cardBelow) Alignment.BottomCenter else Alignment.TopCenter)
+                        .then(
+                            if (cardBelow) Modifier.navigationBarsPadding()
+                            else Modifier.statusBarsPadding()
+                        ),
                 ) {
                     CoachMarkCard(
                         step        = step,

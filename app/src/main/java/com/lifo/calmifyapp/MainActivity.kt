@@ -106,12 +106,12 @@ class MainActivity : AppCompatActivity() {
     @OptIn(ExperimentalAnimationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
 
-        super.onCreate(savedInstanceState)
-
-        // Install splash screen before super.onCreate
+        // Must be called BEFORE super.onCreate so the system splash intercepts the window
         installSplashScreen().apply {
             setKeepOnScreenCondition { keepSplashScreen }
         }
+
+        super.onCreate(savedInstanceState)
 
         // Configure edge-to-edge display
         WindowCompat.setDecorFitsSystemWindows(window, false)

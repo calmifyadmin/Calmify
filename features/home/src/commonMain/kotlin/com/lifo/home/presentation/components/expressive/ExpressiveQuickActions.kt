@@ -33,7 +33,8 @@ internal fun ExpressiveQuickActions(
     onSnapshot: () -> Unit,
     isSnapshotDue: Boolean,
     daysSinceSnapshot: Int,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    eveCardModifier: Modifier = Modifier,
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
@@ -47,7 +48,7 @@ internal fun ExpressiveQuickActions(
             subtitle = "La tua assistente AI vocale",
             onClick = onTalkToEve,
             accentColor = colorScheme.primary,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().then(eveCardModifier)
         )
 
         Row(

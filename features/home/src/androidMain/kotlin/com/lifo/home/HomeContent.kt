@@ -109,11 +109,14 @@ internal fun HomeContent(
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues)
-    ) {
+    // Outer Box fills the full screen (no padding) so CoachMarkOverlay canvas
+    // coordinates align with boundsInRoot() screen coordinates.
+    Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
         PullToRefreshBox(
             state = pullToRefreshState,
             isRefreshing = isRefreshing,
@@ -177,7 +180,10 @@ internal fun HomeContent(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .staggeredEntrance(index = 1, baseDelayMs = 80)
-                                    .coachMarkTarget(coachState, CoachMarkKeys.HOME_QUICK_ACTIONS)
+                                    .coachMarkTarget(coachState, CoachMarkKeys.HOME_QUICK_ACTIONS),
+                                eveCardModifier = Modifier.coachMarkTarget(
+                                    coachState, CoachMarkKeys.HOME_AVATAR
+                                ),
                             )
                         }
 
@@ -306,13 +312,14 @@ internal fun HomeContent(
                 }
             }
         }
+        } // end inner padded Box
 
-        // ── Coach mark overlay (above everything) ────────────────────────────
+        // ── Coach mark overlay — outside padded Box so Canvas coords match boundsInRoot()
         CoachMarkOverlay(
             state     = coachState,
             onFinished = { onboardingManager.markTutorialSeen(ScreenTutorials.KEY_HOME) },
         )
-    }
+    } // end outer fullscreen Box
 }
 
 // ==================== SKELETON (M3 Expressive) ====================
