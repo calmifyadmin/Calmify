@@ -3,6 +3,7 @@ package com.lifo.humanoid.data.vrm
 import android.content.Context
 import com.google.android.filament.gltfio.FilamentAsset
 import com.google.gson.Gson
+import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -228,10 +229,13 @@ class VrmLoader(private val context: Context) {
             ?.map { parseBlendShape(it.asJsonObject) }
             ?: emptyList()
 
+        // Extract glTF nodes array early — needed for spring bone name resolution
+        val nodesArrayEarly = rootObject?.getAsJsonArray("nodes")
+
         // Parse spring bones
         val springBones = vrmObject.getAsJsonObject("secondaryAnimation")
             ?.getAsJsonArray("boneGroups")
-            ?.map { parseSpringBone(it.asJsonObject) }
+            ?.map { parseSpringBone(it.asJsonObject, nodesArrayEarly) }
             ?.flatten()
             ?: emptyList()
 
@@ -415,7 +419,7 @@ class VrmLoader(private val context: Context) {
     /**
      * Parse spring bone group
      */
-    private fun parseSpringBone(boneGroupObject: JsonObject): List<SpringBoneData> {
+    private fun parseSpringBone(boneGroupObject: JsonObject, nodesArray: JsonArray? = null): List<SpringBoneData> {
         val stiffness = boneGroupObject.get("stiffiness")?.asFloat ?: 0.5f // Note: typo in VRM spec
         val gravityPower = boneGroupObject.get("gravityPower")?.asFloat ?: 0.1f
         val dragForce = boneGroupObject.get("dragForce")?.asFloat ?: 0.4f
@@ -440,8 +444,10 @@ class VrmLoader(private val context: Context) {
 
         // Create spring bone data for each bone
         return bones.map { boneIndex ->
+            val resolvedName = nodesArray?.get(boneIndex)?.asJsonObject?.get("name")?.asString
+                ?: "bone_$boneIndex"
             SpringBoneData(
-                boneName = "bone_$boneIndex", // TODO: Resolve actual bone name from node index
+                boneName = resolvedName,
                 stiffness = stiffness,
                 gravityPower = gravityPower,
                 gravityDir = gravityDir,

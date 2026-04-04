@@ -6,71 +6,26 @@ package com.lifo.humanoid.domain.model
  * Each viseme maps to specific blend shapes for lip animation.
  */
 enum class Viseme(val blendShapes: Map<String, Float>) {
-    // Silence
-    SILENCE(mapOf("mouthClosed" to 1.0f)),
+    // Silence — no morph target active
+    SILENCE(emptyMap()),
 
-    // Vowels
-    AA(mapOf(
-        "mouthOpen" to 1.0f,
-        "jawOpen" to 0.8f
-    )), // "ah" as in "father"
+    // Vowels — VRM standard blend shape names: a, i, u, e, o
+    AA(mapOf("a" to 1.0f)),   // "ah" as in "father"
+    E(mapOf("e" to 1.0f)),    // "eh" as in "bed"
+    I(mapOf("i" to 1.0f)),    // "ee" as in "see"
+    O(mapOf("o" to 1.0f)),    // "oh" as in "go"
+    U(mapOf("u" to 1.0f)),    // "oo" as in "boot"
 
-    E(mapOf(
-        "mouthOpen" to 0.6f,
-        "mouthWide" to 0.5f
-    )), // "eh" as in "bed"
-
-    I(mapOf(
-        "mouthWide" to 0.7f,
-        "mouthSmile" to 0.4f
-    )), // "ee" as in "see"
-
-    O(mapOf(
-        "mouthOpen" to 0.7f,
-        "mouthRound" to 1.0f
-    )), // "oh" as in "go"
-
-    U(mapOf(
-        "mouthPucker" to 1.0f,
-        "mouthRound" to 0.8f
-    )), // "oo" as in "boot"
-
-    // Consonants
-    M_B_P(mapOf("mouthClosed" to 1.0f)), // Lips closed (m, b, p)
-
-    F_V(mapOf(
-        "mouthOpen" to 0.3f,
-        "lipBite" to 0.7f
-    )), // Lip-teeth (f, v)
-
-    TH(mapOf(
-        "tongueOut" to 0.5f,
-        "mouthOpen" to 0.3f
-    )), // Tongue-teeth (th)
-
-    T_D_N_L(mapOf("mouthOpen" to 0.4f)), // Tongue-alveolar (t, d, n, l)
-
-    S_Z(mapOf(
-        "mouthWide" to 0.6f,
-        "mouthOpen" to 0.2f
-    )), // Sibilants (s, z)
-
-    SH_ZH_CH_J(mapOf(
-        "mouthRound" to 0.5f,
-        "mouthOpen" to 0.4f
-    )), // Palatals (sh, zh, ch, j)
-
-    K_G_NG(mapOf("mouthOpen" to 0.5f)), // Velars (k, g, ng)
-
-    R(mapOf(
-        "mouthRound" to 0.6f,
-        "mouthOpen" to 0.5f
-    )), // R sound
-
-    W(mapOf(
-        "mouthPucker" to 0.8f,
-        "mouthRound" to 0.9f
-    )); // W sound
+    // Consonants — approximate using VRM vowel shapes
+    M_B_P(emptyMap()),                    // Lips closed (m, b, p) — no morph active
+    F_V(mapOf("i" to 0.4f, "a" to 0.2f)),          // Lip-teeth (f, v)
+    TH(mapOf("i" to 0.3f, "e" to 0.2f)),            // Tongue-teeth (th)
+    T_D_N_L(mapOf("a" to 0.4f)),                    // Tongue-alveolar (t, d, n, l)
+    S_Z(mapOf("i" to 0.5f)),                         // Sibilants (s, z)
+    SH_ZH_CH_J(mapOf("u" to 0.4f, "o" to 0.3f)),   // Palatals (sh, zh, ch, j)
+    K_G_NG(mapOf("a" to 0.4f, "e" to 0.2f)),        // Velars (k, g, ng)
+    R(mapOf("o" to 0.5f, "u" to 0.3f)),             // R sound
+    W(mapOf("u" to 0.8f, "o" to 0.5f));             // W sound
 
     companion object {
         /**

@@ -1238,7 +1238,8 @@ class FilamentRenderer(
                 "(total entities: ${asset.entities.size})")
 
         if (entitiesWithMorphTargets.isNotEmpty()) {
-            val (targetEntity, _, targetMorphCount) = entitiesWithMorphTargets.first()
+            // Use the entity with the most morph targets — that's always the face mesh in VRM models
+            val (targetEntity, _, targetMorphCount) = entitiesWithMorphTargets.maxByOrNull { it.third }!!
 
             vrmBlendShapes.forEach { vrmBlendShape ->
                 val blendShapeName = vrmBlendShape.name.lowercase()
