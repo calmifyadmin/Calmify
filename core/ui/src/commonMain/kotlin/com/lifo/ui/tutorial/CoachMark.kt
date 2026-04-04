@@ -87,6 +87,8 @@ fun CoachMark(
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(bottom = 80.dp)
                         .padding(horizontal = CalmifySpacing.lg, vertical = CalmifySpacing.xl),
                     shape = RoundedCornerShape(CalmifyRadius.xxl),
                     color = MaterialTheme.colorScheme.surface,
