@@ -2,9 +2,7 @@
 <resources>
     <style name="Theme.CalmifyApp.Splash" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="windowSplashScreenBackground">#0A1109</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_leaf_animated</item>
-        <item name="windowSplashScreenIconBackgroundColor">#31C48D</item>
-        <item name="windowSplashScreenAnimationDuration">900</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/calmify_logo</item>
         <item name="postSplashScreenTheme">@style/Theme.CalmifyApp</item>
     </style>
 </resources>
