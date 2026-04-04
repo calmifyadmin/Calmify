@@ -19,6 +19,7 @@ kotlin {
             implementation project(':core:util')
             implementation project(':core:ui')
             implementation project(':data:mongo')
+            implementation project(':features:home')
 
             implementation compose.materialIconsExtended
 

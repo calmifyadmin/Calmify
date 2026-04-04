@@ -1,5 +1,7 @@
 package com.lifo.profile
 
+import com.lifo.home.domain.aggregator.WellbeingAggregator
+import com.lifo.home.domain.model.WellbeingAggregationResult
 import com.lifo.util.auth.AuthProvider
 import com.lifo.util.mvi.MviContract
 import com.lifo.util.mvi.MviViewModel
@@ -38,7 +40,8 @@ object ProfileContract {
  */
 class ProfileViewModel constructor(
     private val profileRepository: ProfileRepository,
-    private val authProvider: AuthProvider
+    private val authProvider: AuthProvider,
+    private val wellbeingAggregator: WellbeingAggregator
 ) : MviViewModel<ProfileContract.Intent, ProfileUiState, ProfileContract.Effect>(
     initialState = ProfileUiState.Loading
 ) {
@@ -89,10 +92,16 @@ class ProfileViewModel constructor(
                         } else {
                             // Transform profiles to chart data
                             val chartData = transformToChartData(profiles)
+                            val aggregation = try {
+                                wellbeingAggregator.aggregate()
+                            } catch (e: Exception) {
+                                null
+                            }
                             updateState {
                                 ProfileUiState.Success(
                                     profiles = profiles,
-                                    chartData = chartData
+                                    chartData = chartData,
+                                    aggregation = aggregation
                                 )
                             }
                         }
@@ -165,7 +174,8 @@ sealed class ProfileUiState : MviContract.State {
 
     data class Success(
         val profiles: List<PsychologicalProfile>,
-        val chartData: ChartData
+        val chartData: ChartData,
+        val aggregation: WellbeingAggregationResult? = null
     ) : ProfileUiState()
 
     data class Error(val message: String) : ProfileUiState()

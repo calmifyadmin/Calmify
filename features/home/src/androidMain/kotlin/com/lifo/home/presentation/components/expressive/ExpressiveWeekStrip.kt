@@ -24,6 +24,7 @@ import com.lifo.home.DailyInsightData
 import com.lifo.home.domain.model.WeeklyGoal
 import com.lifo.home.presentation.components.common.animatedCounter
 import com.lifo.home.util.EmotionAwareColors
+import com.lifo.ui.components.tooltips.InfoTooltip
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
@@ -88,14 +89,25 @@ internal fun ExpressiveWeekStrip(
                         size = 32.dp,
                     )
                     Column {
-                        Text(
-                            text = "CRESCITA",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.SemiBold,
-                                letterSpacing = 1.sp,
-                            ),
-                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = "CRESCITA",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.SemiBold,
+                                    letterSpacing = 1.sp,
+                                ),
+                                color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            )
+                            InfoTooltip(
+                                title = "Cos'e' la serie di giorni?",
+                                description = "Indica quanti giorni consecutivi hai scritto nel diario. " +
+                                    "Costruire una serie continua rinforza l'abitudine e ti aiuta a " +
+                                    "mantenere costanza nel tuo percorso di crescita."
+                            )
+                        }
                         Row(
                             verticalAlignment = Alignment.Bottom,
                             horizontalArrangement = Arrangement.spacedBy(4.dp),

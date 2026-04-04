@@ -1,6 +1,12 @@
 package com.lifo.profile
 
 import com.lifo.util.formatDecimal
+import com.lifo.home.domain.model.GrowthProgress
+import com.lifo.home.domain.model.SleepMoodCorrelation
+import com.lifo.home.domain.model.ActivityImpact
+import com.lifo.home.domain.model.TrendDirection
+import com.lifo.home.domain.model.WellbeingAggregationResult
+import com.lifo.home.domain.model.WellbeingTrend
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -63,7 +69,8 @@ fun ProfileDashboard(
                 is ProfileUiState.Loading -> LoadingState()
                 is ProfileUiState.Success -> SuccessState(
                     profiles = state.profiles,
-                    chartData = state.chartData
+                    chartData = state.chartData,
+                    aggregation = state.aggregation
                 )
                 is ProfileUiState.Error -> ErrorState(
                     message = state.message,
@@ -182,7 +189,8 @@ private fun EmptyState() {
 @Composable
 private fun SuccessState(
     profiles: List<PsychologicalProfile>,
-    chartData: ChartData
+    chartData: ChartData,
+    aggregation: WellbeingAggregationResult? = null
 ) {
     val latestProfile = profiles.firstOrNull() ?: return
 
@@ -212,6 +220,18 @@ private fun SuccessState(
 
         // 6. Data quality
         DataQualityFooter(latestProfile)
+
+        // 7–9. Wellbeing Aggregator sections (when available)
+        if (aggregation != null) {
+            if (aggregation.sleepMoodCorrelation != null || aggregation.activityImpact != null) {
+                CorrelationsSection(
+                    sleepMood = aggregation.sleepMoodCorrelation,
+                    activityImpact = aggregation.activityImpact
+                )
+            }
+            GrowthSection(aggregation.growthProgress)
+            aggregation.wellbeingTrend?.let { WellbeingTrendSection(it) }
+        }
 
         Spacer(Modifier.height(80.dp))
     }
@@ -935,6 +955,301 @@ private fun DataQualityFooter(profile: PsychologicalProfile) {
                     fontWeight = FontWeight.SemiBold,
                     color = confColor
                 )
+            }
+        }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Correlations Section
+// ══════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun CorrelationsSection(
+    sleepMood: SleepMoodCorrelation?,
+    activityImpact: ActivityImpact?
+) {
+    val colorScheme = MaterialTheme.colorScheme
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = colorScheme.surfaceContainerLow
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = colorScheme.tertiary.copy(alpha = 0.15f),
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.Psychology,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = colorScheme.tertiary
+                        )
+                    }
+                }
+                Text(
+                    text = "Correlazioni",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            sleepMood?.let {
+                NarrativeChip(it.narrative, colorScheme.primary)
+            }
+            activityImpact?.let {
+                NarrativeChip(it.narrative, colorScheme.secondary)
+            }
+        }
+    }
+}
+
+@Composable
+private fun NarrativeChip(text: String, accentColor: Color) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = accentColor.copy(alpha = 0.08f),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .clip(CircleShape)
+                    .background(accentColor)
+            )
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                lineHeight = 20.sp
+            )
+        }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Growth Section
+// ══════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun GrowthSection(growth: GrowthProgress) {
+    val colorScheme = MaterialTheme.colorScheme
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = colorScheme.surfaceContainerLow
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = Color(0xFF4CAF50).copy(alpha = 0.15f),
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.TrendingUp,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = Color(0xFF4CAF50)
+                        )
+                    }
+                }
+                Text(
+                    text = "Crescita personale",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            // Metrics row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                GrowthMetric(
+                    modifier = Modifier.weight(1f),
+                    label = "Abitudini",
+                    value = "${(growth.habitCompletionRate7d * 100).toInt()}%",
+                    color = Color(0xFF4CAF50)
+                )
+                GrowthMetric(
+                    modifier = Modifier.weight(1f),
+                    label = "Gratitudine",
+                    value = "${growth.gratitudeDays7d}g",
+                    color = colorScheme.primary
+                )
+                GrowthMetric(
+                    modifier = Modifier.weight(1f),
+                    label = "Reframe",
+                    value = "${growth.reframesCompleted}",
+                    color = colorScheme.secondary
+                )
+            }
+
+            // Suggestions
+            if (growth.suggestions.isNotEmpty()) {
+                growth.suggestions.take(2).forEach { suggestion ->
+                    NarrativeChip(suggestion, colorScheme.primary)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GrowthMetric(
+    modifier: Modifier = Modifier,
+    label: String,
+    value: String,
+    color: Color
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        color = color.copy(alpha = 0.08f)
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                color = color
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Wellbeing Trend Section
+// ══════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun WellbeingTrendSection(trend: WellbeingTrend) {
+    val colorScheme = MaterialTheme.colorScheme
+    val trendColor = when (trend.trend) {
+        TrendDirection.IMPROVING -> Color(0xFF4CAF50)
+        TrendDirection.DECLINING -> Color(0xFFEF5350)
+        else -> colorScheme.onSurfaceVariant
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = colorScheme.surfaceContainerLow
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = trendColor.copy(alpha = 0.15f),
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.Spa,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = trendColor
+                            )
+                        }
+                    }
+                    Text(
+                        text = "Benessere",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = trendColor.copy(alpha = 0.12f)
+                ) {
+                    Text(
+                        text = formatDecimal(1, trend.currentScore),
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                        color = trendColor,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            Text(
+                text = trend.narrative,
+                style = MaterialTheme.typography.bodyMedium,
+                color = colorScheme.onSurfaceVariant,
+                lineHeight = 22.sp
+            )
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (trend.dominantStrength.isNotBlank()) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFF4CAF50).copy(alpha = 0.10f)
+                    ) {
+                        Text(
+                            text = "\u2b50 ${trend.dominantStrength}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF4CAF50),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+                if (trend.areaToImprove.isNotBlank()) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = colorScheme.primary.copy(alpha = 0.10f)
+                    ) {
+                        Text(
+                            text = "\u2192 ${trend.areaToImprove}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
+                }
             }
         }
     }

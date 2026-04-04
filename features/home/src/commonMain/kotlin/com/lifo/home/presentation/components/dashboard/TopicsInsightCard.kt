@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifo.home.domain.model.TopicFrequency
 import com.lifo.home.domain.model.TopicTrend
+import com.lifo.ui.components.tooltips.InfoTooltip
 import com.lifo.ui.theme.Sage
 import com.lifo.ui.theme.SageSoft
 import com.lifo.ui.theme.SageMedium
@@ -41,12 +42,23 @@ internal fun TopicsInsightCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Temi ricorrenti",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colorScheme.onSurface
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "Temi ricorrenti",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = colorScheme.onSurface
+                    )
+                    InfoTooltip(
+                        title = "Cosa sono i temi ricorrenti?",
+                        description = "Sono gli argomenti che compaiono più spesso nei tuoi diari. " +
+                            "Riconoscere i temi che tornano ti aiuta a capire cosa occupa la tua mente " +
+                            "e su cosa vale la pena riflettere con più attenzione."
+                    )
+                }
                 emergingTopic?.let { trend ->
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
