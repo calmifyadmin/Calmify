@@ -294,7 +294,7 @@ private fun HabitCard(
                 }
                 if (habit.anchorHabit != null) {
                     Text(
-                        text = stringResource(Res.string.habits_after_anchor, habit.anchorHabit),
+                        text = stringResource(Res.string.habits_after_anchor, habit.anchorHabit!!),
                         style = MaterialTheme.typography.labelSmall,
                         color = colorScheme.primary,
                     )

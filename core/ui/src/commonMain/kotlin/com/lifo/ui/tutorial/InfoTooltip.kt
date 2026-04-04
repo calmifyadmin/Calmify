@@ -35,7 +35,7 @@ fun InfoTooltip(
     modifier: Modifier = Modifier,
 ) {
     var showSheet by remember { mutableStateOf(false) }
-    val sheetState = rememberModalBottomSheetState(skipPartialExpansion = true)
+    val sheetState = rememberModalBottomSheetState()
 
     IconButton(
         onClick = { showSheet = true },

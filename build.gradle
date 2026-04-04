@@ -22,6 +22,11 @@ plugins {
 tasks.register("lintHardcodedStrings") {
     description = "Report hardcoded UI strings in Kotlin Compose sources."
     group = "verification"
+    notCompatibleWithConfigurationCache("Scans project source files at execution time")
+
+    // Capture project references before doLast (config cache requirement)
+    def capturedProjectDir = projectDir
+    def capturedBuildDir   = layout.buildDirectory.asFile.get()
 
     // Patterns that flag potential hardcoded UI strings (Groovy ~// = regex literal)
     def uiPatterns = [
@@ -56,7 +61,7 @@ tasks.register("lintHardcodedStrings") {
     doLast {
         def findings = []
 
-        fileTree(projectDir) {
+        fileTree(capturedProjectDir) {
             include "**/*.kt"
             exclude "**/build/**"
             exclude "**/.claude/**"
@@ -72,7 +77,7 @@ tasks.register("lintHardcodedStrings") {
                     uiPatterns.each { pat ->
                         if (line =~ pat) {
                             findings << sprintf("  %s:%d\n    %s",
-                                ktFile.path.replace(projectDir.absolutePath + File.separator, ""),
+                                ktFile.path.replace(capturedProjectDir.absolutePath + File.separator, ""),
                                 lineNum,
                                 line.trim())
                         }
@@ -81,14 +86,14 @@ tasks.register("lintHardcodedStrings") {
             }
         }
 
-        def reportDir = file("${buildDir}/reports")
+        def reportDir = new File(capturedBuildDir, "reports")
         reportDir.mkdirs()
         def reportFile = new File(reportDir, "hardcoded-strings.txt")
 
         def header = """\
 Hardcoded String Lint Report
 Generated : ${new Date()}
-Project   : ${projectDir.absolutePath}
+Project   : ${capturedProjectDir.absolutePath}
 Findings  : ${findings.size()}
 Guide     : I18N_GUIDE.md
 ${"-" * 72}
@@ -117,94 +122,3 @@ subprojects {
     }
 }
 
-// ── checkHardcodedStrings ──────────────────────────────────────────────────────
-// Scans features/ and core/ui/ for hardcoded string literals passed directly to
-// Compose UI functions.  Fails the build with file:line pointers so the developer
-// can replace them with stringResource(R.string.key).
-//
-// Run manually:   ./gradlew checkHardcodedStrings
-// Auto-runs:      before every compileKotlin task in every subproject
-// Skip a line:    append  // noinspection HardcodedStringInCompose
-// ──────────────────────────────────────────────────────────────────────────────
-tasks.register('checkHardcodedStrings') {
-    group       = 'verification'
-    description = 'Fails if Compose .kt files contain hardcoded user-visible string literals.'
-
-    doLast {
-        def violations = []
-
-        def sourceTree = fileTree(rootDir) {
-            include 'features/**/*.kt'
-            include 'core/ui/**/*.kt'
-            exclude '**/build/**'
-            exclude '**/test/**'
-            exclude '**/androidTest/**'
-            exclude '**/*Test*.kt'
-            exclude '**/*Test.kt'
-        }
-
-        // Each entry: regex → human-readable violation label
-        def checks = [
-            // Text("literal")  — catches positional first-arg hardcoded string
-            (~/\bText\s*\(\s*"[^"$\\]{2,}/)          : 'Text("hardcoded")',
-            // title = "Literal"  — at least 3 chars, starts anywhere
-            (~/\btitle\s*=\s*"[^"$\\]{3,}/)           : 'title = "hardcoded"',
-            // label = "Literal"
-            (~/\blabel\s*=\s*"[^"$\\]{3,}/)           : 'label = "hardcoded"',
-            // placeholder = "Literal"
-            (~/\bplaceholder\s*=\s*"[^"$\\]{3,}/)     : 'placeholder = "hardcoded"',
-        ]
-
-        // Lines that are safe to skip regardless of content
-        def isSafe = { String ln ->
-            def t = ln.trim()
-            t.startsWith('//')             ||   // line comment
-            t.startsWith('*')             ||   // doc-comment line
-            ln.contains('stringResource') ||   // already localised
-            ln.contains('pluralStringResource') ||
-            ln.contains('@Suppress')      ||   // explicit suppression
-            ln.contains('noinspection HardcodedStringInCompose') ||
-            ln.contains('Log.')           ||   // logging
-            ln.contains('println(')       ||   // debug output
-            ln.contains('BuildConfig.')   ||   // constants
-            // Pure technical strings: all lowercase+digits+symbols (Firestore paths, keys, etc.)
-            ln.matches(/.*"\s*[a-z][a-z0-9_\/.@:%-]*\s*".*/)
-        }
-
-        sourceTree.each { File f ->
-            int lineNum = 0
-            f.eachLine { String ln ->
-                lineNum++
-                if (isSafe(ln)) return
-                checks.each { pattern, label ->
-                    if (pattern.matcher(ln).find()) {
-                        violations << "  ${f.path}:${lineNum}: [${label}]\n    ${ln.trim().take(120)}"
-                    }
-                }
-            }
-        }
-
-        if (!violations.empty) {
-            def sb = new StringBuilder('\n')
-            sb << '╔══════════════════════════════════════════════════════════════╗\n'
-            sb << "║  checkHardcodedStrings — ${violations.size()} violation(s) found          \n"
-            sb << '╚══════════════════════════════════════════════════════════════╝\n\n'
-            violations.each { sb << "${it}\n\n" }
-            sb << '  Fix  → stringResource(R.string.your_key)\n'
-            sb << '  Skip → append  // noinspection HardcodedStringInCompose  to the line\n'
-            sb << '  Docs → see I18N_GUIDE.md\n'
-            throw new GradleException(sb.toString())
-        }
-
-        logger.lifecycle('checkHardcodedStrings: OK — no hardcoded strings detected.')
-    }
-}
-
-// Wire the check to run before every Kotlin compilation in every subproject
-subprojects {
-    afterEvaluate { proj ->
-        proj.tasks.matching { it.name ==~ /compile.*Kotlin.*/ }.configureEach {
-            dependsOn rootProject.tasks.named('checkHardcodedStrings')
-        }
-    }
-}

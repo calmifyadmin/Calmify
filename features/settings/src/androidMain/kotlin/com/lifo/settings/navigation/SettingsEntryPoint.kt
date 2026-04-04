@@ -104,8 +104,6 @@ fun SettingsMainRouteContent(
         onNavigateToEnvironment = onNavigateToEnvironment,
         onNavigateToAvatarDebug = onNavigateToAvatarDebug,
         onLogout = onLogout,
-        currentLanguageCode = currentLanguageCode,
-        onLanguageChanged = { code -> context.applyAndSaveLanguage(code) },
         viewModel = viewModel
     )
 }
