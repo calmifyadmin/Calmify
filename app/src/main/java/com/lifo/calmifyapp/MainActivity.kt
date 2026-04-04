@@ -514,30 +514,14 @@ private fun InitializingScreen() {
             .background(Color(0xFF0A1109)),
         contentAlignment = Alignment.Center
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                painter = painterResource(id = com.lifo.ui.R.drawable.logo_calmify),
-                contentDescription = "Calmify",
-                modifier = Modifier
-                    .size(88.dp)
-                    .scale(scale),
-                tint = Color(0xFF31C48D)
-            )
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            Text(
-                text = "CALMIFY",
-                color = Color(0xFF31C48D).copy(alpha = 0.85f),
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                letterSpacing = 6.sp,
-                textAlign = TextAlign.Center
-            )
-        }
+        Icon(
+            painter = painterResource(id = com.lifo.ui.R.drawable.logo_calmify),
+            contentDescription = "Calmify",
+            modifier = Modifier
+                .size(88.dp)
+                .scale(scale),
+            tint = Color(0xFF31C48D)
+        )
     }
 }
 
