@@ -71,7 +71,7 @@ fun CoachMark(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                 ) { /* consume touches — prevent click-through */ },
-            contentAlignment = Alignment.BottomCenter,
+            contentAlignment = Alignment.Center,
         ) {
             AnimatedContent(
                 targetState = currentStep,
@@ -87,8 +87,6 @@ fun CoachMark(
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(bottom = 80.dp)
                         .padding(horizontal = CalmifySpacing.lg, vertical = CalmifySpacing.xl),
                     shape = RoundedCornerShape(CalmifyRadius.xxl),
                     color = MaterialTheme.colorScheme.surface,
