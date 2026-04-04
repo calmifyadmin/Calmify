@@ -105,7 +105,12 @@ fun SettingsMainRouteContent(
         onNavigateToAvatarDebug = onNavigateToAvatarDebug,
         onLogout = onLogout,
         currentLanguageCode = currentLanguageCode,
-        onLanguageSelected = { code -> applyLanguage(code) },
+        onLanguageSelected = { code ->
+            context.getSharedPreferences("calmify_prefs", Context.MODE_PRIVATE)
+                .edit().putBoolean("return_to_settings", true).apply()
+            android.widget.Toast.makeText(context, "Lingua aggiornata", android.widget.Toast.LENGTH_SHORT).show()
+            applyLanguage(code)
+        },
         viewModel = viewModel
     )
 }

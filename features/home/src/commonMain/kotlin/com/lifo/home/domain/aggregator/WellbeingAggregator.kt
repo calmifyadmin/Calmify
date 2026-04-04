@@ -64,9 +64,16 @@ class WellbeingAggregator(
     /**
      * Collects all 14 data domains in parallel and computes cross-domain insights.
      */
-    suspend fun aggregate(): WellbeingAggregationResult = coroutineScope {
-        if (userId.isEmpty()) return@coroutineScope emptyResult()
+    suspend fun aggregate(): WellbeingAggregationResult {
+        if (userId.isEmpty()) return emptyResult()
+        return try {
+            coroutineScope { aggregateInternal() }
+        } catch (e: Exception) {
+            emptyResult()
+        }
+    }
 
+    private suspend fun aggregateInternal(): WellbeingAggregationResult = coroutineScope {
         val tz = TimeZone.currentSystemDefault()
         val today = Clock.System.now().toLocalDateTime(tz).date
         val last7DayKeys = (0 until 7).map { today.minus(it, DateTimeUnit.DAY).toString() }.toSet()

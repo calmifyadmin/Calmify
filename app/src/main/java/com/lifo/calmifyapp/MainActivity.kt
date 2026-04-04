@@ -272,6 +272,13 @@ class MainActivity : AppCompatActivity() {
                 rootComponent.replaceAll(startDestination)
             }
 
+            // If the user changed language in Settings, navigate back there after recreation
+            val prefs = getSharedPreferences("calmify_prefs", Context.MODE_PRIVATE)
+            if (prefs.getBoolean("return_to_settings", false)) {
+                prefs.edit().remove("return_to_settings").apply()
+                rootComponent.navigateToSettings()
+            }
+
             // Update state to ready
             _appState.value = AppState.Ready
 

@@ -221,17 +221,13 @@ private fun SuccessState(
         // 6. Data quality
         DataQualityFooter(latestProfile)
 
-        // 7–9. Wellbeing Aggregator sections (when available)
-        if (aggregation != null) {
-            if (aggregation.sleepMoodCorrelation != null || aggregation.activityImpact != null) {
-                CorrelationsSection(
-                    sleepMood = aggregation.sleepMoodCorrelation,
-                    activityImpact = aggregation.activityImpact
-                )
-            }
-            GrowthSection(aggregation.growthProgress)
-            aggregation.wellbeingTrend?.let { WellbeingTrendSection(it) }
-        }
+        // 7–9. Wellbeing Aggregator sections (always shown, placeholder when no data)
+        CorrelationsSection(
+            sleepMood = aggregation?.sleepMoodCorrelation,
+            activityImpact = aggregation?.activityImpact
+        )
+        GrowthSection(aggregation?.growthProgress)
+        aggregation?.wellbeingTrend?.let { WellbeingTrendSection(it) }
 
         Spacer(Modifier.height(80.dp))
     }
@@ -1005,11 +1001,18 @@ private fun CorrelationsSection(
                 )
             }
 
-            sleepMood?.let {
-                NarrativeChip(it.narrative, colorScheme.primary)
-            }
-            activityImpact?.let {
-                NarrativeChip(it.narrative, colorScheme.secondary)
+            if (sleepMood == null && activityImpact == null) {
+                NarrativeChip(
+                    "Registra sonno e umore per scoprire le correlazioni nel tuo benessere.",
+                    colorScheme.tertiary
+                )
+            } else {
+                sleepMood?.let {
+                    NarrativeChip(it.narrative, colorScheme.primary)
+                }
+                activityImpact?.let {
+                    NarrativeChip(it.narrative, colorScheme.secondary)
+                }
             }
         }
     }
@@ -1048,7 +1051,7 @@ private fun NarrativeChip(text: String, accentColor: Color) {
 // ══════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun GrowthSection(growth: GrowthProgress) {
+private fun GrowthSection(growth: GrowthProgress?) {
     val colorScheme = MaterialTheme.colorScheme
 
     Surface(
@@ -1085,35 +1088,42 @@ private fun GrowthSection(growth: GrowthProgress) {
                 )
             }
 
-            // Metrics row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                GrowthMetric(
-                    modifier = Modifier.weight(1f),
-                    label = "Abitudini",
-                    value = "${(growth.habitCompletionRate7d * 100).toInt()}%",
-                    color = Color(0xFF4CAF50)
+            if (growth == null) {
+                NarrativeChip(
+                    "Inizia a registrare abitudini, gratitudine e riflessioni per sbloccare i tuoi progressi.",
+                    colorScheme.primary
                 )
-                GrowthMetric(
-                    modifier = Modifier.weight(1f),
-                    label = "Gratitudine",
-                    value = "${growth.gratitudeDays7d}g",
-                    color = colorScheme.primary
-                )
-                GrowthMetric(
-                    modifier = Modifier.weight(1f),
-                    label = "Reframe",
-                    value = "${growth.reframesCompleted}",
-                    color = colorScheme.secondary
-                )
-            }
+            } else {
+                // Metrics row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    GrowthMetric(
+                        modifier = Modifier.weight(1f),
+                        label = "Abitudini",
+                        value = "${(growth.habitCompletionRate7d * 100).toInt()}%",
+                        color = Color(0xFF4CAF50)
+                    )
+                    GrowthMetric(
+                        modifier = Modifier.weight(1f),
+                        label = "Gratitudine",
+                        value = "${growth.gratitudeDays7d}g",
+                        color = colorScheme.primary
+                    )
+                    GrowthMetric(
+                        modifier = Modifier.weight(1f),
+                        label = "Reframe",
+                        value = "${growth.reframesCompleted}",
+                        color = colorScheme.secondary
+                    )
+                }
 
-            // Suggestions
-            if (growth.suggestions.isNotEmpty()) {
-                growth.suggestions.take(2).forEach { suggestion ->
-                    NarrativeChip(suggestion, colorScheme.primary)
+                // Suggestions
+                if (growth.suggestions.isNotEmpty()) {
+                    growth.suggestions.take(2).forEach { suggestion ->
+                        NarrativeChip(suggestion, colorScheme.primary)
+                    }
                 }
             }
         }
