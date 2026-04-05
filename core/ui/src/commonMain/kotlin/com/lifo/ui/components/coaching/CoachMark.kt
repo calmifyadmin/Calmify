@@ -208,51 +208,59 @@ fun CoachMarkOverlay(
             state.currentStep?.let { step ->
                 var cardHeight by remember { mutableStateOf(0f) }
                 var cardWidth by remember { mutableStateOf(0f) }
+                var offsetY by remember { mutableStateOf(0.dp) }
+                var offsetX by remember { mutableStateOf(0.dp) }
+
                 val density = LocalDensity.current
                 val cardPaddingDp = 16.dp
                 val cardPaddingPx = cardPaddingDp.value * density.density
 
                 if (spotlight != null) {
-                    val spaceAbove = spotlight.top
-                    val spaceBelow = screenHeightPx - spotlight.bottom
+                    // Calculate position after card is measured
+                    LaunchedEffect(cardHeight, cardWidth, spotlight) {
+                        if (cardHeight > 0 && cardWidth > 0) {
+                            val spaceAbove = spotlight.top
+                            val spaceBelow = screenHeightPx - spotlight.bottom
 
-                    // Position card above spotlight if more space, else below
-                    val cardBelow = spaceBelow > (spaceAbove + 100f)
+                            val cardBelow = spaceBelow > (spaceAbove + 100f)
 
-                    val offsetYPx = if (cardBelow) {
-                        spotlight.bottom + cardPaddingPx
-                    } else {
-                        spotlight.top - cardHeight - cardPaddingPx
+                            offsetY = if (cardBelow) {
+                                (spotlight.bottom + cardPaddingPx).dp
+                            } else {
+                                (spotlight.top - cardHeight - cardPaddingPx).coerceAtLeast(0f).dp
+                            }
+
+                            val targetCenterX = spotlight.center.x
+                            offsetX = (targetCenterX - cardWidth / 2f)
+                                .coerceIn(cardPaddingPx, screenHeightPx - cardWidth - cardPaddingPx)
+                                .dp
+                        }
                     }
-
-                    // Center horizontally with spotlight, clamped to screen edges
-                    val targetCenterX = spotlight.center.x
-                    val offsetXPx = (targetCenterX - cardWidth / 2f)
-                        .coerceIn(cardPaddingPx, screenHeightPx - cardWidth - cardPaddingPx)
 
                     AnimatedVisibility(
                         visible  = state.isVisible,
-                        enter    = fadeIn(tween(250)) +
-                                slideInVertically(tween(300)) { if (cardBelow) it / 2 else -it / 2 },
-                        exit     = fadeOut(tween(150)) +
-                                slideOutVertically(tween(200)) { if (cardBelow) it / 2 else -it / 2 },
-                        modifier = Modifier
-                            .offset(x = offsetXPx.dp, y = offsetYPx.dp)
-                            .onGloballyPositioned { coords ->
-                                cardHeight = coords.size.height.toFloat()
-                                cardWidth = coords.size.width.toFloat()
-                            },
+                        enter    = fadeIn(tween(250)) + slideInVertically(tween(300)) { it / 2 },
+                        exit     = fadeOut(tween(150)) + slideOutVertically(tween(200)) { it / 2 },
                     ) {
-                        CoachMarkCard(
-                            step        = step,
-                            stepDisplay = state.stepDisplay,
-                            isLastStep  = state.currentIndex == state.totalSteps - 1,
-                            onNext      = { state.advance() },
-                            onSkip      = {
-                                state.hide()
-                                onFinished()
-                            },
-                        )
+                        Box(
+                            modifier = Modifier
+                                .offset(x = offsetX, y = offsetY)
+                                .onGloballyPositioned { coords ->
+                                    cardHeight = coords.size.height.toFloat()
+                                    cardWidth = coords.size.width.toFloat()
+                                }
+                        ) {
+                            CoachMarkCard(
+                                step        = step,
+                                stepDisplay = state.stepDisplay,
+                                isLastStep  = state.currentIndex == state.totalSteps - 1,
+                                onNext      = { state.advance() },
+                                onSkip      = {
+                                    state.hide()
+                                    onFinished()
+                                },
+                            )
+                        }
                     }
                 } else {
                     // No spotlight: position at bottom
