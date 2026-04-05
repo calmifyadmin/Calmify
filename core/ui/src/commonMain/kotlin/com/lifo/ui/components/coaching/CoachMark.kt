@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -58,6 +59,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lifo.ui.theme.CalmifyRadius
@@ -203,34 +205,76 @@ fun CoachMarkOverlay(
             }
 
             // ── Tooltip card positioned near the spotlight ───────────────────
-            // If spotlight is in the top 55% of screen → card at bottom edge.
-            // If spotlight is in the bottom 45% → card at top edge.
             state.currentStep?.let { step ->
-                val cardBelow = spotlight == null ||
-                        spotlight.center.y < screenHeightPx * 0.55f
-                AnimatedVisibility(
-                    visible  = state.isVisible,
-                    enter    = fadeIn(tween(250)) +
-                            slideInVertically(tween(300)) { if (cardBelow) it / 2 else -it / 2 },
-                    exit     = fadeOut(tween(150)) +
-                            slideOutVertically(tween(200)) { if (cardBelow) it / 2 else -it / 2 },
-                    modifier = Modifier
-                        .align(if (cardBelow) Alignment.BottomCenter else Alignment.TopCenter)
-                        .then(
-                            if (cardBelow) Modifier.navigationBarsPadding()
-                            else Modifier.statusBarsPadding()
-                        ),
-                ) {
-                    CoachMarkCard(
-                        step        = step,
-                        stepDisplay = state.stepDisplay,
-                        isLastStep  = state.currentIndex == state.totalSteps - 1,
-                        onNext      = { state.advance() },
-                        onSkip      = {
-                            state.hide()
-                            onFinished()
-                        },
-                    )
+                var cardHeight by remember { mutableStateOf(0f) }
+                var cardWidth by remember { mutableStateOf(0f) }
+                val density = LocalDensity.current
+                val cardPaddingDp = 16.dp
+                val cardPaddingPx = cardPaddingDp.value * density.density
+
+                if (spotlight != null) {
+                    val spaceAbove = spotlight.top
+                    val spaceBelow = screenHeightPx - spotlight.bottom
+
+                    // Position card above spotlight if more space, else below
+                    val cardBelow = spaceBelow > (spaceAbove + 100f)
+
+                    val offsetYPx = if (cardBelow) {
+                        spotlight.bottom + cardPaddingPx
+                    } else {
+                        spotlight.top - cardHeight - cardPaddingPx
+                    }
+
+                    // Center horizontally with spotlight, clamped to screen edges
+                    val targetCenterX = spotlight.center.x
+                    val offsetXPx = (targetCenterX - cardWidth / 2f)
+                        .coerceIn(cardPaddingPx, screenHeightPx - cardWidth - cardPaddingPx)
+
+                    AnimatedVisibility(
+                        visible  = state.isVisible,
+                        enter    = fadeIn(tween(250)) +
+                                slideInVertically(tween(300)) { if (cardBelow) it / 2 else -it / 2 },
+                        exit     = fadeOut(tween(150)) +
+                                slideOutVertically(tween(200)) { if (cardBelow) it / 2 else -it / 2 },
+                        modifier = Modifier
+                            .offset(x = offsetXPx.dp, y = offsetYPx.dp)
+                            .onGloballyPositioned { coords ->
+                                cardHeight = coords.size.height.toFloat()
+                                cardWidth = coords.size.width.toFloat()
+                            },
+                    ) {
+                        CoachMarkCard(
+                            step        = step,
+                            stepDisplay = state.stepDisplay,
+                            isLastStep  = state.currentIndex == state.totalSteps - 1,
+                            onNext      = { state.advance() },
+                            onSkip      = {
+                                state.hide()
+                                onFinished()
+                            },
+                        )
+                    }
+                } else {
+                    // No spotlight: position at bottom
+                    AnimatedVisibility(
+                        visible  = state.isVisible,
+                        enter    = fadeIn(tween(250)) + slideInVertically(tween(300)) { it / 2 },
+                        exit     = fadeOut(tween(150)) + slideOutVertically(tween(200)) { it / 2 },
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .navigationBarsPadding(),
+                    ) {
+                        CoachMarkCard(
+                            step        = step,
+                            stepDisplay = state.stepDisplay,
+                            isLastStep  = state.currentIndex == state.totalSteps - 1,
+                            onNext      = { state.advance() },
+                            onSkip      = {
+                                state.hide()
+                                onFinished()
+                            },
+                        )
+                    }
                 }
             }
         }
