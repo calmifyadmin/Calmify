@@ -54,6 +54,9 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -264,20 +267,29 @@ fun CoachMarkOverlay(
                     exit     = fadeOut() + slideOutVertically { it / 2 },
                 ) {
                     if (cardPosition != null) {
+                        // Get actual navigation bar height
+                        val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
                         // Position card relative to target bottom-center
                         val cardPadding = 16.dp
                         val startPadding = with(density) { cardPosition.x.toDp() - 100.dp }
                         val topPadding = with(density) { cardPosition.y.toDp() + cardPadding }
 
-                        // Check if card will be in bottom area (below 70% of screen height)
+                        // Check if card is in bottom area and would be covered by navbar
                         val screenHeightDp = with(density) { screenHeightPx.toDp() }
-                        val isCardInBottomArea = with(density) { cardPosition.y.toDp() > screenHeightDp * 0.7f }
+                        val estimatedCardHeight = 250.dp // Approximate card height
+                        val cardBottomPosition = with(density) { cardPosition.y.toDp() } + estimatedCardHeight
+                        val isCardCoveredByNavBar = cardBottomPosition > (screenHeightDp - navBarHeight)
 
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(start = startPadding, top = topPadding)
-                                .then(if (isCardInBottomArea) Modifier.navigationBarsPadding() else Modifier),
+                                .padding(
+                                    start = startPadding,
+                                    top = topPadding,
+                                    // Add extra bottom padding if card would be covered by navbar
+                                    bottom = if (isCardCoveredByNavBar) navBarHeight + 16.dp else 0.dp
+                                ),
                         ) {
                             CoachMarkCard(
                                 step        = step,
