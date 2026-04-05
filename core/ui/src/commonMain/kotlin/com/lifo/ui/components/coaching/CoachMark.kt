@@ -269,10 +269,15 @@ fun CoachMarkOverlay(
                         val startPadding = with(density) { cardPosition.x.toDp() - 100.dp }
                         val topPadding = with(density) { cardPosition.y.toDp() + cardPadding }
 
+                        // Check if card will be in bottom area (below 70% of screen height)
+                        val screenHeightDp = with(density) { screenHeightPx.toDp() }
+                        val isCardInBottomArea = with(density) { cardPosition.y.toDp() > screenHeightDp * 0.7f }
+
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(start = startPadding, top = topPadding)
+                                .then(if (isCardInBottomArea) Modifier.navigationBarsPadding() else Modifier),
                         ) {
                             CoachMarkCard(
                                 step        = step,
