@@ -52,6 +52,8 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -89,6 +91,9 @@ class CoachMarkState(val steps: List<CoachMarkStep>) {
     /** Target position for positioning the card (from onGloballyPositioned) */
     private val targetPositions = mutableMapOf<String, Offset>()
 
+    /** BringIntoViewRequester for each target to auto-scroll when coach mark shows */
+    private val bringIntoViewRequesters = mutableMapOf<String, BringIntoViewRequester>()
+
     /** Whether the overlay is currently visible. */
     val isVisible: Boolean get() = currentIndex >= 0
 
@@ -122,6 +127,14 @@ class CoachMarkState(val steps: List<CoachMarkStep>) {
 
     internal fun registerTargetPosition(key: String, coords: LayoutCoordinates) {
         targetPositions[key] = coords.boundsInRoot().bottomCenter
+    }
+
+    internal fun registerBringIntoViewRequester(key: String, requester: BringIntoViewRequester) {
+        bringIntoViewRequesters[key] = requester
+    }
+
+    internal fun getBringIntoViewRequester(key: String): BringIntoViewRequester? {
+        return bringIntoViewRequesters[key]
     }
 }
 
@@ -159,6 +172,31 @@ fun Modifier.coachMarkTarget(
     state.registerTargetPosition(key, coords)
 }
 
+/**
+ * Wraps a composable that has coach mark targets with BringIntoViewRequester for auto-scroll.
+ * Use this at the target's parent level.
+ */
+@Composable
+fun CoachMarkTargetWithScroll(
+    state: CoachMarkState,
+    key: String,
+    modifier: Modifier = Modifier,
+    content: @Composable (Modifier) -> Unit,
+) {
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+
+    // Register the requester when this composable is created
+    LaunchedEffect(key) {
+        state.registerBringIntoViewRequester(key, bringIntoViewRequester)
+    }
+
+    content(
+        modifier
+            .bringIntoViewRequester(bringIntoViewRequester)
+            .coachMarkTarget(state, key)
+    )
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // CoachMarkOverlay — the full-screen overlay composable
 // ─────────────────────────────────────────────────────────────────────────────
@@ -187,6 +225,13 @@ fun CoachMarkOverlay(
         val spotlight = state.currentSpotlight
         val cardPosition = state.currentCardPosition
         val density = LocalDensity.current
+
+        // Auto-scroll target into view when coach mark becomes visible
+        LaunchedEffect(state.currentStep?.targetKey) {
+            state.currentStep?.targetKey?.let { targetKey ->
+                state.getBringIntoViewRequester(targetKey)?.bringIntoView()
+            }
+        }
 
         BoxWithConstraints(
             modifier = Modifier
