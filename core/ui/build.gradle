@@ -37,6 +37,9 @@ kotlin {
             implementation libs.haze
             implementation libs.haze.materials
             implementation libs.colormath
+
+            // Coach Marks (KMP - with Web support)
+            implementation libs.compose.coach
         }
 
         androidMain.dependencies {

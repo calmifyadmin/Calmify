@@ -1,14 +1,8 @@
 package com.lifo.ui.components.coaching
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -26,11 +20,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -61,6 +53,7 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.lifo.ui.theme.CalmifyRadius
 import com.lifo.ui.theme.CalmifySpacing
@@ -93,6 +86,9 @@ class CoachMarkState(val steps: List<CoachMarkStep>) {
     /** Registered target bounds keyed by [CoachMarkKeys] value. */
     private val targets = mutableMapOf<String, Rect>()
 
+    /** Target position for positioning the card (from onGloballyPositioned) */
+    private val targetPositions = mutableMapOf<String, Offset>()
+
     /** Whether the overlay is currently visible. */
     val isVisible: Boolean get() = currentIndex >= 0
 
@@ -101,6 +97,9 @@ class CoachMarkState(val steps: List<CoachMarkStep>) {
 
     /** Spotlight rect for the current step, or null if no targetKey / not yet measured. */
     val currentSpotlight: Rect? get() = currentStep?.targetKey?.let { targets[it] }
+
+    /** Card position offset for the current step */
+    val currentCardPosition: Offset? get() = currentStep?.targetKey?.let { targetPositions[it] }
 
     val totalSteps: Int get() = steps.size
     val stepDisplay: String get() = "${currentIndex + 1} di $totalSteps"
@@ -119,6 +118,10 @@ class CoachMarkState(val steps: List<CoachMarkStep>) {
 
     internal fun registerTarget(key: String, bounds: Rect) {
         targets[key] = bounds
+    }
+
+    internal fun registerTargetPosition(key: String, coords: LayoutCoordinates) {
+        targetPositions[key] = coords.boundsInRoot().bottomCenter
     }
 }
 
@@ -152,6 +155,8 @@ fun Modifier.coachMarkTarget(
             bottom = bounds.bottom + padding,
         )
     )
+    // Store position for card positioning
+    state.registerTargetPosition(key, coords)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -162,7 +167,7 @@ private val OverlayColor = Color(0xCC000000)   // 80 % black, same feel as M3 sc
 private val SpotlightColor = Color(0x00000000) // transparent cut-out
 
 /**
- * Full-screen coach-mark overlay.  Place this at the top of a [Box] that contains the screen content.
+ * Full-screen coach-mark overlay. Place this at the top of a [Box] that contains the screen content.
  *
  * @param state      Drives visibility, current step, and spotlight position.
  * @param onFinished Called when the user completes or skips the entire sequence.
@@ -175,11 +180,13 @@ fun CoachMarkOverlay(
 ) {
     AnimatedVisibility(
         visible     = state.isVisible,
-        enter       = fadeIn(tween(300)),
-        exit        = fadeOut(tween(200)),
+        enter       = fadeIn(),
+        exit        = fadeOut(),
         modifier    = modifier,
     ) {
         val spotlight = state.currentSpotlight
+        val cardPosition = state.currentCardPosition
+        val density = LocalDensity.current
 
         BoxWithConstraints(
             modifier = Modifier
@@ -204,51 +211,42 @@ fun CoachMarkOverlay(
                 )
             }
 
-            // ── Tooltip card positioned near the spotlight ───────────────────
+            // ── Tooltip card positioned near the target ────────────────────────
             state.currentStep?.let { step ->
-                var cardHeight by remember { mutableStateOf(0f) }
-                var cardWidth by remember { mutableStateOf(0f) }
-                var offsetY by remember { mutableStateOf(0.dp) }
-                var offsetX by remember { mutableStateOf(0.dp) }
+                AnimatedVisibility(
+                    visible  = state.isVisible,
+                    enter    = fadeIn() + slideInVertically { it / 2 },
+                    exit     = fadeOut() + slideOutVertically { it / 2 },
+                ) {
+                    if (cardPosition != null) {
+                        // Position card relative to target bottom-center
+                        val cardPadding = 16.dp
+                        val startPadding = with(density) { cardPosition.x.toDp() - 100.dp }
+                        val topPadding = with(density) { cardPosition.y.toDp() + cardPadding }
 
-                val density = LocalDensity.current
-                val cardPaddingDp = 16.dp
-                val cardPaddingPx = cardPaddingDp.value * density.density
-
-                if (spotlight != null) {
-                    // Calculate position after card is measured
-                    LaunchedEffect(cardHeight, cardWidth, spotlight) {
-                        if (cardHeight > 0 && cardWidth > 0) {
-                            val spaceAbove = spotlight.top
-                            val spaceBelow = screenHeightPx - spotlight.bottom
-
-                            val cardBelow = spaceBelow > (spaceAbove + 100f)
-
-                            offsetY = if (cardBelow) {
-                                (spotlight.bottom + cardPaddingPx).dp
-                            } else {
-                                (spotlight.top - cardHeight - cardPaddingPx).coerceAtLeast(0f).dp
-                            }
-
-                            val targetCenterX = spotlight.center.x
-                            offsetX = (targetCenterX - cardWidth / 2f)
-                                .coerceIn(cardPaddingPx, screenHeightPx - cardWidth - cardPaddingPx)
-                                .dp
-                        }
-                    }
-
-                    AnimatedVisibility(
-                        visible  = state.isVisible,
-                        enter    = fadeIn(tween(250)) + slideInVertically(tween(300)) { it / 2 },
-                        exit     = fadeOut(tween(150)) + slideOutVertically(tween(200)) { it / 2 },
-                    ) {
                         Box(
                             modifier = Modifier
-                                .offset(x = offsetX, y = offsetY)
-                                .onGloballyPositioned { coords ->
-                                    cardHeight = coords.size.height.toFloat()
-                                    cardWidth = coords.size.width.toFloat()
-                                }
+                                .fillMaxSize()
+                                .padding(start = startPadding, top = topPadding)
+                        ) {
+                            CoachMarkCard(
+                                step        = step,
+                                stepDisplay = state.stepDisplay,
+                                isLastStep  = state.currentIndex == state.totalSteps - 1,
+                                onNext      = { state.advance() },
+                                onSkip      = {
+                                    state.hide()
+                                    onFinished()
+                                },
+                            )
+                        }
+                    } else {
+                        // Fallback: position at bottom center if no position yet
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .navigationBarsPadding(),
+                            contentAlignment = Alignment.BottomCenter,
                         ) {
                             CoachMarkCard(
                                 step        = step,
@@ -262,27 +260,6 @@ fun CoachMarkOverlay(
                             )
                         }
                     }
-                } else {
-                    // No spotlight: position at bottom
-                    AnimatedVisibility(
-                        visible  = state.isVisible,
-                        enter    = fadeIn(tween(250)) + slideInVertically(tween(300)) { it / 2 },
-                        exit     = fadeOut(tween(150)) + slideOutVertically(tween(200)) { it / 2 },
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .navigationBarsPadding(),
-                    ) {
-                        CoachMarkCard(
-                            step        = step,
-                            stepDisplay = state.stepDisplay,
-                            isLastStep  = state.currentIndex == state.totalSteps - 1,
-                            onNext      = { state.advance() },
-                            onSkip      = {
-                                state.hide()
-                                onFinished()
-                            },
-                        )
-                    }
                 }
             }
         }
@@ -295,30 +272,11 @@ fun CoachMarkOverlay(
 
 @Composable
 private fun SpotlightCanvas(rect: Rect) {
-    // Pulse animation on the spotlight ring
-    val pulse = remember { Animatable(0f) }
-    LaunchedEffect(rect) {
-        pulse.animateTo(
-            targetValue    = 1f,
-            animationSpec  = infiniteRepeatable(
-                animation  = tween(1200),
-                repeatMode = RepeatMode.Reverse,
-            )
-        )
-    }
-    val ringAlpha by animateFloatAsState(
-        targetValue   = 0.3f + pulse.value * 0.4f,
-        animationSpec = tween(100),
-        label         = "ringAlpha",
-    )
-
     val cornerRadius = 16f
 
     Canvas(
         modifier = Modifier
             .fillMaxSize()
-            // graphicsLayer with CompositingStrategy.Offscreen is required so
-            // BlendMode.Clear actually punches through the overlay layer.
             .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
     ) {
         // 1. Solid dark overlay
@@ -327,7 +285,7 @@ private fun SpotlightCanvas(rect: Rect) {
         // 2. Cut out the spotlight area
         drawRoundRect(
             color        = SpotlightColor,
-            topLeft      = Offset(rect.left, rect.top),
+            topLeft      = androidx.compose.ui.geometry.Offset(rect.left, rect.top),
             size         = rect.size,
             cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadius),
             blendMode    = BlendMode.Clear,
@@ -335,8 +293,8 @@ private fun SpotlightCanvas(rect: Rect) {
 
         // 3. Subtle pulsing ring around the spotlight
         drawRoundRect(
-            color        = Color(0xFF4CAF7D).copy(alpha = ringAlpha),
-            topLeft      = Offset(rect.left - 4f, rect.top - 4f),
+            color        = Color(0xFF4CAF7D).copy(alpha = 0.4f),
+            topLeft      = androidx.compose.ui.geometry.Offset(rect.left - 4f, rect.top - 4f),
             size         = rect.size.copy(
                 width  = rect.width + 8f,
                 height = rect.height + 8f,
@@ -348,7 +306,7 @@ private fun SpotlightCanvas(rect: Rect) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CoachMarkCard — tooltip card at the bottom of the screen
+// CoachMarkCard — tooltip card
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
@@ -361,8 +319,8 @@ private fun CoachMarkCard(
 ) {
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = CalmifySpacing.lg, vertical = CalmifySpacing.xl),
+            .fillMaxWidth(0.85f)
+            .padding(horizontal = CalmifySpacing.lg),
         shape  = RoundedCornerShape(CalmifyRadius.xxl),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -413,10 +371,7 @@ private fun CoachMarkCard(
 
             // ── Advance button ────────────────────────────────────────────────
             Button(
-                onClick   = {
-                    onNext()
-                    // if last step, caller's onFinished fires from CoachMarkOverlay via state.advance()->hide()
-                },
+                onClick   = onNext,
                 modifier  = Modifier.fillMaxWidth(),
                 shape     = RoundedCornerShape(CalmifyRadius.lg),
                 colors    = ButtonDefaults.buttonColors(
@@ -450,7 +405,7 @@ private fun StepDots(
             val isActive = index == current
             val dotWidth by animateDpAsState(
                 targetValue   = if (isActive) 20.dp else 6.dp,
-                animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                animationSpec = spring(),
                 label         = "dotWidth",
             )
             Surface(
