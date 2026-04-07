@@ -124,8 +124,8 @@ fun rememberCoachMarkState(steps: List<CoachMarkStep>): CoachMarkState =
 
 /**
  * Attach this to any composable to register it as a spotlight target.
- * This is a temporary placeholder - actual spotlight highlighting requires
- * applying revealable() with access to the RevealState.
+ * Currently a placeholder - full implementation requires KMP-compatible way
+ * to apply revealable() modifier with RevealState from CompositionLocal.
  *
  * @param state  The [CoachMarkState] that drives the overlay.
  * @param key    One of the [CoachMarkKeys] constants.
@@ -133,14 +133,7 @@ fun rememberCoachMarkState(steps: List<CoachMarkStep>): CoachMarkState =
 fun Modifier.coachMarkTarget(
     @Suppress("UNUSED_PARAMETER") state: CoachMarkState,
     @Suppress("UNUSED_PARAMETER") key: String,
-): Modifier {
-    // TODO: Implement proper revealable application
-    // The challenge: revealable() requires a RevealState parameter,
-    // but we're in a non-Composable context where we can't access it.
-    // Solution needed: Either use Modifier.composed() with KMP compatibility,
-    // or restructure to apply revealable from the Reveal composable directly.
-    return this
-}
+): Modifier = this
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CoachMarkOverlay — Reveal-based coach mark overlay with content wrapping
