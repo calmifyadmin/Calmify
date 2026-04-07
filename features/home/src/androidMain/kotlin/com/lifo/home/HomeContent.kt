@@ -82,9 +82,13 @@ internal fun HomeContent(
     val onboardingManager: OnboardingManager = koinInject()
     val coachState = rememberCoachMarkState(ScreenTutorials.home)
     val lazyListState = rememberLazyListState()
+    var isLazyColumnReady by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         if (onboardingManager.shouldShowTutorial(ScreenTutorials.KEY_HOME)) {
+            // Delay initial start until LazyColumn is laid out
+            kotlinx.coroutines.delay(500)
+            isLazyColumnReady = true
             coachState.start()
         }
     }
@@ -92,7 +96,7 @@ internal fun HomeContent(
     // Auto-scroll to reveal target if it's off-screen
     LaunchedEffect(coachState.currentStep?.targetKey) {
         val targetKey = coachState.currentStep?.targetKey
-        if (targetKey != null) {
+        if (targetKey != null && isLazyColumnReady) {
             try {
                 // Map target keys to LazyColumn item indices for scrolling
                 // These indices correspond to the item() calls in the LazyColumn below
@@ -100,13 +104,13 @@ internal fun HomeContent(
                     CoachMarkKeys.HOME_GREETING -> 0       // item(key = "hero")
                     CoachMarkKeys.HOME_QUICK_ACTIONS -> 1  // item(key = "quick_actions")
                     CoachMarkKeys.HOME_AVATAR -> 1         // Also quick_actions (nested element)
-                    CoachMarkKeys.HOME_MOOD -> 3           // item(key = "stats")
+                    CoachMarkKeys.HOME_MOOD -> 5           // item(key = "mood")
                     else -> null
                 }
 
                 if (scrollIndex != null && lazyListState.layoutInfo.totalItemsCount > scrollIndex) {
                     lazyListState.animateScrollToItem(scrollIndex)
-                    kotlinx.coroutines.delay(500) // Wait for scroll + render
+                    kotlinx.coroutines.delay(1000) // Wait for scroll + render completion
                 }
             } catch (e: Exception) {
                 // Scroll might fail if LazyColumn hasn't been laid out yet - ignore
