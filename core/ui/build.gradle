@@ -38,8 +38,8 @@ kotlin {
             implementation libs.haze.materials
             implementation libs.colormath
 
-            // Coach Marks (KMP - Reveal library)
-            implementation libs.reveal
+            // Coach Marks (KMP - CoachMark library with dynamic positioning)
+            implementation libs.coachmark.core
         }
 
         androidMain.dependencies {
