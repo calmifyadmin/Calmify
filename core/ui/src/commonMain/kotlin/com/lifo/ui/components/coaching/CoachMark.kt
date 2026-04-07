@@ -29,6 +29,10 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.modifier.ModifierLocalConsumer
+import androidx.compose.ui.modifier.ModifierLocalReadScope
+import androidx.compose.ui.node.ModifierNodeElement
+import androidx.compose.ui.node.SemanticsModifierNode
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lifo.ui.theme.CalmifyRadius
@@ -120,7 +124,8 @@ fun rememberCoachMarkState(steps: List<CoachMarkStep>): CoachMarkState =
 
 /**
  * Attach this to any composable to register it as a spotlight target.
- * Works with CoachMarkOverlay to enable spotlight highlighting.
+ * This is a temporary placeholder - actual spotlight highlighting requires
+ * applying revealable() with access to the RevealState.
  *
  * @param state  The [CoachMarkState] that drives the overlay.
  * @param key    One of the [CoachMarkKeys] constants.
@@ -129,8 +134,11 @@ fun Modifier.coachMarkTarget(
     @Suppress("UNUSED_PARAMETER") state: CoachMarkState,
     @Suppress("UNUSED_PARAMETER") key: String,
 ): Modifier {
-    // TODO: Apply revealable modifier with proper state binding
-    // For now, this is a semantic marker for future implementation
+    // TODO: Implement proper revealable application
+    // The challenge: revealable() requires a RevealState parameter,
+    // but we're in a non-Composable context where we can't access it.
+    // Solution needed: Either use Modifier.composed() with KMP compatibility,
+    // or restructure to apply revealable from the Reveal composable directly.
     return this
 }
 
