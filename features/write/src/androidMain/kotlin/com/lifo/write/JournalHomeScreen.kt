@@ -37,10 +37,6 @@ import com.lifo.util.repository.MediaUploadRepository
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.lifo.ui.components.CalmifyTopBar
-import com.lifo.ui.tutorial.CoachMark
-import com.lifo.ui.tutorial.CoachMarkStep
-import com.lifo.util.tutorial.OnboardingManager
-import com.lifo.util.tutorial.TutorialKey
 import com.lifo.ui.emotion.MiniMoodShape
 import com.lifo.util.auth.UserIdentityResolver
 import com.lifo.util.model.Diary
@@ -80,7 +76,6 @@ fun JournalHomeScreen(
     onMovementClick: () -> Unit = {},
     onAllActivitiesClick: () -> Unit = {},
     mongoRepository: MongoRepository = koinInject(),
-    onboardingManager: OnboardingManager = koinInject(),
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val diariesState by mongoRepository.getAllDiaries().collectAsState(initial = RequestState.Loading)
@@ -99,24 +94,6 @@ fun JournalHomeScreen(
     }
 
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
-
-    var showDiarioCoach by rememberSaveable {
-        mutableStateOf(!onboardingManager.isTutorialSeen(TutorialKey.DIARIO))
-    }
-    val diarioCoachSteps = remember {
-        listOf(
-            CoachMarkStep(
-                title = "Il tuo diario",
-                description = "Scrivi liberamente: pensieri, emozioni, esperienze quotidiane. " +
-                    "Non c'è risposta giusta — solo la tua verità. Anche poche righe fanno la differenza.",
-            ),
-            CoachMarkStep(
-                title = "Umore e tag psicologici",
-                description = "Dopo aver scritto, registra come ti senti con il tasto ✦. " +
-                    "Nel tempo, scoprirai pattern che non avresti notato da solo — connessioni tra stress, sonno ed energia.",
-            ),
-        )
-    }
 
     Box(modifier = Modifier.fillMaxSize()) {
 
@@ -208,15 +185,6 @@ fun JournalHomeScreen(
             }
         }
     }
-
-    CoachMark(
-        visible = showDiarioCoach,
-        steps = diarioCoachSteps,
-        onComplete = {
-            onboardingManager.markTutorialSeen(TutorialKey.DIARIO)
-            showDiarioCoach = false
-        },
-    )
 
     } // end Box
 }

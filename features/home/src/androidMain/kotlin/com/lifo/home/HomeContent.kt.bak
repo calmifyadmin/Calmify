@@ -33,6 +33,10 @@ import com.lifo.ui.components.coaching.CoachMarkOverlay
 import com.lifo.ui.components.coaching.ScreenTutorials
 import com.lifo.ui.components.coaching.coachMarkTarget
 import com.lifo.ui.components.coaching.rememberCoachMarkState
+import dev.svenjacobs.reveal.Reveal
+import dev.svenjacobs.reveal.RevealScaffold
+import dev.svenjacobs.reveal.rememberRevealCanvasState
+import dev.svenjacobs.reveal.rememberRevealState
 import com.lifo.ui.components.tooltips.InfoTooltip
 import com.lifo.ui.components.tooltips.TooltipContent
 import com.lifo.ui.onboarding.OnboardingManager
@@ -78,7 +82,9 @@ internal fun HomeContent(
 
     // ── Coach marks ──────────────────────────────────────────────────────────
     val onboardingManager: OnboardingManager = koinInject()
-    val coachState = rememberCoachMarkState(ScreenTutorials.home)
+    val revealCanvasState = rememberRevealCanvasState()
+    val revealState = rememberRevealState()
+    val coachState = rememberCoachMarkState(ScreenTutorials.home, revealState)
     LaunchedEffect(Unit) {
         if (onboardingManager.shouldShowTutorial(ScreenTutorials.KEY_HOME)) {
             coachState.start()
@@ -109,47 +115,48 @@ internal fun HomeContent(
         }
     }
 
-    // CoachMarkOverlay wraps the entire content with Reveal canvas for spotlighting
-    CoachMarkOverlay(
-        state = coachState,
-        onFinished = { onboardingManager.markTutorialSeen(ScreenTutorials.KEY_HOME) }
-    ) {
-        // Outer Box fills the full screen (no padding) so canvas coordinates
-        // align with boundsInRoot() screen coordinates.
+    // Reveal Coach Marks using library
+    RevealScaffold(revealCanvasState = revealCanvasState) {
+        // Outer Box fills the full screen (no padding) so CoachMarkOverlay canvas
+        // coordinates align with boundsInRoot() screen coordinates.
         Box(modifier = Modifier.fillMaxSize()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
+            Reveal(
+                revealCanvasState = revealCanvasState,
+                revealState = revealState,
             ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                ) {
                 PullToRefreshBox(
+            state = pullToRefreshState,
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
+            modifier = Modifier.fillMaxSize(),
+            indicator = {
+                PullToRefreshDefaults.Indicator(
                     state = pullToRefreshState,
                     isRefreshing = isRefreshing,
-                    onRefresh = onRefresh,
-                    modifier = Modifier.fillMaxSize(),
-                    indicator = {
-                        PullToRefreshDefaults.Indicator(
-                            state = pullToRefreshState,
-                            isRefreshing = isRefreshing,
-                            modifier = Modifier.align(Alignment.TopCenter),
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                ) {
-                    when {
-                        isLoading && dailyInsights.isEmpty() && homeRedesignState.heroLoadingState.isLoading -> {
-                            DashboardSkeleton()
-                        }
-                        dailyInsights.isEmpty() && !isLoading && todayPulse == null -> {
-                            EmptyDashboardState(
-                                onWrite = navigateToWrite,
-                                onTalkToEve = navigateToLive
-                            )
-                        }
-                        else -> {
-                            // Main dashboard — M3 Expressive layout
-                            LazyColumn(
+                    modifier = Modifier.align(Alignment.TopCenter),
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+        ) {
+            when {
+                isLoading && dailyInsights.isEmpty() && homeRedesignState.heroLoadingState.isLoading -> {
+                    DashboardSkeleton()
+                }
+                dailyInsights.isEmpty() && !isLoading && todayPulse == null -> {
+                    EmptyDashboardState(
+                        onWrite = navigateToWrite,
+                        onTalkToEve = navigateToLive
+                    )
+                }
+                else -> {
+                    // Main dashboard — M3 Expressive layout
+                    LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
                             start = 20.dp,
@@ -313,13 +320,18 @@ internal fun HomeContent(
                                 )
                             }
                         }
-                        }
                     }
-                } // end when
-                } // end PullToRefreshBox
-            } // end inner padded Box
-        } // end outer fullscreen Box
-    } // end CoachMarkOverlay
+                }
+            }
+        }
+        } // end inner padded Box
+
+        // ── Coach mark overlay — outside padded Box so Canvas coords match boundsInRoot()
+        CoachMarkOverlay(
+            state     = coachState,
+            onFinished = { onboardingManager.markTutorialSeen(ScreenTutorials.KEY_HOME) },
+        )
+    } // end outer fullscreen Box
 }
 
 // ==================== SKELETON (M3 Expressive) ====================

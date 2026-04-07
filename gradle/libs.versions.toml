@@ -112,8 +112,9 @@ multiplatform-settings = "1.3.0"
 decompose = "3.4.0"
 essenty = "2.5.0"
 
-# Coach Marks - ComposeCoach (KMP spotlight + onboarding, supports Web)
-compose-coach = "1.0.1"
+# Coach Marks - Reveal (KMP spotlight + onboarding)
+# Compatible with Kotlin 2.3.0, supports Android/iOS/Desktop/Web
+reveal = "4.1.0"
 
 # GitLive Firebase KMP SDK (bridge until official KFire is stable)
 gitlive-firebase = "2.4.0"
@@ -293,8 +294,8 @@ essenty-statekeeper = { module = "com.arkivanov.essenty:state-keeper", version.r
 essenty-instancekeeper = { module = "com.arkivanov.essenty:instance-keeper", version.ref = "essenty" }
 essenty-backhandler = { module = "com.arkivanov.essenty:back-handler", version.ref = "essenty" }
 
-# ComposeCoach (KMP Multiplatform - spotlight + onboarding, Web support)
-compose-coach = { module = "com.ruviapps.coachmark:compose-coach", version.ref = "compose-coach" }
+# Reveal (KMP Multiplatform - spotlight + onboarding)
+reveal = { module = "com.svenjacobs.reveal:reveal-core", version.ref = "reveal" }
 
 # GitLive Firebase KMP SDK (multiplatform Firebase, bridge until KFire stable)
 gitlive-firebase-auth = { module = "dev.gitlive:firebase-auth", version.ref = "gitlive-firebase" }

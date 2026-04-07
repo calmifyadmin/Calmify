@@ -126,7 +126,10 @@
       "Bash(__NEW_LINE_b3c1dd04b2a050a5__ echo:*)",
       "Bash(__NEW_LINE_702b9976a97656d0__ echo:*)",
       "Read(//c/Users/lifoe/Downloads/**)",
-      "Bash(tasklist)"
+      "Bash(tasklist)",
+      "Bash(tee /tmp/kotlin_migration_build.log)",
+      "Read(//tmp/**)",
+      "Bash(tee /tmp/kotlin_migration_tests.log)"
     ],
     "deny": []
   }

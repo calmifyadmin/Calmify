@@ -88,6 +88,7 @@ import com.lifo.util.auth.AuthProvider
 import com.lifo.util.repository.FeatureFlagRepository
 import com.lifo.util.repository.NotificationRepository
 import com.lifo.util.repository.ProfileSettingsRepository
+import com.lifo.ui.components.coaching.RevealCanvasWrapper
 
 /**
  * Main Decompose-based app composable.
@@ -202,11 +203,12 @@ fun DecomposeApp(
     var signOutDialogOpened by remember { mutableStateOf(false) }
     var deleteAllDialogOpened by remember { mutableStateOf(false) }
 
-    // Navigation Drawer wrapper
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        gesturesEnabled = isHomeScreen,
-        drawerContent = {
+    // Navigation Drawer wrapper with Reveal canvas for coach marks
+    RevealCanvasWrapper {
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            gesturesEnabled = isHomeScreen,
+            drawerContent = {
             ModalDrawerSheet(
                 modifier = Modifier.fillMaxWidth(0.85f),
                 drawerContainerColor = MaterialTheme.colorScheme.surface
@@ -996,6 +998,7 @@ fun DecomposeApp(
                 )
             }
         }
+    }
     }
 
     // Sign Out Dialog

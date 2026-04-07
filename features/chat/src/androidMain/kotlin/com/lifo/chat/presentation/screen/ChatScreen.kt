@@ -66,11 +66,6 @@ import com.lifo.chat.domain.model.AIEmotion
 import com.lifo.chat.domain.model.ConnectionStatus
 import com.lifo.chat.domain.model.TurnState
 import androidx.compose.runtime.saveable.rememberSaveable
-import com.lifo.ui.tutorial.CoachMark
-import com.lifo.ui.tutorial.CoachMarkStep
-import com.lifo.util.tutorial.OnboardingManager
-import com.lifo.util.tutorial.TutorialKey
-import org.koin.compose.koinInject
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -108,25 +103,6 @@ fun ChatScreen(
     // Track chat modes - regular voice vs live chat mode
     var isVoiceChatMode by remember { mutableStateOf(false) }
     var isLiveChatMode by remember { mutableStateOf(false) }
-
-    val onboardingManager = koinInject<OnboardingManager>()
-    var showChatCoach by rememberSaveable {
-        mutableStateOf(!onboardingManager.isTutorialSeen(TutorialKey.CHAT))
-    }
-    val chatCoachSteps = remember {
-        listOf(
-            CoachMarkStep(
-                title = "Parla con Eve",
-                description = "Eve è la tua compagna di riflessione. Puoi scriverle quello che hai in mente — " +
-                    "ti risponde con cura e senza giudizi. Non è una chatbot: ascolta davvero.",
-            ),
-            CoachMarkStep(
-                title = "Modalità vocale",
-                description = "Tocca il microfono per una conversazione naturale. Eve parla italiano, " +
-                    "capisce il tuo tono e risponde con voce. Perfetto quando le parole scritte non bastano.",
-            ),
-        )
-    }
 
     // Permission handling for voice and camera modes
     val audioPermissionLauncher = rememberLauncherForActivityResult(
@@ -421,15 +397,6 @@ fun ChatScreen(
                 }
             }
         } // End of Scaffold
-
-        CoachMark(
-            visible = showChatCoach,
-            steps = chatCoachSteps,
-            onComplete = {
-                onboardingManager.markTutorialSeen(TutorialKey.CHAT)
-                showChatCoach = false
-            },
-        )
     } // End of Box
 
     // Error handling

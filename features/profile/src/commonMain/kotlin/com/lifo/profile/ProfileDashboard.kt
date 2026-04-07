@@ -33,12 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.lifo.ui.tutorial.CoachMark
-import com.lifo.ui.tutorial.CoachMarkStep
 import com.lifo.ui.tutorial.InfoTooltip
-import com.lifo.util.tutorial.OnboardingManager
-import com.lifo.util.tutorial.TutorialKey
-import org.koin.compose.koinInject
 import com.lifo.home.domain.model.ActivityImpact
 import com.lifo.home.domain.model.GrowthProgress
 import com.lifo.home.domain.model.SleepMoodCorrelation
@@ -60,27 +55,6 @@ fun ProfileDashboard(
     viewModel: ProfileViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-
-    val onboardingManager = koinInject<OnboardingManager>()
-    var showPercorsoCoach by rememberSaveable {
-        mutableStateOf(!onboardingManager.isTutorialSeen(TutorialKey.PERCORSO))
-    }
-    val percorsoCoachSteps = remember {
-        listOf(
-            CoachMarkStep(
-                title = "Le tue correlazioni personali",
-                description = "Qui vedi come le tue abitudini si influenzano a vicenda: come il sonno impatta l'umore, o l'attività fisica sull'energia. Sono pattern tuoi, non regole universali.",
-            ),
-            CoachMarkStep(
-                title = "Il tuo trend di benessere",
-                description = "Questo grafico mostra l'evoluzione del tuo benessere nel tempo, basato sulla Self-Determination Theory. Un percorso — non una performance.",
-            ),
-            CoachMarkStep(
-                title = "Forze e aree di crescita",
-                description = "Ogni settimana identifichi i tuoi punti di forza e le aree su cui lavorare. Piccoli passi, direzione chiara.",
-            ),
-        )
-    }
 
     Box(modifier = Modifier.fillMaxSize()) {
 
@@ -110,15 +84,6 @@ fun ProfileDashboard(
             }
         }
     }
-
-    CoachMark(
-        visible = showPercorsoCoach,
-        steps = percorsoCoachSteps,
-        onComplete = {
-            onboardingManager.markTutorialSeen(TutorialKey.PERCORSO)
-            showPercorsoCoach = false
-        },
-    )
 
     } // end Box
 }
