@@ -25,14 +25,13 @@ kotlin {
             implementation libs.koin.core
             implementation libs.koin.compose
             implementation libs.koin.compose.viewmodel
-
-            implementation libs.coil
-            implementation libs.coil.network.okhttp
         }
 
         androidMain.dependencies {
             implementation libs.core.ktx
             implementation libs.coroutines.android
+            implementation libs.coil
+            implementation libs.coil.network.okhttp
         }
 
         commonTest.dependencies {
