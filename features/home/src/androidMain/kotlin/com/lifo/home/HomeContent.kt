@@ -93,19 +93,23 @@ internal fun HomeContent(
     LaunchedEffect(coachState.currentStep?.targetKey) {
         val targetKey = coachState.currentStep?.targetKey
         if (targetKey != null) {
-            // Map target keys to LazyColumn item indices for scrolling
-            // These indices correspond to the item() calls in the LazyColumn below
-            val scrollIndex = when (targetKey) {
-                CoachMarkKeys.HOME_GREETING -> 0       // item(key = "hero")
-                CoachMarkKeys.HOME_QUICK_ACTIONS -> 1  // item(key = "quick_actions")
-                CoachMarkKeys.HOME_AVATAR -> 1         // Also quick_actions (nested element)
-                CoachMarkKeys.HOME_MOOD -> 3           // item(key = "stats")
-                else -> null
-            }
+            try {
+                // Map target keys to LazyColumn item indices for scrolling
+                // These indices correspond to the item() calls in the LazyColumn below
+                val scrollIndex = when (targetKey) {
+                    CoachMarkKeys.HOME_GREETING -> 0       // item(key = "hero")
+                    CoachMarkKeys.HOME_QUICK_ACTIONS -> 1  // item(key = "quick_actions")
+                    CoachMarkKeys.HOME_AVATAR -> 1         // Also quick_actions (nested element)
+                    CoachMarkKeys.HOME_MOOD -> 3           // item(key = "stats")
+                    else -> null
+                }
 
-            if (scrollIndex != null) {
-                lazyListState.animateScrollToItem(scrollIndex)
-                kotlinx.coroutines.delay(500) // Wait for scroll + render
+                if (scrollIndex != null && lazyListState.layoutInfo.totalItemsCount > scrollIndex) {
+                    lazyListState.animateScrollToItem(scrollIndex)
+                    kotlinx.coroutines.delay(500) // Wait for scroll + render
+                }
+            } catch (e: Exception) {
+                // Scroll might fail if LazyColumn hasn't been laid out yet - ignore
             }
         }
     }
