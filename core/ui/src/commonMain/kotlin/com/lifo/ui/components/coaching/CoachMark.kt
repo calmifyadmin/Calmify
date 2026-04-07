@@ -201,6 +201,7 @@ fun CoachMarkOverlay(
         onRevealableClick = { /* No action on target click */ },
         onOverlayClick = { /* Overlay is non-interactive */ },
         modifier = modifier,
+        overlayArrangement = RevealOverlayArrangement.Bottom,
         overlayContent = { key ->
             state.steps.find { it.targetKey == key }?.let { step ->
                 Surface(
