@@ -3,8 +3,10 @@ package com.lifo.home
 import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -79,9 +81,32 @@ internal fun HomeContent(
     // ── Coach marks ──────────────────────────────────────────────────────────
     val onboardingManager: OnboardingManager = koinInject()
     val coachState = rememberCoachMarkState(ScreenTutorials.home)
+    val lazyListState = rememberLazyListState()
+
     LaunchedEffect(Unit) {
         if (onboardingManager.shouldShowTutorial(ScreenTutorials.KEY_HOME)) {
             coachState.start()
+        }
+    }
+
+    // Auto-scroll to reveal target if it's off-screen
+    LaunchedEffect(coachState.currentStep?.targetKey) {
+        val targetKey = coachState.currentStep?.targetKey
+        if (targetKey != null) {
+            // Map target keys to LazyColumn item indices for scrolling
+            // These indices correspond to the item() calls in the LazyColumn below
+            val scrollIndex = when (targetKey) {
+                CoachMarkKeys.HOME_GREETING -> 0       // item(key = "hero")
+                CoachMarkKeys.HOME_QUICK_ACTIONS -> 1  // item(key = "quick_actions")
+                CoachMarkKeys.HOME_AVATAR -> 1         // Also quick_actions (nested element)
+                CoachMarkKeys.HOME_MOOD -> 3           // item(key = "stats")
+                else -> null
+            }
+
+            if (scrollIndex != null) {
+                lazyListState.animateScrollToItem(scrollIndex)
+                kotlinx.coroutines.delay(500) // Wait for scroll + render
+            }
         }
     }
 
@@ -150,6 +175,7 @@ internal fun HomeContent(
                         else -> {
                             // Main dashboard — M3 Expressive layout
                             LazyColumn(
+                        state = lazyListState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
                             start = 20.dp,
