@@ -64,6 +64,12 @@ val LocalRevealCanvasState = staticCompositionLocalOf<RevealCanvasState?> { null
  */
 val LocalRevealState = staticCompositionLocalOf<RevealState?> { null }
 
+/**
+ * Provides a callback to report target element bounds for tooltip positioning.
+ * Used by [coachMarkTarget] to send coordinates back to [CoachMarkOverlay].
+ */
+val LocalTargetBoundsCallback = staticCompositionLocalOf<((String, androidx.compose.ui.geometry.Rect) -> Unit)?> { null }
+
 // ─────────────────────────────────────────────────────────────────────────────
 // CoachMarkState — hoisted state for the entire overlay sequence
 // ─────────────────────────────────────────────────────────────────────────────
@@ -94,6 +100,10 @@ class CoachMarkState(val steps: List<CoachMarkStep>) {
     /** Index of the currently active step, or -1 when hidden. */
     var currentIndex by mutableStateOf(-1)
         private set
+
+    /** Bounds of the currently revealed target element (for positioning the tooltip). */
+    var targetBounds by mutableStateOf(androidx.compose.ui.geometry.Rect.Zero)
+        internal set
 
     /** Current step data, or null when not visible. */
     val currentStep: CoachMarkStep? get() = steps.getOrNull(currentIndex)
@@ -201,7 +211,6 @@ fun CoachMarkOverlay(
         onRevealableClick = { /* No action on target click */ },
         onOverlayClick = { /* Overlay is non-interactive */ },
         modifier = modifier,
-        overlayArrangement = RevealOverlayArrangement.Bottom,
         overlayContent = { key ->
             state.steps.find { it.targetKey == key }?.let { step ->
                 Surface(
