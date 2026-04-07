@@ -98,19 +98,23 @@ internal fun HomeContent(
         val targetKey = coachState.currentStep?.targetKey
         if (targetKey != null && isLazyColumnReady) {
             try {
-                // Map target keys to LazyColumn item indices for scrolling
-                // These indices correspond to the item() calls in the LazyColumn below
-                val scrollIndex = when (targetKey) {
-                    CoachMarkKeys.HOME_GREETING -> 0       // item(key = "hero")
-                    CoachMarkKeys.HOME_QUICK_ACTIONS -> 1  // item(key = "quick_actions")
-                    CoachMarkKeys.HOME_AVATAR -> 1         // Also quick_actions (nested element)
-                    CoachMarkKeys.HOME_MOOD -> 5           // item(key = "mood")
-                    else -> null
-                }
-
-                if (scrollIndex != null && lazyListState.layoutInfo.totalItemsCount > scrollIndex) {
-                    lazyListState.animateScrollToItem(scrollIndex)
-                    kotlinx.coroutines.delay(1000) // Wait for scroll + render completion
+                when (targetKey) {
+                    CoachMarkKeys.HOME_GREETING -> {
+                        lazyListState.animateScrollToItem(0)
+                        kotlinx.coroutines.delay(800)
+                    }
+                    CoachMarkKeys.HOME_QUICK_ACTIONS, CoachMarkKeys.HOME_AVATAR -> {
+                        lazyListState.animateScrollToItem(1)
+                        kotlinx.coroutines.delay(800)
+                    }
+                    CoachMarkKeys.HOME_MOOD -> {
+                        // Scroll to item 5, or to the last item if 5 doesn't exist
+                        val totalItems = lazyListState.layoutInfo.totalItemsCount
+                        val scrollIndex = if (totalItems > 5) 5 else maxOf(0, totalItems - 2)
+                        lazyListState.animateScrollToItem(scrollIndex)
+                        kotlinx.coroutines.delay(1500)
+                    }
+                    else -> { /* no scroll needed */ }
                 }
             } catch (e: Exception) {
                 // Scroll might fail if LazyColumn hasn't been laid out yet - ignore

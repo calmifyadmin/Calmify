@@ -179,7 +179,17 @@ fun CoachMarkOverlay(
     // Sync CoachMarkState with Reveal using LaunchedEffect (reveal/hide are suspend functions)
     LaunchedEffect(state.currentStep?.targetKey) {
         if (state.isVisible && state.currentStep != null) {
-            revealState.reveal(state.currentStep!!.targetKey as Any)
+            try {
+                revealState.reveal(state.currentStep!!.targetKey as Any)
+            } catch (e: IllegalArgumentException) {
+                // Target may not be rendered yet, try again after delay
+                kotlinx.coroutines.delay(500)
+                try {
+                    revealState.reveal(state.currentStep!!.targetKey as Any)
+                } catch (e2: Exception) {
+                    // Target still not found, silently continue
+                }
+            }
         } else {
             revealState.hide()
         }
