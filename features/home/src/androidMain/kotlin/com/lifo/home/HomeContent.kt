@@ -80,11 +80,9 @@ internal fun HomeContent(
     val onboardingManager: OnboardingManager = koinInject()
     val coachState = rememberCoachMarkState(ScreenTutorials.home)
     LaunchedEffect(Unit) {
-        // TODO: Re-enable coach mark when revealable() modifier is properly implemented
-        // Currently disabled because coachMarkTarget doesn't apply revealable() yet
-        // if (onboardingManager.shouldShowTutorial(ScreenTutorials.KEY_HOME)) {
-        //     coachState.start()
-        // }
+        if (onboardingManager.shouldShowTutorial(ScreenTutorials.KEY_HOME)) {
+            coachState.start()
+        }
     }
 
     // Redesign state

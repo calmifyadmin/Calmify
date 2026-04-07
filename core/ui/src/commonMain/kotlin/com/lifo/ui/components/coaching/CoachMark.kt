@@ -26,6 +26,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.composed
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -124,16 +125,23 @@ fun rememberCoachMarkState(steps: List<CoachMarkStep>): CoachMarkState =
 
 /**
  * Attach this to any composable to register it as a spotlight target.
- * Currently a placeholder - full implementation requires KMP-compatible way
- * to apply revealable() modifier with RevealState from CompositionLocal.
+ * Uses Modifier.composed() to read RevealState from CompositionLocal
+ * and apply the revealable() modifier from the Reveal library.
  *
  * @param state  The [CoachMarkState] that drives the overlay.
  * @param key    One of the [CoachMarkKeys] constants.
  */
 fun Modifier.coachMarkTarget(
-    @Suppress("UNUSED_PARAMETER") state: CoachMarkState,
-    @Suppress("UNUSED_PARAMETER") key: String,
-): Modifier = this
+    state: CoachMarkState,
+    key: String,
+): Modifier = composed {
+    val revealState = LocalRevealState.current
+    if (revealState != null) {
+        this.revealable(key = key as Any, state = revealState)
+    } else {
+        this
+    }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CoachMarkOverlay — Reveal-based coach mark overlay with content wrapping
