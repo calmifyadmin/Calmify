@@ -1,8 +1,7 @@
 package com.lifo.notifications
 
 import app.cash.turbine.test
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
+import com.lifo.util.auth.AuthProvider
 import com.lifo.util.model.RequestState
 import com.lifo.util.repository.NotificationRepository
 import io.mockk.coEvery
@@ -28,14 +27,16 @@ class NotificationsViewModelTest {
 
     private lateinit var viewModel: NotificationsViewModel
     private val notificationRepository = mockk<NotificationRepository>(relaxed = true)
-    private val firebaseAuth = mockk<FirebaseAuth>()
-    private val mockUser = mockk<FirebaseUser>()
+    private val authProvider = mockk<AuthProvider>(relaxed = true)
 
     @Before
     fun setUp() {
-        every { firebaseAuth.currentUser } returns mockUser
-        every { mockUser.uid } returns "test-user-id"
-        viewModel = NotificationsViewModel(notificationRepository, firebaseAuth)
+        every { authProvider.isAuthenticated } returns true
+        every { authProvider.currentUserId } returns "test-user-id"
+        viewModel = NotificationsViewModel(
+            notificationRepository = notificationRepository,
+            authProvider = authProvider
+        )
     }
 
     @Test
@@ -88,7 +89,8 @@ class NotificationsViewModelTest {
 
     @Test
     fun `LoadNotifications without authenticated user emits ShowError`() = runTest {
-        every { firebaseAuth.currentUser } returns null
+        every { authProvider.isAuthenticated } returns false
+        every { authProvider.currentUserId } returns null
 
         viewModel.effects.test {
             viewModel.onIntent(NotificationsContract.Intent.LoadNotifications)

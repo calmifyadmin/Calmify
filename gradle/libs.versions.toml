@@ -1,8 +1,8 @@
 [versions]
-# Core - ULTIME STABILI COMPATIBILI CON HILT 2.55
+# Core - KOTLIN 2.3.0 STABLE RELEASE (2026-01-15)
 agp = "8.13.0"
-kotlin = "2.1.0"
-ksp = "2.1.0-1.0.29"
+kotlin = "2.3.0"
+ksp = "2.3.6"
 
 # Compose - LATEST STABLE 2025 + Material3 Alpha for Expressive
 compose-bom = "2025.10.01"

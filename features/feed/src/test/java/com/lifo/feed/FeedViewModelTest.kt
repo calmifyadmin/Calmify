@@ -1,10 +1,11 @@
 package com.lifo.feed
 
 import app.cash.turbine.test
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
+import com.lifo.util.auth.AuthProvider
 import com.lifo.util.model.RequestState
 import com.lifo.util.repository.FeedRepository
+import com.lifo.util.repository.SocialGraphRepository
+import com.lifo.util.repository.ThreadHydrator
 import com.lifo.util.repository.ThreadRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -31,14 +32,21 @@ class FeedViewModelTest {
     private lateinit var viewModel: FeedViewModel
     private val feedRepository = mockk<FeedRepository>(relaxed = true)
     private val threadRepository = mockk<ThreadRepository>(relaxed = true)
-    private val firebaseAuth = mockk<FirebaseAuth>()
-    private val mockUser = mockk<FirebaseUser>()
+    private val threadHydrator = mockk<ThreadHydrator>(relaxed = true)
+    private val authProvider = mockk<AuthProvider>(relaxed = true)
+    private val socialGraphRepository = mockk<SocialGraphRepository>(relaxed = true)
 
     @Before
     fun setUp() {
-        every { firebaseAuth.currentUser } returns mockUser
-        every { mockUser.uid } returns "test-user-id"
-        viewModel = FeedViewModel(feedRepository, threadRepository, firebaseAuth)
+        every { authProvider.isAuthenticated } returns true
+        every { authProvider.currentUserId } returns "test-user-id"
+        viewModel = FeedViewModel(
+            feedRepository = feedRepository,
+            threadRepository = threadRepository,
+            threadHydrator = threadHydrator,
+            authProvider = authProvider,
+            socialGraphRepository = socialGraphRepository
+        )
     }
 
     @Test
@@ -48,7 +56,7 @@ class FeedViewModelTest {
         assertFalse(state.isLoading)
         assertFalse(state.isRefreshing)
         assertFalse(state.isLoadingMore)
-        assertEquals(FeedContract.FeedTab.FOR_YOU, state.selectedTab)
+        assertEquals(FeedContract.FeedTab.ALL, state.selectedTab)
         assertFalse(state.hasMore)
         assertNull(state.nextCursor)
         assertNull(state.error)
@@ -78,7 +86,8 @@ class FeedViewModelTest {
 
     @Test
     fun `LoadFeed without authenticated user emits ShowError effect`() = runTest {
-        every { firebaseAuth.currentUser } returns null
+        every { authProvider.isAuthenticated } returns false
+        every { authProvider.currentUserId } returns null
 
         viewModel.effects.test {
             viewModel.onIntent(FeedContract.Intent.LoadFeed)
@@ -109,10 +118,10 @@ class FeedViewModelTest {
         every { feedRepository.getFollowingFeed("test-user-id") } returns flowOf(
             RequestState.Success(FeedRepository.FeedPage()),
         )
-        viewModel.onIntent(FeedContract.Intent.SelectTab(FeedContract.FeedTab.FOLLOWING))
+        viewModel.onIntent(FeedContract.Intent.SelectTab(FeedContract.FeedTab.SCOPERTE))
         advanceUntilIdle()
 
-        assertEquals(FeedContract.FeedTab.FOLLOWING, viewModel.state.value.selectedTab)
+        assertEquals(FeedContract.FeedTab.SCOPERTE, viewModel.state.value.selectedTab)
     }
 
     @Test

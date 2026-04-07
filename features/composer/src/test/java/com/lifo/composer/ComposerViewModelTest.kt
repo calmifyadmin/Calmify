@@ -1,9 +1,10 @@
 package com.lifo.composer
 
+import android.app.Application
 import app.cash.turbine.test
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
+import com.lifo.util.auth.AuthProvider
 import com.lifo.util.model.RequestState
+import com.lifo.util.repository.MediaUploadRepository
 import com.lifo.util.repository.ThreadRepository
 import io.mockk.coEvery
 import io.mockk.every
@@ -27,14 +28,20 @@ class ComposerViewModelTest {
 
     private lateinit var viewModel: ComposerViewModel
     private val threadRepository = mockk<ThreadRepository>(relaxed = true)
-    private val firebaseAuth = mockk<FirebaseAuth>()
-    private val mockUser = mockk<FirebaseUser>()
+    private val authProvider = mockk<AuthProvider>(relaxed = true)
+    private val mediaUploadRepository = mockk<MediaUploadRepository>(relaxed = true)
+    private val appContext = mockk<Application>(relaxed = true)
 
     @Before
     fun setUp() {
-        every { firebaseAuth.currentUser } returns mockUser
-        every { mockUser.uid } returns "test-user-id"
-        viewModel = ComposerViewModel(threadRepository, firebaseAuth)
+        every { authProvider.isAuthenticated } returns true
+        every { authProvider.currentUserId } returns "test-user-id"
+        viewModel = ComposerViewModel(
+            threadRepository = threadRepository,
+            authProvider = authProvider,
+            mediaUploadRepository = mediaUploadRepository,
+            appContext = appContext
+        )
     }
 
     @Test
@@ -143,7 +150,8 @@ class ComposerViewModelTest {
 
     @Test
     fun `Submit without authenticated user emits ShowError`() = runTest {
-        every { firebaseAuth.currentUser } returns null
+        every { authProvider.isAuthenticated } returns false
+        every { authProvider.currentUserId } returns null
 
         viewModel.effects.test {
             viewModel.onIntent(ComposerContract.Intent.UpdateContent("Valid content"))
