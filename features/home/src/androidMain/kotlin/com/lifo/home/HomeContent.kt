@@ -82,42 +82,37 @@ internal fun HomeContent(
     val onboardingManager: OnboardingManager = koinInject()
     val coachState = rememberCoachMarkState(ScreenTutorials.home)
     val lazyListState = rememberLazyListState()
-    var isLazyColumnReady by remember { mutableStateOf(false) }
 
+    // Avvia il tour al primo caricamento
     LaunchedEffect(Unit) {
         if (onboardingManager.shouldShowTutorial(ScreenTutorials.KEY_HOME)) {
-            // Delay initial start until LazyColumn is laid out
-            kotlinx.coroutines.delay(500)
-            isLazyColumnReady = true
             coachState.start()
         }
     }
 
-    // Auto-scroll to reveal target if it's off-screen
+    // Auto-scroll per rivelare il target se fuori schermo
+    // Usa animateScrollToItem per transizione smooth, sincronizzato con BringIntoViewRequester
     LaunchedEffect(coachState.currentStep?.targetKey) {
         val targetKey = coachState.currentStep?.targetKey
-        if (targetKey != null && isLazyColumnReady) {
+        if (targetKey != null) {
             try {
                 when (targetKey) {
                     CoachMarkKeys.HOME_GREETING -> {
                         lazyListState.animateScrollToItem(0)
-                        kotlinx.coroutines.delay(800)
                     }
                     CoachMarkKeys.HOME_QUICK_ACTIONS, CoachMarkKeys.HOME_AVATAR -> {
                         lazyListState.animateScrollToItem(1)
-                        kotlinx.coroutines.delay(800)
                     }
                     CoachMarkKeys.HOME_MOOD -> {
-                        // Scroll to item 5, or to the last item if 5 doesn't exist
+                        // Scroll al target HOME_MOOD (indice ~5 nella LazyColumn)
                         val totalItems = lazyListState.layoutInfo.totalItemsCount
                         val scrollIndex = if (totalItems > 5) 5 else maxOf(0, totalItems - 2)
                         lazyListState.animateScrollToItem(scrollIndex)
-                        kotlinx.coroutines.delay(1500)
                     }
-                    else -> { /* no scroll needed */ }
+                    else -> { /* nessuno scroll necessario */ }
                 }
             } catch (e: Exception) {
-                // Scroll might fail if LazyColumn hasn't been laid out yet - ignore
+                // Lo scroll potrebbe fallire — il sistema attenderà reattivamente il layout
             }
         }
     }
@@ -146,20 +141,16 @@ internal fun HomeContent(
         }
     }
 
-    // CoachMarkOverlay wraps the entire content with Reveal canvas for spotlighting
-    CoachMarkOverlay(
-        state = coachState,
-        onFinished = { onboardingManager.markTutorialSeen(ScreenTutorials.KEY_HOME) }
-    ) {
-        // Outer Box fills the full screen (no padding) so canvas coordinates
-        // align with boundsInRoot() screen coordinates.
-        Box(modifier = Modifier.fillMaxSize()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-            ) {
-                PullToRefreshBox(
+    // Outer Box fills the full screen (no padding) so canvas coordinates
+    // align with boundsInRoot() screen coordinates.
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Content with padding
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            PullToRefreshBox(
                     state = pullToRefreshState,
                     isRefreshing = isRefreshing,
                     onRefresh = onRefresh,
@@ -317,9 +308,8 @@ internal fun HomeContent(
                                         dominantMood = dominantMood!!,
                                         timeRange = selectedTimeRange,
                                         onTimeRangeChange = { viewModel.updateTimeRange(it) },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .coachMarkTarget(coachState, CoachMarkKeys.HOME_MOOD)
+                                        modifier = Modifier.fillMaxWidth(),
+                                        donutModifier = Modifier.coachMarkTarget(coachState, CoachMarkKeys.HOME_MOOD),
                                     )
                                 }
                             }
@@ -354,10 +344,16 @@ internal fun HomeContent(
                         }
                     }
                 } // end when
-                } // end PullToRefreshBox
-            } // end inner padded Box
-        } // end outer fullscreen Box
-    } // end CoachMarkOverlay
+            } // end PullToRefreshBox
+        } // end inner padded Box
+
+        // CoachMarkOverlay as overlay on top of content
+        CoachMarkOverlay(
+            state = coachState,
+            onFinished = { onboardingManager.markTutorialSeen(ScreenTutorials.KEY_HOME) },
+            modifier = Modifier.fillMaxSize()
+        )
+    } // end outer fullscreen Box
 }
 
 // ==================== SKELETON (M3 Expressive) ====================

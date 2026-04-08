@@ -39,7 +39,8 @@ internal fun ExpressiveMoodCard(
     dominantMood: DominantMood,
     timeRange: TimeRange,
     onTimeRangeChange: (TimeRange) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    donutModifier: Modifier = Modifier,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val dominantPct = (dominantMood.percentage * 100).toInt()
@@ -94,7 +95,7 @@ internal fun ExpressiveMoodCard(
 
             // Centered donut — larger, simpler
             Box(
-                modifier = Modifier
+                modifier = donutModifier
                     .fillMaxWidth()
                     .height(200.dp),
                 contentAlignment = Alignment.Center

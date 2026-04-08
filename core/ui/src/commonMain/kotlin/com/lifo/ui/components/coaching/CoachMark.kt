@@ -1,128 +1,119 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
 package com.lifo.ui.components.coaching
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.ui.composed
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.modifier.ModifierLocalConsumer
-import androidx.compose.ui.modifier.ModifierLocalReadScope
-import androidx.compose.ui.node.ModifierNodeElement
-import androidx.compose.ui.node.SemanticsModifierNode
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.lifo.ui.theme.CalmifyRadius
 import com.lifo.ui.theme.CalmifySpacing
-import androidx.compose.ui.semantics.semantics
-import com.svenjacobs.reveal.Reveal
-import com.svenjacobs.reveal.RevealCanvas
-import com.svenjacobs.reveal.RevealCanvasState
-import com.svenjacobs.reveal.RevealOverlayArrangement
-import com.svenjacobs.reveal.RevealState
-import com.svenjacobs.reveal.rememberRevealCanvasState
-import com.svenjacobs.reveal.rememberRevealState
-import com.svenjacobs.reveal.revealable
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CompositionLocal — propagates Reveal state without explicit parameters
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Provides the [RevealCanvasState] to all descendant [CoachMarkOverlay] composables.
- * Set by [RevealCanvasWrapper] at app level.
- */
-val LocalRevealCanvasState = staticCompositionLocalOf<RevealCanvasState?> { null }
-
-/**
- * Provides the [RevealState] to elements marked with [coachMarkTarget].
- * Set by [CoachMarkOverlay] internally for reveal functionality.
- */
-val LocalRevealState = staticCompositionLocalOf<RevealState?> { null }
-
-/**
- * Provides a callback to report target element bounds for tooltip positioning.
- * Used by [coachMarkTarget] to send coordinates back to [CoachMarkOverlay].
- */
-val LocalTargetBoundsCallback = staticCompositionLocalOf<((String, androidx.compose.ui.geometry.Rect) -> Unit)?> { null }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CoachMarkState — hoisted state for the entire overlay sequence
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Hoisted state for a coach-mark sequence using Reveal library.
- *
- * Usage in screen:
- * ```
- * val coachState = rememberCoachMarkState(ScreenTutorials.home)
- *
- * LaunchedEffect(Unit) {
- *     if (onboardingManager.shouldShowTutorial(ScreenTutorials.KEY_HOME)) {
- *         coachState.start()
- *     }
- * }
- *
- * CoachMarkOverlay(state = coachState, onFinished = { ... }) {
- *     Box(Modifier.fillMaxSize()) {
- *         GreetingRow(modifier = Modifier.coachMarkTarget(coachState, CoachMarkKeys.HOME_GREETING))
- *         // ... other content with targets
- *     }
- * }
- * ```
- */
 class CoachMarkState(val steps: List<CoachMarkStep>) {
 
-    /** Index of the currently active step, or -1 when hidden. */
     var currentIndex by mutableStateOf(-1)
         private set
 
-    /** Bounds of the currently revealed target element (for positioning the tooltip). */
-    var targetBounds by mutableStateOf(androidx.compose.ui.geometry.Rect.Zero)
-        internal set
+    private val targets = mutableStateMapOf<String, Rect>()
+    private val targetPositions = mutableStateMapOf<String, Offset>()
 
-    /** Current step data, or null when not visible. */
-    val currentStep: CoachMarkStep? get() = steps.getOrNull(currentIndex)
+    /** Top Y coordinate (px) of each registered target */
+    private val targetTops = mutableStateMapOf<String, Float>()
+
+    private val bringIntoViewRequesters = mutableMapOf<String, BringIntoViewRequester>()
 
     val isVisible: Boolean get() = currentIndex >= 0
+    val currentStep: CoachMarkStep? get() = steps.getOrNull(currentIndex)
+    val currentSpotlight: Rect? get() = currentStep?.targetKey?.let { targets[it] }
+    val currentCardPosition: Offset? get() = currentStep?.targetKey?.let { targetPositions[it] }
     val totalSteps: Int get() = steps.size
     val stepDisplay: String get() = "${currentIndex + 1} di $totalSteps"
 
-    fun start() {
-        currentIndex = 0
+    fun start() { currentIndex = 0 }
+    fun advance() { if (currentIndex < steps.lastIndex) currentIndex++ else hide() }
+    fun hide() { currentIndex = -1 }
+
+    internal fun registerTarget(key: String, bounds: Rect) {
+        targets[key] = bounds
     }
 
-    fun advance() {
-        if (currentIndex < steps.lastIndex) currentIndex++ else hide()
+    internal fun registerTargetPosition(key: String, coords: LayoutCoordinates) {
+        val bounds = coords.boundsInRoot()
+        targetPositions[key] = bounds.bottomCenter
+        targetTops[key] = bounds.top
     }
 
-    fun hide() {
-        currentIndex = -1
+    internal fun registerBringIntoViewRequester(key: String, requester: BringIntoViewRequester) {
+        bringIntoViewRequesters[key] = requester
     }
+
+    internal fun getBringIntoViewRequester(key: String): BringIntoViewRequester? =
+        bringIntoViewRequesters[key]
+
+    /** Returns the top Y (px) of the target, or null if not yet measured. */
+    fun getTargetTop(key: String): Float? = targetTops[key]
 }
 
 @Composable
@@ -130,190 +121,293 @@ fun rememberCoachMarkState(steps: List<CoachMarkStep>): CoachMarkState =
     remember(steps) { CoachMarkState(steps) }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Modifier extension — marks element as spotlight target (Reveal)
+// Modifier extension
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Attach this to any composable to register it as a spotlight target.
- * Uses Modifier.composed() to read RevealState from CompositionLocal
- * and apply the revealable() modifier from the Reveal library.
- *
- * @param state  The [CoachMarkState] that drives the overlay.
- * @param key    One of the [CoachMarkKeys] constants.
- */
 fun Modifier.coachMarkTarget(
     state: CoachMarkState,
     key: String,
-): Modifier = composed {
-    val revealState = LocalRevealState.current
-    if (revealState != null) {
-        this.revealable(key = key as Any, state = revealState)
-    } else {
-        this
+    padding: Float = 12f,
+): Modifier = this.onGloballyPositioned { coords: LayoutCoordinates ->
+    val bounds = coords.boundsInRoot()
+    state.registerTarget(
+        key,
+        Rect(
+            left   = bounds.left   - padding,
+            top    = bounds.top    - padding,
+            right  = bounds.right  + padding,
+            bottom = bounds.bottom + padding,
+        )
+    )
+    state.registerTargetPosition(key, coords)
+}
+
+@Composable
+fun CoachMarkTargetWithScroll(
+    state: CoachMarkState,
+    key: String,
+    modifier: Modifier = Modifier,
+    content: @Composable (Modifier) -> Unit,
+) {
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    LaunchedEffect(key) {
+        state.registerBringIntoViewRequester(key, bringIntoViewRequester)
     }
+    content(
+        modifier
+            .bringIntoViewRequester(bringIntoViewRequester)
+            .coachMarkTarget(state, key)
+    )
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CoachMarkOverlay — Reveal-based coach mark overlay with content wrapping
+// CoachMarkOverlay
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Coach-mark overlay using Reveal library.
- * Wraps the screen content to enable spotlight on target elements.
- *
- * Requires [RevealCanvasWrapper] to be set up at app level.
- *
- * The [RevealCanvasState] is automatically obtained from [LocalRevealCanvasState]
- * (no explicit parameter needed).
- *
- * @param state       Drives visibility, current step, and spotlight position.
- * @param onFinished  Called when the user completes or skips the entire sequence.
- * @param modifier    Applied to the Reveal composable.
- * @param content     The screen content with .coachMarkTarget() elements.
- */
+private val OverlayColor = Color(0xCC000000)
+private val SpotlightColor = Color(0x00000000)
+
 @Composable
 fun CoachMarkOverlay(
     state: CoachMarkState,
     onFinished: () -> Unit = {},
     modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
+    bottomBarHeight: Dp = 80.dp,
 ) {
-    val revealCanvasState = LocalRevealCanvasState.current ?: run {
-        // Fallback: if no RevealCanvasWrapper, just render content without overlay
-        content()
-        return
-    }
-
-    val revealState = rememberRevealState()
-
-    // Sync CoachMarkState with Reveal using LaunchedEffect (reveal/hide are suspend functions)
-    LaunchedEffect(state.currentStep?.targetKey) {
-        if (state.isVisible && state.currentStep != null) {
-            try {
-                revealState.reveal(state.currentStep!!.targetKey as Any)
-            } catch (e: IllegalArgumentException) {
-                // Target may not be rendered yet, try again after delay
-                kotlinx.coroutines.delay(500)
-                try {
-                    revealState.reveal(state.currentStep!!.targetKey as Any)
-                } catch (e2: Exception) {
-                    // Target still not found, silently continue
-                }
-            }
-        } else {
-            revealState.hide()
-        }
-    }
-
-    Reveal(
-        revealCanvasState = revealCanvasState,
-        revealState = revealState,
-        onRevealableClick = { /* No action on target click */ },
-        onOverlayClick = { /* Overlay is non-interactive */ },
+    AnimatedVisibility(
+        visible  = state.isVisible,
+        enter    = fadeIn(),
+        exit     = fadeOut(),
         modifier = modifier,
-        overlayContent = { key ->
-            state.steps.find { it.targetKey == key }?.let { step ->
-                Surface(
-                    modifier = Modifier
-                        .padding(CalmifySpacing.lg),
-                    shape = RoundedCornerShape(CalmifyRadius.xxl),
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    shadowElevation = 8.dp,
+    ) {
+        val spotlight    = state.currentSpotlight
+        val cardPosition = state.currentCardPosition
+        val density      = LocalDensity.current
+
+        LaunchedEffect(state.currentStep?.targetKey) {
+            state.currentStep?.targetKey?.let { key ->
+                state.getBringIntoViewRequester(key)?.bringIntoView()
+            }
+        }
+
+        var actualCardHeight by remember { mutableStateOf(0.dp) }
+
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(
+                    indication        = null,
+                    interactionSource = remember { MutableInteractionSource() },
+                    onClick           = { /* block pass-through */ }
+                )
+        ) {
+            val screenHeightPx = constraints.maxHeight.toFloat()
+
+            // ── Overlay / spotlight ──────────────────────────────────────────
+            if (spotlight != null) {
+                SpotlightCanvas(rect = spotlight)
+            } else {
+                Box(Modifier.fillMaxSize().background(OverlayColor))
+            }
+
+            // ── Tooltip card ─────────────────────────────────────────────────
+            state.currentStep?.let { step ->
+                val navBarHeight = WindowInsets.navigationBars
+                    .asPaddingValues()
+                    .calculateBottomPadding()
+
+                AnimatedVisibility(
+                    visible = state.isVisible,
+                    enter   = fadeIn() + slideInVertically { it / 2 },
+                    exit    = fadeOut() + slideOutVertically { it / 2 },
                 ) {
-                    CoachMarkCard(
-                        step = step,
-                        stepDisplay = state.stepDisplay,
-                        isLastStep = state.currentIndex == state.totalSteps - 1,
-                        onNext = { state.advance() },
-                        onSkip = {
-                            state.hide()
-                            onFinished()
-                        },
-                    )
+                    if (cardPosition != null) {
+                        val gapDp       = 16.dp
+                        val cardHeight  = if (actualCardHeight > 0.dp) actualCardHeight else 250.dp
+
+                        // Convert to px for space calculations
+                        val cardHeightPx    = with(density) { cardHeight.toPx() }
+                        val navBarHeightPx  = with(density) { navBarHeight.toPx() }
+                        val bottomBarPx     = with(density) { bottomBarHeight.toPx() }
+                        val gapPx           = with(density) { gapDp.toPx() }
+                        val usableBottomPx  = screenHeightPx - navBarHeightPx - bottomBarPx
+
+                        val targetBotPx = cardPosition.y          // bottomCenter.y
+                        val targetTopPx = step.targetKey
+                            ?.let { state.getTargetTop(it) }
+                            ?: (targetBotPx - with(density) { 56.dp.toPx() })
+
+                        // Does the card fit below the target (above the nav bar)?
+                        val spaceBelow = usableBottomPx - targetBotPx - gapPx
+                        val fitsBelow  = spaceBelow >= cardHeightPx
+
+                        val topPadding = with(density) {
+                            if (fitsBelow) {
+                                // Enough room below → place card under the target
+                                (targetBotPx + gapPx).toDp()
+                            } else {
+                                // Not enough room below → place card ABOVE the target
+                                (targetTopPx - cardHeightPx - gapPx)
+                                    .coerceAtLeast(8f)
+                                    .toDp()
+                            }
+                        }
+
+                        val startPadding = with(density) {
+                            (cardPosition.x.toDp() - 100.dp).coerceAtLeast(0.dp)
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(start = startPadding, top = topPadding),
+                        ) {
+                            CoachMarkCard(
+                                step        = step,
+                                stepDisplay = state.stepDisplay,
+                                isLastStep  = state.currentIndex == state.totalSteps - 1,
+                                onNext      = { state.advance() },
+                                onSkip      = { state.hide(); onFinished() },
+                                modifier    = Modifier.onSizeChanged { size ->
+                                    actualCardHeight = with(density) { size.height.toDp() }
+                                }
+                            )
+                        }
+                    } else {
+                        // Fallback: no position yet → bottom-center above nav + bottom bar
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .navigationBarsPadding()
+                                .padding(bottom = bottomBarHeight),
+                            contentAlignment = Alignment.BottomCenter,
+                        ) {
+                            CoachMarkCard(
+                                step        = step,
+                                stepDisplay = state.stepDisplay,
+                                isLastStep  = state.currentIndex == state.totalSteps - 1,
+                                onNext      = { state.advance() },
+                                onSkip      = { state.hide(); onFinished() },
+                            )
+                        }
+                    }
                 }
             }
-        },
-    ) {
-        // Provide RevealState to all descendant coachMarkTarget modifiers
-        CompositionLocalProvider(LocalRevealState provides revealState) {
-            content()
         }
     }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CoachMarkCard — tooltip card with step progress and actions
+// SpotlightCanvas
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-fun CoachMarkCard(
+private fun SpotlightCanvas(rect: Rect) {
+    val cornerRadius = 16f
+    Canvas(
+        modifier = Modifier
+            .fillMaxSize()
+            .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+    ) {
+        drawRect(color = OverlayColor)
+        drawRoundRect(
+            color        = SpotlightColor,
+            topLeft      = androidx.compose.ui.geometry.Offset(rect.left, rect.top),
+            size         = rect.size,
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadius),
+            blendMode    = BlendMode.Clear,
+        )
+        drawRoundRect(
+            color        = Color(0xFF4CAF7D).copy(alpha = 0.4f),
+            topLeft      = androidx.compose.ui.geometry.Offset(rect.left - 4f, rect.top - 4f),
+            size         = rect.size.copy(width = rect.width + 8f, height = rect.height + 8f),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadius + 4f),
+            style        = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.5f),
+        )
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CoachMarkCard
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun CoachMarkCard(
     step: CoachMarkStep,
     stepDisplay: String,
     isLastStep: Boolean,
     onNext: () -> Unit,
     onSkip: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Column(modifier = Modifier.padding(CalmifySpacing.xl)) {
+    Card(
+        modifier  = modifier
+            .fillMaxWidth(0.85f)
+            .padding(horizontal = CalmifySpacing.lg),
+        shape     = RoundedCornerShape(CalmifyRadius.xxl),
+        colors    = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+    ) {
+        Column(modifier = Modifier.padding(CalmifySpacing.xl)) {
 
-        // ── Header row: step indicator + skip ────────────────────────────
-        Row(
-            modifier            = Modifier.fillMaxWidth(),
-            verticalAlignment   = Alignment.CenterVertically,
-        ) {
-            StepDots(
-                total   = stepDisplay.substringAfter("di").trim().toIntOrNull() ?: 1,
-                current = stepDisplay.substringBefore("di").trim().toIntOrNull()?.minus(1) ?: 0,
-                modifier = Modifier.weight(1f),
+            Row(
+                modifier          = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                StepDots(
+                    total    = stepDisplay.substringAfter("di").trim().toIntOrNull() ?: 1,
+                    current  = stepDisplay.substringBefore("di").trim().toIntOrNull()?.minus(1) ?: 0,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = onSkip) {
+                    Text(
+                        text  = "Salta",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(CalmifySpacing.md))
+
+            Text(
+                text       = step.title,
+                style      = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color      = MaterialTheme.colorScheme.onSurface,
             )
-            TextButton(onClick = onSkip) {
+
+            Spacer(Modifier.height(CalmifySpacing.sm))
+
+            Text(
+                text  = step.description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(Modifier.height(CalmifySpacing.xl))
+
+            Button(
+                onClick  = onNext,
+                modifier = Modifier.fillMaxWidth(),
+                shape    = RoundedCornerShape(CalmifyRadius.lg),
+                colors   = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                ),
+            ) {
                 Text(
-                    text  = "Salta",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text       = if (isLastStep) "Capito!" else step.buttonText,
+                    fontWeight = FontWeight.SemiBold,
                 )
             }
-        }
-
-        Spacer(Modifier.height(CalmifySpacing.md))
-
-        // ── Title ─────────────────────────────────────────────────────────
-        Text(
-            text       = step.title,
-            style      = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color      = MaterialTheme.colorScheme.onSurface,
-        )
-
-        Spacer(Modifier.height(CalmifySpacing.sm))
-
-        // ── Description ───────────────────────────────────────────────────
-        Text(
-            text  = step.description,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        Spacer(Modifier.height(CalmifySpacing.xl))
-
-        // ── Advance button ────────────────────────────────────────────────
-        Button(
-            onClick   = onNext,
-            modifier  = Modifier.fillMaxWidth(),
-            shape     = RoundedCornerShape(CalmifyRadius.lg),
-            colors    = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-            ),
-        ) {
-            Text(
-                text       = if (isLastStep) "Capito!" else step.buttonText,
-                fontWeight = FontWeight.SemiBold,
-            )
         }
     }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// StepDots — small progress indicator
+// StepDots
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
@@ -338,41 +432,12 @@ private fun StepDots(
                     .padding(end = 4.dp)
                     .size(width = dotWidth, height = 6.dp)
                     .clip(CircleShape),
-                color = if (isActive)
+                color   = if (isActive)
                     MaterialTheme.colorScheme.primary
                 else
                     MaterialTheme.colorScheme.outlineVariant,
                 content = {},
             )
-        }
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// RevealCanvasWrapper — wraps app content with RevealCanvas + CompositionLocal
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Wraps your app content with [RevealCanvas] and provides [LocalRevealCanvasState].
- * Use at the **root level** of your app (in DecomposeApp or MainActivity).
- *
- * Usage:
- * ```
- * RevealCanvasWrapper {
- *     YourAppContent()
- * }
- * ```
- */
-@Composable
-fun RevealCanvasWrapper(
-    content: @Composable () -> Unit,
-) {
-    val revealCanvasState = rememberRevealCanvasState()
-    CompositionLocalProvider(LocalRevealCanvasState provides revealCanvasState) {
-        RevealCanvas(
-            revealCanvasState = revealCanvasState,
-        ) {
-            content()
         }
     }
 }
