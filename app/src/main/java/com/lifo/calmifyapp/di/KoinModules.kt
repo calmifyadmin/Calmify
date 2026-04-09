@@ -9,9 +9,12 @@ import com.lifo.mongo.di.firebaseModule
 import com.lifo.mongo.di.repositoryModule
 import com.lifo.mongo.sync.SyncEngine
 import com.lifo.mongo.sync.syncModule
+import com.lifo.network.KtorApiClient
 import com.lifo.network.di.networkModule as ktorNetworkModule
+import com.lifo.network.repository.*
 import com.lifo.util.Constants.DATABASE_NAME
 import com.lifo.util.connectivity.ConnectivityObserver
+import com.lifo.util.repository.*
 import com.lifo.chat.di.chatKoinModule
 import com.lifo.home.di.homeKoinModule
 import com.lifo.auth.di.authKoinModule
@@ -40,6 +43,41 @@ import com.lifo.util.tutorial.OnboardingManager as TutorialOnboardingManager
 import com.lifo.util.tutorial.SharedPrefsOnboardingManager
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
+
+/**
+ * Backend mode — controls which implementation backs each repository.
+ *
+ * FIRESTORE: Direct Firestore (current, client-side rules)
+ * REST:      Ktor Server REST API (server-mediated, zero creds in APK)
+ *
+ * Flip individual flags to migrate one domain at a time.
+ * When all are REST, remove repositoryModule entirely.
+ */
+object BackendConfig {
+    // ── Per-domain backend mode ──────────────────────────────────────
+    // Flip to `true` to route through Ktor Server instead of Firestore
+
+    /** Diary CRUD (write, home, history screens) */
+    const val DIARY_REST = false
+
+    /** Chat sessions + messages + AI responses */
+    const val CHAT_REST = false
+
+    /** Diary insights (sentiment, cognitive patterns) */
+    const val INSIGHT_REST = false
+
+    /** Psychological profiles */
+    const val PROFILE_REST = false
+
+    /** Social: threads, feed, notifications */
+    const val SOCIAL_REST = false
+
+    /** Habits + gratitude */
+    const val WELLNESS_REST = false
+
+    /** Feature flags */
+    const val FLAGS_REST = false
+}
 
 // Database module: SQLDelight database, queries, connectivity
 val databaseModule = module {
@@ -71,8 +109,38 @@ val onboardingUiModule = module {
     single { OnboardingManager(get()) }
 }
 
-// Network module: Ktor HttpClient + SyncExecutor + REST repositories
-// Uses the real networkModule from data/network (aliased as ktorNetworkModule)
+/**
+ * REST override module — selectively replaces Firestore repos with REST-backed ones.
+ *
+ * Only registers bindings for domains where BackendConfig flag is true.
+ * These override the earlier Firestore bindings because Koin uses last-wins.
+ */
+val restOverrideModule = module {
+    if (BackendConfig.DIARY_REST) {
+        single<MongoRepository> { KtorDiaryRepository(get()) }
+    }
+    if (BackendConfig.CHAT_REST) {
+        single<ChatRepository> { KtorChatRepository(get()) }
+    }
+    if (BackendConfig.INSIGHT_REST) {
+        single<InsightRepository> { KtorInsightRepository(get()) }
+    }
+    if (BackendConfig.PROFILE_REST) {
+        single<ProfileRepository> { KtorProfileRepository(get()) }
+    }
+    if (BackendConfig.SOCIAL_REST) {
+        single<ThreadRepository> { KtorThreadRepository(get()) }
+        single<FeedRepository> { KtorFeedRepository(get()) }
+        single<NotificationRepository> { KtorNotificationRepository(get()) }
+    }
+    if (BackendConfig.WELLNESS_REST) {
+        single<HabitRepository> { KtorHabitRepository(get()) }
+        single<GratitudeRepository> { KtorGratitudeRepository(get()) }
+    }
+    if (BackendConfig.FLAGS_REST) {
+        single<FeatureFlagRepository> { KtorFeatureFlagRepository(get()) }
+    }
+}
 
 // Social module: social feature use cases and ViewModels (repositories are in repositoryModule)
 val socialModule = module {
@@ -84,9 +152,10 @@ val allKoinModules = listOf(
     databaseModule,
     onboardingUiModule,
     firebaseModule,
-    repositoryModule,
-    ktorNetworkModule,
-    syncModule,
+    repositoryModule,           // Firestore-backed (base layer)
+    ktorNetworkModule,          // KtorApiClient + SyncExecutor
+    syncModule,                 // SyncEngine + DeltaApplier
+    restOverrideModule,         // REST overrides (last-wins, only active flags)
     socialModule,
     chatKoinModule,
     homeKoinModule,
