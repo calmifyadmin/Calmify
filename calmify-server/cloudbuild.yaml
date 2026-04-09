@@ -1,11 +1,14 @@
+substitutions:
+  _TAG: 'latest'
+
 steps:
   # Build container image
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/calmify-server:$COMMIT_SHA', '-f', 'calmify-server/Dockerfile', '.']
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/calmify-server:${_TAG}', '-f', 'calmify-server/Dockerfile', '.']
 
   # Push to Container Registry
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/calmify-server:$COMMIT_SHA']
+    args: ['push', 'gcr.io/$PROJECT_ID/calmify-server:${_TAG}']
 
   # Deploy to Cloud Run with secrets
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -14,7 +17,7 @@ steps:
       - 'run'
       - 'deploy'
       - 'calmify-server'
-      - '--image=gcr.io/$PROJECT_ID/calmify-server:$COMMIT_SHA'
+      - '--image=gcr.io/$PROJECT_ID/calmify-server:${_TAG}'
       - '--region=europe-west1'
       - '--platform=managed'
       - '--memory=512Mi'
@@ -27,6 +30,6 @@ steps:
       - '--allow-unauthenticated'
 
 images:
-  - 'gcr.io/$PROJECT_ID/calmify-server:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/calmify-server:${_TAG}'
 
 timeout: '600s'

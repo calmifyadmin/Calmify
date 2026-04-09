@@ -1,0 +1,40 @@
+# .gcloudignore — exclude heavy dirs from gcloud builds submit upload
+# Gradle needs the full project structure (settings.gradle, build.gradle files)
+# but NOT build outputs, caches, or NDK artifacts
+
+# Build outputs & caches
+.gradle/
+**/build/
+.cxx/
+local.properties
+
+# IDE
+.idea/
+*.iml
+
+# Android binaries
+*.apk
+*.aab
+*.keystore
+
+# NDK / native build artifacts
+**/src/main/cpp/build/
+**/src/main/jniLibs/
+
+# Git
+.git/
+
+# Large media / test assets
+**/src/androidTest/
+**/src/test/
+
+# Oboe prebuilt (huge)
+features/chat/src/main/cpp/oboe/
+
+# Documentation (not needed for build)
+*.md
+JARVIS_SUCCESS_LOG.md
+HOLISTIC_GROWTH_PLAN.md
+FEATURE_IMPROVEMENT_ANALYSIS.md
+PRODUCTION_READY_PLAN.md
+.claude/
