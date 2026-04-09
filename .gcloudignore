@@ -38,3 +38,6 @@ HOLISTIC_GROWTH_PLAN.md
 FEATURE_IMPROVEMENT_ANALYSIS.md
 PRODUCTION_READY_PLAN.md
 .claude/
+
+# Windows reserved device name (causes Docker "operation not permitted")
+nul

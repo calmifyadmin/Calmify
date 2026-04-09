@@ -1,0 +1,49 @@
+# .dockerignore — exclude files not needed for server build
+# The Gradle build needs: settings.gradle, build-logic/, all build.gradle files,
+# shared/models, core/util, calmify-server/, and gradle wrapper
+
+# Build outputs & caches
+.gradle/
+**/build/
+.cxx/
+local.properties
+
+# IDE
+.idea/
+*.iml
+
+# Android binaries
+*.apk
+*.aab
+*.keystore
+
+# NDK / native build artifacts
+**/src/main/cpp/
+**/src/main/jniLibs/
+
+# Git
+.git/
+
+# Test assets
+**/src/androidTest/
+**/src/test/
+
+# Documentation
+*.md
+.claude/
+
+# Android resources not needed for server
+**/src/main/res/raw/
+**/src/main/res/drawable*/
+**/src/main/res/mipmap*/
+**/src/main/res/font/
+**/src/main/assets/
+
+# Google services config
+**/google-services.json
+
+# Memory / project management
+memory/
+
+# Windows reserved device name (causes "operation not permitted" in Docker)
+nul
