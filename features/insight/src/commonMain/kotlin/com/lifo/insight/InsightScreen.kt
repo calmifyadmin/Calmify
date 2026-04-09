@@ -40,7 +40,7 @@ fun InsightScreen(
     diaryId: String,
     onBackPressed: () -> Unit,
     onPromptClicked: (String) -> Unit,
-    viewModel: InsightViewModel = koinViewModel()
+    viewModel: InsightViewModel = koinViewModel<InsightViewModel>()
 ) {
     val uiState by viewModel.state.collectAsState()
     val scrollState = rememberScrollState()

@@ -1,6 +1,5 @@
 package com.lifo.insight
 
-import androidx.lifecycle.SavedStateHandle
 import com.lifo.util.mvi.MviContract
 import com.lifo.util.mvi.MviViewModel
 import com.lifo.util.repository.InsightRepository
@@ -49,18 +48,11 @@ object InsightContract {
  * Migrated from MVVM to MVI pattern.
  * Week 5 - PSYCHOLOGICAL_INSIGHTS_PLAN.md
  */
-class InsightViewModel constructor(
-    private val savedStateHandle: SavedStateHandle,
-    private val insightRepository: InsightRepository
+class InsightViewModel(
+    private val insightRepository: InsightRepository,
 ) : MviViewModel<InsightContract.Intent, InsightContract.State, InsightContract.Effect>(
     initialState = InsightContract.State()
 ) {
-
-    private val diaryId: String? = savedStateHandle.get<String>("diaryId")
-
-    init {
-        diaryId?.let { onIntent(InsightContract.Intent.LoadInsight(it)) }
-    }
 
     override fun handleIntent(intent: InsightContract.Intent) {
         when (intent) {

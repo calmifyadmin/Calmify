@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.SurfaceTexture
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.SavedStateHandle
 import com.lifo.chat.audio.GeminiLiveAudioSource
 import com.lifo.chat.config.ApiConfigManager
 import com.lifo.chat.data.websocket.GeminiLiveWebSocketClient
@@ -89,8 +88,7 @@ class LiveChatViewModel constructor(
     private val firebaseAuth: FirebaseAuth,
     private val subscriptionRepository: SubscriptionRepository,
     private val avatarRepository: AvatarRepository?,
-    private val headphoneDetector: HeadphoneDetector,
-    private val savedStateHandle: SavedStateHandle
+    private val headphoneDetector: HeadphoneDetector
 ) : MviViewModel<LiveChatContract.Intent, LiveChatContract.State, LiveChatContract.Effect>(
     initialState = LiveChatContract.State(
         live = LiveChatUiState(

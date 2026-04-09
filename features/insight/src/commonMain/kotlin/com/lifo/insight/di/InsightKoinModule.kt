@@ -5,5 +5,5 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val insightKoinModule = module {
-    viewModel { InsightViewModel(get(), get()) }
+    viewModel<InsightViewModel> { InsightViewModel(get()) }
 }

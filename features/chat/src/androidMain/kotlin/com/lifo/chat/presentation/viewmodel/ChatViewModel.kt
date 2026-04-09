@@ -1,7 +1,6 @@
 package com.lifo.chat.presentation.viewmodel
 
 import android.content.Context
-import androidx.lifecycle.SavedStateHandle
 import com.google.firebase.auth.FirebaseAuth
 import com.lifo.chat.audio.GeminiNativeVoiceSystem
 import com.lifo.chat.audio.GeminiVoiceAudioSource
@@ -58,8 +57,7 @@ class ChatViewModel constructor(
     private val synchronizedSpeechController: SynchronizedSpeechController,
     private val apiConfigManager: ApiConfigManager,
     private val auth: FirebaseAuth,
-    private val subscriptionRepository: SubscriptionRepository,
-    savedStateHandle: SavedStateHandle
+    private val subscriptionRepository: SubscriptionRepository
 ) : MviViewModel<ChatContract.Intent, ChatContract.State, ChatContract.Effect>(
     initialState = ChatContract.State()
 ) {

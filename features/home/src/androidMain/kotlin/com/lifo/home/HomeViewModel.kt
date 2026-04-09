@@ -9,6 +9,7 @@ import com.google.firebase.storage.FirebaseStorage
 import com.lifo.util.auth.AuthProvider
 import com.lifo.util.auth.UserIdentityResolver
 import com.lifo.home.domain.model.*
+import com.lifo.home.domain.model.DailyInsightData
 import com.lifo.home.domain.usecase.*
 import com.lifo.mongo.database.ImageToDeleteQueries
 import com.lifo.util.connectivity.ConnectivityObserver
@@ -50,14 +51,6 @@ data class UnifiedHomeState(
     val dateIsSelected: Boolean = false,
     val error: String? = null,
     val isEmpty: Boolean = false
-)
-
-data class DailyInsightData(
-    val date: ZonedDateTime,
-    val dayLabel: String,
-    val sentimentMagnitude: Float,
-    val dominantEmotion: SentimentLabel,
-    val diaryCount: Int
 )
 
 // ── MVI Contract ──────────────────────────────────────────────────────────────
@@ -842,7 +835,7 @@ internal class HomeViewModel constructor(
                                 }
 
                                 DailyInsightData(
-                                    date = targetDate,
+                                    date = targetDate.toInstant().let { kotlinx.datetime.Instant.fromEpochMilliseconds(it.toEpochMilli()) },
                                     dayLabel = dayLabel,
                                     sentimentMagnitude = avgMagnitude,
                                     dominantEmotion = dominantEmotion,
