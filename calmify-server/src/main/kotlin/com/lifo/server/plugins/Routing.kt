@@ -1,18 +1,17 @@
 package com.lifo.server.plugins
 
-import com.lifo.server.routing.healthRoutes
+import com.lifo.server.routing.*
 import io.ktor.server.application.*
 import io.ktor.server.routing.*
 
 fun Application.configureRouting() {
     routing {
         healthRoutes()
-        // Future route groups will be added here:
-        // diaryRoutes()
-        // chatRoutes()
-        // insightRoutes()
-        // profileRoutes()
-        // wellnessRoutes()
+        diaryRoutes()
+        chatRoutes()
+        insightRoutes()
+        profileRoutes()
+        // wellnessRoutes() — will be wired when WellnessServiceFactory is ready
         // socialRoutes()
         // mediaRoutes()
         // notificationRoutes()
