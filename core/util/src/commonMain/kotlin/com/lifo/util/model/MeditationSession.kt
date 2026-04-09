@@ -1,8 +1,11 @@
 package com.lifo.util.model
 
+import kotlinx.serialization.Serializable
+
 /**
  * A completed meditation or breathing session.
  */
+@Serializable
 data class MeditationSession(
     val id: String = "",
     val ownerId: String = "",
@@ -14,12 +17,14 @@ data class MeditationSession(
     val postNote: String = "",
 )
 
+@Serializable
 enum class MeditationType(val displayName: String) {
     TIMER("Meditazione libera"),
     BREATHING("Respirazione guidata"),
     BODY_SCAN("Body Scan"),
 }
 
+@Serializable
 enum class BreathingPattern(
     val displayName: String,
     val inhaleSeconds: Int,

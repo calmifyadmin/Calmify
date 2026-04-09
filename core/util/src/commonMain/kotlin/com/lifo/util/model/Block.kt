@@ -1,8 +1,11 @@
 package com.lifo.util.model
 
+import kotlinx.serialization.Serializable
+
 /**
  * A recorded mental block — what was blocking, type detected, resolution used.
  */
+@Serializable
 data class Block(
     val id: String = "",
     val ownerId: String = "",
@@ -15,6 +18,7 @@ data class Block(
     val resolvedAtMillis: Long? = null,
 )
 
+@Serializable
 enum class BlockType(val displayName: String, val suggestion: String) {
     FEAR_OF_FAILURE(
         "Paura del fallimento",
@@ -38,6 +42,7 @@ enum class BlockType(val displayName: String, val suggestion: String) {
     ),
 }
 
+@Serializable
 enum class BlockResolution(val displayName: String) {
     BRAIN_DUMP("Brain Dump"),
     REFRAMING("Riformulazione"),

@@ -124,7 +124,9 @@ class ChatRepositoryImpl(
                     summary = null,
                     lastMessage = null,
                     mood = null,
-                    isLiveMode = 0L
+                    isLiveMode = 0L,
+                    is_dirty = 0L,
+                    updated_at = session.createdAt.toEpochMilliseconds()
                 )
                 RequestState.Success(session)
             } catch (e: Exception) {
@@ -148,6 +150,8 @@ class ChatRepositoryImpl(
                     lastMessage = null,
                     mood = null,
                     isLiveMode = 0L,
+                    is_dirty = 0L,
+                    updated_at = Clock.System.now().toEpochMilliseconds(),
                     id = session.id
                 )
                 RequestState.Success(Unit)
@@ -216,7 +220,8 @@ class ChatRepositoryImpl(
                     isUser = if (message.isUser) 1L else 0L,
                     timestamp = message.timestamp.toEpochMilliseconds(),
                     status = message.status.name,
-                    error = message.error
+                    error = message.error,
+                    is_dirty = 0L
                 )
                 chatSessionQueries.incrementMessageCount(
                     lastMessageAt = Clock.System.now().toEpochMilliseconds(),
@@ -261,7 +266,8 @@ class ChatRepositoryImpl(
                     isUser = if (message.isUser) 1L else 0L,
                     timestamp = message.timestamp.toEpochMilliseconds(),
                     status = message.status.name,
-                    error = message.error
+                    error = message.error,
+                    is_dirty = 0L
                 )
                 chatSessionQueries.incrementMessageCount(
                     lastMessageAt = Clock.System.now().toEpochMilliseconds(),
@@ -309,7 +315,9 @@ class ChatRepositoryImpl(
                     summary = null,
                     lastMessage = null,
                     mood = null,
-                    isLiveMode = 1L
+                    isLiveMode = 1L,
+                    is_dirty = 0L,
+                    updated_at = liveSession.createdAt.toEpochMilliseconds()
                 )
                 Log.d(TAG, "Live session created: ${liveSession.title}")
             } else {
@@ -451,7 +459,8 @@ class ChatRepositoryImpl(
                     isUser = 0L,
                     timestamp = message.timestamp.toEpochMilliseconds(),
                     status = message.status.name,
-                    error = message.error
+                    error = message.error,
+                    is_dirty = 0L
                 )
                 chatSessionQueries.incrementMessageCount(
                     lastMessageAt = Clock.System.now().toEpochMilliseconds(),

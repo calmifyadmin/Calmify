@@ -1,6 +1,7 @@
 package com.lifo.util.model
 
 import kotlinx.datetime.Clock
+import kotlinx.serialization.Serializable
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -12,6 +13,7 @@ import kotlin.uuid.Uuid
  * 2. Socratic questioning (evidence for/against)
  * 3. Reframed, credible alternative
  */
+@Serializable
 @OptIn(ExperimentalUuidApi::class)
 data class ThoughtReframe(
     val id: String = Uuid.random().toString(),
@@ -25,6 +27,7 @@ data class ThoughtReframe(
     val category: ThoughtCategory = ThoughtCategory.ALTRO,
 )
 
+@Serializable
 enum class ThoughtCategory(val displayName: String) {
     AUTOSTIMA("Autostima"),
     LAVORO("Lavoro"),

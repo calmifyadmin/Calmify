@@ -6,7 +6,6 @@ import com.lifo.util.sync.ConnectivityObserver
 import com.lifo.util.sync.ConnectivityStatus
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import org.slf4j.LoggerFactory
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.ExperimentalUuidApi
@@ -26,8 +25,6 @@ class SyncEngine(
     private val syncExecutor: SyncExecutor,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) {
-    private val logger = LoggerFactory.getLogger(SyncEngine::class.java)
-
     private val _syncState = MutableStateFlow(SyncState.IDLE)
     val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
 
@@ -45,7 +42,7 @@ class SyncEngine(
         scope.launch {
             connectivityObserver.observe().collect { status ->
                 if (status == ConnectivityStatus.Available) {
-                    logger.info("Network available — draining sync queue")
+                    println("Network available — draining sync queue")
                     drainQueue()
                 }
             }
@@ -114,7 +111,7 @@ class SyncEngine(
                 return
             }
 
-            logger.info("Draining ${pending.size} pending sync operations")
+            println("Draining ${pending.size} pending sync operations")
 
             for (op in pending) {
                 syncOps.markSyncing(now = currentTimeMillis(), id = op.id)
@@ -122,10 +119,10 @@ class SyncEngine(
                 try {
                     syncExecutor.execute(op.entity_type, op.entity_id, op.operation, op.payload)
                     syncOps.markCompleted(id = op.id)
-                    logger.debug("Synced: ${op.entity_type}/${op.entity_id} [${op.operation}]")
+                    println("Synced: ${op.entity_type}/${op.entity_id} [${op.operation}]")
                 } catch (e: Exception) {
                     syncOps.markFailed(error = e.message ?: "Unknown error", id = op.id)
-                    logger.warn("Sync failed for ${op.entity_type}/${op.entity_id}: ${e.message}")
+                    println("Sync failed for ${op.entity_type}/${op.entity_id}: ${e.message}")
 
                     // Exponential backoff for retries
                     if (op.retry_count < 4) {
@@ -138,7 +135,7 @@ class SyncEngine(
             _pendingCount.value = syncOps.countPending().executeAsOne().toInt()
             _syncState.value = if (_pendingCount.value > 0) SyncState.ERROR else SyncState.IDLE
         } catch (e: Exception) {
-            logger.error("Drain queue failed", e)
+            println("Drain queue failed: ${e.message}")
             _syncState.value = SyncState.ERROR
         }
     }
@@ -158,7 +155,7 @@ class SyncEngine(
                 )
             }
         } catch (e: Exception) {
-            logger.warn("Pull changes failed: ${e.message}")
+            println("Pull changes failed: ${e.message}")
         }
     }
 

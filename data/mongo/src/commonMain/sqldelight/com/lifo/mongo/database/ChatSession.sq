@@ -9,8 +9,13 @@ CREATE TABLE chat_sessions (
     summary TEXT,
     lastMessage TEXT,
     mood TEXT,
-    isLiveMode INTEGER NOT NULL DEFAULT 0
+    isLiveMode INTEGER NOT NULL DEFAULT 0,
+    is_dirty INTEGER NOT NULL DEFAULT 0,
+    updated_at INTEGER NOT NULL DEFAULT 0
 );
+
+CREATE INDEX idx_chat_session_owner ON chat_sessions(ownerId);
+CREATE INDEX idx_chat_session_dirty ON chat_sessions(is_dirty);
 
 getAllSessions:
 SELECT * FROM chat_sessions
@@ -22,13 +27,19 @@ SELECT * FROM chat_sessions
 WHERE id = ? AND ownerId = ?;
 
 insertSession:
-INSERT OR REPLACE INTO chat_sessions(id, title, createdAt, lastMessageAt, aiModel, messageCount, ownerId, summary, lastMessage, mood, isLiveMode)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT OR REPLACE INTO chat_sessions(id, title, createdAt, lastMessageAt, aiModel, messageCount, ownerId, summary, lastMessage, mood, isLiveMode, is_dirty, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 updateSession:
 UPDATE chat_sessions
-SET title = ?, createdAt = ?, lastMessageAt = ?, aiModel = ?, messageCount = ?, ownerId = ?, summary = ?, lastMessage = ?, mood = ?, isLiveMode = ?
+SET title = ?, createdAt = ?, lastMessageAt = ?, aiModel = ?, messageCount = ?, ownerId = ?, summary = ?, lastMessage = ?, mood = ?, isLiveMode = ?, is_dirty = ?, updated_at = ?
 WHERE id = ?;
+
+getDirty:
+SELECT * FROM chat_sessions WHERE is_dirty = 1;
+
+markClean:
+UPDATE chat_sessions SET is_dirty = 0 WHERE id = ?;
 
 deleteSession:
 DELETE FROM chat_sessions

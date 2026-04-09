@@ -1,6 +1,7 @@
 package com.lifo.util.model
 
 import kotlinx.datetime.Clock
+import kotlinx.serialization.Serializable
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -9,6 +10,7 @@ import kotlin.uuid.Uuid
  *
  * "La disciplina non e' forza di volonta' — e' design."
  */
+@Serializable
 @OptIn(ExperimentalUuidApi::class)
 data class Habit(
     val id: String = Uuid.random().toString(),
@@ -27,6 +29,7 @@ data class Habit(
 /**
  * HabitCompletion — a single completion record for a habit on a day.
  */
+@Serializable
 @OptIn(ExperimentalUuidApi::class)
 data class HabitCompletion(
     val id: String = Uuid.random().toString(),
@@ -37,6 +40,7 @@ data class HabitCompletion(
     val note: String? = null,
 )
 
+@Serializable
 enum class HabitCategory(val displayName: String) {
     MENTE("Mente"),
     CORPO("Corpo"),
@@ -45,6 +49,7 @@ enum class HabitCategory(val displayName: String) {
     CRESCITA("Crescita"),
 }
 
+@Serializable
 enum class HabitFrequency(val displayName: String) {
     DAILY("Ogni giorno"),
     WEEKDAYS("Giorni feriali"),

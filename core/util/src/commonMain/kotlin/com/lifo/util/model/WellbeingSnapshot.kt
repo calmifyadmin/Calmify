@@ -3,6 +3,7 @@ package com.lifo.util.model
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.serialization.Serializable
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -12,6 +13,7 @@ import kotlin.uuid.Uuid
  * Weekly psychological wellbeing assessment based on Self-Determination Theory (SDT)
  * Firestore mapping handled by FirestoreMapper in data/mongo
  */
+@Serializable
 @OptIn(ExperimentalUuidApi::class)
 data class WellbeingSnapshot(
     var id: String = Uuid.random().toString(),

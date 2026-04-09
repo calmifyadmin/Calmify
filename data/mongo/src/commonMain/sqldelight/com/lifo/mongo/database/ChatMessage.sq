@@ -6,10 +6,12 @@ CREATE TABLE chat_messages (
     timestamp INTEGER NOT NULL,
     status TEXT NOT NULL,
     error TEXT,
+    is_dirty INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY(sessionId) REFERENCES chat_sessions(id) ON DELETE CASCADE
 );
 
 CREATE INDEX index_chat_messages_sessionId ON chat_messages(sessionId);
+CREATE INDEX idx_chat_messages_dirty ON chat_messages(is_dirty);
 
 getMessagesForSession:
 SELECT * FROM chat_messages
@@ -21,8 +23,8 @@ SELECT * FROM chat_messages
 WHERE id = ?;
 
 insertMessage:
-INSERT INTO chat_messages(id, sessionId, content, isUser, timestamp, status, error)
-VALUES (?, ?, ?, ?, ?, ?, ?);
+INSERT INTO chat_messages(id, sessionId, content, isUser, timestamp, status, error, is_dirty)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
 
 updateMessage:
 UPDATE chat_messages
@@ -45,3 +47,9 @@ WHERE id = ?;
 getMessageCount:
 SELECT COUNT(*) FROM chat_messages
 WHERE sessionId = ?;
+
+getDirty:
+SELECT * FROM chat_messages WHERE is_dirty = 1;
+
+markClean:
+UPDATE chat_messages SET is_dirty = 0 WHERE id = ?;

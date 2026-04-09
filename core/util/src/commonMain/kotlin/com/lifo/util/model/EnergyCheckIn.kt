@@ -3,6 +3,7 @@ package com.lifo.util.model
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.serialization.Serializable
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -12,6 +13,7 @@ import kotlin.uuid.Uuid
  * Quick 30-second body check: energy, sleep, water, movement, meals.
  * One entry per day (dayKey-based, same pattern as GratitudeEntry).
  */
+@Serializable
 @OptIn(ExperimentalUuidApi::class)
 data class EnergyCheckIn(
     val id: String = Uuid.random().toString(),
@@ -41,6 +43,7 @@ data class EnergyCheckIn(
     }
 }
 
+@Serializable
 enum class MovementType(val displayName: String) {
     NESSUNO("Nessuno"),
     CAMMINATA("Camminata"),

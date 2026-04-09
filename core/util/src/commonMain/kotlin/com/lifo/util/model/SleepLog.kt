@@ -3,6 +3,7 @@ package com.lifo.util.model
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.serialization.Serializable
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -12,6 +13,7 @@ import kotlin.uuid.Uuid
  * Tracks bedtime, waketime, quality, and disturbance factors.
  * One entry per day (dayKey-based).
  */
+@Serializable
 @OptIn(ExperimentalUuidApi::class)
 data class SleepLog(
     val id: String = Uuid.random().toString(),
@@ -55,6 +57,7 @@ data class SleepLog(
     }
 }
 
+@Serializable
 enum class SleepDisturbance(val displayName: String) {
     RUMORE("Rumore"),
     LUCE("Luce"),

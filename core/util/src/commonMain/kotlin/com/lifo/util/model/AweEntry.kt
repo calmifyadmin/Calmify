@@ -1,10 +1,13 @@
 package com.lifo.util.model
 
+import kotlinx.serialization.Serializable
+
 /**
  * AweEntry — "Momenti di Meraviglia" journal entry.
  *
  * Captures moments of awe, wonder, and connection with nature/beauty.
  */
+@Serializable
 data class AweEntry(
     val id: String = "",
     val ownerId: String = "",

@@ -32,6 +32,7 @@ kotlin {
             implementation libs.sqldelight.coroutines
             implementation libs.kotlinx.serialization.json
             implementation libs.kotlinx.datetime
+            implementation libs.koin.core
 
             // Ktor HTTP client (KMP) — for Cloud Functions calls
             implementation libs.ktor.client.core

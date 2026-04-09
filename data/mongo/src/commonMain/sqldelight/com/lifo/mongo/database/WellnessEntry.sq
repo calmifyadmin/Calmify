@@ -1,0 +1,65 @@
+-- Generic wellness entry table.
+-- Stores ALL 13 wellness entity types with JSON payload.
+-- Avoids 13 separate tables — the payload holds the typed data.
+
+CREATE TABLE wellness_entries (
+    id TEXT NOT NULL PRIMARY KEY,
+    owner_id TEXT NOT NULL,
+    entity_type TEXT NOT NULL,          -- GRATITUDE, HABIT, ENERGY, SLEEP, etc.
+    day_key TEXT NOT NULL DEFAULT '',
+    timestamp_millis INTEGER NOT NULL,
+    payload TEXT NOT NULL DEFAULT '{}',  -- Full JSON of the entity
+    is_dirty INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+CREATE INDEX idx_wellness_owner ON wellness_entries(owner_id);
+CREATE INDEX idx_wellness_type ON wellness_entries(entity_type);
+CREATE INDEX idx_wellness_owner_type ON wellness_entries(owner_id, entity_type);
+CREATE INDEX idx_wellness_day_key ON wellness_entries(day_key);
+CREATE INDEX idx_wellness_dirty ON wellness_entries(is_dirty);
+
+getAllByUserAndType:
+SELECT * FROM wellness_entries
+WHERE owner_id = :userId AND entity_type = :entityType
+ORDER BY timestamp_millis DESC;
+
+getById:
+SELECT * FROM wellness_entries WHERE id = :id;
+
+getByDayKey:
+SELECT * FROM wellness_entries
+WHERE owner_id = :userId AND entity_type = :entityType AND day_key = :dayKey
+ORDER BY timestamp_millis DESC;
+
+getByDateRange:
+SELECT * FROM wellness_entries
+WHERE owner_id = :userId AND entity_type = :entityType
+    AND timestamp_millis BETWEEN :start AND :end
+ORDER BY timestamp_millis DESC;
+
+getDirty:
+SELECT * FROM wellness_entries WHERE is_dirty = 1;
+
+getDirtyByType:
+SELECT * FROM wellness_entries WHERE entity_type = :entityType AND is_dirty = 1;
+
+upsert:
+INSERT OR REPLACE INTO wellness_entries(
+    id, owner_id, entity_type, day_key, timestamp_millis,
+    payload, is_dirty, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+markClean:
+UPDATE wellness_entries SET is_dirty = 0 WHERE id = :id;
+
+deleteById:
+DELETE FROM wellness_entries WHERE id = :id;
+
+deleteAllByUserAndType:
+DELETE FROM wellness_entries WHERE owner_id = :userId AND entity_type = :entityType;
+
+countByType:
+SELECT COUNT(*) FROM wellness_entries
+WHERE owner_id = :userId AND entity_type = :entityType;

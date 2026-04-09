@@ -1,5 +1,7 @@
 package com.lifo.util.model
 
+import kotlinx.serialization.Serializable
+
 /**
  * ValuesDiscovery — "La Tua Bussola" guided values exploration.
  *
@@ -9,6 +11,7 @@ package com.lifo.util.model
  * 3. "La Domanda Finale" — end-of-life regret reflection
  * 4. "I Tuoi Valori" — AI synthesis + user confirmation
  */
+@Serializable
 data class ValuesDiscovery(
     val id: String = "",
     val ownerId: String = "",

@@ -3,6 +3,7 @@ package com.lifo.util.model
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.serialization.Serializable
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -12,6 +13,7 @@ import kotlin.uuid.Uuid
  * Each entry captures up to 3 things the user is grateful for today.
  * Simple, quick, no pressure.
  */
+@Serializable
 @OptIn(ExperimentalUuidApi::class)
 data class GratitudeEntry(
     val id: String = Uuid.random().toString(),
@@ -47,6 +49,7 @@ data class GratitudeEntry(
     }
 }
 
+@Serializable
 enum class GratitudeCategory(val displayName: String) {
     PERSONE("Persone"),
     NATURA("Natura"),

@@ -3,12 +3,14 @@ package com.lifo.util.model
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.serialization.Serializable
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 /**
  * ConnectionEntry — "Le Tue Connessioni" relational gratitude & service acts.
  */
+@Serializable
 @OptIn(ExperimentalUuidApi::class)
 data class ConnectionEntry(
     val id: String = Uuid.random().toString(),
@@ -35,6 +37,7 @@ data class ConnectionEntry(
     }
 }
 
+@Serializable
 enum class ConnectionType(val displayName: String) {
     GRATITUDE("Gratitudine relazionale"),
     SERVICE("Atto di servizio"),

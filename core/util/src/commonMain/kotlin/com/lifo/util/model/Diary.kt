@@ -1,12 +1,14 @@
 package com.lifo.util.model
 
 import kotlinx.datetime.Clock
+import kotlinx.serialization.Serializable
 
 /**
  * Diary Model - Pure Kotlin (KMP)
  *
  * Firestore mapping handled by FirestoreMapper in data/mongo
  */
+@Serializable
 data class Diary(
     var _id: String = "",
     var ownerId: String = "",
