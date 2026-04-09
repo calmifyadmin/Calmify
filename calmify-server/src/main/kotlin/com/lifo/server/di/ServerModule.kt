@@ -36,6 +36,9 @@ val serverModule = module {
     single(named("block")) { WellnessServiceFactory.block(get()) }
     single(named("values")) { WellnessServiceFactory.values(get()) }
 
+    // Sync
+    single { com.lifo.server.service.SyncService(get()) }
+
     // AI components
     single {
         val apiKey = System.getenv("GEMINI_API_KEY") ?: ""

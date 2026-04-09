@@ -31,6 +31,9 @@ fun Application.configureRouting() {
 
         // AI — chat, insight, analysis, usage
         aiRoutes()
+
+        // Sync — delta sync for offline-first
+        syncRoutes()
     }
 }
 

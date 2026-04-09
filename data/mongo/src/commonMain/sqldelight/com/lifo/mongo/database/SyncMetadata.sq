@@ -1,0 +1,15 @@
+CREATE TABLE sync_metadata (
+    entity_type TEXT NOT NULL PRIMARY KEY,
+    last_sync_at INTEGER NOT NULL,
+    server_version TEXT
+);
+
+getLastSync:
+SELECT last_sync_at FROM sync_metadata WHERE entity_type = :entityType;
+
+upsertLastSync:
+INSERT OR REPLACE INTO sync_metadata(entity_type, last_sync_at, server_version)
+VALUES (:entityType, :lastSyncAt, :serverVersion);
+
+deleteAll:
+DELETE FROM sync_metadata;

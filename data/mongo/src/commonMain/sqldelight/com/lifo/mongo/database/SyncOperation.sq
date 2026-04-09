@@ -1,0 +1,43 @@
+CREATE TABLE sync_operations (
+    id TEXT NOT NULL PRIMARY KEY,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    operation TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'PENDING',
+    retry_count INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    last_attempt_at INTEGER,
+    error_message TEXT
+);
+
+CREATE INDEX idx_sync_status ON sync_operations(status);
+CREATE INDEX idx_sync_created ON sync_operations(created_at);
+
+getPendingOperations:
+SELECT * FROM sync_operations
+WHERE status = 'PENDING' OR (status = 'FAILED' AND retry_count < 5)
+ORDER BY created_at ASC
+LIMIT :limit;
+
+markSyncing:
+UPDATE sync_operations SET status = 'SYNCING', last_attempt_at = :now
+WHERE id = :id;
+
+markCompleted:
+DELETE FROM sync_operations WHERE id = :id;
+
+markFailed:
+UPDATE sync_operations
+SET status = 'FAILED', retry_count = retry_count + 1, error_message = :error
+WHERE id = :id;
+
+countPending:
+SELECT COUNT(*) FROM sync_operations WHERE status IN ('PENDING', 'FAILED');
+
+insert:
+INSERT INTO sync_operations(id, entity_type, entity_id, operation, payload, status, retry_count, created_at, last_attempt_at, error_message)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+deleteAll:
+DELETE FROM sync_operations;

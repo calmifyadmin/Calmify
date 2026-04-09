@@ -1,0 +1,55 @@
+CREATE TABLE diaries (
+    id TEXT NOT NULL PRIMARY KEY,
+    owner_id TEXT NOT NULL,
+    mood TEXT NOT NULL DEFAULT 'Neutral',
+    title TEXT NOT NULL DEFAULT '',
+    description TEXT NOT NULL DEFAULT '',
+    images TEXT NOT NULL DEFAULT '[]',
+    date_millis INTEGER NOT NULL,
+    day_key TEXT NOT NULL DEFAULT '',
+    timezone TEXT NOT NULL DEFAULT '',
+    emotion_intensity INTEGER NOT NULL DEFAULT 5,
+    stress_level INTEGER NOT NULL DEFAULT 5,
+    energy_level INTEGER NOT NULL DEFAULT 5,
+    calm_anxiety_level INTEGER NOT NULL DEFAULT 5,
+    primary_trigger TEXT NOT NULL DEFAULT 'NONE',
+    dominant_body_sensation TEXT NOT NULL DEFAULT 'NONE',
+    is_dirty INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+CREATE INDEX idx_diary_owner ON diaries(owner_id);
+CREATE INDEX idx_diary_date ON diaries(date_millis);
+CREATE INDEX idx_diary_day_key ON diaries(day_key);
+CREATE INDEX idx_diary_dirty ON diaries(is_dirty);
+
+getAllByUser:
+SELECT * FROM diaries WHERE owner_id = :userId ORDER BY date_millis DESC;
+
+getById:
+SELECT * FROM diaries WHERE id = :id;
+
+getByDayKey:
+SELECT * FROM diaries WHERE owner_id = :userId AND day_key = :dayKey ORDER BY date_millis DESC;
+
+getByDateRange:
+SELECT * FROM diaries WHERE owner_id = :userId AND date_millis BETWEEN :start AND :end ORDER BY date_millis DESC;
+
+getDirty:
+SELECT * FROM diaries WHERE is_dirty = 1;
+
+upsert:
+INSERT OR REPLACE INTO diaries(id, owner_id, mood, title, description, images, date_millis, day_key, timezone,
+    emotion_intensity, stress_level, energy_level, calm_anxiety_level, primary_trigger, dominant_body_sensation,
+    is_dirty, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+markClean:
+UPDATE diaries SET is_dirty = 0 WHERE id = :id;
+
+deleteById:
+DELETE FROM diaries WHERE id = :id;
+
+deleteAllByUser:
+DELETE FROM diaries WHERE owner_id = :userId;
