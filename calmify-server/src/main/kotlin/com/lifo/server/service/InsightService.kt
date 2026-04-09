@@ -8,14 +8,14 @@ import com.lifo.shared.model.DiaryInsightProto
 import com.lifo.server.model.PaginationParams
 import org.slf4j.LoggerFactory
 
-class InsightService(private val db: Firestore?) {
+class InsightService(private val db: Firestore) {
     private val logger = LoggerFactory.getLogger(InsightService::class.java)
     private val collection = "diaryInsights"
 
     data class PagedInsights(val items: List<DiaryInsightProto>, val meta: PaginationMeta)
 
     suspend fun getInsightByDiaryId(userId: String, diaryId: String): DiaryInsightProto? {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
 
         val snapshot = firestore.collection(collection)
             .whereEqualTo("ownerId", userId)
@@ -28,7 +28,7 @@ class InsightService(private val db: Firestore?) {
     }
 
     suspend fun getInsights(userId: String, params: PaginationParams): PagedInsights {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
 
         var query = firestore.collection(collection)
             .whereEqualTo("ownerId", userId)

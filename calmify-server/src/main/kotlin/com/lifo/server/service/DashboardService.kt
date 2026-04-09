@@ -6,7 +6,7 @@ import com.lifo.shared.api.*
 import org.slf4j.LoggerFactory
 
 class DashboardService(
-    private val db: Firestore?,
+    private val db: Firestore,
     private val diaryService: DiaryService,
 ) {
     private val logger = LoggerFactory.getLogger(DashboardService::class.java)
@@ -65,8 +65,7 @@ class DashboardService(
     }
 
     private fun calculateStreak(userId: String): Int {
-        val firestore = db ?: return 0
-        val docs = firestore.collection("diary")
+        val docs = db.collection("diary")
             .whereEqualTo("ownerId", userId)
             .orderBy("dayKey", Query.Direction.DESCENDING)
             .limit(60) // Max 60 days back
@@ -86,14 +85,13 @@ class DashboardService(
     }
 
     private fun getHabitStatsToday(userId: String): Pair<Int, Int> {
-        val firestore = db ?: return 0 to 0
-        val totalHabits = firestore.collection("habits")
+        val totalHabits = db.collection("habits")
             .whereEqualTo("ownerId", userId)
             .whereEqualTo("isActive", true)
             .get().get().documents.size
 
         val todayKey = java.time.LocalDate.now().toString() // YYYY-MM-DD
-        val completionsToday = firestore.collection("habitCompletions")
+        val completionsToday = db.collection("habitCompletions")
             .whereEqualTo("ownerId", userId)
             .whereEqualTo("dayKey", todayKey)
             .get().get().documents.size

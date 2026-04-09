@@ -54,7 +54,7 @@ private fun Routing.wellnessRoutes() {
     val recurring by inject<GenericWellnessService<RecurringThoughtProto>>(named("recurring"))
     val block by inject<GenericWellnessService<BlockProto>>(named("block"))
     val values by inject<GenericWellnessService<ValuesDiscoveryProto>>(named("values"))
-    val db by inject<com.google.cloud.firestore.Firestore?>()
+    val db by inject<com.google.cloud.firestore.Firestore>()
 
     route("/api/v1/wellness") {
         route("/gratitude") { wellnessCrudRoutes(gratitude) }

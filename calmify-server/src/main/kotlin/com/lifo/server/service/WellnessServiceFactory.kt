@@ -6,7 +6,7 @@ import com.lifo.shared.model.*
 
 object WellnessServiceFactory {
 
-    fun gratitude(db: Firestore?) = GenericWellnessService(
+    fun gratitude(db: Firestore) = GenericWellnessService(
         db = db,
         collectionName = "gratitudeEntries",
         mapper = { doc: DocumentSnapshot ->
@@ -28,7 +28,7 @@ object WellnessServiceFactory {
         getId = { it.id },
     )
 
-    fun energy(db: Firestore?) = GenericWellnessService(
+    fun energy(db: Firestore) = GenericWellnessService(
         db = db,
         collectionName = "energyCheckIns",
         mapper = { doc: DocumentSnapshot ->
@@ -54,7 +54,7 @@ object WellnessServiceFactory {
         getId = { it.id },
     )
 
-    fun sleep(db: Firestore?) = GenericWellnessService(
+    fun sleep(db: Firestore) = GenericWellnessService(
         db = db,
         collectionName = "sleepLogs",
         mapper = { doc: DocumentSnapshot ->
@@ -83,7 +83,7 @@ object WellnessServiceFactory {
         getId = { it.id },
     )
 
-    fun meditation(db: Firestore?) = GenericWellnessService(
+    fun meditation(db: Firestore) = GenericWellnessService(
         db = db,
         collectionName = "meditationSessions",
         mapper = { doc: DocumentSnapshot ->
@@ -106,7 +106,7 @@ object WellnessServiceFactory {
         getId = { it.id },
     )
 
-    fun habits(db: Firestore?) = GenericWellnessService(
+    fun habits(db: Firestore) = GenericWellnessService(
         db = db,
         collectionName = "habits",
         mapper = { doc: DocumentSnapshot ->
@@ -132,7 +132,7 @@ object WellnessServiceFactory {
         getId = { it.id },
     )
 
-    fun movement(db: Firestore?) = GenericWellnessService(
+    fun movement(db: Firestore) = GenericWellnessService(
         db = db,
         collectionName = "movementLogs",
         mapper = { doc: DocumentSnapshot ->
@@ -155,7 +155,7 @@ object WellnessServiceFactory {
         getId = { it.id },
     )
 
-    fun reframe(db: Firestore?) = GenericWellnessService(
+    fun reframe(db: Firestore) = GenericWellnessService(
         db = db,
         collectionName = "thoughtReframes",
         mapper = { doc: DocumentSnapshot ->
@@ -179,7 +179,7 @@ object WellnessServiceFactory {
         getId = { it.id },
     )
 
-    fun wellbeing(db: Firestore?) = GenericWellnessService(
+    fun wellbeing(db: Firestore) = GenericWellnessService(
         db = db,
         collectionName = "wellbeingSnapshots",
         mapper = { doc: DocumentSnapshot ->
@@ -216,7 +216,7 @@ object WellnessServiceFactory {
         getId = { it.id },
     )
 
-    fun awe(db: Firestore?) = GenericWellnessService(
+    fun awe(db: Firestore) = GenericWellnessService(
         db = db,
         collectionName = "aweEntries",
         mapper = { doc: DocumentSnapshot ->
@@ -237,7 +237,7 @@ object WellnessServiceFactory {
         getId = { it.id },
     )
 
-    fun connection(db: Firestore?) = GenericWellnessService(
+    fun connection(db: Firestore) = GenericWellnessService(
         db = db,
         collectionName = "connectionEntries",
         mapper = { doc: DocumentSnapshot ->
@@ -258,7 +258,7 @@ object WellnessServiceFactory {
         getId = { it.id },
     )
 
-    fun recurringThought(db: Firestore?) = GenericWellnessService(
+    fun recurringThought(db: Firestore) = GenericWellnessService(
         db = db,
         collectionName = "recurringThoughts",
         mapper = { doc: DocumentSnapshot ->
@@ -285,7 +285,7 @@ object WellnessServiceFactory {
         getId = { it.id },
     )
 
-    fun block(db: Firestore?) = GenericWellnessService(
+    fun block(db: Firestore) = GenericWellnessService(
         db = db,
         collectionName = "blocks",
         mapper = { doc: DocumentSnapshot ->
@@ -309,7 +309,7 @@ object WellnessServiceFactory {
         getId = { it.id },
     )
 
-    fun values(db: Firestore?) = GenericWellnessService(
+    fun values(db: Firestore) = GenericWellnessService(
         db = db,
         collectionName = "valuesDiscovery",
         mapper = { doc: DocumentSnapshot ->

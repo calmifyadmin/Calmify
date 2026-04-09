@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory
  * SECURITY: Only the authenticated user can export/delete their own data.
  * All operations are audit-logged.
  */
-class GdprService(private val db: Firestore?) {
+class GdprService(private val db: Firestore) {
     private val logger = LoggerFactory.getLogger(GdprService::class.java)
 
     // All Firestore collections that contain user data
@@ -42,7 +42,7 @@ class GdprService(private val db: Firestore?) {
      * Returns a map of collection name -> list of documents.
      */
     suspend fun exportUserData(userId: String): Map<String, List<Map<String, Any?>>> {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val export = mutableMapOf<String, List<Map<String, Any?>>>()
 
         for (collection in userCollections) {
@@ -78,7 +78,7 @@ class GdprService(private val db: Firestore?) {
      * Returns the number of documents deleted.
      */
     suspend fun deleteUserAccount(userId: String): Int {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         var totalDeleted = 0
 
         // Phase 1: Delete all user documents from every collection

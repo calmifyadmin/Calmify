@@ -8,7 +8,7 @@ import com.lifo.server.model.PaginationParams
 import com.lifo.shared.api.PaginationMeta
 import org.slf4j.LoggerFactory
 
-class DiaryService(private val db: Firestore?) {
+class DiaryService(private val db: Firestore) {
     private val logger = LoggerFactory.getLogger(DiaryService::class.java)
     private val collection = "diary"
 
@@ -18,7 +18,7 @@ class DiaryService(private val db: Firestore?) {
     )
 
     suspend fun getDiaries(userId: String, params: PaginationParams): PagedResult {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
 
         var query = firestore.collection(collection)
             .whereEqualTo("ownerId", userId)
@@ -68,7 +68,7 @@ class DiaryService(private val db: Firestore?) {
     }
 
     suspend fun getDiaryById(userId: String, diaryId: String): DiaryProto? {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val doc = firestore.collection(collection).document(diaryId).get().get()
 
         if (!doc.exists()) return null
@@ -94,7 +94,7 @@ class DiaryService(private val db: Firestore?) {
     }
 
     suspend fun createDiary(userId: String, diary: DiaryProto): DiaryProto {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
 
         val data = mapOf(
             "ownerId" to userId,
@@ -126,7 +126,7 @@ class DiaryService(private val db: Firestore?) {
     }
 
     suspend fun updateDiary(userId: String, diaryId: String, diary: DiaryProto): DiaryProto? {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val docRef = firestore.collection(collection).document(diaryId)
         val existing = docRef.get().get()
 
@@ -156,7 +156,7 @@ class DiaryService(private val db: Firestore?) {
     }
 
     suspend fun deleteDiary(userId: String, diaryId: String): Boolean {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val docRef = firestore.collection(collection).document(diaryId)
         val existing = docRef.get().get()
 
@@ -169,7 +169,7 @@ class DiaryService(private val db: Firestore?) {
     }
 
     suspend fun deleteAllDiaries(userId: String): Int {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val docs = firestore.collection(collection)
             .whereEqualTo("ownerId", userId)
             .get().get().documents
@@ -188,7 +188,7 @@ class DiaryService(private val db: Firestore?) {
         startMillis: Long,
         endMillis: Long,
     ): List<DiaryProto> {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
 
         val snapshot = firestore.collection(collection)
             .whereEqualTo("ownerId", userId)

@@ -8,7 +8,7 @@ import com.lifo.server.model.PaginationParams
 import org.slf4j.LoggerFactory
 
 class GenericWellnessService<T>(
-    private val db: Firestore?,
+    private val db: Firestore,
     private val collectionName: String,
     private val mapper: (DocumentSnapshot) -> T,
     private val toFirestoreMap: (T, String) -> Map<String, Any?>,
@@ -19,7 +19,7 @@ class GenericWellnessService<T>(
     data class PagedResult<T>(val items: List<T>, val meta: PaginationMeta)
 
     suspend fun list(userId: String, params: PaginationParams): PagedResult<T> {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
 
         var query = firestore.collection(collectionName)
             .whereEqualTo("ownerId", userId)
@@ -45,14 +45,14 @@ class GenericWellnessService<T>(
     }
 
     suspend fun getById(userId: String, id: String): T? {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val doc = firestore.collection(collectionName).document(id).get().get()
         if (!doc.exists() || doc.getString("ownerId") != userId) return null
         return mapper(doc)
     }
 
     suspend fun create(userId: String, item: T): T {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val data = toFirestoreMap(item, userId)
         val id = getId(item)
         val docRef = if (id.isNotEmpty()) {
@@ -66,7 +66,7 @@ class GenericWellnessService<T>(
     }
 
     suspend fun update(userId: String, id: String, item: T): T? {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val existing = firestore.collection(collectionName).document(id).get().get()
         if (!existing.exists() || existing.getString("ownerId") != userId) return null
 
@@ -77,7 +77,7 @@ class GenericWellnessService<T>(
     }
 
     suspend fun delete(userId: String, id: String): Boolean {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val existing = firestore.collection(collectionName).document(id).get().get()
         if (!existing.exists() || existing.getString("ownerId") != userId) return false
 
@@ -87,7 +87,7 @@ class GenericWellnessService<T>(
     }
 
     suspend fun getByDayKey(userId: String, dayKey: String): List<T> {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val snapshot = firestore.collection(collectionName)
             .whereEqualTo("ownerId", userId)
             .whereEqualTo("dayKey", dayKey)

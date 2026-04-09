@@ -7,13 +7,13 @@ import com.lifo.shared.model.PsychologicalProfileProto
 import com.lifo.shared.model.StressPeakProto
 import org.slf4j.LoggerFactory
 
-class ProfileService(private val db: Firestore?) {
+class ProfileService(private val db: Firestore) {
     private val logger = LoggerFactory.getLogger(ProfileService::class.java)
     private val collection = "profileSettings"
     private val psychCollection = "psychologicalProfiles"
 
     suspend fun getProfile(userId: String): ProfileSettingsProto? {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val doc = firestore.collection(collection).document(userId).get().get()
         if (!doc.exists()) return null
 
@@ -49,7 +49,7 @@ class ProfileService(private val db: Firestore?) {
     }
 
     suspend fun updateProfile(userId: String, profile: ProfileSettingsProto): ProfileSettingsProto {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val now = System.currentTimeMillis()
 
         val data = hashMapOf<String, Any>(
@@ -87,7 +87,7 @@ class ProfileService(private val db: Firestore?) {
     }
 
     suspend fun getPsychologicalProfiles(userId: String, weeks: Int): List<PsychologicalProfileProto> {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val docs = firestore.collection(psychCollection)
             .whereEqualTo("ownerId", userId)
             .orderBy("computedAtMillis", Query.Direction.DESCENDING)
@@ -98,7 +98,7 @@ class ProfileService(private val db: Firestore?) {
     }
 
     suspend fun getLatestPsychologicalProfile(userId: String): PsychologicalProfileProto? {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val docs = firestore.collection(psychCollection)
             .whereEqualTo("ownerId", userId)
             .orderBy("computedAtMillis", Query.Direction.DESCENDING)
@@ -109,7 +109,7 @@ class ProfileService(private val db: Firestore?) {
     }
 
     suspend fun getPsychologicalProfileByWeek(userId: String, weekNumber: Int, year: Int): PsychologicalProfileProto? {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val docs = firestore.collection(psychCollection)
             .whereEqualTo("ownerId", userId)
             .whereEqualTo("weekNumber", weekNumber)

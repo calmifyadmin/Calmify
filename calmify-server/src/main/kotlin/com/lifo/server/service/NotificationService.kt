@@ -20,14 +20,14 @@ data class NotificationProto(
     @ProtoNumber(8) val createdAtMillis: Long = 0L,
 )
 
-class NotificationService(private val db: Firestore?) {
+class NotificationService(private val db: Firestore) {
     private val logger = LoggerFactory.getLogger(NotificationService::class.java)
     private val collection = "notifications"
 
     data class PagedNotifications(val items: List<NotificationProto>, val meta: PaginationMeta)
 
     suspend fun getNotifications(userId: String, params: PaginationParams): PagedNotifications {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
 
         var query = firestore.collection(collection)
             .whereEqualTo("userId", userId)
@@ -64,7 +64,7 @@ class NotificationService(private val db: Firestore?) {
     }
 
     suspend fun markAsRead(userId: String, notificationId: String): Boolean {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val doc = firestore.collection(collection).document(notificationId).get().get()
         if (!doc.exists() || doc.getString("userId") != userId) return false
         firestore.collection(collection).document(notificationId).update("isRead", true).get()
@@ -72,7 +72,7 @@ class NotificationService(private val db: Firestore?) {
     }
 
     suspend fun markAllAsRead(userId: String) {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val unread = firestore.collection(collection)
             .whereEqualTo("userId", userId)
             .whereEqualTo("isRead", false)
@@ -85,7 +85,7 @@ class NotificationService(private val db: Firestore?) {
     }
 
     suspend fun getUnreadCount(userId: String): Int {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         return firestore.collection(collection)
             .whereEqualTo("userId", userId)
             .whereEqualTo("isRead", false)

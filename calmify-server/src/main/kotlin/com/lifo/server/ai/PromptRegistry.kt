@@ -15,7 +15,7 @@ import kotlin.time.Duration.Companion.minutes
  * - A/B testing on prompt variants
  * - Version tracking for prompt changes
  */
-class PromptRegistry(private val db: Firestore?) {
+class PromptRegistry(private val db: Firestore) {
     private val logger = LoggerFactory.getLogger(PromptRegistry::class.java)
 
     private val cache = Cache.Builder<String, PromptTemplate>()
@@ -26,28 +26,25 @@ class PromptRegistry(private val db: Firestore?) {
         cache.get(id)?.let { return it }
 
         // Try Firestore
-        val firestore = db
-        if (firestore != null) {
-            try {
-                val doc = firestore.collection("config").document("prompts")
-                    .collection("templates").document(id).get().get()
-                if (doc.exists()) {
-                    val template = PromptTemplate(
-                        id = id,
-                        version = doc.getLong("version")?.toInt() ?: 1,
-                        systemInstruction = doc.getString("systemInstruction") ?: "",
-                        userTemplate = doc.getString("userTemplate") ?: "{{message}}",
-                        model = doc.getString("model") ?: "gemini-2.0-flash",
-                        temperature = doc.getDouble("temperature")?.toFloat() ?: 0.8f,
-                        maxTokens = doc.getLong("maxTokens")?.toInt() ?: 4096,
-                    )
-                    cache.put(id, template)
-                    logger.info("Loaded prompt '$id' v${template.version} from Firestore")
-                    return template
-                }
-            } catch (e: Exception) {
-                logger.warn("Failed to load prompt '$id' from Firestore: ${e.message}")
+        try {
+            val doc = db.collection("config").document("prompts")
+                .collection("templates").document(id).get().get()
+            if (doc.exists()) {
+                val template = PromptTemplate(
+                    id = id,
+                    version = doc.getLong("version")?.toInt() ?: 1,
+                    systemInstruction = doc.getString("systemInstruction") ?: "",
+                    userTemplate = doc.getString("userTemplate") ?: "{{message}}",
+                    model = doc.getString("model") ?: "gemini-2.0-flash",
+                    temperature = doc.getDouble("temperature")?.toFloat() ?: 0.8f,
+                    maxTokens = doc.getLong("maxTokens")?.toInt() ?: 4096,
+                )
+                cache.put(id, template)
+                logger.info("Loaded prompt '$id' v${template.version} from Firestore")
+                return template
             }
+        } catch (e: Exception) {
+            logger.warn("Failed to load prompt '$id' from Firestore: ${e.message}")
         }
 
         // Fallback to defaults

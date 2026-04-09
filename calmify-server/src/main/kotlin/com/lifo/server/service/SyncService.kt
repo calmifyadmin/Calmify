@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory
  * Returns changes since a given timestamp for a user's entities.
  * Supports diary + all 13 wellness types + chat sessions/messages.
  */
-class SyncService(private val db: Firestore?) {
+class SyncService(private val db: Firestore) {
     private val logger = LoggerFactory.getLogger(SyncService::class.java)
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
@@ -42,9 +42,7 @@ class SyncService(private val db: Firestore?) {
      * Get diary changes since [sinceMillis] (typed, backwards-compatible).
      */
     suspend fun getDiaryChangesSince(userId: String, sinceMillis: Long): DiaryDeltaResponse {
-        val firestore = db ?: return DiaryDeltaResponse(serverTime = System.currentTimeMillis())
-
-        val docs = firestore.collection("diaries")
+        val docs = db.collection("diaries")
             .whereEqualTo("ownerId", userId)
             .whereGreaterThan("updatedAt", sinceMillis)
             .orderBy("updatedAt", Query.Direction.ASCENDING)
@@ -82,7 +80,7 @@ class SyncService(private val db: Firestore?) {
             }
         }
 
-        val deletedIds = getDeletedIds(firestore, userId, "diary", sinceMillis)
+        val deletedIds = getDeletedIds(db, userId, "diary", sinceMillis)
 
         logger.info("Delta sync DIARY for user $userId: ${created.size} created, ${updated.size} updated, ${deletedIds.size} deleted")
 
@@ -99,15 +97,10 @@ class SyncService(private val db: Firestore?) {
      * Returns documents as raw JsonElements — client deserializes based on type.
      */
     suspend fun getChangesSince(userId: String, entityType: String, sinceMillis: Long): GenericDeltaResponse {
-        val firestore = db ?: return GenericDeltaResponse(
-            entityType = entityType,
-            serverTime = System.currentTimeMillis(),
-        )
-
         val collectionName = collectionMap[entityType]
             ?: return GenericDeltaResponse(entityType = entityType, serverTime = System.currentTimeMillis())
 
-        val docs = firestore.collection(collectionName)
+        val docs = db.collection(collectionName)
             .whereEqualTo("ownerId", userId)
             .whereGreaterThan("updatedAt", sinceMillis)
             .orderBy("updatedAt", Query.Direction.ASCENDING)
@@ -151,7 +144,7 @@ class SyncService(private val db: Firestore?) {
         }
 
         val entityTypeForDeletion = entityType.lowercase().replace("_", "")
-        val deletedIds = getDeletedIds(firestore, userId, entityTypeForDeletion, sinceMillis)
+        val deletedIds = getDeletedIds(db, userId, entityTypeForDeletion, sinceMillis)
 
         logger.info("Delta sync $entityType for user $userId: ${created.size} created, ${updated.size} updated, ${deletedIds.size} deleted")
 
@@ -172,7 +165,6 @@ class SyncService(private val db: Firestore?) {
         userId: String,
         operations: List<Triple<String, String, String>>, // (entityType, entityId, operation+payload)
     ): List<Pair<String, Boolean>> {
-        val firestore = db ?: return operations.map { it.second to false }
         val results = mutableListOf<Pair<String, Boolean>>()
 
         for ((entityType, entityId, opPayload) in operations) {
@@ -195,13 +187,13 @@ class SyncService(private val db: Firestore?) {
                             data["createdAt"] = System.currentTimeMillis()
                         }
                         data["ownerId"] = userId
-                        firestore.collection(collection).document(entityId).set(data).get()
+                        db.collection(collection).document(entityId).set(data).get()
                         results.add(entityId to true)
                     }
                     "DELETE" -> {
-                        firestore.collection(collection).document(entityId).delete().get()
+                        db.collection(collection).document(entityId).delete().get()
                         // Log deletion for other devices' delta sync
-                        firestore.collection("deletion_log").add(
+                        db.collection("deletion_log").add(
                             hashMapOf<String, Any>(
                                 "userId" to userId,
                                 "entityType" to entityType.lowercase(),

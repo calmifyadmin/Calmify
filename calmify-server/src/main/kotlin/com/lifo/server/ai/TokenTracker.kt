@@ -14,7 +14,7 @@ import kotlin.time.Duration.Companion.minutes
  * Storage: Firestore ai_usage/{userId}/daily/{date} and monthly/{yearMonth}
  * Local cache: 1-minute TTL to avoid Firestore reads on every request.
  */
-class TokenTracker(private val db: Firestore?) {
+class TokenTracker(private val db: Firestore) {
     private val logger = LoggerFactory.getLogger(TokenTracker::class.java)
 
     companion object {
@@ -58,12 +58,11 @@ class TokenTracker(private val db: Firestore?) {
      * Record token usage after a successful AI call.
      */
     suspend fun record(userId: String, tokens: Int) {
-        val firestore = db ?: return
         val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
         val dayKey = "${now.year}-${now.monthNumber.toString().padStart(2, '0')}-${now.dayOfMonth.toString().padStart(2, '0')}"
         val monthKey = "${now.year}-${now.monthNumber.toString().padStart(2, '0')}"
 
-        val userRef = firestore.collection("ai_usage").document(userId)
+        val userRef = db.collection("ai_usage").document(userId)
 
         // Daily counter
         userRef.collection("daily").document(dayKey)
@@ -106,17 +105,15 @@ class TokenTracker(private val db: Firestore?) {
     private suspend fun getUsageSnapshot(userId: String): UsageSnapshot {
         usageCache.get("usage:$userId")?.let { return it }
 
-        val firestore = db ?: return UsageSnapshot(0, 0, false)
-
         val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
         val dayKey = "${now.year}-${now.monthNumber.toString().padStart(2, '0')}-${now.dayOfMonth.toString().padStart(2, '0')}"
         val monthKey = "${now.year}-${now.monthNumber.toString().padStart(2, '0')}"
 
-        val userRef = firestore.collection("ai_usage").document(userId)
+        val userRef = db.collection("ai_usage").document(userId)
 
         val dailyDoc = userRef.collection("daily").document(dayKey).get().get()
         val monthlyDoc = userRef.collection("monthly").document(monthKey).get().get()
-        val profileDoc = firestore.collection("profiles").document(userId).get().get()
+        val profileDoc = db.collection("profiles").document(userId).get().get()
 
         val snapshot = UsageSnapshot(
             dailyTokens = dailyDoc.getLong("tokens")?.toInt() ?: 0,

@@ -8,7 +8,7 @@ import com.lifo.shared.model.ThreadProto
 import com.lifo.server.model.PaginationParams
 import org.slf4j.LoggerFactory
 
-class SocialService(private val db: Firestore?) {
+class SocialService(private val db: Firestore) {
     private val logger = LoggerFactory.getLogger(SocialService::class.java)
     private val threadsCollection = "threads"
     private val likesCollection = "threadLikes"
@@ -20,7 +20,7 @@ class SocialService(private val db: Firestore?) {
     // --- Threads ---
 
     suspend fun getFeed(userId: String, params: PaginationParams): PagedThreads {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
 
         // For-you feed: public threads ordered by recency (ranking will be server-side later)
         var query = firestore.collection(threadsCollection)
@@ -55,7 +55,7 @@ class SocialService(private val db: Firestore?) {
     }
 
     suspend fun getFollowingFeed(userId: String, params: PaginationParams): PagedThreads {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
 
         // Get who user follows
         val followingDocs = firestore.collection(followsCollection)
@@ -91,7 +91,7 @@ class SocialService(private val db: Firestore?) {
     }
 
     suspend fun getThreadById(userId: String, threadId: String): ThreadProto? {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val doc = firestore.collection(threadsCollection).document(threadId).get().get()
         if (!doc.exists()) return null
 
@@ -104,7 +104,7 @@ class SocialService(private val db: Firestore?) {
     }
 
     suspend fun getReplies(threadId: String, params: PaginationParams): PagedThreads {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
 
         var query = firestore.collection(threadsCollection)
             .whereEqualTo("parentThreadId", threadId)
@@ -129,7 +129,7 @@ class SocialService(private val db: Firestore?) {
     }
 
     suspend fun createThread(userId: String, thread: ThreadProto): ThreadProto {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val now = System.currentTimeMillis()
 
         val data = hashMapOf<String, Any>(
@@ -164,7 +164,7 @@ class SocialService(private val db: Firestore?) {
     }
 
     suspend fun deleteThread(userId: String, threadId: String): Boolean {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val doc = firestore.collection(threadsCollection).document(threadId).get().get()
         if (!doc.exists() || doc.getString("authorId") != userId) return false
 
@@ -176,7 +176,7 @@ class SocialService(private val db: Firestore?) {
     // --- Engagement ---
 
     suspend fun likeThread(userId: String, threadId: String): Boolean {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val likeId = "${userId}_$threadId"
         val likeRef = firestore.collection(likesCollection).document(likeId)
 
@@ -189,7 +189,7 @@ class SocialService(private val db: Firestore?) {
     }
 
     suspend fun unlikeThread(userId: String, threadId: String): Boolean {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val likeRef = firestore.collection(likesCollection).document("${userId}_$threadId")
 
         if (!likeRef.get().get().exists()) return false
@@ -201,7 +201,7 @@ class SocialService(private val db: Firestore?) {
     }
 
     suspend fun repostThread(userId: String, threadId: String): Boolean {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val repostId = "${userId}_$threadId"
         val repostRef = firestore.collection(repostsCollection).document(repostId)
 
@@ -216,7 +216,7 @@ class SocialService(private val db: Firestore?) {
     // --- Social Graph ---
 
     suspend fun follow(followerId: String, followedId: String): Boolean {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         if (followerId == followedId) return false
 
         val followId = "${followerId}_$followedId"
@@ -232,7 +232,7 @@ class SocialService(private val db: Firestore?) {
     }
 
     suspend fun unfollow(followerId: String, followedId: String): Boolean {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val followRef = firestore.collection(followsCollection).document("${followerId}_$followedId")
         if (!followRef.get().get().exists()) return false
         followRef.delete().get()

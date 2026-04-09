@@ -12,7 +12,7 @@ data class FeatureFlagsProto(
     @ProtoNumber(1) val flags: Map<String, Boolean> = emptyMap(),
 )
 
-class FeatureFlagService(private val db: Firestore?) {
+class FeatureFlagService(private val db: Firestore) {
     private val logger = LoggerFactory.getLogger(FeatureFlagService::class.java)
 
     // Cache flags for 5 minutes — avoid Firestore reads on every request
@@ -24,8 +24,7 @@ class FeatureFlagService(private val db: Firestore?) {
         val cached = cache.get("flags")
         if (cached != null) return cached
 
-        val firestore = db ?: return emptyMap()
-        val doc = firestore.collection("config").document("flags").get().get()
+        val doc = db.collection("config").document("flags").get().get()
         if (!doc.exists()) return emptyMap()
 
         val flags = doc.data?.mapValues { (_, v) -> v as? Boolean ?: false } ?: emptyMap()

@@ -9,7 +9,7 @@ import com.lifo.shared.model.MessageStatusProto
 import com.lifo.server.model.PaginationParams
 import org.slf4j.LoggerFactory
 
-class ChatService(private val db: Firestore?) {
+class ChatService(private val db: Firestore) {
     private val logger = LoggerFactory.getLogger(ChatService::class.java)
     private val sessionsCollection = "chatSessions"
     private val messagesCollection = "chatMessages"
@@ -18,7 +18,7 @@ class ChatService(private val db: Firestore?) {
     data class PagedMessages(val items: List<ChatMessageProto>, val meta: PaginationMeta)
 
     suspend fun getSessions(userId: String, params: PaginationParams): PagedSessions {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
 
         var query = firestore.collection(sessionsCollection)
             .whereEqualTo("ownerId", userId)
@@ -54,7 +54,7 @@ class ChatService(private val db: Firestore?) {
     }
 
     suspend fun getSessionById(userId: String, sessionId: String): ChatSessionProto? {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val doc = firestore.collection(sessionsCollection).document(sessionId).get().get()
         if (!doc.exists() || doc.getString("ownerId") != userId) return null
 
@@ -70,7 +70,7 @@ class ChatService(private val db: Firestore?) {
     }
 
     suspend fun createSession(userId: String, session: ChatSessionProto): ChatSessionProto {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val now = System.currentTimeMillis()
 
         val data = mapOf(
@@ -89,7 +89,7 @@ class ChatService(private val db: Firestore?) {
     }
 
     suspend fun deleteSession(userId: String, sessionId: String): Boolean {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val doc = firestore.collection(sessionsCollection).document(sessionId).get().get()
         if (!doc.exists() || doc.getString("ownerId") != userId) return false
 
@@ -107,7 +107,7 @@ class ChatService(private val db: Firestore?) {
     }
 
     suspend fun getMessages(userId: String, sessionId: String, params: PaginationParams): PagedMessages {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
 
         // Verify session ownership
         val session = firestore.collection(sessionsCollection).document(sessionId).get().get()
@@ -153,7 +153,7 @@ class ChatService(private val db: Firestore?) {
     }
 
     suspend fun deleteAllSessions(userId: String): Int {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val sessions = firestore.collection(sessionsCollection)
             .whereEqualTo("ownerId", userId)
             .get().get().documents
@@ -175,7 +175,7 @@ class ChatService(private val db: Firestore?) {
     }
 
     suspend fun exportSessionToDiary(userId: String, sessionId: String): String {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
 
         // Get session
         val session = getSessionById(userId, sessionId)
@@ -218,7 +218,7 @@ class ChatService(private val db: Firestore?) {
     }
 
     suspend fun retryMessage(userId: String, messageId: String): ChatMessageProto? {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
         val doc = firestore.collection(messagesCollection).document(messageId).get().get()
         if (!doc.exists()) return null
 
@@ -243,7 +243,7 @@ class ChatService(private val db: Firestore?) {
     }
 
     suspend fun sendMessage(userId: String, sessionId: String, message: ChatMessageProto): ChatMessageProto {
-        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val firestore = db
 
         // Verify session ownership
         val session = firestore.collection(sessionsCollection).document(sessionId).get().get()

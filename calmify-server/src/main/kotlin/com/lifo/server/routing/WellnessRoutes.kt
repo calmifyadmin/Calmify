@@ -100,7 +100,7 @@ inline fun <reified T : Any> Route.wellnessCrudRoutes(
  */
 fun Route.habitCompletionRoutes(
     habitService: GenericWellnessService<com.lifo.shared.model.HabitProto>,
-    db: com.google.cloud.firestore.Firestore?,
+    db: com.google.cloud.firestore.Firestore,
 ) {
     authenticate("firebase") {
         // POST /api/v1/wellness/habits/{habitId}/toggle?dayKey=2026-04-10
@@ -110,7 +110,7 @@ fun Route.habitCompletionRoutes(
             val dayKey = call.parameters["dayKey"]
                 ?: throw IllegalArgumentException("Missing dayKey parameter")
 
-            val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+            val firestore = db
             val completionId = "${habitId}_$dayKey"
             val docRef = firestore.collection("habitCompletions").document(completionId)
             val existing = docRef.get().get()
@@ -135,7 +135,7 @@ fun Route.habitCompletionRoutes(
         get("/completions/day/{dayKey}") {
             val user = call.principal<UserPrincipal>()!!
             val dayKey = call.parameters["dayKey"]!!
-            val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+            val firestore = db
 
             val completions = firestore.collection("habitCompletions")
                 .whereEqualTo("ownerId", user.uid)
@@ -158,7 +158,7 @@ fun Route.habitCompletionRoutes(
             val user = call.principal<UserPrincipal>()!!
             val habitId = call.parameters["habitId"]!!
             val limit = call.parameters["limit"]?.toIntOrNull() ?: 30
-            val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+            val firestore = db
 
             val completions = firestore.collection("habitCompletions")
                 .whereEqualTo("ownerId", user.uid)
