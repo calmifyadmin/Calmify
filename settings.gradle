@@ -63,3 +63,6 @@ include ':features:meditation'
 
 // Shared models (Protobuf — client + server)
 include ':shared:models'
+
+// Ktor Server (Cloud Run)
+include ':calmify-server'

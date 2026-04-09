@@ -321,3 +321,7 @@ com-google-firebase-perf = { id = "com.google.firebase.firebase-perf", version =
 org-jetbrains-kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 org-jetbrains-compose = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
 app-cash-sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
+
+# === SERVER PLUGINS ===
+org-jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+io-ktor-plugin = { id = "io.ktor.plugin", version = "3.1.1" }
