@@ -32,4 +32,4 @@ steps:
 images:
   - 'gcr.io/$PROJECT_ID/calmify-server:${_TAG}'
 
-timeout: '600s'
+timeout: '1800s'

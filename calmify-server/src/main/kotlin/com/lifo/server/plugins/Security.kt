@@ -23,6 +23,7 @@ fun Application.configureSecurity() {
 
     // Security headers via DefaultHeaders plugin
     install(DefaultHeaders) {
+        header("X-Server", "calmify-ktor")
         header("X-Content-Type-Options", "nosniff")
         header("X-Frame-Options", "DENY")
         header("X-XSS-Protection", "0") // Modern browsers: CSP replaces this
