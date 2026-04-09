@@ -45,37 +45,77 @@ Come Jarvis di Iron Man, opero con questi principi fondamentali:
 
 ## Session Initialization — CRITICAL
 
-**Ad ogni nuova sessione, LEGGERE SUBITO questo file prima di fare qualsiasi cosa:**
+**Ad ogni nuova sessione, LEGGERE SUBITO questo file prima di fare qualsiasi cosa.**
 
-1. **`.claude/KMP_STATUS.md`** — Stato COMPLETO del progetto: architettura, moduli, DI, database, navigation, audio, 3D avatar, tutti i dettagli tecnici. Questo e' il file principale.
+### Stato Attuale (aggiornato 2026-04-09)
 
-2. **`.claude/refactor-status.md`** — Log cronologico dettagliato di tutte le operazioni passate (utile per capire PERCHE' qualcosa e' stato fatto in un certo modo).
+- **Branch attivo**: `backend-architecture-refactor` (base: master @ `08ef101`)
+- **Fase 1 KMP COMPLETATA**: 237 file commonMain / 90 file androidMain (72.5% shared)
+- **Prossimo lavoro**: Backend Architecture Refactor (4 workstream)
 
-3. **`.claude/IMPROVEMENT_PROGRESS.md`** — Tracker del piano di miglioramento strategico (4 fasi, 30+ task — COMPLETATO).
+### File da leggere in ordine di priorita'
 
-4. **`.claude/HOLISTIC_GROWTH_STATUS.md`** — Tracker del piano di crescita olistica (6 fasi, 18 deliverable, 5 sprint). Leggere per sapere DOVE siamo e cosa fare dopo.
+1. **`.claude/KMP_MIGRATION_STATUS.md`** — Tracker KMP attivo: fasi 1-5, metriche, log commit. Fonte di verita' per lo stato della migrazione.
 
-5. **`HOLISTIC_GROWTH_PLAN.md`** — Piano crescita olistica completo: feature mente-corpo-spirito, modelli dati, stack grafico KMP, roadmap sprint, principi guida.
+2. **Backend Plans** (se si lavora sul refactor backend):
+   - **`.claude/BACKEND_KTOR_SERVER.md`** — Server Ktor su Cloud Run (3-5 sett.)
+   - **`.claude/BACKEND_SYNC_ENGINE.md`** — Offline-first con SQLDelight + SyncQueue (2 sett.)
+   - **`.claude/BACKEND_PROTOBUF.md`** — Serializzazione binaria, shared-models module (1 sett.)
+   - **`.claude/BACKEND_AI_SERVER.md`** — AI centralizzata server-side (1 sett.)
 
-6. **`FEATURE_IMPROVEMENT_ANALYSIS.md`** — Piano strategico originale: analisi 15 moduli, problemi, improvement plan (completato, evoluto in Holistic Growth Plan).
+3. **`.claude/KMP_STATUS.md`** — Stato architettura progetto: moduli, DI, DB, navigation, audio, 3D.
 
-**Slash command `/improve`** — Trigger per avviare/continuare il piano di miglioramento. Legge il tracker, identifica il prossimo task, propone approccio.
+4. **`.claude/refactor-status.md`** — Log cronologico di TUTTE le operazioni passate (utile per capire PERCHE').
 
-**NON sovrascrivere MEMORY.md con informazioni non verificate.** Se una sessione finisce i token, la prossima sessione deve VERIFICARE lo stato dal codice prima di aggiornare la memoria.
+5. **Piani feature** (se si lavora su nuove feature):
+   - **`.claude/HOLISTIC_GROWTH_STATUS.md`** — Tracker crescita olistica (6 fasi, 18 deliverable)
+   - **`HOLISTIC_GROWTH_PLAN.md`** — Piano completo feature mente-corpo-spirito
+
+### Regole branch
+
+- **`master`** — Solo codice stabile, build che funziona
+- **`backend-architecture-refactor`** — Tutto il lavoro backend (Ktor Server, Sync Engine, Protobuf, AI)
+- **Commit convention**: `<type>(<workstream>): <what>` + sezioni Problems/Gains (vedi memory/backend_refactor_tracker.md)
+- **Dopo ogni commit**: aggiornare il tracker nella memory con hash, descrizione, problemi, guadagni
+
+### Slash commands
+
+- **`/improve`** — Avvia/continua il piano di miglioramento. Legge tracker, identifica prossimo task.
+
+### Regole memoria
+
+- **NON sovrascrivere MEMORY.md con informazioni non verificate.**
+- Se una sessione finisce i token, la prossima sessione deve VERIFICARE lo stato dal codice prima di aggiornare la memoria.
+- Il tracker backend (`memory/backend_refactor_tracker.md`) e' la fonte di verita' per i commit del refactor.
 
 ---
 
 ## Project Overview — Calmify
 
 Calmify e' una piattaforma wellness + social **Kotlin Multiplatform** (KMP) con:
-- Chat AI (Gemini API, full-duplex voice)
-- Journaling/Diary (write feature)
-- Mood tracking + insights
-- Avatar 3D (Filament engine, VRM, lip-sync)
-- Social features (feed, messaging, notifications)
-- Monetization (subscription/billing)
+- Chat AI (Gemini 2.0 Flash, full-duplex voice WebSocket)
+- Journaling/Diary (write feature, 16+ wizard screens)
+- Mood tracking + insights (CBT-informed, sentiment analysis)
+- Avatar 3D (Filament engine, VRM, VRMA animations, lip-sync)
+- Social features (feed, messaging, threads, notifications)
+- Monetization (subscription/billing via Google Play)
 
-**Migrazione KMP completata** (2026-03-02): 17/18 moduli KMP, app resta Android-only.
+### Stato KMP (aggiornato 2026-04-09)
+- **18 moduli** KMP con convention plugins (`calmify.kmp.library`, `calmify.kmp.compose`)
+- **237 file commonMain** (72.5%) / **90 file androidMain** (27.5%)
+- **Fase 1 completata**: write (47 file), home (22 file), history (100%), habits, meditation migrati
+- **90 file androidMain restanti** hanno blockers reali: Firebase, audio, Filament, permissions
+- **Prossima evoluzione**: Backend Ktor Server (server-mediated architecture)
+
+### Target Architecture (in corso)
+```
+Client (KMP)  →  Ktor Server (Cloud Run)  →  Firestore + Gemini
+                      │
+              Firebase Auth (JWT validation)
+              Protobuf serialization
+              Response caching
+              Offline sync via SQLDelight
+```
 
 ## Build Commands
 
@@ -108,10 +148,11 @@ Calmify e' una piattaforma wellness + social **Kotlin Multiplatform** (KMP) con:
 | Modulo | Plugin | Ruolo |
 |--------|--------|-------|
 | **app** | `com.android.application` | MainActivity, DecomposeApp, RootComponent, Koin setup |
-| **core/util** | `calmify.kmp.library` | Modelli, 19 repository interfaces, MVI base, AuthProvider, UseCases |
-| **core/ui** | `calmify.kmp.compose` | Theme (expect/actual), componenti UI condivisi |
-| **data/mongo** | `calmify.kmp.library` + SQLDelight | SQLDelight schema + 19 Firestore repository implementations |
-| **features/** (14) | `calmify.kmp.compose` | auth, home, write, chat, humanoid, history, insight, profile, settings, onboarding, feed, composer, social-profile, search, notifications, messaging, subscription |
+| **core/util** | `calmify.kmp.library` | Modelli, 36 repository interfaces, MVI base, AuthProvider, UseCases |
+| **core/ui** | `calmify.kmp.compose` | Theme (expect/actual), componenti UI condivisi, coach marks |
+| **core/social-ui** | `calmify.kmp.compose` | Componenti social: ThreadPostCard, MediaCarousel |
+| **data/mongo** | `calmify.kmp.library` + SQLDelight | SQLDelight schema (5 tabelle) + 36 Firestore repository implementations |
+| **features/** (17) | `calmify.kmp.compose` | auth, home, write, chat, humanoid, history, insight, profile, settings, onboarding, feed, composer, social-profile, search, notifications, messaging, subscription, thread-detail, habits, meditation, avatar-creator |
 
 ### Key Technologies
 
@@ -119,7 +160,7 @@ Calmify e' una piattaforma wellness + social **Kotlin Multiplatform** (KMP) con:
 - **Navigation**: Decompose 3.4.0 (StackNavigation, 18 @Serializable destinations)
 - **DI**: Koin 4.1.1 (sole DI, Hilt completamente rimosso)
 - **Pattern**: MVI rigoroso (MviViewModel + Intent/State/Effect) su tutti i 18+ ViewModel
-- **Database**: SQLDelight 2.0.2 (4 tabelle, Room completamente rimosso)
+- **Database**: SQLDelight 2.0.2 (5 tabelle: ChatMessage, ChatSession, CachedThread, ImageToUpload, ImageToDelete)
 - **Authentication**: Firebase Auth behind `AuthProvider` interface (commonMain)
 - **AI/Voice**: Gemini API, Silero VAD, full-duplex AEC, Sherpa-ONNX TTS
 - **3D**: Filament 1.68.2 per avatar VRM + VRMA animations
@@ -133,7 +174,7 @@ Calmify e' una piattaforma wellness + social **Kotlin Multiplatform** (KMP) con:
 
 2. **ViewModels**: All 18+ VMs extend `MviViewModel<Intent, State, Effect>` in `core/util/mvi/`. Pattern: `onIntent()` -> `handleIntent()` -> `updateState()` / `sendEffect()`. Uses `CoroutineScope` (NO AndroidX ViewModel).
 
-3. **Repository Pattern**: 19 interfaces in `core/util/repository/` (commonMain), implementations in `data/mongo/` (androidMain Firestore).
+3. **Repository Pattern**: 36 interfaces in `core/util/repository/` (commonMain), implementations in `data/mongo/` (androidMain Firestore). Categories: CRUD (diary, chat, profiles, 14 wellness), Social (feed, threads, messaging, graph), Real-time (presence, notifications), Utility (feature flags, moderation, search).
 
 4. **AuthProvider**: Interface in commonMain, `FirebaseAuthProvider` in androidMain. Tutti i VM usano AuthProvider, mai FirebaseAuth direttamente.
 
@@ -156,10 +197,18 @@ Calmify e' una piattaforma wellness + social **Kotlin Multiplatform** (KMP) con:
 - `rememberSaveable` for configuration changes
 
 ### KMP Source Set Rules
-- **commonMain**: Solo Kotlin puro. No `android.*`, no `java.time`, no `R.drawable`
-- **androidMain**: Codice platform-specific (Firebase, Filament, Camera, Audio I/O)
-- Feature modules usano `kotlin.srcDirs('src/main/java')` per mappare legacy code ad androidMain
-- Per spostare codice in commonMain: verificare ZERO import Android, poi muovere fisicamente
+- **commonMain**: Solo Kotlin puro. No `android.*`, no `java.time`, no `java.util`, no `R.drawable`, no `String.format()`
+- **androidMain**: Codice platform-specific (Firebase, Filament, Camera, Audio I/O, Permissions)
+- Per spostare codice in commonMain: verificare ZERO import Android/JVM, poi muovere fisicamente
+- **Conversioni note**:
+  - `java.time.*` → `kotlinx.datetime.*` (vedi DateFormatters.kt per pattern completo)
+  - `java.util.UUID` → `kotlin.uuid.Uuid.random()` con `@OptIn(ExperimentalUuidApi::class)`
+  - `System.currentTimeMillis()` → `com.lifo.util.currentTimeMillis()`
+  - `String.format("%.1f", val)` → `com.lifo.util.formatDecimal(1, val)`
+  - `LocalTime.now().hour` → `Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).hour`
+  - `@SuppressLint("NewApi")` → rimuovere (non serve in KMP)
+  - `SavedStateHandle` → rimuovere, passare parametri via constructor da Decompose
+- **Validazione**: `compileDebugKotlinAndroid` (Android), `compileKotlinIosSimulatorArm64` (iOS). NON usare `compileCommonMainKotlinMetadata` — fallisce per moduli con `koinViewModel()`.
 
 ### Adding a New Feature Module
 1. Creare directory sotto `features/`

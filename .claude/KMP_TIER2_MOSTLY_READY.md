@@ -1,3 +1,7 @@
+> **NOTA (2026-04-09)**: Questo file e' stato scritto PRIMA della Fase 1. Molte azioni sono gia' completate.
+> Per lo stato attuale, vedi `.claude/KMP_MIGRATION_STATUS.md` (tracker aggiornato).
+> Per i piani backend, vedi `.claude/BACKEND_*.md`.
+
 # KMP TIER 2 — Mostly Ready (3 moduli, lavoro mirato)
 
 > commonMain pulito, ma androidMain ha logica significativa da astrarre.

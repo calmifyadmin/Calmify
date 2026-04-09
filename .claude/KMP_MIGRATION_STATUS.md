@@ -3,10 +3,22 @@
 > Tracker principale. Aggiornare SOLO dopo aver verificato che il codice compila.
 > Iniziato: 2026-04-08
 
-## Strategia data layer: Option C
-- commonMain: GitLive Firebase SDK (Android + iOS + JS)
-- wasmJsMain (futuro): Ktor REST fallback
-- desktopMain: GitLive JVM (alpha, accettabile)
+## Strategia data layer: EVOLUTA da Option C → Server-Mediated
+
+> **Decision (2026-04-09)**: Ktor Server in mezzo > Firebase diretto
+> - Sicurezza: zero credenziali nell'APK, server-side validation
+> - Performance: aggregazione server-side, response caching, Protobuf 3-5x compatto
+> - AI: prompt registry centralizzato, token caching 60%+ savings
+> - Offline: SQLDelight cache + SyncQueue + delta sync
+> - WASM: Ktor Client funziona su tutte le piattaforme (GitLive no)
+
+- Client (KMP) → Ktor REST/Protobuf → Ktor Server (Cloud Run) → Firestore
+- Real-time: Firestore snapshots per messaging/feed (resta diretto per ora)
+- Auth: Firebase Auth resta (JWT validato server-side)
+- AI: Gemini chiamato SOLO dal server (mai dal client)
+- **Piani dettagliati**: `.claude/BACKEND_KTOR_SERVER.md`, `BACKEND_SYNC_ENGINE.md`, `BACKEND_PROTOBUF.md`, `BACKEND_AI_SERVER.md`
+- **Tracker commit**: `memory/backend_refactor_tracker.md`
+- **Branch**: `backend-architecture-refactor`
 
 ---
 
@@ -14,7 +26,7 @@
 - [x] Verificare build corrente compila: `./gradlew assembleDebug` — OK
 - [x] Verificare `KMP_READY` flag in buildSrc/ProjectConfig.kt — `false` (non blocca, solo doc)
 - [x] Verificare convention plugins supportano iOS targets — iosX64, iosArm64, iosSimulatorArm64 configurati
-- [ ] Creare branch dedicato: `kmp-full-migration`
+- [x] Branch: `backend-architecture-refactor` (include sia KMP che backend)
 
 **NOTA**: `compileCommonMainKotlinMetadata` fallisce per TUTTI i moduli con `koinViewModel()`
 perche' `PlatformViewModel` in commonMain non e' `ViewModel`. Questo e' un limite noto KMP+Koin.
@@ -183,6 +195,38 @@ Validazione corretta: `compileDebugKotlinAndroid` (Android) e `compileKotlinIosS
 - [ ] core/util — OnboardingManager per iOS
 - [ ] core/util — AuthProvider per iOS
 - [ ] core/social-ui — MediaCarousel actual per iOS
+
+## FASE 6: Backend Architecture (7-9 settimane) — NEW
+
+> Branch: `backend-architecture-refactor`
+> Tracker commit: `memory/backend_refactor_tracker.md`
+> Piani dettagliati: `.claude/BACKEND_*.md`
+
+### 6.1 Protobuf (1 settimana) — `.claude/BACKEND_PROTOBUF.md`
+- [ ] Modulo shared-models con @ProtoNumber data classes
+- [ ] Domain ↔ Proto mappers
+- [ ] ContentNegotiation server + client (Protobuf + JSON fallback)
+
+### 6.2 Ktor Server (3-5 settimane) — `.claude/BACKEND_KTOR_SERVER.md`
+- [ ] Bootstrap: Ktor + Netty + Firebase Admin + Cloud Run
+- [ ] CRUD Batch 1: 15 core endpoints (diary, chat, insight, profile)
+- [ ] CRUD Batch 2: 14 wellness endpoints + aggregated dashboard
+- [ ] Social endpoints: feed, threads, graph, GDPR
+- [ ] Real-time: WebSocket messaging, SSE feed/notifications
+- [ ] Security: rate limiting, audit log, input sanitization
+
+### 6.3 AI Server-Side (1 settimana) — `.claude/BACKEND_AI_SERVER.md`
+- [ ] AiOrchestrator + PromptRegistry + ModelRouter
+- [ ] ResponseCache (semantic hash, 60%+ savings)
+- [ ] ContentFilter + TokenTracker
+- [ ] Streaming SSE + WebSocket voice proxy
+
+### 6.4 Sync Engine (2 settimane) — `.claude/BACKEND_SYNC_ENGINE.md`
+- [ ] SyncOperation.sq + SyncMetadata.sq + expanded entity tables
+- [ ] SyncEngine.kt (drain queue, pull changes, delta sync)
+- [ ] ConnectivityObserver expect/actual
+- [ ] SyncAwareRepository pattern + conflict resolution
+- [ ] Optimistic updates + UI indicators
 
 ---
 

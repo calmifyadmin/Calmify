@@ -1,30 +1,53 @@
 # Calmify — Stato Progetto e Guida per Nuove Sessioni
 
-> **LEGGERE SEMPRE all'inizio di ogni sessione.**
-> Ultimo aggiornamento: 2026-03-19
+> Ultimo aggiornamento: **2026-04-09**
+> Per tracker dettagliato migrazione: vedi `.claude/KMP_MIGRATION_STATUS.md`
+> Per piani backend: vedi `.claude/BACKEND_*.md` (4 file)
 
 ## TL;DR — Stato Attuale
 
-**Migrazione KMP source set COMPLETATA. Zero file legacy. Zero `kotlin.srcDirs` mapping.**
+**Fase 1 KMP COMPLETATA (2026-04-09). 72.5% codice in commonMain. Backend refactor in corso.**
 
-- **17/18 moduli** usano convention plugin KMP (`calmify.kmp.library` o `calmify.kmp.compose`)
+- **18 moduli** usano convention plugin KMP (`calmify.kmp.library` o `calmify.kmp.compose`)
 - **Solo `app`** resta Android-only (`com.android.application`)
-- **assembleDebug OK**: 562 tasks, 0 errori
+- **assembleDebug OK**: 943 tasks, 0 errori
 - **DI**: Koin 4.1.1 (Hilt completamente rimosso)
-- **Database**: SQLDelight 2.0.2 (Room completamente rimosso)
-- **Navigation**: Decompose 3.4.0 (Navigation Compose rimosso)
+- **Database**: SQLDelight 2.0.2 (5 tabelle: ChatMessage, ChatSession, CachedThread, ImageToUpload, ImageToDelete)
+- **Navigation**: Decompose 3.4.0 (18 @Serializable destinations)
 - **MVI**: Tutti i 18+ ViewModel usano `MviViewModel<Intent, State, Effect>`
-- **Production Plan**: `PRODUCTION_READY_PLAN.md` — PRO Switch, Play Store, compliance, i18n
+- **Repository**: 36 interfaces in core/util, 36 Firestore implementations in data/mongo
+- **Branch attivo**: `backend-architecture-refactor` (base: master @ `08ef101`)
 
-### Stato Codice (verificato 2026-03-19)
-- **commonMain**: 217 file (61%) — UI, ViewModel, domain, contracts, utility, Ktor clients
-- **androidMain**: 137 file (39%) — di cui solo **17 veramente platform-specific** (vedi analisi sotto)
-- **Legacy src/main/java**: 0 file (eliminati tutti i `kotlin.srcDirs` mapping)
+### Stato Codice (verificato 2026-04-09)
+- **commonMain**: **237 file** (72.5%) — UI, ViewModel, domain, contracts, utility, Ktor clients
+- **androidMain**: **90 file** (27.5%) — tutti con blockers reali (Firebase, audio, Filament, permissions)
+- **Legacy src/main/java**: 0 file
 - **app module**: 13 file (Android-only entry point, non KMP)
-- Target realistico: **~95% commonMain** (335 di 355 file)
-- **Production Plan**: `PRODUCTION_READY_PLAN.md` + `.claude/PROD_PROGRESS.md` (tracker)
+- **SavedStateHandle rimasti**: 2 (HomeViewModel, WriteViewModel) — gli altri rimossi
 
-### Analisi androidMain — Cosa resta davvero platform-specific
+### Moduli 100% commonMain (dopo Fase 1)
+- history, habits (4/5), meditation (4/6), insight, messaging, avatar-creator, notifications, onboarding, profile, search, subscription
+
+### Cosa blocca i 90 file androidMain restanti
+
+| Categoria | File | Blockers |
+|-----------|------|----------|
+| **Firebase/Google SDK** | ~15 | FirebaseStorage, FirebaseAuth, GoogleSignIn, Filament |
+| **Android platform APIs** | ~25 | AudioTrack/Record, Camera2, Permissions, Toast, Context |
+| **java.time con UI complessa** | ~10 | CalendarDialog (maxkeppeler), date pickers |
+| **Coil/Accompanist** | ~8 | Image loading, HorizontalPager |
+| **Transitive deps** | ~32 | Entry points/screens bloccati dai VM ancora in androidMain |
+
+### Prossima evoluzione: Backend Architecture
+
+| Workstream | Effort | Stato | Plan file |
+|---|---|---|---|
+| Protobuf (shared-models) | 1 sett. | NOT STARTED | `.claude/BACKEND_PROTOBUF.md` |
+| Ktor Server (Cloud Run) | 3-5 sett. | NOT STARTED | `.claude/BACKEND_KTOR_SERVER.md` |
+| AI Server-Side | 1 sett. | NOT STARTED | `.claude/BACKEND_AI_SERVER.md` |
+| Sync Engine (offline-first) | 2 sett. | NOT STARTED | `.claude/BACKEND_SYNC_ENGINE.md` |
+
+### Analisi androidMain — Cosa resta davvero platform-specific (LEGACY — da aggiornare)
 
 | Categoria | File | % del totale | Strategia |
 |-----------|------|-------------|-----------|
