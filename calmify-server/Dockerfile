@@ -18,7 +18,7 @@ COPY . .
 RUN gradle :calmify-server:buildFatJar --no-daemon
 
 # Runtime stage
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 COPY --from=build /app/calmify-server/build/libs/calmify-server-all.jar server.jar
 
