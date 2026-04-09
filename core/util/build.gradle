@@ -11,6 +11,8 @@ kotlin {
         commonMain.dependencies {
             // Coroutines core already added by convention plugin
             api libs.kotlinx.datetime
+            // Shared Proto models for network serialization
+            api project(':shared:models')
         }
 
         androidMain {

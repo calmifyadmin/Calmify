@@ -1,0 +1,56 @@
+package com.lifo.util.mapper
+
+import com.lifo.shared.model.ThreadProto
+import com.lifo.util.repository.ThreadRepository.Thread
+
+fun Thread.toProto(): ThreadProto = ThreadProto(
+    threadId = threadId,
+    authorId = authorId,
+    parentThreadId = parentThreadId ?: "",
+    text = text,
+    likeCount = likeCount,
+    replyCount = replyCount,
+    repostCount = repostCount,
+    visibility = visibility,
+    moodTag = moodTag ?: "",
+    isFromJournal = isFromJournal,
+    createdAt = createdAt,
+    updatedAt = updatedAt ?: 0L,
+    authorDisplayName = authorDisplayName ?: "",
+    authorUsername = authorUsername ?: "",
+    authorAvatarUrl = authorAvatarUrl ?: "",
+    authorIsVerified = authorIsVerified,
+    mediaUrls = mediaUrls,
+    isLikedByCurrentUser = isLikedByCurrentUser,
+    isRepostedByCurrentUser = isRepostedByCurrentUser,
+    replyPreviewAvatars = replyPreviewAvatars,
+    viewCount = viewCount,
+    shareCount = shareCount,
+    postCategory = postCategory ?: "",
+)
+
+fun ThreadProto.toDomain(): Thread = Thread(
+    threadId = threadId,
+    authorId = authorId,
+    parentThreadId = parentThreadId.takeIf { it.isNotEmpty() },
+    text = text,
+    likeCount = likeCount,
+    replyCount = replyCount,
+    repostCount = repostCount,
+    visibility = visibility,
+    moodTag = moodTag.takeIf { it.isNotEmpty() },
+    isFromJournal = isFromJournal,
+    createdAt = createdAt,
+    updatedAt = updatedAt.takeIf { it != 0L },
+    authorDisplayName = authorDisplayName.takeIf { it.isNotEmpty() },
+    authorUsername = authorUsername.takeIf { it.isNotEmpty() },
+    authorAvatarUrl = authorAvatarUrl.takeIf { it.isNotEmpty() },
+    authorIsVerified = authorIsVerified,
+    mediaUrls = mediaUrls,
+    isLikedByCurrentUser = isLikedByCurrentUser,
+    isRepostedByCurrentUser = isRepostedByCurrentUser,
+    replyPreviewAvatars = replyPreviewAvatars,
+    viewCount = viewCount,
+    shareCount = shareCount,
+    postCategory = postCategory.takeIf { it.isNotEmpty() },
+)

@@ -60,3 +60,6 @@ include ':features:avatar-creator'
 // Holistic Growth (Sprint 1)
 include ':features:habits'
 include ':features:meditation'
+
+// Shared models (Protobuf — client + server)
+include ':shared:models'
