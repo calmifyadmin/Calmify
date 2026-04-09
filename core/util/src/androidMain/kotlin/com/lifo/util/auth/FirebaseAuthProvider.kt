@@ -1,10 +1,10 @@
 package com.lifo.util.auth
 
 import com.google.firebase.auth.FirebaseAuth
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.tasks.await
 
 /**
  * Android implementation of [AuthProvider] backed by Firebase Auth.
@@ -40,6 +40,14 @@ class FirebaseAuthProvider(private val auth: FirebaseAuth) : AuthProvider {
         get() = auth.currentUser?.photoUrl?.toString()
 
     override val authStateFlow: StateFlow<String?> = _authStateFlow.asStateFlow()
+
+    override suspend fun getIdToken(forceRefresh: Boolean): String? {
+        return try {
+            auth.currentUser?.getIdToken(forceRefresh)?.await()?.token
+        } catch (e: Exception) {
+            null
+        }
+    }
 
     override suspend fun signOut() {
         auth.signOut()

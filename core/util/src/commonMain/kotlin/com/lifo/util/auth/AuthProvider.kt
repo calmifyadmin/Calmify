@@ -25,6 +25,9 @@ interface AuthProvider {
     /** Observable auth state — emits the current user ID (or null) on every auth change. */
     val authStateFlow: kotlinx.coroutines.flow.StateFlow<String?>
 
+    /** Get the Firebase ID token for the current user (for server auth). */
+    suspend fun getIdToken(forceRefresh: Boolean = false): String?
+
     /** Sign out the current user. */
     suspend fun signOut()
 }

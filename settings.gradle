@@ -61,6 +61,9 @@ include ':features:avatar-creator'
 include ':features:habits'
 include ':features:meditation'
 
+// Data — network layer (Ktor REST client)
+include ':data:network'
+
 // Shared models (Protobuf — client + server)
 include ':shared:models'
 
