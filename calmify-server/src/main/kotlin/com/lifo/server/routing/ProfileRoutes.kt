@@ -4,6 +4,7 @@ import com.lifo.server.security.UserPrincipal
 import com.lifo.server.service.ProfileService
 import com.lifo.shared.api.ApiError
 import com.lifo.shared.model.ProfileSettingsProto
+import com.lifo.shared.model.PsychologicalProfileProto
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
@@ -37,6 +38,46 @@ fun Route.profileRoutes() {
                 val profile = call.receive<ProfileSettingsProto>()
                 val updated = profileService.updateProfile(user.uid, profile)
                 call.respond(updated)
+            }
+
+            // GET /api/v1/profile/psychological?weeks=4
+            get("/psychological") {
+                val user = call.principal<UserPrincipal>()!!
+                val weeks = call.parameters["weeks"]?.toIntOrNull() ?: 4
+                val profiles = profileService.getPsychologicalProfiles(user.uid, weeks)
+                call.respond(mapOf("data" to profiles))
+            }
+
+            // GET /api/v1/profile/psychological/latest
+            get("/psychological/latest") {
+                val user = call.principal<UserPrincipal>()!!
+                val profile = profileService.getLatestPsychologicalProfile(user.uid)
+                if (profile != null) {
+                    call.respond(profile)
+                } else {
+                    call.respond(
+                        HttpStatusCode.NotFound,
+                        ApiError(code = "NOT_FOUND", message = "No psychological profile found"),
+                    )
+                }
+            }
+
+            // GET /api/v1/profile/psychological/{weekNumber}/{year}
+            get("/psychological/{weekNumber}/{year}") {
+                val user = call.principal<UserPrincipal>()!!
+                val weekNumber = call.parameters["weekNumber"]?.toIntOrNull()
+                    ?: throw IllegalArgumentException("Invalid weekNumber")
+                val year = call.parameters["year"]?.toIntOrNull()
+                    ?: throw IllegalArgumentException("Invalid year")
+                val profile = profileService.getPsychologicalProfileByWeek(user.uid, weekNumber, year)
+                if (profile != null) {
+                    call.respond(profile)
+                } else {
+                    call.respond(
+                        HttpStatusCode.NotFound,
+                        ApiError(code = "NOT_FOUND", message = "Profile not found for week $weekNumber/$year"),
+                    )
+                }
             }
         }
     }

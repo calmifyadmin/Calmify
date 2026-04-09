@@ -85,6 +85,36 @@ fun Route.chatRoutes() {
                 val sent = chatService.sendMessage(user.uid, sessionId, message)
                 call.respond(HttpStatusCode.Created, sent)
             }
+
+            // DELETE /api/v1/chat/sessions — bulk delete all sessions
+            delete("/sessions") {
+                val user = call.principal<UserPrincipal>()!!
+                val count = chatService.deleteAllSessions(user.uid)
+                call.respond(mapOf("deleted" to count))
+            }
+
+            // POST /api/v1/chat/sessions/{sessionId}/export — export session to diary
+            post("/sessions/{sessionId}/export") {
+                val user = call.principal<UserPrincipal>()!!
+                val sessionId = call.parameters["sessionId"]!!
+                val diaryId = chatService.exportSessionToDiary(user.uid, sessionId)
+                call.respond(mapOf("diaryId" to diaryId))
+            }
+
+            // POST /api/v1/chat/messages/{messageId}/retry — retry failed message
+            post("/messages/{messageId}/retry") {
+                val user = call.principal<UserPrincipal>()!!
+                val messageId = call.parameters["messageId"]!!
+                val message = chatService.retryMessage(user.uid, messageId)
+                if (message != null) {
+                    call.respond(message)
+                } else {
+                    call.respond(
+                        HttpStatusCode.NotFound,
+                        ApiError(code = "NOT_FOUND", message = "Message not found"),
+                    )
+                }
+            }
         }
     }
 }

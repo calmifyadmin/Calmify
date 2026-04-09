@@ -2,6 +2,7 @@ package com.lifo.mongo.sync
 
 import com.lifo.util.auth.AuthProvider
 import com.lifo.util.model.*
+import com.lifo.util.sync.DeltaHandler
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
@@ -44,6 +45,30 @@ val syncModule = module {
             database = get(),
             syncEngine = get(),
             userId = { authProvider.currentUserId },
+        )
+    }
+
+    // DeltaApplier — routes server deltas to the correct sync repository
+    single<DeltaHandler> {
+        DeltaApplier(
+            database = get(),
+            syncDiaryRepository = get(),
+            syncChatRepository = get(),
+            wellnessRepos = mapOf(
+                SyncEntityType.GRATITUDE to get<SyncWellnessRepository<GratitudeEntry>>(named("sync_gratitude")),
+                SyncEntityType.ENERGY to get<SyncWellnessRepository<EnergyCheckIn>>(named("sync_energy")),
+                SyncEntityType.SLEEP to get<SyncWellnessRepository<SleepLog>>(named("sync_sleep")),
+                SyncEntityType.MEDITATION to get<SyncWellnessRepository<MeditationSession>>(named("sync_meditation")),
+                SyncEntityType.HABIT to get<SyncWellnessRepository<Habit>>(named("sync_habit")),
+                SyncEntityType.MOVEMENT to get<SyncWellnessRepository<MovementLog>>(named("sync_movement")),
+                SyncEntityType.REFRAME to get<SyncWellnessRepository<ThoughtReframe>>(named("sync_reframe")),
+                SyncEntityType.WELLBEING to get<SyncWellnessRepository<WellbeingSnapshot>>(named("sync_wellbeing")),
+                SyncEntityType.AWE to get<SyncWellnessRepository<AweEntry>>(named("sync_awe")),
+                SyncEntityType.CONNECTION to get<SyncWellnessRepository<ConnectionEntry>>(named("sync_connection")),
+                SyncEntityType.RECURRING_THOUGHT to get<SyncWellnessRepository<RecurringThought>>(named("sync_recurring")),
+                SyncEntityType.BLOCK to get<SyncWellnessRepository<Block>>(named("sync_block")),
+                SyncEntityType.VALUES to get<SyncWellnessRepository<ValuesDiscovery>>(named("sync_values")),
+            ),
         )
     }
 

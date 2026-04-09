@@ -168,6 +168,21 @@ class DiaryService(private val db: Firestore?) {
         return true
     }
 
+    suspend fun deleteAllDiaries(userId: String): Int {
+        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val docs = firestore.collection(collection)
+            .whereEqualTo("ownerId", userId)
+            .get().get().documents
+
+        if (docs.isEmpty()) return 0
+
+        val batch = firestore.batch()
+        docs.forEach { batch.delete(it.reference) }
+        batch.commit().get()
+        logger.info("Deleted ${docs.size} diaries for user $userId")
+        return docs.size
+    }
+
     suspend fun getDiariesByDateRange(
         userId: String,
         startMillis: Long,

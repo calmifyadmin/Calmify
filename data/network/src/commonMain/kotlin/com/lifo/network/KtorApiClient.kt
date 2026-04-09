@@ -12,7 +12,9 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import io.ktor.serialization.kotlinx.protobuf.*
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.protobuf.ProtoBuf
 
 /**
  * Central HTTP client for all server communication.
@@ -35,6 +37,9 @@ class KtorApiClient(
 
     val client = HttpClient {
         install(ContentNegotiation) {
+            // Protobuf preferred — 3-5x smaller payloads than JSON
+            protobuf(ProtoBuf { encodeDefaults = true })
+            // JSON fallback — for debugging, browser clients, or when server sends JSON
             json(this@KtorApiClient.json)
         }
 
@@ -50,7 +55,9 @@ class KtorApiClient(
 
         defaultRequest {
             url(baseUrl)
-            contentType(ContentType.Application.Json)
+            // Request protobuf from server; server falls back to JSON if needed
+            accept(ContentType.Application.ProtoBuf)
+            contentType(ContentType.Application.ProtoBuf)
         }
     }
 

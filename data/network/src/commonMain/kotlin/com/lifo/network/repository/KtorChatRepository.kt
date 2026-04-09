@@ -61,7 +61,15 @@ class KtorChatRepository(
     }
 
     override suspend fun retryMessage(messageId: String): RequestState<ChatMessage> {
-        return RequestState.Error(Exception("Retry not supported via REST"))
+        val result = api.post<Map<String, String>>("/api/v1/chat/messages/$messageId/retry")
+        return result.map {
+            ChatMessage(
+                id = it["id"] ?: messageId,
+                sessionId = it["sessionId"] ?: "",
+                content = it["content"] ?: "",
+                isUser = it["isUser"]?.toBooleanStrictOrNull() ?: false,
+            )
+        }
     }
 
     override suspend fun generateAiResponse(
@@ -82,11 +90,12 @@ class KtorChatRepository(
     }
 
     override suspend fun exportSessionToDiary(sessionId: String): RequestState<String> {
-        return RequestState.Error(Exception("Export not yet supported via REST"))
+        val result = api.post<Map<String, String>>("/api/v1/chat/sessions/$sessionId/export")
+        return result.map { it["diaryId"] ?: "" }
     }
 
     override suspend fun deleteAllSessions(): RequestState<Boolean> {
-        return RequestState.Error(Exception("Bulk delete not supported via REST yet"))
+        return api.deleteNoBody("/api/v1/chat/sessions")
     }
 
     override suspend fun saveLiveMessage(

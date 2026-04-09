@@ -65,13 +65,14 @@ class KtorDiaryRepository(
     }
 
     override suspend fun deleteAllDiaries(): RequestState<Boolean> {
-        // Server doesn't have a bulk delete endpoint yet — would need batch
-        return RequestState.Error(Exception("Bulk delete not supported via REST yet"))
+        return api.deleteNoBody("/api/v1/diaries")
     }
 
     override suspend fun deleteAllUserData(): RequestState<Boolean> {
-        // GDPR delete — needs dedicated server endpoint
-        return RequestState.Error(Exception("GDPR delete not supported via REST yet"))
+        // GDPR full account deletion via dedicated endpoint
+        return api.postNoBody("/api/v1/gdpr/delete") {
+            url { parameters.append("confirmation", "DELETE_MY_ACCOUNT") }
+        }
     }
 
     override suspend fun saveFCMToken(token: String): RequestState<Boolean> {

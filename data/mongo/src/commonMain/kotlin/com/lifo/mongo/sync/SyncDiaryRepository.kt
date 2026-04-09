@@ -166,6 +166,42 @@ class SyncDiaryRepository(
         return RequestState.Error(Exception("Use network repository for FCM token"))
     }
 
+    // ─── Delta sync: apply server changes ──────────────────────────────
+
+    suspend fun applyServerChanges(
+        created: List<Diary>,
+        updated: List<Diary>,
+        deletedIds: List<String>,
+    ) = withContext(Dispatchers.Default) {
+        val now = currentTimeMillis()
+        for (diary in created + updated) {
+            diaryQueries.upsert(
+                id = diary._id,
+                owner_id = diary.ownerId,
+                mood = diary.mood,
+                title = diary.title,
+                description = diary.description,
+                images = json.encodeToString(diary.images),
+                date_millis = diary.dateMillis,
+                day_key = diary.dayKey,
+                timezone = diary.timezone,
+                emotion_intensity = diary.emotionIntensity.toLong(),
+                stress_level = diary.stressLevel.toLong(),
+                energy_level = diary.energyLevel.toLong(),
+                calm_anxiety_level = diary.calmAnxietyLevel.toLong(),
+                primary_trigger = diary.primaryTrigger,
+                dominant_body_sensation = diary.dominantBodySensation,
+                is_dirty = 0, // Server data is clean
+                created_at = diary.dateMillis,
+                updated_at = now,
+            )
+        }
+        for (id in deletedIds) {
+            diaryQueries.deleteById(id)
+        }
+        println("DeltaApplier: applied ${created.size + updated.size} diary upserts, ${deletedIds.size} deletes")
+    }
+
     // ─── Mapping helpers ────────────────────────────────────────────────
 
     private fun serializeDiary(diary: Diary): String {

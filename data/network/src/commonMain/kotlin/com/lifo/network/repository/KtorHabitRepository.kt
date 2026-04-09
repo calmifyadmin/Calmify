@@ -45,15 +45,34 @@ class KtorHabitRepository(
 
     override fun getCompletionsForDay(dayKey: String): Flow<RequestState<List<HabitCompletion>>> = flow {
         emit(RequestState.Loading)
-        // Would need a completions sub-endpoint
-        emit(RequestState.Success(emptyList()))
+        val result = api.get<CompletionListDto>("/api/v1/wellness/habits/completions/day/$dayKey")
+        emit(result.map { it.data.map { c -> c.toDomain() } })
     }
 
     override fun getCompletionsForHabit(habitId: String, limit: Int): Flow<RequestState<List<HabitCompletion>>> = flow {
         emit(RequestState.Loading)
-        emit(RequestState.Success(emptyList()))
+        val result = api.get<CompletionListDto>("/api/v1/wellness/habits/$habitId/completions?limit=$limit")
+        emit(result.map { it.data.map { c -> c.toDomain() } })
     }
 }
 
 @Serializable
 data class WellnessListDto<T>(val data: List<T> = emptyList())
+
+@Serializable
+data class CompletionListDto(val data: List<CompletionDto> = emptyList())
+
+@Serializable
+data class CompletionDto(
+    val id: String = "",
+    val habitId: String = "",
+    val dayKey: String = "",
+    val completedAt: Long = 0L,
+) {
+    fun toDomain() = HabitCompletion(
+        id = id,
+        habitId = habitId,
+        dayKey = dayKey,
+        completedAtMillis = completedAt,
+    )
+}

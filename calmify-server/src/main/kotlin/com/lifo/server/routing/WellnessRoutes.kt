@@ -94,3 +94,88 @@ inline fun <reified T : Any> Route.wellnessCrudRoutes(
         }
     }
 }
+
+/**
+ * Habit-specific routes with completion tracking.
+ */
+fun Route.habitCompletionRoutes(
+    habitService: GenericWellnessService<com.lifo.shared.model.HabitProto>,
+    db: com.google.cloud.firestore.Firestore?,
+) {
+    authenticate("firebase") {
+        // POST /api/v1/wellness/habits/{habitId}/toggle?dayKey=2026-04-10
+        post("/{habitId}/toggle") {
+            val user = call.principal<UserPrincipal>()!!
+            val habitId = call.parameters["habitId"]!!
+            val dayKey = call.parameters["dayKey"]
+                ?: throw IllegalArgumentException("Missing dayKey parameter")
+
+            val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+            val completionId = "${habitId}_$dayKey"
+            val docRef = firestore.collection("habitCompletions").document(completionId)
+            val existing = docRef.get().get()
+
+            if (existing.exists()) {
+                docRef.delete().get()
+                call.respond(mapOf("completed" to false))
+            } else {
+                docRef.set(
+                    hashMapOf<String, Any>(
+                        "habitId" to habitId,
+                        "ownerId" to user.uid,
+                        "dayKey" to dayKey,
+                        "completedAt" to System.currentTimeMillis(),
+                    ),
+                ).get()
+                call.respond(mapOf("completed" to true))
+            }
+        }
+
+        // GET /api/v1/wellness/habits/completions/day/{dayKey}
+        get("/completions/day/{dayKey}") {
+            val user = call.principal<UserPrincipal>()!!
+            val dayKey = call.parameters["dayKey"]!!
+            val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+
+            val completions = firestore.collection("habitCompletions")
+                .whereEqualTo("ownerId", user.uid)
+                .whereEqualTo("dayKey", dayKey)
+                .get().get().documents
+
+            val items = completions.map { doc ->
+                mapOf(
+                    "id" to doc.id,
+                    "habitId" to (doc.getString("habitId") ?: ""),
+                    "dayKey" to (doc.getString("dayKey") ?: ""),
+                    "completedAt" to (doc.getLong("completedAt") ?: 0L),
+                )
+            }
+            call.respond(mapOf("data" to items))
+        }
+
+        // GET /api/v1/wellness/habits/{habitId}/completions?limit=30
+        get("/{habitId}/completions") {
+            val user = call.principal<UserPrincipal>()!!
+            val habitId = call.parameters["habitId"]!!
+            val limit = call.parameters["limit"]?.toIntOrNull() ?: 30
+            val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+
+            val completions = firestore.collection("habitCompletions")
+                .whereEqualTo("ownerId", user.uid)
+                .whereEqualTo("habitId", habitId)
+                .orderBy("completedAt", com.google.cloud.firestore.Query.Direction.DESCENDING)
+                .limit(limit)
+                .get().get().documents
+
+            val items = completions.map { doc ->
+                mapOf(
+                    "id" to doc.id,
+                    "habitId" to (doc.getString("habitId") ?: ""),
+                    "dayKey" to (doc.getString("dayKey") ?: ""),
+                    "completedAt" to (doc.getLong("completedAt") ?: 0L),
+                )
+            }
+            call.respond(mapOf("data" to items))
+        }
+    }
+}

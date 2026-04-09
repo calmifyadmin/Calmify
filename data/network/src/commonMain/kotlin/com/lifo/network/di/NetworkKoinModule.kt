@@ -3,7 +3,6 @@ package com.lifo.network.di
 import com.lifo.network.KtorApiClient
 import com.lifo.network.repository.*
 import com.lifo.network.sync.KtorSyncExecutor
-import com.lifo.shared.api.GenericDeltaResponse
 import com.lifo.util.repository.*
 import com.lifo.util.sync.SyncExecutor
 import org.koin.dsl.module
@@ -26,13 +25,13 @@ val networkModule = module {
     }
 
     // SyncExecutor — bridges SyncEngine to server /sync endpoints
+    // DeltaHandler is provided by syncModule (data/mongo) via interface in core/util
     single<SyncExecutor> {
         KtorSyncExecutor(
             apiClient = get(),
             onDeltaReceived = { entityType, delta ->
-                // TODO: Apply delta to local SQLDelight tables
-                // This will be wired to the individual sync repositories
-                println("Delta received for $entityType: ${delta.created.size} created, ${delta.updated.size} updated, ${delta.deletedIds.size} deleted")
+                getKoin().getOrNull<com.lifo.util.sync.DeltaHandler>()?.apply(entityType, delta)
+                    ?: println("DeltaHandler not available — delta for $entityType ignored")
             },
         )
     }
@@ -69,7 +68,7 @@ val networkRepositoryModule = module {
  */
 object ServerConfig {
     val baseUrl: String
-        get() = "https://calmify-server-europe-west1.a.run.app" // Cloud Run URL
+        get() = "https://calmify-server-23546263069.europe-west1.run.app"
 
     val devBaseUrl: String
         get() = "http://10.0.2.2:8080" // Android emulator → localhost

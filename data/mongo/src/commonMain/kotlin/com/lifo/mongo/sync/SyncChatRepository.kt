@@ -318,6 +318,58 @@ class SyncChatRepository(
         return contextParts.takeLast(maxMessages).joinToString("\n")
     }
 
+    // ─── Delta sync: apply server changes ──────────────────────────────
+
+    suspend fun applySessionChanges(
+        created: List<ChatSession>,
+        updated: List<ChatSession>,
+        deletedIds: List<String>,
+    ) = withContext(Dispatchers.Default) {
+        for (session in created + updated) {
+            sessionQueries.insertSession(
+                id = session.id,
+                title = session.title,
+                createdAt = session.createdAt.toEpochMilliseconds(),
+                lastMessageAt = session.lastMessageAt.toEpochMilliseconds(),
+                aiModel = session.aiModel,
+                messageCount = session.messageCount.toLong(),
+                ownerId = session.ownerId,
+                summary = null,
+                lastMessage = null,
+                mood = null,
+                isLiveMode = 0L,
+                is_dirty = 0L,
+                updated_at = session.lastMessageAt.toEpochMilliseconds(),
+            )
+        }
+        for (id in deletedIds) {
+            messageQueries.deleteMessagesForSession(id)
+            userId()?.let { uid -> sessionQueries.deleteSession(id, uid) }
+        }
+    }
+
+    suspend fun applyMessageChanges(
+        created: List<ChatMessage>,
+        updated: List<ChatMessage>,
+        deletedIds: List<String>,
+    ) = withContext(Dispatchers.Default) {
+        for (message in created + updated) {
+            messageQueries.insertMessage(
+                id = message.id,
+                sessionId = message.sessionId,
+                content = message.content,
+                isUser = if (message.isUser) 1L else 0L,
+                timestamp = message.timestamp.toEpochMilliseconds(),
+                status = message.status.name,
+                error = message.error,
+                is_dirty = 0L,
+            )
+        }
+        for (id in deletedIds) {
+            messageQueries.deleteMessage(id)
+        }
+    }
+
     // ─── Mapping ──────────────────────────────────────────────────────
 
     private fun com.lifo.mongo.database.Chat_sessions.toDomain() = ChatSession(

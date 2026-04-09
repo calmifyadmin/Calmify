@@ -152,6 +152,96 @@ class ChatService(private val db: Firestore?) {
         )
     }
 
+    suspend fun deleteAllSessions(userId: String): Int {
+        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val sessions = firestore.collection(sessionsCollection)
+            .whereEqualTo("ownerId", userId)
+            .get().get().documents
+
+        if (sessions.isEmpty()) return 0
+
+        val batch = firestore.batch()
+        for (session in sessions) {
+            // Delete messages for this session
+            val messages = firestore.collection(messagesCollection)
+                .whereEqualTo("sessionId", session.id)
+                .get().get()
+            messages.documents.forEach { batch.delete(it.reference) }
+            batch.delete(session.reference)
+        }
+        batch.commit().get()
+        logger.info("Deleted ${sessions.size} sessions and their messages for user $userId")
+        return sessions.size
+    }
+
+    suspend fun exportSessionToDiary(userId: String, sessionId: String): String {
+        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+
+        // Get session
+        val session = getSessionById(userId, sessionId)
+            ?: throw IllegalArgumentException("Session not found")
+
+        // Get all messages
+        val messages = firestore.collection(messagesCollection)
+            .whereEqualTo("sessionId", sessionId)
+            .orderBy("timestamp", Query.Direction.ASCENDING)
+            .get().get()
+
+        val transcript = messages.documents.joinToString("\n\n") { doc ->
+            val role = if (doc.getBoolean("isUser") == true) "Tu" else "AI"
+            "$role: ${doc.getString("content") ?: ""}"
+        }
+
+        // Create diary entry
+        val now = System.currentTimeMillis()
+        val diaryData = hashMapOf<String, Any>(
+            "ownerId" to userId,
+            "mood" to "Neutral",
+            "title" to "Chat: ${session.title}",
+            "description" to transcript,
+            "images" to emptyList<String>(),
+            "dateMillis" to now,
+            "dayKey" to "",
+            "timezone" to "",
+            "emotionIntensity" to 5,
+            "stressLevel" to 5,
+            "energyLevel" to 5,
+            "calmAnxietyLevel" to 5,
+            "primaryTrigger" to "NONE",
+            "dominantBodySensation" to "NONE",
+        )
+
+        val diaryRef = firestore.collection("diary").document()
+        diaryRef.set(diaryData).get()
+        logger.info("Exported session $sessionId to diary ${diaryRef.id}")
+        return diaryRef.id
+    }
+
+    suspend fun retryMessage(userId: String, messageId: String): ChatMessageProto? {
+        val firestore = db ?: throw IllegalStateException("Firestore not initialized")
+        val doc = firestore.collection(messagesCollection).document(messageId).get().get()
+        if (!doc.exists()) return null
+
+        val sessionId = doc.getString("sessionId") ?: return null
+        // Verify session ownership
+        val session = firestore.collection(sessionsCollection).document(sessionId).get().get()
+        if (!session.exists() || session.getString("ownerId") != userId) return null
+
+        // Reset message status to pending for re-processing
+        firestore.collection(messagesCollection).document(messageId).update(
+            mapOf("status" to MessageStatusProto.SENDING.name),
+        ).get()
+
+        return ChatMessageProto(
+            id = doc.id,
+            sessionId = sessionId,
+            content = doc.getString("content") ?: "",
+            isUser = doc.getBoolean("isUser") ?: false,
+            timestampMillis = doc.getLong("timestamp") ?: 0L,
+            status = MessageStatusProto.SENDING,
+        )
+    }
+
     suspend fun sendMessage(userId: String, sessionId: String, message: ChatMessageProto): ChatMessageProto {
         val firestore = db ?: throw IllegalStateException("Firestore not initialized")
 

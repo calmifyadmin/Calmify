@@ -99,6 +99,13 @@ fun Route.diaryRoutes() {
                     )
                 }
             }
+
+            // DELETE /api/v1/diaries — bulk delete all user diaries
+            delete {
+                val user = call.principal<UserPrincipal>()!!
+                val count = diaryService.deleteAllDiaries(user.uid)
+                call.respond(mapOf("deleted" to count))
+            }
         }
     }
 }
