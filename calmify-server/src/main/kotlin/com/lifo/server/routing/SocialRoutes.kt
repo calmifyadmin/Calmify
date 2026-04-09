@@ -55,6 +55,7 @@ fun Route.socialRoutes() {
 
             // GET /api/v1/threads/{id}/replies
             get("/{id}/replies") {
+                val user = call.principal<UserPrincipal>()!!
                 val params = PaginationParams.fromCall(call)
                 val id = call.parameters["id"]!!
                 val result = socialService.getReplies(id, params)

@@ -9,6 +9,7 @@ import kotlinx.serialization.protobuf.ProtoNumber
 
 fun Route.healthRoutes() {
     // No auth required — Cloud Run uses this for liveness/readiness probes
+    // SECURITY: Only expose status, no version or internal service info
     get("/health") {
         val firebaseReady = FirebaseApp.getApps().isNotEmpty()
         val status = if (firebaseReady) "healthy" else "degraded"
@@ -17,7 +18,6 @@ fun Route.healthRoutes() {
         call.respond(httpStatus, HealthResponse(
             status = status,
             firebase = firebaseReady,
-            version = System.getenv("APP_VERSION") ?: "dev",
         ))
     }
 }
@@ -26,5 +26,4 @@ fun Route.healthRoutes() {
 data class HealthResponse(
     @ProtoNumber(1) val status: String,
     @ProtoNumber(2) val firebase: Boolean,
-    @ProtoNumber(3) val version: String,
 )

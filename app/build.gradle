@@ -182,6 +182,7 @@ dependencies {
     implementation(project(":core:ui"))
     implementation(project(":core:util"))
     implementation(project(":data:mongo"))
+    implementation(project(":data:network"))
     implementation(project(":features:auth"))
     implementation(project(":features:onboarding"))
     implementation(project(":features:home"))

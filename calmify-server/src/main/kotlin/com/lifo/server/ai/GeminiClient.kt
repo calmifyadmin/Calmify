@@ -77,7 +77,7 @@ class GeminiClient(
         }
 
         val response = httpClient.post("$baseUrl/models/$model:generateContent") {
-            parameter("key", apiKey)
+            header("x-goog-api-key", apiKey)
             contentType(ContentType.Application.Json)
             setBody(requestBody.toString())
         }
@@ -121,7 +121,7 @@ class GeminiClient(
         }
 
         val response = httpClient.preparePost("$baseUrl/models/$model:streamGenerateContent") {
-            parameter("key", apiKey)
+            header("x-goog-api-key", apiKey)
             parameter("alt", "sse")
             contentType(ContentType.Application.Json)
             setBody(requestBody.toString())
@@ -191,7 +191,7 @@ class GeminiClient(
         }
 
         val response = httpClient.post("$baseUrl/models/$model:generateContent") {
-            parameter("key", apiKey)
+            header("x-goog-api-key", apiKey)
             contentType(ContentType.Application.Json)
             setBody(requestBody.toString())
         }

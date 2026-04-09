@@ -34,6 +34,9 @@ fun Application.configureRouting() {
 
         // Sync — delta sync for offline-first
         syncRoutes()
+
+        // GDPR — data export + account deletion
+        gdprRoutes()
     }
 }
 

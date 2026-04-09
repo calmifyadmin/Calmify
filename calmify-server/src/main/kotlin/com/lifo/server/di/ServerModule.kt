@@ -39,10 +39,17 @@ val serverModule = module {
     // Sync
     single { com.lifo.server.service.SyncService(get()) }
 
+    // GDPR compliance
+    single { GdprService(get()) }
+
     // AI components
     single {
-        val apiKey = System.getenv("GEMINI_API_KEY") ?: ""
-        GeminiClient(apiKey)
+        val apiKey = System.getenv("GEMINI_API_KEY")
+        val isProduction = System.getenv("K_SERVICE") != null
+        if (apiKey.isNullOrEmpty() && isProduction) {
+            throw IllegalStateException("GEMINI_API_KEY must be set in production")
+        }
+        GeminiClient(apiKey ?: "")
     }
     single { PromptRegistry(get()) }
     single { ModelRouter() }

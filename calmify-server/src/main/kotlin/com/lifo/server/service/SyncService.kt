@@ -202,7 +202,7 @@ class SyncService(private val db: Firestore?) {
                         firestore.collection(collection).document(entityId).delete().get()
                         // Log deletion for other devices' delta sync
                         firestore.collection("deletion_log").add(
-                            hashMapOf(
+                            hashMapOf<String, Any>(
                                 "userId" to userId,
                                 "entityType" to entityType.lowercase(),
                                 "entityId" to entityId,

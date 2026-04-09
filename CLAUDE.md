@@ -51,7 +51,9 @@ Come Jarvis di Iron Man, opero con questi principi fondamentali:
 
 - **Branch attivo**: `backend-architecture-refactor` (base: master @ `08ef101`)
 - **Fase 1 KMP COMPLETATA**: 237 file commonMain / 90 file androidMain (72.5% shared)
-- **Prossimo lavoro**: Backend Architecture Refactor (4 workstream)
+- **Backend Refactor**: W1 Ktor Server (8 fasi COMPLETE incl. security + E2E wiring), W2 Sync Engine (Week 1-2 COMPLETE + wired), W3 Protobuf (Days 1-2 COMPLETE), W4 AI Server (Days 1-4 COMPLETE + security hardened)
+- **Security**: 16 vulnerabilities fixed, GDPR Art.17+20, audit logging, security headers
+- **Prossimo**: GCP setup manuale + deploy + test E2E, poi Protobuf Days 3-5
 
 ### File da leggere in ordine di priorita'
 
@@ -105,16 +107,20 @@ Calmify e' una piattaforma wellness + social **Kotlin Multiplatform** (KMP) con:
 - **237 file commonMain** (72.5%) / **90 file androidMain** (27.5%)
 - **Fase 1 completata**: write (47 file), home (22 file), history (100%), habits, meditation migrati
 - **90 file androidMain restanti** hanno blockers reali: Firebase, audio, Filament, permissions
-- **Prossima evoluzione**: Backend Ktor Server (server-mediated architecture)
 
-### Target Architecture (in corso)
+### Target Architecture (IMPLEMENTATA)
 ```
-Client (KMP)  →  Ktor Server (Cloud Run)  →  Firestore + Gemini
-                      │
-              Firebase Auth (JWT validation)
-              Protobuf serialization
-              Response caching
-              Offline sync via SQLDelight
+Client (KMP)  →  KtorApiClient  →  Ktor Server (Cloud Run)  →  Firestore + Gemini
+     │                                     │
+     │                              Firebase Auth (JWT)
+     │                              Security headers + audit log
+     │                              Rate limiting + CORS
+     │                              GDPR endpoints
+     │                              AI orchestration + caching
+     │
+SyncEngine (SQLDelight)  ←→  KtorSyncExecutor  ←→  /sync/batch + /sync/changes
+     │
+ConnectivityObserver (expect/actual)
 ```
 
 ## Build Commands
@@ -143,15 +149,18 @@ Client (KMP)  →  Ktor Server (Cloud Run)  →  Firestore + Gemini
 
 ## Architecture
 
-### Multi-Module Structure (18 moduli)
+### Multi-Module Structure (20+ moduli)
 
 | Modulo | Plugin | Ruolo |
 |--------|--------|-------|
-| **app** | `com.android.application` | MainActivity, DecomposeApp, RootComponent, Koin setup |
-| **core/util** | `calmify.kmp.library` | Modelli, 36 repository interfaces, MVI base, AuthProvider, UseCases |
-| **core/ui** | `calmify.kmp.compose` | Theme (expect/actual), componenti UI condivisi, coach marks |
+| **app** | `com.android.application` | MainActivity, DecomposeApp, RootComponent, Koin setup, SyncEngine lifecycle |
+| **core/util** | `calmify.kmp.library` | Modelli, 36 repository interfaces, MVI base, AuthProvider, SyncExecutor interface, ConnectivityObserver expect/actual |
+| **core/ui** | `calmify.kmp.compose` | Theme (expect/actual), componenti UI condivisi, coach marks, SyncIndicator |
 | **core/social-ui** | `calmify.kmp.compose` | Componenti social: ThreadPostCard, MediaCarousel |
-| **data/mongo** | `calmify.kmp.library` + SQLDelight | SQLDelight schema (5 tabelle) + 36 Firestore repository implementations |
+| **data/mongo** | `calmify.kmp.library` + SQLDelight | SQLDelight schema (8 tabelle incl. sync) + 36 Firestore repos + SyncEngine + sync repos |
+| **data/network** | `calmify.kmp.library` | KtorApiClient, 10 REST-backed repos, KtorSyncExecutor, NetworkKoinModule |
+| **shared/models** | `calmify.kmp.library` | 30+ Proto data classes, API wrappers, SyncApi DTOs, Domain↔Proto mappers |
+| **calmify-server** | Ktor 3.1.1 + Netty | Server su Cloud Run: CRUD, Social, AI, Sync, GDPR, Security, Audit |
 | **features/** (17) | `calmify.kmp.compose` | auth, home, write, chat, humanoid, history, insight, profile, settings, onboarding, feed, composer, social-profile, search, notifications, messaging, subscription, thread-detail, habits, meditation, avatar-creator |
 
 ### Key Technologies

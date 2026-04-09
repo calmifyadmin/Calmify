@@ -1,10 +1,10 @@
-package com.lifo.mongo.sync
+package com.lifo.util.sync
 
 /**
  * Executes sync operations against the server.
  *
  * This interface decouples the SyncEngine from the specific HTTP client
- * implementation (KtorApiClient). Implemented in data/network or data/mongo.
+ * implementation (KtorApiClient). Implemented in data/network.
  */
 interface SyncExecutor {
     /**

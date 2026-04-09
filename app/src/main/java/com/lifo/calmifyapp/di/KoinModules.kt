@@ -7,6 +7,9 @@ import com.lifo.calmifyapp.connectivity.NetworkConnectivityObserver
 import com.lifo.mongo.database.CalmifyDatabase
 import com.lifo.mongo.di.firebaseModule
 import com.lifo.mongo.di.repositoryModule
+import com.lifo.mongo.sync.SyncEngine
+import com.lifo.mongo.sync.syncModule
+import com.lifo.network.di.networkModule as ktorNetworkModule
 import com.lifo.util.Constants.DATABASE_NAME
 import com.lifo.util.connectivity.ConnectivityObserver
 import com.lifo.chat.di.chatKoinModule
@@ -57,6 +60,8 @@ val databaseModule = module {
     single { get<CalmifyDatabase>().imageToDeleteQueries }
     single { get<CalmifyDatabase>().cachedThreadQueries }
     single<ConnectivityObserver> { NetworkConnectivityObserver(androidContext()) }
+    // SyncEngine's expect/actual ConnectivityObserver (uses Android ConnectivityManager)
+    single { com.lifo.util.sync.ConnectivityObserver(androidContext()) }
     single<TutorialOnboardingManager> { SharedPrefsOnboardingManager(androidContext()) }
 }
 
@@ -66,10 +71,8 @@ val onboardingUiModule = module {
     single { OnboardingManager(get()) }
 }
 
-// Network module: Ktor HttpClient (future, for social API calls)
-val networkModule = module {
-    // Will be populated when core-network module is created
-}
+// Network module: Ktor HttpClient + SyncExecutor + REST repositories
+// Uses the real networkModule from data/network (aliased as ktorNetworkModule)
 
 // Social module: social feature use cases and ViewModels (repositories are in repositoryModule)
 val socialModule = module {
@@ -82,7 +85,8 @@ val allKoinModules = listOf(
     onboardingUiModule,
     firebaseModule,
     repositoryModule,
-    networkModule,
+    ktorNetworkModule,
+    syncModule,
     socialModule,
     chatKoinModule,
     homeKoinModule,

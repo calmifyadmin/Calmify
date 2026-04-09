@@ -50,6 +50,13 @@ fun Route.diaryRoutes() {
                     ?: throw IllegalArgumentException("Missing 'start' parameter (epoch millis)")
                 val end = call.parameters["end"]?.toLongOrNull()
                     ?: throw IllegalArgumentException("Missing 'end' parameter (epoch millis)")
+                if (end < start) {
+                    throw IllegalArgumentException("'end' must be >= 'start'")
+                }
+                val maxRangeMs = 90L * 24 * 60 * 60 * 1000 // 90 days
+                if (end - start > maxRangeMs) {
+                    throw IllegalArgumentException("Date range cannot exceed 90 days")
+                }
                 val diaries = diaryService.getDiariesByDateRange(user.uid, start, end)
                 call.respond(DiaryListResponse(data = diaries))
             }

@@ -14,16 +14,48 @@ class ContentFilter {
     private val maxInputLength = 10_000
 
     private val injectionPatterns = listOf(
+        // Direct instruction override
         "ignore previous instructions",
         "ignore all previous",
         "ignore your instructions",
-        "you are now",
-        "new instructions:",
+        "ignore the above",
+        "disregard previous",
+        "disregard your instructions",
+        "forget your instructions",
+        "forget previous",
         "override system prompt",
+        "override your instructions",
+        // Role hijacking
+        "you are now",
+        "act as if you",
+        "pretend you are",
+        "simulate being",
+        "roleplay as",
+        "new instructions:",
+        "new role:",
+        // Prompt extraction
         "system prompt",
+        "reveal your prompt",
+        "show your instructions",
+        "what are your instructions",
+        "repeat your system",
+        "print your prompt",
+        // Jailbreak patterns
         "jailbreak",
         "DAN mode",
         "developer mode",
+        "do anything now",
+        "no restrictions",
+        "unrestricted mode",
+        // Encoding bypass
+        "base64 decode",
+        "rot13",
+        "hex decode",
+        // Delimiter injection
+        "```system",
+        "[SYSTEM]",
+        "<<SYS>>",
+        "<|im_start|>system",
     )
 
     /**
@@ -42,7 +74,8 @@ class ContentFilter {
         val lower = text.lowercase()
         for (pattern in injectionPatterns) {
             if (pattern in lower) {
-                logger.warn("Prompt injection attempt detected: '$pattern'")
+                // Don't log which pattern matched — prevents detection rule leaks via logs
+                logger.warn("Prompt injection attempt detected")
                 throw ContentPolicyException("Richiesta non valida")
             }
         }

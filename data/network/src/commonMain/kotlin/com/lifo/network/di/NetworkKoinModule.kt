@@ -2,7 +2,10 @@ package com.lifo.network.di
 
 import com.lifo.network.KtorApiClient
 import com.lifo.network.repository.*
+import com.lifo.network.sync.KtorSyncExecutor
+import com.lifo.shared.api.GenericDeltaResponse
 import com.lifo.util.repository.*
+import com.lifo.util.sync.SyncExecutor
 import org.koin.dsl.module
 
 /**
@@ -19,6 +22,18 @@ val networkModule = module {
         KtorApiClient(
             authProvider = get(),
             baseUrl = ServerConfig.baseUrl,
+        )
+    }
+
+    // SyncExecutor — bridges SyncEngine to server /sync endpoints
+    single<SyncExecutor> {
+        KtorSyncExecutor(
+            apiClient = get(),
+            onDeltaReceived = { entityType, delta ->
+                // TODO: Apply delta to local SQLDelight tables
+                // This will be wired to the individual sync repositories
+                println("Delta received for $entityType: ${delta.created.size} created, ${delta.updated.size} updated, ${delta.deletedIds.size} deleted")
+            },
         )
     }
 }

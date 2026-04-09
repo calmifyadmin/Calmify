@@ -28,6 +28,9 @@ fun Application.module() {
         modules(serverModule)
     }
 
+    // Security — must be early in pipeline (headers, body limits, HTTPS enforcement)
+    configureSecurity()
+
     // Plugins
     configureAuthentication()
     configureSerialization()
@@ -35,5 +38,10 @@ fun Application.module() {
     configureCORS()
     configureMonitoring()
     configureStatusPages()
+
+    // Audit logging — after auth so we can extract userId
+    configureAuditLog()
+
+    // Routes
     configureRouting()
 }

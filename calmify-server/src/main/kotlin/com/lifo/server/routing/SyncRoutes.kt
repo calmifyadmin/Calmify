@@ -48,8 +48,8 @@ fun Route.syncRoutes() {
                     return@post
                 }
 
-                if (request.operations.size > 100) {
-                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Max 100 operations per batch"))
+                if (request.operations.size > 25) {
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Max 25 operations per batch"))
                     return@post
                 }
 
