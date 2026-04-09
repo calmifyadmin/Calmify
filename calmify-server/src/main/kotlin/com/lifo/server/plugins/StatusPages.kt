@@ -43,6 +43,23 @@ fun Application.configureStatusPages() {
             )
         }
 
+        // AI-specific exceptions
+        exception<com.lifo.server.ai.ContentPolicyException> { call, cause ->
+            logger.warn("Content policy violation: ${cause.message}")
+            call.respond(
+                HttpStatusCode.BadRequest,
+                ApiError(code = "CONTENT_POLICY", message = cause.message ?: "Content policy violation"),
+            )
+        }
+
+        exception<com.lifo.server.ai.QuotaExceededException> { call, cause ->
+            logger.info("Quota exceeded: ${cause.message}")
+            call.respond(
+                HttpStatusCode.TooManyRequests,
+                ApiError(code = "QUOTA_EXCEEDED", message = cause.message ?: "Quota exceeded"),
+            )
+        }
+
         // Generic exceptions — never expose stack traces
         exception<IllegalArgumentException> { call, cause ->
             logger.warn("Bad request: ${cause.message}")

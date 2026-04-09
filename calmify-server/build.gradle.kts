@@ -55,6 +55,11 @@ dependencies {
     // Logging
     implementation("ch.qos.logback:logback-classic:1.5.12")
 
+    // Ktor Client (for Gemini API calls)
+    implementation("io.ktor:ktor-client-core:$ktorVersion")
+    implementation("io.ktor:ktor-client-cio:$ktorVersion")
+    implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+
     // Test
     testImplementation("io.ktor:ktor-server-test-host:$ktorVersion")
     testImplementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")

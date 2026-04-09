@@ -47,3 +47,42 @@ data class AiUsageResponse(
     @ProtoNumber(5) val isPremium: Boolean = false,
     @ProtoNumber(6) val error: ApiError? = null,
 )
+
+// --- Text Analysis ---
+
+@Serializable
+data class AiAnalyzeRequest(
+    @ProtoNumber(1) val text: String = "",
+    @ProtoNumber(2) val analysisType: String = "full", // "sentiment", "topics", "full"
+)
+
+@Serializable
+data class AiAnalyzeResponse(
+    @ProtoNumber(1) val sentiment: String = "NEUTRAL",
+    @ProtoNumber(2) val magnitude: Float = 0f,
+    @ProtoNumber(3) val topics: List<String> = emptyList(),
+    @ProtoNumber(4) val cached: Boolean = false,
+    @ProtoNumber(5) val error: ApiError? = null,
+)
+
+// --- Insight Response (structured AI output) ---
+
+@Serializable
+data class AiInsightResponse(
+    @ProtoNumber(1) val sentimentLabel: String = "NEUTRAL",
+    @ProtoNumber(2) val sentimentMagnitude: Float = 0f,
+    @ProtoNumber(3) val cognitivePatterns: List<AiCognitivePatternProto> = emptyList(),
+    @ProtoNumber(4) val topics: List<String> = emptyList(),
+    @ProtoNumber(5) val summary: String = "",
+    @ProtoNumber(6) val suggestions: List<String> = emptyList(),
+    @ProtoNumber(7) val cached: Boolean = false,
+    @ProtoNumber(8) val tokensUsed: Int = 0,
+    @ProtoNumber(9) val error: ApiError? = null,
+)
+
+@Serializable
+data class AiCognitivePatternProto(
+    @ProtoNumber(1) val name: String = "",
+    @ProtoNumber(2) val confidence: Float = 0f,
+    @ProtoNumber(3) val excerpt: String = "",
+)

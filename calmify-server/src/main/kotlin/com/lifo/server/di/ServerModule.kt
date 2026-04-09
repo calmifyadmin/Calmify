@@ -1,5 +1,6 @@
 package com.lifo.server.di
 
+import com.lifo.server.ai.*
 import com.lifo.server.firebase.FirestoreClient
 import com.lifo.server.service.*
 import com.lifo.shared.model.*
@@ -34,4 +35,16 @@ val serverModule = module {
     single(named("recurring")) { WellnessServiceFactory.recurringThought(get()) }
     single(named("block")) { WellnessServiceFactory.block(get()) }
     single(named("values")) { WellnessServiceFactory.values(get()) }
+
+    // AI components
+    single {
+        val apiKey = System.getenv("GEMINI_API_KEY") ?: ""
+        GeminiClient(apiKey)
+    }
+    single { PromptRegistry(get()) }
+    single { ModelRouter() }
+    single { ResponseCache() }
+    single { ContentFilter() }
+    single { TokenTracker(get()) }
+    single { AiOrchestrator(get(), get(), get(), get(), get(), get()) }
 }
