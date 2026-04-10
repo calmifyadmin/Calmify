@@ -4,6 +4,14 @@
 > **Dipende da**: BACKEND_KTOR_SERVER.md (server deve esistere), BACKEND_PROTOBUF.md (serializzazione)
 > **Effort stimato**: 2 settimane
 > **Risultato**: Offline-first vero — l'app funziona senza rete, sync automatico in background
+>
+> ## STATUS: COMPLETE + WIRED (2026-04-10)
+> - Week 1-2 implementate: SyncEngine, SyncDiaryRepository, SyncChatRepository, 13 SyncWellnessRepository
+> - SQLDelight tables: SyncOperation, SyncMetadata, Diary, ChatSession, ChatMessage, WellnessEntry
+> - ConnectivityObserver expect/actual, ConflictResolver (LWW), SyncIndicator UI
+> - DeltaApplier routes server deltas to correct sync repos
+> - KtorSyncExecutor bridges SyncEngine to server /sync endpoints
+> - SyncEngine.start() in Application.onCreate() lifecycle
 
 ---
 

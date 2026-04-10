@@ -1,12 +1,12 @@
 # Calmify — Stato Progetto e Guida per Nuove Sessioni
 
-> Ultimo aggiornamento: **2026-04-09**
+> Ultimo aggiornamento: **2026-04-10**
 > Per tracker dettagliato migrazione: vedi `.claude/KMP_MIGRATION_STATUS.md`
 > Per piani backend: vedi `.claude/BACKEND_*.md` (4 file)
 
 ## TL;DR — Stato Attuale
 
-**Fase 1 KMP COMPLETATA (2026-04-09). 72.5% codice in commonMain. Backend refactor in corso.**
+**Fase 1 KMP COMPLETATA (2026-04-09). 72.5% codice in commonMain. Backend refactor COMPLETE + DEPLOYED (2026-04-10).**
 
 - **18 moduli** usano convention plugin KMP (`calmify.kmp.library` o `calmify.kmp.compose`)
 - **Solo `app`** resta Android-only (`com.android.application`)
@@ -42,10 +42,12 @@
 
 | Workstream | Effort | Stato | Plan file |
 |---|---|---|---|
-| Protobuf (shared-models) | 1 sett. | NOT STARTED | `.claude/BACKEND_PROTOBUF.md` |
-| Ktor Server (Cloud Run) | 3-5 sett. | NOT STARTED | `.claude/BACKEND_KTOR_SERVER.md` |
-| AI Server-Side | 1 sett. | NOT STARTED | `.claude/BACKEND_AI_SERVER.md` |
-| Sync Engine (offline-first) | 2 sett. | NOT STARTED | `.claude/BACKEND_SYNC_ENGINE.md` |
+| Protobuf (shared-models) | 1 sett. | **COMPLETE** (Days 1-5) | `.claude/BACKEND_PROTOBUF.md` |
+| Ktor Server (Cloud Run) | 3-5 sett. | **COMPLETE + DEPLOYED** (8 fasi) | `.claude/BACKEND_KTOR_SERVER.md` |
+| AI Server-Side | 1 sett. | **COMPLETE + HARDENED** (Days 1-4) | `.claude/BACKEND_AI_SERVER.md` |
+| Sync Engine (offline-first) | 2 sett. | **COMPLETE + WIRED** (Week 1-2) | `.claude/BACKEND_SYNC_ENGINE.md` |
+| Gradual Switch | - | **READY** (BackendConfig flags, all false) | `app/di/KoinModules.kt` |
+| **Server URL** | - | `https://calmify-server-23546263069.europe-west1.run.app` | `cloudbuild.yaml` |
 
 ### Analisi androidMain — Cosa resta davvero platform-specific (LEGACY — da aggiornare)
 

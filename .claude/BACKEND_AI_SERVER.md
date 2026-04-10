@@ -4,6 +4,14 @@
 > **Dipende da**: BACKEND_KTOR_SERVER.md (server infra), BACKEND_PROTOBUF.md (serializzazione)
 > **Effort stimato**: 1 settimana
 > **Risultato**: AI centralizzata server-side — caching, routing, prompt engineering, sicurezza
+>
+> ## STATUS: COMPLETE + SECURITY HARDENED (2026-04-10)
+> - Days 1-4 implementati: GeminiClient, PromptRegistry, ModelRouter, ResponseCache, ContentFilter, TokenTracker, AiOrchestrator
+> - Routes: POST /chat, POST /chat/stream (SSE), POST /insight, POST /analyze, GET /usage
+> - Security: API key in header (not URL), 35+ injection patterns, fail-fast key validation
+> - Caching: chat 1h TTL, insight 24h TTL, semantic hashing (~60% token savings)
+> - Quotas: 10K daily (FREE), 100K daily (PREMIUM), per-user Firestore counters
+> - Deployed on Cloud Run with GEMINI_API_KEY via Secret Manager
 
 ---
 

@@ -4,6 +4,15 @@
 > **Prerequisiti**: Fase 1 KMP completata (72.5% commonMain), BACKEND_SYNC_ENGINE.md, BACKEND_PROTOBUF.md
 > **Effort stimato**: 3-5 settimane
 > **Risultato**: Server Kotlin che media TUTTE le operazioni client-Firestore
+>
+> ## STATUS: COMPLETE + DEPLOYED (2026-04-10)
+> Server live su Cloud Run: `https://calmify-server-23546263069.europe-west1.run.app`
+> - 8 fasi implementate (Bootstrap → E2E Wiring)
+> - 12 route files, 12 services, 9 plugins, AI pipeline
+> - Security hardened: 16 vuln fixed, GDPR Art.17+20, audit logging
+> - Client: 10 REST repos in data/network, BackendConfig gradual switch
+> - Protobuf CN (preferred) + JSON fallback
+> - Health: `/health` → `healthy`, all auth endpoints → 401 without token
 
 ---
 

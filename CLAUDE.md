@@ -47,23 +47,28 @@ Come Jarvis di Iron Man, opero con questi principi fondamentali:
 
 **Ad ogni nuova sessione, LEGGERE SUBITO questo file prima di fare qualsiasi cosa.**
 
-### Stato Attuale (aggiornato 2026-04-09)
+### Stato Attuale (aggiornato 2026-04-10)
 
 - **Branch attivo**: `backend-architecture-refactor` (base: master @ `08ef101`)
 - **Fase 1 KMP COMPLETATA**: 237 file commonMain / 90 file androidMain (72.5% shared)
-- **Backend Refactor**: W1 Ktor Server (8 fasi COMPLETE incl. security + E2E wiring), W2 Sync Engine (Week 1-2 COMPLETE + wired), W3 Protobuf (Days 1-2 COMPLETE), W4 AI Server (Days 1-4 COMPLETE + security hardened)
+- **Backend Refactor COMPLETE + DEPLOYED**:
+  - W1 Ktor Server: 8 fasi COMPLETE, deployed su Cloud Run (`https://calmify-server-23546263069.europe-west1.run.app`)
+  - W2 Sync Engine: Week 1-2 COMPLETE + DeltaApplier wired
+  - W3 Protobuf: Days 1-5 COMPLETE (client + server protobuf CN)
+  - W4 AI Server: Days 1-4 COMPLETE + security hardened
 - **Security**: 16 vulnerabilities fixed, GDPR Art.17+20, audit logging, security headers
-- **Prossimo**: GCP setup manuale + deploy + test E2E, poi Protobuf Days 3-5
+- **Gradual Switch**: BackendConfig con 7 flag per-domain (tutti false/Firestore). Flip per migrare.
+- **Prossimo**: E2E test (flip DIARY_REST=true su emulatore), poi migrazione graduale dominio per dominio
 
 ### File da leggere in ordine di priorita'
 
 1. **`.claude/KMP_MIGRATION_STATUS.md`** — Tracker KMP attivo: fasi 1-5, metriche, log commit. Fonte di verita' per lo stato della migrazione.
 
-2. **Backend Plans** (se si lavora sul refactor backend):
-   - **`.claude/BACKEND_KTOR_SERVER.md`** — Server Ktor su Cloud Run (3-5 sett.)
-   - **`.claude/BACKEND_SYNC_ENGINE.md`** — Offline-first con SQLDelight + SyncQueue (2 sett.)
-   - **`.claude/BACKEND_PROTOBUF.md`** — Serializzazione binaria, shared-models module (1 sett.)
-   - **`.claude/BACKEND_AI_SERVER.md`** — AI centralizzata server-side (1 sett.)
+2. **Backend Plans** (tutti COMPLETE — riferimento per manutenzione/debug):
+   - **`.claude/BACKEND_KTOR_SERVER.md`** — Server Ktor su Cloud Run — COMPLETE + DEPLOYED
+   - **`.claude/BACKEND_SYNC_ENGINE.md`** — Offline-first con SQLDelight + SyncQueue — COMPLETE + WIRED
+   - **`.claude/BACKEND_PROTOBUF.md`** — Serializzazione binaria, shared-models module — COMPLETE
+   - **`.claude/BACKEND_AI_SERVER.md`** — AI centralizzata server-side — COMPLETE + HARDENED
 
 3. **`.claude/KMP_STATUS.md`** — Stato architettura progetto: moduli, DI, DB, navigation, audio, 3D.
 
@@ -102,25 +107,29 @@ Calmify e' una piattaforma wellness + social **Kotlin Multiplatform** (KMP) con:
 - Social features (feed, messaging, threads, notifications)
 - Monetization (subscription/billing via Google Play)
 
-### Stato KMP (aggiornato 2026-04-09)
+### Stato KMP (aggiornato 2026-04-10)
 - **18 moduli** KMP con convention plugins (`calmify.kmp.library`, `calmify.kmp.compose`)
 - **237 file commonMain** (72.5%) / **90 file androidMain** (27.5%)
 - **Fase 1 completata**: write (47 file), home (22 file), history (100%), habits, meditation migrati
 - **90 file androidMain restanti** hanno blockers reali: Firebase, audio, Filament, permissions
 
-### Target Architecture (IMPLEMENTATA)
+### Target Architecture (IMPLEMENTATA + DEPLOYED 2026-04-10)
 ```
 Client (KMP)  →  KtorApiClient  →  Ktor Server (Cloud Run)  →  Firestore + Gemini
      │                                     │
-     │                              Firebase Auth (JWT)
+     │                              Server URL: calmify-server-23546263069.europe-west1.run.app
+     │                              Firebase Auth (JWT validation)
      │                              Security headers + audit log
      │                              Rate limiting + CORS
-     │                              GDPR endpoints
-     │                              AI orchestration + caching
+     │                              GDPR endpoints (Art.17 + Art.20)
+     │                              AI orchestration + caching (60%+ savings)
+     │                              Protobuf CN (preferred) + JSON fallback
      │
 SyncEngine (SQLDelight)  ←→  KtorSyncExecutor  ←→  /sync/batch + /sync/changes
-     │
+     │                              DeltaApplier routes deltas to sync repos
 ConnectivityObserver (expect/actual)
+     │
+BackendConfig (7 per-domain flags)  →  restOverrideModule (Koin last-wins)
 ```
 
 ## Build Commands

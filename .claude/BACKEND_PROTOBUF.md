@@ -4,6 +4,13 @@
 > **Dipende da**: BACKEND_KTOR_SERVER.md (server endpoints), modelli in core/util/model/
 > **Effort stimato**: 1 settimana
 > **Risultato**: Comunicazione client-server 3-5x piu' compatta di JSON, type-safe, versionata
+>
+> ## STATUS: COMPLETE (2026-04-10)
+> - shared/models KMP module: 30+ Proto data classes with @ProtoNumber
+> - 6 API wrapper files, 6 Domain↔Proto mapper files in core:util
+> - Client: KtorApiClient protobuf ContentNegotiation (preferred) + JSON fallback
+> - Server: protobuf CN already in place from Phase 1
+> - Ktor version aligned to 3.0.3 (firebase-ai transitive dep)
 
 ---
 
