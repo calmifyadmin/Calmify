@@ -6,6 +6,8 @@ import com.lifo.shared.api.AiChatResponse
 import com.lifo.shared.api.ChatMessageListResponse
 import com.lifo.shared.api.ChatSessionListResponse
 import com.lifo.shared.api.ChatSessionResponse
+import com.lifo.shared.model.ChatMessageProto
+import com.lifo.shared.model.ChatSessionProto
 import com.lifo.util.mapper.toDomain
 import com.lifo.util.mapper.toProto
 import com.lifo.util.model.ChatMessage
@@ -31,7 +33,7 @@ class KtorChatRepository(
     }
 
     override suspend fun createSession(title: String?): RequestState<ChatSession> {
-        val body = mapOf("title" to (title ?: "Nuova conversazione"))
+        val body = ChatSessionProto(title = title ?: "Nuova conversazione")
         return api.post<ChatSessionResponse>("/api/v1/chat/sessions", body)
             .map { it.data.toDomain() }
     }
@@ -51,9 +53,9 @@ class KtorChatRepository(
     }
 
     override suspend fun sendMessage(sessionId: String, content: String): RequestState<ChatMessage> {
-        val body = mapOf("content" to content)
-        return api.post<Map<String, String>>("/api/v1/chat/sessions/$sessionId/messages", body)
-            .map { ChatMessage(id = it["id"] ?: "", sessionId = sessionId, content = content, isUser = true) }
+        val body = ChatMessageProto(sessionId = sessionId, content = content, isUser = true)
+        return api.post<ChatMessageProto>("/api/v1/chat/sessions/$sessionId/messages", body)
+            .map { it.toDomain() }
     }
 
     override suspend fun deleteMessage(messageId: String): RequestState<Boolean> {
@@ -84,9 +86,9 @@ class KtorChatRepository(
     }
 
     override suspend fun saveAiMessage(sessionId: String, content: String): RequestState<ChatMessage> {
-        val body = mapOf("content" to content, "role" to "model")
-        return api.post<Map<String, String>>("/api/v1/chat/sessions/$sessionId/messages", body)
-            .map { ChatMessage(id = it["id"] ?: "", sessionId = sessionId, content = content, isUser = false) }
+        val body = ChatMessageProto(sessionId = sessionId, content = content, isUser = false)
+        return api.post<ChatMessageProto>("/api/v1/chat/sessions/$sessionId/messages", body)
+            .map { it.toDomain() }
     }
 
     override suspend fun exportSessionToDiary(sessionId: String): RequestState<String> {
@@ -103,9 +105,9 @@ class KtorChatRepository(
         content: String,
         isUser: Boolean,
     ): RequestState<ChatMessage> {
-        val body = mapOf("content" to content, "role" to if (isUser) "user" else "model")
-        return api.post<Map<String, String>>("/api/v1/chat/sessions/$sessionId/messages", body)
-            .map { ChatMessage(id = it["id"] ?: "", sessionId = sessionId, content = content, isUser = isUser) }
+        val body = ChatMessageProto(sessionId = sessionId, content = content, isUser = isUser)
+        return api.post<ChatMessageProto>("/api/v1/chat/sessions/$sessionId/messages", body)
+            .map { it.toDomain() }
     }
 
     override suspend fun getCrossSessionContext(

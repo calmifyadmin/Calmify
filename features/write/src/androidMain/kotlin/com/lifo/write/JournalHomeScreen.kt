@@ -78,7 +78,8 @@ fun JournalHomeScreen(
     mongoRepository: MongoRepository = koinInject(),
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val diariesState by mongoRepository.getAllDiaries().collectAsState(initial = RequestState.Loading)
+    val diariesFlow = remember(mongoRepository) { mongoRepository.getAllDiaries() }
+    val diariesState by diariesFlow.collectAsState(initial = RequestState.Loading)
 
     val diaries = remember(diariesState) {
         when (val state = diariesState) {

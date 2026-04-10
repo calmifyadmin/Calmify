@@ -58,25 +58,25 @@ object BackendConfig {
     // Flip to `true` to route through Ktor Server instead of Firestore
 
     /** Diary CRUD (write, home, history screens) */
-    const val DIARY_REST = false
+    const val DIARY_REST = true
 
     /** Chat sessions + messages + AI responses */
-    const val CHAT_REST = false
+    const val CHAT_REST = true
 
     /** Diary insights (sentiment, cognitive patterns) */
-    const val INSIGHT_REST = false
+    const val INSIGHT_REST = true
 
     /** Psychological profiles */
-    const val PROFILE_REST = false
+    const val PROFILE_REST = true
 
     /** Social: threads, feed, notifications */
-    const val SOCIAL_REST = false
+    const val SOCIAL_REST = true
 
     /** Habits + gratitude */
-    const val WELLNESS_REST = false
+    const val WELLNESS_REST = true
 
     /** Feature flags */
-    const val FLAGS_REST = false
+    const val FLAGS_REST = true
 }
 
 // Database module: SQLDelight database, queries, connectivity

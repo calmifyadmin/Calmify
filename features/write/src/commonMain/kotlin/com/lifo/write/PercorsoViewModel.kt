@@ -2,7 +2,9 @@ package com.lifo.write
 
 import com.lifo.util.auth.AuthProvider
 import com.lifo.util.mvi.MviViewModel
+import com.lifo.util.model.RequestState
 import com.lifo.util.repository.*
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
@@ -36,6 +38,27 @@ class PercorsoViewModel(
     private fun loadAll() {
         val userId = authProvider.currentUserId ?: return
         scope.launch {
+            try {
+                loadAllInternal(userId)
+            } catch (e: Exception) {
+                println("PercorsoViewModel: loadAll failed: ${e.message}")
+            }
+        }
+    }
+
+    private suspend fun <T> safeList(block: suspend () -> RequestState<List<T>>): List<T> {
+        return try {
+            when (val result = block()) {
+                is RequestState.Success -> result.data
+                else -> emptyList()
+            }
+        } catch (e: Exception) {
+            println("PercorsoViewModel: ${e.message}")
+            emptyList()
+        }
+    }
+
+    private suspend fun loadAllInternal(userId: String) {
             val now = Clock.System.now()
             val tz = TimeZone.currentSystemDefault()
             val today = now.toLocalDateTime(tz).date
@@ -48,10 +71,8 @@ class PercorsoViewModel(
             // MENTE
             val meditations = meditationRepository.getRecentSessions(userId, 50).firstOrNull() ?: emptyList()
             val weekMeditations = meditations.filter { it.timestampMillis >= weekStartMillis }
-            val reframesResult = reframeRepository.getRecentReframes(30).firstOrNull()
-            val reframes = (reframesResult as? com.lifo.util.model.RequestState.Success)?.data ?: emptyList()
-            val gratitudesResult = gratitudeRepository.getEntriesInRange(weekStartMillis, nowMillis).firstOrNull()
-            val weekGratitudes = (gratitudesResult as? com.lifo.util.model.RequestState.Success)?.data ?: emptyList()
+            val reframes = safeList { reframeRepository.getRecentReframes(30).first { it !is RequestState.Loading } }
+            val weekGratitudes = safeList { gratitudeRepository.getEntriesInRange(weekStartMillis, nowMillis).first { it !is RequestState.Loading } }
 
             val menteItems = listOf(
                 PercorsoContract.SectionItem("Meditazione", "${weekMeditations.size} sessioni", minOf(weekMeditations.size / 7f, 1f)),
@@ -60,11 +81,9 @@ class PercorsoViewModel(
             )
 
             // CORPO
-            val energyResult = energyRepository.getCheckInsInRange(weekStartMillis, nowMillis).firstOrNull()
-            val weekEnergy = (energyResult as? com.lifo.util.model.RequestState.Success)?.data ?: emptyList()
+            val weekEnergy = safeList { energyRepository.getCheckInsInRange(weekStartMillis, nowMillis).first { it !is RequestState.Loading } }
             val avgEnergy = if (weekEnergy.isNotEmpty()) weekEnergy.map { it.energyLevel }.average() else 0.0
-            val sleepResult = sleepRepository.getRecentLogs(7).firstOrNull()
-            val weekSleep = (sleepResult as? com.lifo.util.model.RequestState.Success)?.data ?: emptyList()
+            val weekSleep = safeList { sleepRepository.getRecentLogs(7).first { it !is RequestState.Loading } }
             val avgSleep = if (weekSleep.isNotEmpty()) weekSleep.map { it.sleepHours }.average() else 0.0
             val weekMovement = movementRepository.getLogsInRange(userId, weekStartDayKey, todayKey).firstOrNull() ?: emptyList()
 
@@ -92,10 +111,8 @@ class PercorsoViewModel(
             )
 
             // ABITUDINI
-            val habitsResult = habitRepository.getActiveHabits().firstOrNull()
-            val habits = (habitsResult as? com.lifo.util.model.RequestState.Success)?.data ?: emptyList()
-            val completionsResult = habitRepository.getCompletionsForDay(todayKey).firstOrNull()
-            val todayCompletions = (completionsResult as? com.lifo.util.model.RequestState.Success)?.data ?: emptyList()
+            val habits = safeList { habitRepository.getActiveHabits().first { it !is RequestState.Loading } }
+            val todayCompletions = safeList { habitRepository.getCompletionsForDay(todayKey).first { it !is RequestState.Loading } }
             val habitProgress = if (habits.isNotEmpty()) todayCompletions.size.toFloat() / habits.size else 0f
 
             val abitudiniItems = listOf(
@@ -116,6 +133,5 @@ class PercorsoViewModel(
                     overallProgress = overall,
                 )
             }
-        }
     }
 }
