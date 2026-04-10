@@ -15,6 +15,14 @@ ktor {
     }
 }
 
+// Ktor plugin applies Shadow internally — configure it to merge META-INF/services
+// so gRPC finds its providers (pick_first LoadBalancer, dns NameResolver, etc.)
+afterEvaluate {
+    tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJar") {
+        mergeServiceFiles()
+    }
+}
+
 val ktorVersion = "3.1.1"
 val koinVersion = "4.1.1"
 
