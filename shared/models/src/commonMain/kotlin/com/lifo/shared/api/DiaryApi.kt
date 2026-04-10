@@ -7,15 +7,17 @@ import kotlinx.serialization.protobuf.ProtoNumber
 
 @Serializable
 data class DiaryResponse(
-    @ProtoNumber(1) val data: DiaryProto? = null,
-    @ProtoNumber(2) val error: ApiError? = null,
+    @ProtoNumber(1) val success: Boolean = false,
+    @ProtoNumber(2) val data: DiaryProto = DiaryProto(),
+    @ProtoNumber(3) val error: ApiError = ApiError(),
 )
 
 @Serializable
 data class DiaryListResponse(
-    @ProtoNumber(1) val data: List<DiaryProto> = emptyList(),
-    @ProtoNumber(2) val error: ApiError? = null,
-    @ProtoNumber(3) val meta: PaginationMeta? = null,
+    @ProtoNumber(1) val success: Boolean = false,
+    @ProtoNumber(2) val data: List<DiaryProto> = emptyList(),
+    @ProtoNumber(3) val error: ApiError = ApiError(),
+    @ProtoNumber(4) val meta: PaginationMeta = PaginationMeta(),
 )
 
 @Serializable
@@ -28,13 +30,15 @@ data class DiaryDeltaResponse(
 
 @Serializable
 data class DiaryInsightResponse(
-    @ProtoNumber(1) val data: DiaryInsightProto? = null,
-    @ProtoNumber(2) val error: ApiError? = null,
+    @ProtoNumber(1) val success: Boolean = false,
+    @ProtoNumber(2) val data: DiaryInsightProto = DiaryInsightProto(),
+    @ProtoNumber(3) val error: ApiError = ApiError(),
 )
 
 @Serializable
 data class DiaryInsightListResponse(
-    @ProtoNumber(1) val data: List<DiaryInsightProto> = emptyList(),
-    @ProtoNumber(2) val error: ApiError? = null,
-    @ProtoNumber(3) val meta: PaginationMeta? = null,
+    @ProtoNumber(1) val success: Boolean = false,
+    @ProtoNumber(2) val data: List<DiaryInsightProto> = emptyList(),
+    @ProtoNumber(3) val error: ApiError = ApiError(),
+    @ProtoNumber(4) val meta: PaginationMeta = PaginationMeta(),
 )

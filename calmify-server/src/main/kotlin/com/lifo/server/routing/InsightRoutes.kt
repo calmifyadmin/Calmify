@@ -21,7 +21,7 @@ fun Route.insightRoutes() {
                 val user = call.principal<UserPrincipal>()!!
                 val params = PaginationParams.fromCall(call)
                 val result = insightService.getInsights(user.uid, params)
-                call.respond(DiaryInsightListResponse(data = result.items, meta = result.meta))
+                call.respond(DiaryInsightListResponse(success = true, data = result.items, meta = result.meta))
             }
 
             // GET /api/v1/insights/diary/{diaryId}
@@ -30,7 +30,7 @@ fun Route.insightRoutes() {
                 val diaryId = call.parameters["diaryId"]!!
                 val insight = insightService.getInsightByDiaryId(user.uid, diaryId)
                 if (insight != null) {
-                    call.respond(DiaryInsightResponse(data = insight))
+                    call.respond(DiaryInsightResponse(success = true, data = insight))
                 } else {
                     call.respond(
                         HttpStatusCode.NotFound,

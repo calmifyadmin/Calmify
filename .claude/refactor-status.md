@@ -3,6 +3,21 @@
 > Questo file viene letto da Jarvis all'inizio di ogni sessione.
 > Aggiornato automaticamente dopo ogni operazione completata.
 
+## EVENTO CRITICO: Backend Audit (2026-04-10)
+
+Audit completo di 124 file del backend refactor ha rivelato **30+ bug critici**.
+Il backend richiede **RE-ENGINEERING COMPLETO** — non patching.
+Vedi `.claude/BACKEND_AUDIT.md` per catalogo completo.
+Standard: **NASA-level, zero tolerance** — vedi CLAUDE.md "QUALITY MANDATE".
+
+Top issues: 24/26 collection names server ≠ client, 17 Protobuf nullable fields,
+blocking calls ovunque, GDPR broken, double Gemini API calls, IDOR.
+
+**BackendConfig flags**: tutti `true` ma server non funziona. Riportare a `false`.
+**Firestore DB**: `calmify-native` (NON `(default)` che e' Datastore Mode).
+
+---
+
 ## Fase Corrente: KMP Migration — ONDA 10 COMPLETATA (Full Build OK)
 
 ## KMP Migration (10 Onde) — 2026-03-01/02

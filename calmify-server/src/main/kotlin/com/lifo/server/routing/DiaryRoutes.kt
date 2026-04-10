@@ -25,7 +25,7 @@ fun Route.diaryRoutes() {
                 val user = call.principal<UserPrincipal>()!!
                 val params = PaginationParams.fromCall(call)
                 val result = diaryService.getDiaries(user.uid, params)
-                call.respond(DiaryListResponse(data = result.items, meta = result.meta))
+                call.respond(DiaryListResponse(success = true, data = result.items, meta = result.meta))
             }
 
             // GET /api/v1/diaries/{id}
@@ -34,7 +34,7 @@ fun Route.diaryRoutes() {
                 val id = call.parameters["id"] ?: throw IllegalArgumentException("Missing diary id")
                 val diary = diaryService.getDiaryById(user.uid, id)
                 if (diary != null) {
-                    call.respond(DiaryResponse(data = diary))
+                    call.respond(DiaryResponse(success = true, data = diary))
                 } else {
                     call.respond(
                         HttpStatusCode.NotFound,
@@ -58,7 +58,7 @@ fun Route.diaryRoutes() {
                     throw IllegalArgumentException("Date range cannot exceed 90 days")
                 }
                 val diaries = diaryService.getDiariesByDateRange(user.uid, start, end)
-                call.respond(DiaryListResponse(data = diaries))
+                call.respond(DiaryListResponse(success = true, data = diaries))
             }
 
             // POST /api/v1/diaries
@@ -66,7 +66,7 @@ fun Route.diaryRoutes() {
                 val user = call.principal<UserPrincipal>()!!
                 val diary = call.receive<DiaryProto>()
                 val created = diaryService.createDiary(user.uid, diary)
-                call.respond(HttpStatusCode.Created, DiaryResponse(data = created))
+                call.respond(HttpStatusCode.Created, DiaryResponse(success = true, data = created))
             }
 
             // PUT /api/v1/diaries/{id}
@@ -76,7 +76,7 @@ fun Route.diaryRoutes() {
                 val diary = call.receive<DiaryProto>()
                 val updated = diaryService.updateDiary(user.uid, id, diary)
                 if (updated != null) {
-                    call.respond(DiaryResponse(data = updated))
+                    call.respond(DiaryResponse(success = true, data = updated))
                 } else {
                     call.respond(
                         HttpStatusCode.NotFound,

@@ -17,8 +17,9 @@ fun Route.dashboardRoutes() {
         // GET /api/v1/home/dashboard — single call replaces 5+ client calls
         get("/api/v1/home/dashboard") {
             val user = call.principal<UserPrincipal>()!!
-            val dashboard = dashboardService.getHomeDashboard(user.uid)
-            call.respond(HomeDashboardResponse(data = dashboard))
+            val timezone = call.parameters["timezone"] ?: "UTC"
+            val dashboard = dashboardService.getHomeDashboard(user.uid, timezone)
+            call.respond(HomeDashboardResponse(success = true, data = dashboard))
         }
     }
 

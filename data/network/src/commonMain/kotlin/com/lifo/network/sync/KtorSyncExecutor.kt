@@ -54,7 +54,7 @@ class KtorSyncExecutor(
                 if (failed.isNotEmpty()) {
                     throw SyncException(
                         "Sync failed for ${failed.size} operation(s): " +
-                            failed.joinToString { "${it.entityId}: ${it.error ?: "unknown"}" }
+                            failed.joinToString { "${it.entityId}: ${it.error.ifEmpty { "unknown" }}" }
                     )
                 }
             }

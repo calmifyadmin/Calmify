@@ -3,6 +3,8 @@ package com.lifo.server.ai
 import com.google.cloud.firestore.FieldValue
 import com.google.cloud.firestore.Firestore
 import io.github.reactivecircus.cache4k.Cache
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.*
 import org.slf4j.LoggerFactory
 import kotlin.time.Duration.Companion.minutes
@@ -57,14 +59,14 @@ class TokenTracker(private val db: Firestore) {
     /**
      * Record token usage after a successful AI call.
      */
-    suspend fun record(userId: String, tokens: Int) {
+    suspend fun record(userId: String, tokens: Int) = withContext(Dispatchers.IO) {
         val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
         val dayKey = "${now.year}-${now.monthNumber.toString().padStart(2, '0')}-${now.dayOfMonth.toString().padStart(2, '0')}"
         val monthKey = "${now.year}-${now.monthNumber.toString().padStart(2, '0')}"
 
         val userRef = db.collection("ai_usage").document(userId)
 
-        // Daily counter
+        // Daily counter (blocking ApiFuture.get() runs on IO dispatcher)
         userRef.collection("daily").document(dayKey)
             .set(mapOf("tokens" to FieldValue.increment(tokens.toLong()), "date" to dayKey), com.google.cloud.firestore.SetOptions.merge())
             .get()
@@ -89,6 +91,7 @@ class TokenTracker(private val db: Firestore) {
         val monthlyLimit = if (snapshot.isPremium) PREMIUM_MONTHLY_LIMIT else FREE_MONTHLY_LIMIT
 
         return com.lifo.shared.api.AiUsageResponse(
+            success = true,
             dailyTokensUsed = snapshot.dailyTokens,
             dailyTokensLimit = dailyLimit,
             monthlyTokensUsed = snapshot.monthlyTokens,
@@ -105,24 +108,27 @@ class TokenTracker(private val db: Firestore) {
     private suspend fun getUsageSnapshot(userId: String): UsageSnapshot {
         usageCache.get("usage:$userId")?.let { return it }
 
-        val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
-        val dayKey = "${now.year}-${now.monthNumber.toString().padStart(2, '0')}-${now.dayOfMonth.toString().padStart(2, '0')}"
-        val monthKey = "${now.year}-${now.monthNumber.toString().padStart(2, '0')}"
+        return withContext(Dispatchers.IO) {
+            val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
+            val dayKey = "${now.year}-${now.monthNumber.toString().padStart(2, '0')}-${now.dayOfMonth.toString().padStart(2, '0')}"
+            val monthKey = "${now.year}-${now.monthNumber.toString().padStart(2, '0')}"
 
-        val userRef = db.collection("ai_usage").document(userId)
+            val userRef = db.collection("ai_usage").document(userId)
 
-        val dailyDoc = userRef.collection("daily").document(dayKey).get().get()
-        val monthlyDoc = userRef.collection("monthly").document(monthKey).get().get()
-        val profileDoc = db.collection("profiles").document(userId).get().get()
+            val dailyDoc = userRef.collection("daily").document(dayKey).get().get()
+            val monthlyDoc = userRef.collection("monthly").document(monthKey).get().get()
+            // Android client uses "profile_settings" collection, not "profiles"
+            val profileDoc = db.collection("profile_settings").document(userId).get().get()
 
-        val snapshot = UsageSnapshot(
-            dailyTokens = dailyDoc.getLong("tokens")?.toInt() ?: 0,
-            monthlyTokens = monthlyDoc.getLong("tokens")?.toInt() ?: 0,
-            isPremium = profileDoc.getBoolean("isPremium") ?: false,
-        )
+            val snapshot = UsageSnapshot(
+                dailyTokens = dailyDoc.getLong("tokens")?.toInt() ?: 0,
+                monthlyTokens = monthlyDoc.getLong("tokens")?.toInt() ?: 0,
+                isPremium = profileDoc.getBoolean("isPremium") ?: false,
+            )
 
-        usageCache.put("usage:$userId", snapshot)
-        return snapshot
+            usageCache.put("usage:$userId", snapshot)
+            snapshot
+        }
     }
 }
 

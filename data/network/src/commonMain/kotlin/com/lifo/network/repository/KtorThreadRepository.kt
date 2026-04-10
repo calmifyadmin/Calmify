@@ -19,7 +19,7 @@ class KtorThreadRepository(
     override fun getThreadById(threadId: String): Flow<RequestState<Thread?>> = flow {
         emit(RequestState.Loading)
         val result = api.get<ThreadResponse>("/api/v1/threads/$threadId")
-        emit(result.map { it.data?.toDomain() })
+        emit(result.map { if (it.success) it.data.toDomain() else null })
     }
 
     override fun getThreadsByAuthor(authorId: String, limit: Int): Flow<RequestState<List<Thread>>> = flow {
@@ -36,7 +36,7 @@ class KtorThreadRepository(
 
     override suspend fun createThread(thread: Thread): RequestState<String> {
         val result = api.post<ThreadResponse>("/api/v1/threads", thread.toProto())
-        return result.map { it.data?.threadId ?: "" }
+        return result.map { it.data.threadId }
     }
 
     override suspend fun deleteThread(threadId: String): RequestState<Boolean> {

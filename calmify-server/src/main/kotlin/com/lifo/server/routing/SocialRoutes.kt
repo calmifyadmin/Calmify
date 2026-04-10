@@ -25,7 +25,7 @@ fun Route.socialRoutes() {
                 val user = call.principal<UserPrincipal>()!!
                 val params = PaginationParams.fromCall(call)
                 val result = socialService.getFeed(user.uid, params)
-                call.respond(ThreadListResponse(data = result.items, meta = result.meta))
+                call.respond(ThreadListResponse(success = true, data = result.items, meta = result.meta))
             }
 
             // GET /api/v1/feed/following
@@ -33,7 +33,7 @@ fun Route.socialRoutes() {
                 val user = call.principal<UserPrincipal>()!!
                 val params = PaginationParams.fromCall(call)
                 val result = socialService.getFollowingFeed(user.uid, params)
-                call.respond(ThreadListResponse(data = result.items, meta = result.meta))
+                call.respond(ThreadListResponse(success = true, data = result.items, meta = result.meta))
             }
         }
 
@@ -46,7 +46,7 @@ fun Route.socialRoutes() {
                 val id = call.parameters["id"]!!
                 val thread = socialService.getThreadById(user.uid, id)
                 if (thread != null) {
-                    call.respond(ThreadResponse(data = thread))
+                    call.respond(ThreadResponse(success = true, data = thread))
                 } else {
                     call.respond(HttpStatusCode.NotFound,
                         ThreadResponse(error = ApiError(code = "NOT_FOUND", message = "Thread not found")))
@@ -59,7 +59,7 @@ fun Route.socialRoutes() {
                 val params = PaginationParams.fromCall(call)
                 val id = call.parameters["id"]!!
                 val result = socialService.getReplies(id, params)
-                call.respond(ThreadListResponse(data = result.items, meta = result.meta))
+                call.respond(ThreadListResponse(success = true, data = result.items, meta = result.meta))
             }
 
             // POST /api/v1/threads
@@ -67,7 +67,7 @@ fun Route.socialRoutes() {
                 val user = call.principal<UserPrincipal>()!!
                 val thread = call.receive<ThreadProto>()
                 val created = socialService.createThread(user.uid, thread)
-                call.respond(HttpStatusCode.Created, ThreadResponse(data = created))
+                call.respond(HttpStatusCode.Created, ThreadResponse(success = true, data = created))
             }
 
             // DELETE /api/v1/threads/{id}

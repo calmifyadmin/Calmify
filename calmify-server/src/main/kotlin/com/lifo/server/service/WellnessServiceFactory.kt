@@ -4,11 +4,18 @@ import com.google.cloud.firestore.DocumentSnapshot
 import com.google.cloud.firestore.Firestore
 import com.lifo.shared.model.*
 
+/**
+ * Factory for all 13 wellness GenericWellnessService instances.
+ *
+ * IMPORTANT: Collection names MUST match the Android client exactly (snake_case).
+ * Each service specifies its correct ordering field.
+ */
 object WellnessServiceFactory {
 
     fun gratitude(db: Firestore) = GenericWellnessService(
         db = db,
-        collectionName = "gratitudeEntries",
+        collectionName = "gratitude_entries",
+        orderByField = "timestampMillis",
         mapper = { doc: DocumentSnapshot ->
             GratitudeEntryProto(
                 id = doc.id, ownerId = doc.getString("ownerId") ?: "",
@@ -30,7 +37,8 @@ object WellnessServiceFactory {
 
     fun energy(db: Firestore) = GenericWellnessService(
         db = db,
-        collectionName = "energyCheckIns",
+        collectionName = "energy_checkins",
+        orderByField = "timestampMillis",
         mapper = { doc: DocumentSnapshot ->
             EnergyCheckInProto(
                 id = doc.id, ownerId = doc.getString("ownerId") ?: "",
@@ -56,7 +64,8 @@ object WellnessServiceFactory {
 
     fun sleep(db: Firestore) = GenericWellnessService(
         db = db,
-        collectionName = "sleepLogs",
+        collectionName = "sleep_logs",
+        orderByField = "timestampMillis",
         mapper = { doc: DocumentSnapshot ->
             SleepLogProto(
                 id = doc.id, ownerId = doc.getString("ownerId") ?: "",
@@ -85,7 +94,8 @@ object WellnessServiceFactory {
 
     fun meditation(db: Firestore) = GenericWellnessService(
         db = db,
-        collectionName = "meditationSessions",
+        collectionName = "meditation_sessions",
+        orderByField = "timestampMillis",
         mapper = { doc: DocumentSnapshot ->
             MeditationSessionProto(
                 id = doc.id, ownerId = doc.getString("ownerId") ?: "",
@@ -109,6 +119,7 @@ object WellnessServiceFactory {
     fun habits(db: Firestore) = GenericWellnessService(
         db = db,
         collectionName = "habits",
+        orderByField = "createdAtMillis",
         mapper = { doc: DocumentSnapshot ->
             HabitProto(
                 id = doc.id, ownerId = doc.getString("ownerId") ?: "",
@@ -134,7 +145,8 @@ object WellnessServiceFactory {
 
     fun movement(db: Firestore) = GenericWellnessService(
         db = db,
-        collectionName = "movementLogs",
+        collectionName = "movement_logs",
+        orderByField = "timestampMillis",
         mapper = { doc: DocumentSnapshot ->
             MovementLogProto(
                 id = doc.id, ownerId = doc.getString("ownerId") ?: "",
@@ -157,7 +169,8 @@ object WellnessServiceFactory {
 
     fun reframe(db: Firestore) = GenericWellnessService(
         db = db,
-        collectionName = "thoughtReframes",
+        collectionName = "thought_reframes",
+        orderByField = "timestampMillis",
         mapper = { doc: DocumentSnapshot ->
             ThoughtReframeProto(
                 id = doc.id, ownerId = doc.getString("ownerId") ?: "",
@@ -181,7 +194,8 @@ object WellnessServiceFactory {
 
     fun wellbeing(db: Firestore) = GenericWellnessService(
         db = db,
-        collectionName = "wellbeingSnapshots",
+        collectionName = "wellbeing_snapshots",
+        orderByField = "timestampMillis",
         mapper = { doc: DocumentSnapshot ->
             WellbeingSnapshotProto(
                 id = doc.id, ownerId = doc.getString("ownerId") ?: "",
@@ -218,7 +232,8 @@ object WellnessServiceFactory {
 
     fun awe(db: Firestore) = GenericWellnessService(
         db = db,
-        collectionName = "aweEntries",
+        collectionName = "awe_entries",
+        orderByField = "timestampMillis",
         mapper = { doc: DocumentSnapshot ->
             AweEntryProto(
                 id = doc.id, ownerId = doc.getString("ownerId") ?: "",
@@ -239,7 +254,8 @@ object WellnessServiceFactory {
 
     fun connection(db: Firestore) = GenericWellnessService(
         db = db,
-        collectionName = "connectionEntries",
+        collectionName = "connection_entries",
+        orderByField = "timestampMillis",
         mapper = { doc: DocumentSnapshot ->
             ConnectionEntryProto(
                 id = doc.id, ownerId = doc.getString("ownerId") ?: "",
@@ -260,7 +276,8 @@ object WellnessServiceFactory {
 
     fun recurringThought(db: Firestore) = GenericWellnessService(
         db = db,
-        collectionName = "recurringThoughts",
+        collectionName = "recurring_thoughts",
+        orderByField = "lastSeenMillis",
         mapper = { doc: DocumentSnapshot ->
             RecurringThoughtProto(
                 id = doc.id, ownerId = doc.getString("ownerId") ?: "",
@@ -288,6 +305,7 @@ object WellnessServiceFactory {
     fun block(db: Firestore) = GenericWellnessService(
         db = db,
         collectionName = "blocks",
+        orderByField = "timestampMillis",
         mapper = { doc: DocumentSnapshot ->
             BlockProto(
                 id = doc.id, ownerId = doc.getString("ownerId") ?: "",
@@ -311,7 +329,8 @@ object WellnessServiceFactory {
 
     fun values(db: Firestore) = GenericWellnessService(
         db = db,
-        collectionName = "valuesDiscovery",
+        collectionName = "values_discovery",
+        orderByField = "createdAtMillis",
         mapper = { doc: DocumentSnapshot ->
             ValuesDiscoveryProto(
                 id = doc.id, ownerId = doc.getString("ownerId") ?: "",

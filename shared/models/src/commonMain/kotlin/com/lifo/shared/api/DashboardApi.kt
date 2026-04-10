@@ -5,14 +5,15 @@ import kotlinx.serialization.protobuf.ProtoNumber
 
 @Serializable
 data class HomeDashboardResponse(
-    @ProtoNumber(1) val data: HomeDashboardProto? = null,
-    @ProtoNumber(2) val error: ApiError? = null,
+    @ProtoNumber(1) val success: Boolean = false,
+    @ProtoNumber(2) val data: HomeDashboardProto = HomeDashboardProto(),
+    @ProtoNumber(3) val error: ApiError = ApiError(),
 )
 
 @Serializable
 data class HomeDashboardProto(
     @ProtoNumber(1) val recentDiaryCount: Int = 0,
-    @ProtoNumber(2) val todayPulse: TodayPulseProto? = null,
+    @ProtoNumber(2) val todayPulse: TodayPulseProto = TodayPulseProto(),
     @ProtoNumber(3) val weeklyMood: List<DailyMoodProto> = emptyList(),
     @ProtoNumber(4) val currentStreak: Int = 0,
     @ProtoNumber(5) val achievements: List<AchievementProto> = emptyList(),

@@ -26,7 +26,7 @@ fun Route.chatRoutes() {
                 val user = call.principal<UserPrincipal>()!!
                 val params = PaginationParams.fromCall(call)
                 val result = chatService.getSessions(user.uid, params)
-                call.respond(ChatSessionListResponse(data = result.items, meta = result.meta))
+                call.respond(ChatSessionListResponse(success = true, data = result.items, meta = result.meta))
             }
 
             // GET /api/v1/chat/sessions/{id}
@@ -35,7 +35,7 @@ fun Route.chatRoutes() {
                 val id = call.parameters["id"]!!
                 val session = chatService.getSessionById(user.uid, id)
                 if (session != null) {
-                    call.respond(ChatSessionResponse(data = session))
+                    call.respond(ChatSessionResponse(success = true, data = session))
                 } else {
                     call.respond(
                         HttpStatusCode.NotFound,
@@ -49,7 +49,7 @@ fun Route.chatRoutes() {
                 val user = call.principal<UserPrincipal>()!!
                 val session = call.receive<ChatSessionProto>()
                 val created = chatService.createSession(user.uid, session)
-                call.respond(HttpStatusCode.Created, ChatSessionResponse(data = created))
+                call.respond(HttpStatusCode.Created, ChatSessionResponse(success = true, data = created))
             }
 
             // DELETE /api/v1/chat/sessions/{id}
@@ -74,7 +74,7 @@ fun Route.chatRoutes() {
                 val sessionId = call.parameters["sessionId"]!!
                 val params = PaginationParams.fromCall(call)
                 val result = chatService.getMessages(user.uid, sessionId, params)
-                call.respond(ChatMessageListResponse(data = result.items, meta = result.meta))
+                call.respond(ChatMessageListResponse(success = true, data = result.items, meta = result.meta))
             }
 
             // POST /api/v1/chat/sessions/{sessionId}/messages

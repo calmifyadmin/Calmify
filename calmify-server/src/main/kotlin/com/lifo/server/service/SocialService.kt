@@ -6,30 +6,33 @@ import com.google.cloud.firestore.Query
 import com.lifo.shared.api.PaginationMeta
 import com.lifo.shared.model.ThreadProto
 import com.lifo.server.model.PaginationParams
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 
 class SocialService(private val db: Firestore) {
     private val logger = LoggerFactory.getLogger(SocialService::class.java)
-    private val threadsCollection = "threads"
-    private val likesCollection = "threadLikes"
-    private val repostsCollection = "threadReposts"
-    private val followsCollection = "follows"
+
+    companion object {
+        const val THREADS_COLLECTION = "threads"
+        const val SOCIAL_GRAPH_COLLECTION = "social_graph"
+        private const val AUTHOR_FIELD = "authorId"
+        private const val BATCH_LIMIT = 500
+    }
 
     data class PagedThreads(val items: List<ThreadProto>, val meta: PaginationMeta)
 
-    // --- Threads ---
+    // ─── Threads ─────────────────────────────────────────────────────
 
-    suspend fun getFeed(userId: String, params: PaginationParams): PagedThreads {
-        val firestore = db
-
-        // For-you feed: public threads ordered by recency (ranking will be server-side later)
-        var query = firestore.collection(threadsCollection)
+    suspend fun getFeed(userId: String, params: PaginationParams): PagedThreads = withContext(Dispatchers.IO) {
+        // For-you feed: public threads ordered by recency
+        var query = db.collection(THREADS_COLLECTION)
             .whereEqualTo("visibility", "public")
             .orderBy("createdAt", Query.Direction.DESCENDING)
             .limit(params.limit + 1)
 
         if (params.cursor != null) {
-            val cursorDoc = firestore.collection(threadsCollection).document(params.cursor).get().get()
+            val cursorDoc = db.collection(THREADS_COLLECTION).document(params.cursor).get().get()
             if (cursorDoc.exists()) query = query.startAfter(cursorDoc)
         }
 
@@ -37,15 +40,15 @@ class SocialService(private val db: Firestore) {
         val hasMore = docs.size > params.limit
         val threadIds = docs.take(params.limit).map { it.id }
 
-        // Batch check likes and reposts for current user
-        val likedSet = batchCheckLikes(firestore, userId, threadIds)
-        val repostedSet = batchCheckReposts(firestore, userId, threadIds)
+        // Batch check likes and reposts for current user via subcollections
+        val likedSet = batchCheckLikes(userId, threadIds)
+        val repostedSet = batchCheckReposts(userId, threadIds)
 
         val items = docs.take(params.limit).map { doc ->
             docToThread(doc, doc.id in likedSet, doc.id in repostedSet)
         }
 
-        return PagedThreads(
+        PagedThreads(
             items = items,
             meta = PaginationMeta(
                 cursor = if (hasMore && items.isNotEmpty()) items.last().threadId else "",
@@ -54,22 +57,21 @@ class SocialService(private val db: Firestore) {
         )
     }
 
-    suspend fun getFollowingFeed(userId: String, params: PaginationParams): PagedThreads {
-        val firestore = db
-
-        // Get who user follows
-        val followingDocs = firestore.collection(followsCollection)
-            .whereEqualTo("followerId", userId)
+    suspend fun getFollowingFeed(userId: String, params: PaginationParams): PagedThreads = withContext(Dispatchers.IO) {
+        // Get who user follows from subcollection social_graph/{userId}/following
+        val followingDocs = db.collection(SOCIAL_GRAPH_COLLECTION)
+            .document(userId)
+            .collection("following")
             .get().get().documents
-        val followingIds = followingDocs.map { it.getString("followedId") ?: "" }.filter { it.isNotEmpty() }
+        val followingIds = followingDocs.map { it.id }.filter { it.isNotEmpty() }
 
-        if (followingIds.isEmpty()) return PagedThreads(emptyList(), PaginationMeta())
+        if (followingIds.isEmpty()) return@withContext PagedThreads(emptyList(), PaginationMeta())
 
         // Firestore whereIn max 30 items
         val chunks = followingIds.chunked(30)
         val allDocs = chunks.flatMap { chunk ->
-            firestore.collection(threadsCollection)
-                .whereIn("authorId", chunk)
+            db.collection(THREADS_COLLECTION)
+                .whereIn(AUTHOR_FIELD, chunk)
                 .orderBy("createdAt", Query.Direction.DESCENDING)
                 .limit(params.limit + 1)
                 .get().get().documents
@@ -81,7 +83,7 @@ class SocialService(private val db: Firestore) {
             docToThread(doc, isLikedByCurrentUser = false, isRepostedByCurrentUser = false)
         }
 
-        return PagedThreads(
+        PagedThreads(
             items = items,
             meta = PaginationMeta(
                 cursor = if (hasMore && items.isNotEmpty()) items.last().threadId else "",
@@ -90,29 +92,27 @@ class SocialService(private val db: Firestore) {
         )
     }
 
-    suspend fun getThreadById(userId: String, threadId: String): ThreadProto? {
-        val firestore = db
-        val doc = firestore.collection(threadsCollection).document(threadId).get().get()
-        if (!doc.exists()) return null
+    suspend fun getThreadById(userId: String, threadId: String): ThreadProto? = withContext(Dispatchers.IO) {
+        val doc = db.collection(THREADS_COLLECTION).document(threadId).get().get()
+        if (!doc.exists()) return@withContext null
 
-        val isLiked = firestore.collection(likesCollection)
-            .document("${userId}_$threadId").get().get().exists()
-        val isReposted = firestore.collection(repostsCollection)
-            .document("${userId}_$threadId").get().get().exists()
+        // Check likes/reposts via subcollections
+        val isLiked = db.collection(THREADS_COLLECTION).document(threadId)
+            .collection("likes").document(userId).get().get().exists()
+        val isReposted = db.collection(THREADS_COLLECTION).document(threadId)
+            .collection("reposts").document(userId).get().get().exists()
 
-        return docToThread(doc, isLiked, isReposted)
+        docToThread(doc, isLiked, isReposted)
     }
 
-    suspend fun getReplies(threadId: String, params: PaginationParams): PagedThreads {
-        val firestore = db
-
-        var query = firestore.collection(threadsCollection)
+    suspend fun getReplies(threadId: String, params: PaginationParams): PagedThreads = withContext(Dispatchers.IO) {
+        var query = db.collection(THREADS_COLLECTION)
             .whereEqualTo("parentThreadId", threadId)
             .orderBy("createdAt", Query.Direction.ASCENDING)
             .limit(params.limit + 1)
 
         if (params.cursor != null) {
-            val cursorDoc = firestore.collection(threadsCollection).document(params.cursor).get().get()
+            val cursorDoc = db.collection(THREADS_COLLECTION).document(params.cursor).get().get()
             if (cursorDoc.exists()) query = query.startAfter(cursorDoc)
         }
 
@@ -122,18 +122,17 @@ class SocialService(private val db: Firestore) {
             docToThread(doc, isLikedByCurrentUser = false, isRepostedByCurrentUser = false)
         }
 
-        return PagedThreads(items, PaginationMeta(
+        PagedThreads(items, PaginationMeta(
             cursor = if (hasMore && items.isNotEmpty()) items.last().threadId else "",
             hasMore = hasMore,
         ))
     }
 
-    suspend fun createThread(userId: String, thread: ThreadProto): ThreadProto {
-        val firestore = db
+    suspend fun createThread(userId: String, thread: ThreadProto): ThreadProto = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
 
         val data = hashMapOf<String, Any>(
-            "authorId" to userId,
+            AUTHOR_FIELD to userId,
             "text" to thread.text,
             "visibility" to thread.visibility.ifEmpty { "public" },
             "moodTag" to thread.moodTag,
@@ -152,107 +151,147 @@ class SocialService(private val db: Firestore) {
         if (thread.parentThreadId.isNotEmpty()) {
             data["parentThreadId"] = thread.parentThreadId
             // Increment parent reply count
-            firestore.collection(threadsCollection).document(thread.parentThreadId)
+            db.collection(THREADS_COLLECTION).document(thread.parentThreadId)
                 .update("replyCount", FieldValue.increment(1)).get()
         }
 
-        val docRef = firestore.collection(threadsCollection).document()
+        val docRef = db.collection(THREADS_COLLECTION).document()
         docRef.set(data).get()
         logger.info("Created thread ${docRef.id} by user $userId")
 
-        return thread.copy(threadId = docRef.id, authorId = userId, createdAt = now, updatedAt = now)
+        thread.copy(threadId = docRef.id, authorId = userId, createdAt = now, updatedAt = now)
     }
 
-    suspend fun deleteThread(userId: String, threadId: String): Boolean {
-        val firestore = db
-        val doc = firestore.collection(threadsCollection).document(threadId).get().get()
-        if (!doc.exists() || doc.getString("authorId") != userId) return false
+    suspend fun deleteThread(userId: String, threadId: String): Boolean = withContext(Dispatchers.IO) {
+        val doc = db.collection(THREADS_COLLECTION).document(threadId).get().get()
+        if (!doc.exists() || doc.getString(AUTHOR_FIELD) != userId) return@withContext false
 
-        firestore.collection(threadsCollection).document(threadId).delete().get()
+        // Delete likes subcollection
+        deleteSubcollection(THREADS_COLLECTION, threadId, "likes")
+        // Delete reposts subcollection
+        deleteSubcollection(THREADS_COLLECTION, threadId, "reposts")
+
+        db.collection(THREADS_COLLECTION).document(threadId).delete().get()
         logger.info("Deleted thread $threadId by user $userId")
-        return true
+        true
     }
 
-    // --- Engagement ---
+    // ─── Engagement (subcollection-based) ────────────────────────────
 
-    suspend fun likeThread(userId: String, threadId: String): Boolean {
-        val firestore = db
-        val likeId = "${userId}_$threadId"
-        val likeRef = firestore.collection(likesCollection).document(likeId)
+    suspend fun likeThread(userId: String, threadId: String): Boolean = withContext(Dispatchers.IO) {
+        val likeRef = db.collection(THREADS_COLLECTION).document(threadId)
+            .collection("likes").document(userId)
 
-        if (likeRef.get().get().exists()) return false // Already liked
+        if (likeRef.get().get().exists()) return@withContext false // Already liked
 
-        likeRef.set(mapOf("userId" to userId, "threadId" to threadId, "createdAt" to System.currentTimeMillis())).get()
-        firestore.collection(threadsCollection).document(threadId)
+        likeRef.set(mapOf("userId" to userId, "createdAt" to System.currentTimeMillis())).get()
+        db.collection(THREADS_COLLECTION).document(threadId)
             .update("likeCount", FieldValue.increment(1)).get()
-        return true
+        true
     }
 
-    suspend fun unlikeThread(userId: String, threadId: String): Boolean {
-        val firestore = db
-        val likeRef = firestore.collection(likesCollection).document("${userId}_$threadId")
+    suspend fun unlikeThread(userId: String, threadId: String): Boolean = withContext(Dispatchers.IO) {
+        val likeRef = db.collection(THREADS_COLLECTION).document(threadId)
+            .collection("likes").document(userId)
 
-        if (!likeRef.get().get().exists()) return false
+        if (!likeRef.get().get().exists()) return@withContext false
 
         likeRef.delete().get()
-        firestore.collection(threadsCollection).document(threadId)
+        db.collection(THREADS_COLLECTION).document(threadId)
             .update("likeCount", FieldValue.increment(-1)).get()
-        return true
+        true
     }
 
-    suspend fun repostThread(userId: String, threadId: String): Boolean {
-        val firestore = db
-        val repostId = "${userId}_$threadId"
-        val repostRef = firestore.collection(repostsCollection).document(repostId)
+    suspend fun repostThread(userId: String, threadId: String): Boolean = withContext(Dispatchers.IO) {
+        val repostRef = db.collection(THREADS_COLLECTION).document(threadId)
+            .collection("reposts").document(userId)
 
-        if (repostRef.get().get().exists()) return false
+        if (repostRef.get().get().exists()) return@withContext false
 
-        repostRef.set(mapOf("userId" to userId, "threadId" to threadId, "createdAt" to System.currentTimeMillis())).get()
-        firestore.collection(threadsCollection).document(threadId)
+        repostRef.set(mapOf("userId" to userId, "createdAt" to System.currentTimeMillis())).get()
+        db.collection(THREADS_COLLECTION).document(threadId)
             .update("repostCount", FieldValue.increment(1)).get()
-        return true
+        true
     }
 
-    // --- Social Graph ---
+    // ─── Social Graph (subcollection-based) ──────────────────────────
 
-    suspend fun follow(followerId: String, followedId: String): Boolean {
-        val firestore = db
-        if (followerId == followedId) return false
+    suspend fun follow(followerId: String, followedId: String): Boolean = withContext(Dispatchers.IO) {
+        if (followerId == followedId) return@withContext false
 
-        val followId = "${followerId}_$followedId"
-        val followRef = firestore.collection(followsCollection).document(followId)
-        if (followRef.get().get().exists()) return false
+        val followingRef = db.collection(SOCIAL_GRAPH_COLLECTION)
+            .document(followerId).collection("following").document(followedId)
+        if (followingRef.get().get().exists()) return@withContext false
 
-        followRef.set(mapOf(
-            "followerId" to followerId,
+        val now = System.currentTimeMillis()
+
+        // Write to follower's "following" subcollection
+        followingRef.set(mapOf(
             "followedId" to followedId,
-            "createdAt" to System.currentTimeMillis(),
+            "createdAt" to now,
         )).get()
-        return true
+
+        // Write to followed's "followers" subcollection
+        db.collection(SOCIAL_GRAPH_COLLECTION)
+            .document(followedId).collection("followers").document(followerId)
+            .set(mapOf(
+                "followerId" to followerId,
+                "createdAt" to now,
+            )).get()
+
+        true
     }
 
-    suspend fun unfollow(followerId: String, followedId: String): Boolean {
-        val firestore = db
-        val followRef = firestore.collection(followsCollection).document("${followerId}_$followedId")
-        if (!followRef.get().get().exists()) return false
-        followRef.delete().get()
-        return true
+    suspend fun unfollow(followerId: String, followedId: String): Boolean = withContext(Dispatchers.IO) {
+        val followingRef = db.collection(SOCIAL_GRAPH_COLLECTION)
+            .document(followerId).collection("following").document(followedId)
+        if (!followingRef.get().get().exists()) return@withContext false
+
+        followingRef.delete().get()
+
+        // Remove from followed's "followers" subcollection
+        db.collection(SOCIAL_GRAPH_COLLECTION)
+            .document(followedId).collection("followers").document(followerId)
+            .delete().get()
+
+        true
     }
 
-    // --- Helpers ---
+    // ─── Helpers ─────────────────────────────────────────────────────
 
-    private fun batchCheckLikes(firestore: Firestore, userId: String, threadIds: List<String>): Set<String> {
+    /**
+     * Batch check likes via subcollections: threads/{threadId}/likes/{userId}
+     */
+    private fun batchCheckLikes(userId: String, threadIds: List<String>): Set<String> {
         if (threadIds.isEmpty()) return emptySet()
         return threadIds.filter { threadId ->
-            firestore.collection(likesCollection).document("${userId}_$threadId").get().get().exists()
+            db.collection(THREADS_COLLECTION).document(threadId)
+                .collection("likes").document(userId).get().get().exists()
         }.toSet()
     }
 
-    private fun batchCheckReposts(firestore: Firestore, userId: String, threadIds: List<String>): Set<String> {
+    /**
+     * Batch check reposts via subcollections: threads/{threadId}/reposts/{userId}
+     */
+    private fun batchCheckReposts(userId: String, threadIds: List<String>): Set<String> {
         if (threadIds.isEmpty()) return emptySet()
         return threadIds.filter { threadId ->
-            firestore.collection(repostsCollection).document("${userId}_$threadId").get().get().exists()
+            db.collection(THREADS_COLLECTION).document(threadId)
+                .collection("reposts").document(userId).get().get().exists()
         }.toSet()
+    }
+
+    /**
+     * Delete all documents in a subcollection, chunked by BATCH_LIMIT.
+     */
+    private fun deleteSubcollection(parentCollection: String, parentDocId: String, subcollectionName: String) {
+        val docs = db.collection(parentCollection).document(parentDocId)
+            .collection(subcollectionName).get().get().documents
+        for (chunk in docs.chunked(BATCH_LIMIT)) {
+            val batch = db.batch()
+            chunk.forEach { batch.delete(it.reference) }
+            batch.commit().get()
+        }
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -262,7 +301,7 @@ class SocialService(private val db: Firestore) {
         isRepostedByCurrentUser: Boolean,
     ): ThreadProto = ThreadProto(
         threadId = doc.id,
-        authorId = doc.getString("authorId") ?: "",
+        authorId = doc.getString(AUTHOR_FIELD) ?: "",
         parentThreadId = doc.getString("parentThreadId") ?: "",
         text = doc.getString("text") ?: "",
         likeCount = doc.getLong("likeCount") ?: 0,

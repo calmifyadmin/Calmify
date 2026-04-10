@@ -112,7 +112,7 @@ fun Route.habitCompletionRoutes(
 
             val firestore = db
             val completionId = "${habitId}_$dayKey"
-            val docRef = firestore.collection("habitCompletions").document(completionId)
+            val docRef = firestore.collection("habit_completions").document(completionId)
             val existing = docRef.get().get()
 
             if (existing.exists()) {
@@ -137,7 +137,7 @@ fun Route.habitCompletionRoutes(
             val dayKey = call.parameters["dayKey"]!!
             val firestore = db
 
-            val completions = firestore.collection("habitCompletions")
+            val completions = firestore.collection("habit_completions")
                 .whereEqualTo("ownerId", user.uid)
                 .whereEqualTo("dayKey", dayKey)
                 .get().get().documents
@@ -160,7 +160,7 @@ fun Route.habitCompletionRoutes(
             val limit = call.parameters["limit"]?.toIntOrNull() ?: 30
             val firestore = db
 
-            val completions = firestore.collection("habitCompletions")
+            val completions = firestore.collection("habit_completions")
                 .whereEqualTo("ownerId", user.uid)
                 .whereEqualTo("habitId", habitId)
                 .orderBy("completedAt", com.google.cloud.firestore.Query.Direction.DESCENDING)

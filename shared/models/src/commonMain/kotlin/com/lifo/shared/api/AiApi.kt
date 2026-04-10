@@ -9,7 +9,7 @@ import kotlinx.serialization.protobuf.ProtoNumber
 data class AiChatRequest(
     @ProtoNumber(1) val sessionId: String = "",
     @ProtoNumber(2) val message: String = "",
-    @ProtoNumber(3) val context: AiContextProto? = null,
+    @ProtoNumber(3) val context: AiContextProto = AiContextProto(),
 )
 
 @Serializable
@@ -23,11 +23,12 @@ data class AiContextProto(
 
 @Serializable
 data class AiChatResponse(
-    @ProtoNumber(1) val message: String = "",
-    @ProtoNumber(2) val sessionId: String = "",
-    @ProtoNumber(3) val tokensUsed: Int = 0,
-    @ProtoNumber(4) val cached: Boolean = false,
-    @ProtoNumber(5) val error: ApiError? = null,
+    @ProtoNumber(1) val success: Boolean = false,
+    @ProtoNumber(2) val message: String = "",
+    @ProtoNumber(3) val sessionId: String = "",
+    @ProtoNumber(4) val tokensUsed: Int = 0,
+    @ProtoNumber(5) val cached: Boolean = false,
+    @ProtoNumber(6) val error: ApiError = ApiError(),
 )
 
 @Serializable
@@ -40,12 +41,13 @@ data class AiInsightRequest(
 
 @Serializable
 data class AiUsageResponse(
-    @ProtoNumber(1) val dailyTokensUsed: Int = 0,
-    @ProtoNumber(2) val dailyTokensLimit: Int = 0,
-    @ProtoNumber(3) val monthlyTokensUsed: Int = 0,
-    @ProtoNumber(4) val monthlyTokensLimit: Int = 0,
-    @ProtoNumber(5) val isPremium: Boolean = false,
-    @ProtoNumber(6) val error: ApiError? = null,
+    @ProtoNumber(1) val success: Boolean = false,
+    @ProtoNumber(2) val dailyTokensUsed: Int = 0,
+    @ProtoNumber(3) val dailyTokensLimit: Int = 0,
+    @ProtoNumber(4) val monthlyTokensUsed: Int = 0,
+    @ProtoNumber(5) val monthlyTokensLimit: Int = 0,
+    @ProtoNumber(6) val isPremium: Boolean = false,
+    @ProtoNumber(7) val error: ApiError = ApiError(),
 )
 
 // --- Text Analysis ---
@@ -58,26 +60,28 @@ data class AiAnalyzeRequest(
 
 @Serializable
 data class AiAnalyzeResponse(
-    @ProtoNumber(1) val sentiment: String = "NEUTRAL",
-    @ProtoNumber(2) val magnitude: Float = 0f,
-    @ProtoNumber(3) val topics: List<String> = emptyList(),
-    @ProtoNumber(4) val cached: Boolean = false,
-    @ProtoNumber(5) val error: ApiError? = null,
+    @ProtoNumber(1) val success: Boolean = false,
+    @ProtoNumber(2) val sentiment: String = "NEUTRAL",
+    @ProtoNumber(3) val magnitude: Float = 0f,
+    @ProtoNumber(4) val topics: List<String> = emptyList(),
+    @ProtoNumber(5) val cached: Boolean = false,
+    @ProtoNumber(6) val error: ApiError = ApiError(),
 )
 
 // --- Insight Response (structured AI output) ---
 
 @Serializable
 data class AiInsightResponse(
-    @ProtoNumber(1) val sentimentLabel: String = "NEUTRAL",
-    @ProtoNumber(2) val sentimentMagnitude: Float = 0f,
-    @ProtoNumber(3) val cognitivePatterns: List<AiCognitivePatternProto> = emptyList(),
-    @ProtoNumber(4) val topics: List<String> = emptyList(),
-    @ProtoNumber(5) val summary: String = "",
-    @ProtoNumber(6) val suggestions: List<String> = emptyList(),
-    @ProtoNumber(7) val cached: Boolean = false,
-    @ProtoNumber(8) val tokensUsed: Int = 0,
-    @ProtoNumber(9) val error: ApiError? = null,
+    @ProtoNumber(1) val success: Boolean = false,
+    @ProtoNumber(2) val sentimentLabel: String = "NEUTRAL",
+    @ProtoNumber(3) val sentimentMagnitude: Float = 0f,
+    @ProtoNumber(4) val cognitivePatterns: List<AiCognitivePatternProto> = emptyList(),
+    @ProtoNumber(5) val topics: List<String> = emptyList(),
+    @ProtoNumber(6) val summary: String = "",
+    @ProtoNumber(7) val suggestions: List<String> = emptyList(),
+    @ProtoNumber(8) val cached: Boolean = false,
+    @ProtoNumber(9) val tokensUsed: Int = 0,
+    @ProtoNumber(10) val error: ApiError = ApiError(),
 )
 
 @Serializable

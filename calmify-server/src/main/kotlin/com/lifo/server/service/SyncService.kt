@@ -5,6 +5,8 @@ import com.google.cloud.firestore.Query
 import com.lifo.shared.api.DiaryDeltaResponse
 import com.lifo.shared.api.GenericDeltaResponse
 import com.lifo.shared.model.DiaryProto
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
 import org.slf4j.LoggerFactory
 
@@ -13,35 +15,51 @@ import org.slf4j.LoggerFactory
  *
  * Returns changes since a given timestamp for a user's entities.
  * Supports diary + all 13 wellness types + chat sessions/messages.
+ *
+ * IMPORTANT: All collection names MUST match the Android client exactly (snake_case).
  */
 class SyncService(private val db: Firestore) {
     private val logger = LoggerFactory.getLogger(SyncService::class.java)
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
-    // Maps SyncEntityType names to Firestore collection paths
+    // Maps SyncEntityType names to Firestore collection paths -- matches client exactly
     private val collectionMap = mapOf(
         "DIARY" to "diaries",
+        "DIARY_INSIGHT" to "diary_insights",
         "CHAT_SESSION" to "chat_sessions",
         "CHAT_MESSAGE" to "chat_messages",
-        "GRATITUDE" to "wellness_gratitude",
-        "HABIT" to "wellness_habits",
-        "ENERGY" to "wellness_energy",
-        "SLEEP" to "wellness_sleep",
-        "MEDITATION" to "wellness_meditation",
-        "MOVEMENT" to "wellness_movement",
-        "REFRAME" to "wellness_reframe",
-        "WELLBEING" to "wellness_wellbeing",
-        "AWE" to "wellness_awe",
-        "CONNECTION" to "wellness_connection",
-        "RECURRING_THOUGHT" to "wellness_recurring_thought",
-        "BLOCK" to "wellness_block",
-        "VALUES" to "wellness_values",
+        "PROFILE_SETTINGS" to "profile_settings",
+        "PSYCHOLOGICAL_PROFILE" to "psychological_profiles",
+        "HABIT" to "habits",
+        "HABIT_COMPLETION" to "habit_completions",
+        "GRATITUDE" to "gratitude_entries",
+        "ENERGY" to "energy_checkins",
+        "SLEEP" to "sleep_logs",
+        "MEDITATION" to "meditation_sessions",
+        "MOVEMENT" to "movement_logs",
+        "REFRAME" to "thought_reframes",
+        "WELLBEING" to "wellbeing_snapshots",
+        "AWE" to "awe_entries",
+        "CONNECTION" to "connection_entries",
+        "RECURRING_THOUGHT" to "recurring_thoughts",
+        "BLOCK" to "blocks",
+        "VALUES" to "values_discovery",
+        "THREAD" to "threads",
+        "NOTIFICATION" to "notifications",
     )
+
+    // Owner field varies by collection
+    private val ownerFieldMap = mapOf(
+        "threads" to "authorId",
+        "notifications" to "userId",
+    )
+
+    private fun ownerFieldFor(collection: String): String = ownerFieldMap[collection] ?: "ownerId"
 
     /**
      * Get diary changes since [sinceMillis] (typed, backwards-compatible).
      */
-    suspend fun getDiaryChangesSince(userId: String, sinceMillis: Long): DiaryDeltaResponse {
+    suspend fun getDiaryChangesSince(userId: String, sinceMillis: Long): DiaryDeltaResponse = withContext(Dispatchers.IO) {
         val docs = db.collection("diaries")
             .whereEqualTo("ownerId", userId)
             .whereGreaterThan("updatedAt", sinceMillis)
@@ -53,7 +71,14 @@ class SyncService(private val db: Firestore) {
 
         for (doc in docs) {
             val createdAt = doc.getLong("createdAt") ?: 0L
-            val updatedAt = doc.getLong("updatedAt") ?: 0L
+
+            // Handle date field: could be Firestore Timestamp or Long millis
+            val dateMillis = when (val dateVal = doc.get("date")) {
+                is com.google.cloud.Timestamp -> dateVal.toDate().time
+                is Long -> dateVal
+                is Number -> dateVal.toLong()
+                else -> doc.getLong("dateMillis") ?: 0L
+            }
 
             val proto = DiaryProto(
                 id = doc.id,
@@ -62,7 +87,7 @@ class SyncService(private val db: Firestore) {
                 title = doc.getString("title") ?: "",
                 description = doc.getString("description") ?: "",
                 images = (doc.get("images") as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
-                dateMillis = doc.getLong("dateMillis") ?: 0L,
+                dateMillis = dateMillis,
                 dayKey = doc.getString("dayKey") ?: "",
                 timezone = doc.getString("timezone") ?: "",
                 emotionIntensity = doc.getLong("emotionIntensity")?.toInt() ?: 5,
@@ -80,11 +105,11 @@ class SyncService(private val db: Firestore) {
             }
         }
 
-        val deletedIds = getDeletedIds(db, userId, "diary", sinceMillis)
+        val deletedIds = getDeletedIds(userId, "DIARY", sinceMillis)
 
         logger.info("Delta sync DIARY for user $userId: ${created.size} created, ${updated.size} updated, ${deletedIds.size} deleted")
 
-        return DiaryDeltaResponse(
+        DiaryDeltaResponse(
             created = created,
             updated = updated,
             deletedIds = deletedIds,
@@ -94,20 +119,22 @@ class SyncService(private val db: Firestore) {
 
     /**
      * Generic delta sync for any entity type.
-     * Returns documents as raw JsonElements — client deserializes based on type.
+     * Returns documents as JSON-encoded strings -- client deserializes based on type.
      */
-    suspend fun getChangesSince(userId: String, entityType: String, sinceMillis: Long): GenericDeltaResponse {
+    suspend fun getChangesSince(userId: String, entityType: String, sinceMillis: Long): GenericDeltaResponse = withContext(Dispatchers.IO) {
         val collectionName = collectionMap[entityType]
-            ?: return GenericDeltaResponse(entityType = entityType, serverTime = System.currentTimeMillis())
+            ?: return@withContext GenericDeltaResponse(entityType = entityType, serverTime = System.currentTimeMillis())
+
+        val ownerField = ownerFieldFor(collectionName)
 
         val docs = db.collection(collectionName)
-            .whereEqualTo("ownerId", userId)
+            .whereEqualTo(ownerField, userId)
             .whereGreaterThan("updatedAt", sinceMillis)
             .orderBy("updatedAt", Query.Direction.ASCENDING)
             .get().get().documents
 
-        val created = mutableListOf<JsonElement>()
-        val updated = mutableListOf<JsonElement>()
+        val created = mutableListOf<String>()
+        val updated = mutableListOf<String>()
 
         for (doc in docs) {
             val createdAt = doc.getLong("createdAt") ?: 0L
@@ -120,6 +147,7 @@ class SyncService(private val db: Firestore) {
                         is Long -> put(key, value)
                         is Double -> put(key, value)
                         is Boolean -> put(key, value)
+                        is com.google.cloud.Timestamp -> put(key, value.toDate().time)
                         is Number -> put(key, JsonPrimitive(value.toLong()))
                         is List<*> -> put(key, buildJsonArray {
                             for (item in value) {
@@ -136,19 +164,19 @@ class SyncService(private val db: Firestore) {
                 }
             }
 
+            val jsonString = jsonObj.toString()
             if (createdAt > sinceMillis) {
-                created.add(jsonObj)
+                created.add(jsonString)
             } else {
-                updated.add(jsonObj)
+                updated.add(jsonString)
             }
         }
 
-        val entityTypeForDeletion = entityType.lowercase().replace("_", "")
-        val deletedIds = getDeletedIds(db, userId, entityTypeForDeletion, sinceMillis)
+        val deletedIds = getDeletedIds(userId, entityType, sinceMillis)
 
         logger.info("Delta sync $entityType for user $userId: ${created.size} created, ${updated.size} updated, ${deletedIds.size} deleted")
 
-        return GenericDeltaResponse(
+        GenericDeltaResponse(
             entityType = entityType,
             created = created,
             updated = updated,
@@ -160,19 +188,24 @@ class SyncService(private val db: Firestore) {
     /**
      * Apply a batch of sync operations from the client.
      * Returns success/failure per operation with server timestamps.
+     *
+     * SECURITY: ownerId is ALWAYS forced to the authenticated userId.
+     * Ownership is verified before UPDATE and DELETE operations.
      */
     suspend fun applyBatch(
         userId: String,
         operations: List<Triple<String, String, String>>, // (entityType, entityId, operation+payload)
-    ): List<Pair<String, Boolean>> {
+    ): List<Pair<String, Boolean>> = withContext(Dispatchers.IO) {
         val results = mutableListOf<Pair<String, Boolean>>()
 
         for ((entityType, entityId, opPayload) in operations) {
-            val collection = collectionMap[entityType]
-            if (collection == null) {
+            val collectionName = collectionMap[entityType]
+            if (collectionName == null) {
                 results.add(entityId to false)
                 continue
             }
+
+            val ownerField = ownerFieldFor(collectionName)
 
             try {
                 val parts = opPayload.split("|", limit = 2)
@@ -182,21 +215,42 @@ class SyncService(private val db: Firestore) {
                 when (operation) {
                     "CREATE", "UPDATE" -> {
                         val data = json.parseToJsonElement(payload).jsonObject.toFirestoreMap()
-                        data["updatedAt"] = System.currentTimeMillis()
+                        val now = System.currentTimeMillis()
+                        data["updatedAt"] = now
                         if (operation == "CREATE") {
-                            data["createdAt"] = System.currentTimeMillis()
+                            data["createdAt"] = now
                         }
-                        data["ownerId"] = userId
-                        db.collection(collection).document(entityId).set(data).get()
+                        // Force ownership -- NEVER trust client-supplied ownerId
+                        data[ownerField] = userId
+
+                        if (operation == "UPDATE") {
+                            // Verify ownership before updating
+                            val existing = db.collection(collectionName).document(entityId).get().get()
+                            if (existing.exists() && existing.getString(ownerField) != userId) {
+                                logger.warn("Ownership check failed for $entityType/$entityId by user $userId")
+                                results.add(entityId to false)
+                                continue
+                            }
+                        }
+
+                        db.collection(collectionName).document(entityId).set(data).get()
                         results.add(entityId to true)
                     }
                     "DELETE" -> {
-                        db.collection(collection).document(entityId).delete().get()
+                        // Verify ownership before deleting
+                        val existing = db.collection(collectionName).document(entityId).get().get()
+                        if (existing.exists() && existing.getString(ownerField) != userId) {
+                            logger.warn("Ownership check failed on DELETE for $entityType/$entityId by user $userId")
+                            results.add(entityId to false)
+                            continue
+                        }
+
+                        db.collection(collectionName).document(entityId).delete().get()
                         // Log deletion for other devices' delta sync
                         db.collection("deletion_log").add(
                             hashMapOf<String, Any>(
                                 "userId" to userId,
-                                "entityType" to entityType.lowercase(),
+                                "entityType" to entityType,
                                 "entityId" to entityId,
                                 "deletedAt" to System.currentTimeMillis(),
                             )
@@ -211,19 +265,18 @@ class SyncService(private val db: Firestore) {
             }
         }
 
-        return results
+        results
     }
 
     // ─── Private helpers ──────────────────────────────────────────────
 
     private fun getDeletedIds(
-        firestore: Firestore,
         userId: String,
         entityType: String,
         sinceMillis: Long,
     ): List<String> {
         return try {
-            firestore.collection("deletion_log")
+            db.collection("deletion_log")
                 .whereEqualTo("userId", userId)
                 .whereEqualTo("entityType", entityType)
                 .whereGreaterThan("deletedAt", sinceMillis)

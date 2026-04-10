@@ -47,17 +47,17 @@ class KtorDiaryRepository(
     override fun getSelectedDiary(diaryId: String): Flow<RequestState<Diary>> = flow {
         emit(RequestState.Loading)
         val result = api.get<DiaryResponse>("/api/v1/diaries/$diaryId")
-        emit(result.map { it.data?.toDomain() ?: throw Exception("Diary not found") })
+        emit(result.map { it.data.toDomain() })
     }
 
     override suspend fun insertDiary(diary: Diary): RequestState<Diary> {
         val result = api.post<DiaryResponse>("/api/v1/diaries", diary.toProto())
-        return result.map { it.data?.toDomain() ?: throw Exception("Failed to create diary") }
+        return result.map { it.data.toDomain() }
     }
 
     override suspend fun updateDiary(diary: Diary): RequestState<Diary> {
         val result = api.put<DiaryResponse>("/api/v1/diaries/${diary._id}", diary.toProto())
-        return result.map { it.data?.toDomain() ?: throw Exception("Failed to update diary") }
+        return result.map { it.data.toDomain() }
     }
 
     override suspend fun deleteDiary(id: String): RequestState<Boolean> {

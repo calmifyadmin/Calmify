@@ -27,13 +27,13 @@ class KtorChatRepository(
 
     override suspend fun getSession(sessionId: String): RequestState<ChatSession> {
         return api.get<ChatSessionResponse>("/api/v1/chat/sessions/$sessionId")
-            .map { it.data?.toDomain() ?: throw Exception("Session not found") }
+            .map { it.data.toDomain() }
     }
 
     override suspend fun createSession(title: String?): RequestState<ChatSession> {
         val body = mapOf("title" to (title ?: "Nuova conversazione"))
         return api.post<ChatSessionResponse>("/api/v1/chat/sessions", body)
-            .map { it.data?.toDomain() ?: throw Exception("Failed to create session") }
+            .map { it.data.toDomain() }
     }
 
     override suspend fun updateSession(session: ChatSession): RequestState<Unit> {

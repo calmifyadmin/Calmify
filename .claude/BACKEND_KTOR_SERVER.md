@@ -5,14 +5,33 @@
 > **Effort stimato**: 3-5 settimane
 > **Risultato**: Server Kotlin che media TUTTE le operazioni client-Firestore
 >
-> ## STATUS: COMPLETE + DEPLOYED (2026-04-10)
-> Server live su Cloud Run: `https://calmify-server-23546263069.europe-west1.run.app`
-> - 8 fasi implementate (Bootstrap → E2E Wiring)
-> - 12 route files, 12 services, 9 plugins, AI pipeline
-> - Security hardened: 16 vuln fixed, GDPR Art.17+20, audit logging
-> - Client: 10 REST repos in data/network, BackendConfig gradual switch
-> - Protobuf CN (preferred) + JSON fallback
-> - Health: `/health` → `healthy`, all auth endpoints → 401 without token
+> ## STATUS: REQUIRES FULL RE-ENGINEERING (2026-04-10)
+>
+> **Il codice esistente e' stato scritto con scorciatoie e NON e' production-ready.**
+> Un audit completo ha rivelato 30+ problemi critici. Il backend va ri-engineerizzato
+> da zero seguendo standard NASA-level (vedi `.claude/BACKEND_AUDIT.md`).
+>
+> ### Cosa e' deployato (MA NON FUNZIONA):
+> - Server su Cloud Run: `https://calmify-server-23546263069.europe-west1.run.app`
+> - Firestore DB: `calmify-native` (NON `(default)` che e' Datastore Mode)
+> - Health endpoint funziona, auth funziona, ma TUTTI gli endpoint dati falliscono
+>
+> ### Problemi critici che richiedono re-engineering:
+> - 24/26 collection names server ≠ client (camelCase vs snake_case)
+> - 17 campi Protobuf nullable (runtime crash)
+> - Tutti i service usano blocking `.get().get()` (freeze sotto carico)
+> - GDPR data export/delete non trova i dati (collection names sbagliate)
+> - Double Gemini API calls (2x costi)
+> - Rate limiting definito ma mai applicato
+> - IDOR su habit completions
+> - Response wrapper inconsistenti
+> - Streaming senza quota tracking
+> - SyncService collection map completamente sbagliata
+>
+> ### Direttiva: RE-ENGINEERING COMPLETO
+> NON fixare i bug uno per uno. Riscrivere ogni service, route, e model
+> verificando OGNI nome collection/campo contro il codice client Android.
+> Seguire le regole NASA-level in CLAUDE.md sezione "QUALITY MANDATE".
 
 ---
 

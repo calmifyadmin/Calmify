@@ -45,6 +45,7 @@ class AiOrchestrator(
         responseCache.getChat(cacheKey)?.let { cached ->
             logger.debug("Cache hit for chat: $cacheKey")
             return AiChatResponse(
+                success = true,
                 message = cached.text,
                 sessionId = request.sessionId,
                 tokensUsed = 0,
@@ -83,6 +84,7 @@ class AiOrchestrator(
         responseCache.putChat(cacheKey, responseText, result.tokensUsed)
 
         return AiChatResponse(
+            success = true,
             message = responseText,
             sessionId = request.sessionId,
             tokensUsed = result.tokensUsed,
@@ -132,17 +134,8 @@ class AiOrchestrator(
             "text" to request.text,
         ))
 
-        // Use JSON mode for structured output
-        val jsonText = geminiClient.generateJson(
-            model = model,
-            systemInstruction = prompt.systemInstruction,
-            contents = listOf(GeminiContent(role = "user", text = userMessage)),
-            temperature = prompt.temperature,
-            maxTokens = prompt.maxTokens,
-        )
-
-        // Parse and cache
-        val result = geminiClient.generate(
+        // Single Gemini call with JSON mode — generateJson returns GeminiResult with token count
+        val result = geminiClient.generateJson(
             model = model,
             systemInstruction = prompt.systemInstruction,
             contents = listOf(GeminiContent(role = "user", text = userMessage)),
@@ -151,9 +144,9 @@ class AiOrchestrator(
         )
 
         if (result.tokensUsed > 0) tokenTracker.record(userId, result.tokensUsed)
-        responseCache.putInsight(cacheKey, jsonText, result.tokensUsed)
+        responseCache.putInsight(cacheKey, result.text, result.tokensUsed)
 
-        return parseInsightJson(jsonText).copy(tokensUsed = result.tokensUsed)
+        return parseInsightJson(result.text).copy(tokensUsed = result.tokensUsed)
     }
 
     // ─── Text Analysis ──────────────────────────────────────────────────
@@ -167,15 +160,8 @@ class AiOrchestrator(
 
         val userMessage = prompt.renderUser(mapOf("text" to request.text))
 
-        val jsonText = geminiClient.generateJson(
-            model = model,
-            systemInstruction = prompt.systemInstruction,
-            contents = listOf(GeminiContent(role = "user", text = userMessage)),
-            temperature = prompt.temperature,
-            maxTokens = prompt.maxTokens,
-        )
-
-        val result = geminiClient.generate(
+        // Single Gemini call — generateJson now returns GeminiResult with token count
+        val result = geminiClient.generateJson(
             model = model,
             systemInstruction = prompt.systemInstruction,
             contents = listOf(GeminiContent(role = "user", text = userMessage)),
@@ -185,7 +171,7 @@ class AiOrchestrator(
 
         if (result.tokensUsed > 0) tokenTracker.record(userId, result.tokensUsed)
 
-        return parseAnalyzeJson(jsonText)
+        return parseAnalyzeJson(result.text)
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────
@@ -194,8 +180,7 @@ class AiOrchestrator(
         return listOf(GeminiContent(role = "user", text = request.message))
     }
 
-    private fun buildContextSuffix(context: AiContextProto?): String {
-        if (context == null) return ""
+    private fun buildContextSuffix(context: AiContextProto): String {
         val parts = mutableListOf<String>()
         if (context.userName.isNotEmpty()) parts.add("L'utente si chiama ${context.userName}.")
         if (context.recentMood.isNotEmpty()) parts.add("Umore recente: ${context.recentMood}.")
@@ -209,6 +194,7 @@ class AiOrchestrator(
         return try {
             val obj = json.parseToJsonElement(jsonText).jsonObject
             AiInsightResponse(
+                success = true,
                 sentimentLabel = obj["sentimentLabel"]?.jsonPrimitive?.contentOrNull ?: "NEUTRAL",
                 sentimentMagnitude = obj["sentimentMagnitude"]?.jsonPrimitive?.floatOrNull ?: 0f,
                 cognitivePatterns = obj["cognitivePatterns"]?.jsonArray?.map { p ->
@@ -225,7 +211,7 @@ class AiOrchestrator(
             )
         } catch (e: Exception) {
             logger.warn("Failed to parse insight JSON: ${e.message}")
-            AiInsightResponse(summary = jsonText) // Fallback: raw text as summary
+            AiInsightResponse(success = true, summary = jsonText) // Fallback: raw text as summary
         }
     }
 
@@ -233,6 +219,7 @@ class AiOrchestrator(
         return try {
             val obj = json.parseToJsonElement(jsonText).jsonObject
             AiAnalyzeResponse(
+                success = true,
                 sentiment = obj["sentiment"]?.jsonPrimitive?.contentOrNull ?: "NEUTRAL",
                 magnitude = obj["magnitude"]?.jsonPrimitive?.floatOrNull ?: 0f,
                 topics = obj["topics"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),

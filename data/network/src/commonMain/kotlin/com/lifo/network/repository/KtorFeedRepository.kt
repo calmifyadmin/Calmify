@@ -25,8 +25,8 @@ class KtorFeedRepository(
         emit(result.map { response ->
             FeedPage(
                 items = response.data.map { it.toDomain() },
-                nextCursor = response.meta?.cursor?.takeIf { it.isNotEmpty() },
-                hasMore = response.meta?.hasMore ?: false,
+                nextCursor = response.meta.cursor.takeIf { it.isNotEmpty() },
+                hasMore = response.meta.hasMore,
             )
         })
     }
@@ -42,8 +42,8 @@ class KtorFeedRepository(
         emit(result.map { response ->
             FeedPage(
                 items = response.data.map { it.toDomain() },
-                nextCursor = response.meta?.cursor?.takeIf { it.isNotEmpty() },
-                hasMore = response.meta?.hasMore ?: false,
+                nextCursor = response.meta.cursor.takeIf { it.isNotEmpty() },
+                hasMore = response.meta.hasMore,
             )
         })
     }

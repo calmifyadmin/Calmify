@@ -6,37 +6,39 @@ import com.lifo.shared.api.PaginationMeta
 import com.lifo.shared.model.CognitivePatternProto
 import com.lifo.shared.model.DiaryInsightProto
 import com.lifo.server.model.PaginationParams
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 
 class InsightService(private val db: Firestore) {
     private val logger = LoggerFactory.getLogger(InsightService::class.java)
-    private val collection = "diaryInsights"
+
+    companion object {
+        const val COLLECTION = "diary_insights"
+        private const val OWNER_FIELD = "ownerId"
+    }
 
     data class PagedInsights(val items: List<DiaryInsightProto>, val meta: PaginationMeta)
 
-    suspend fun getInsightByDiaryId(userId: String, diaryId: String): DiaryInsightProto? {
-        val firestore = db
-
-        val snapshot = firestore.collection(collection)
-            .whereEqualTo("ownerId", userId)
+    suspend fun getInsightByDiaryId(userId: String, diaryId: String): DiaryInsightProto? = withContext(Dispatchers.IO) {
+        val snapshot = db.collection(COLLECTION)
+            .whereEqualTo(OWNER_FIELD, userId)
             .whereEqualTo("diaryId", diaryId)
             .limit(1)
             .get().get()
 
-        val doc = snapshot.documents.firstOrNull() ?: return null
-        return docToInsight(doc)
+        val doc = snapshot.documents.firstOrNull() ?: return@withContext null
+        docToInsight(doc)
     }
 
-    suspend fun getInsights(userId: String, params: PaginationParams): PagedInsights {
-        val firestore = db
-
-        var query = firestore.collection(collection)
-            .whereEqualTo("ownerId", userId)
+    suspend fun getInsights(userId: String, params: PaginationParams): PagedInsights = withContext(Dispatchers.IO) {
+        var query = db.collection(COLLECTION)
+            .whereEqualTo(OWNER_FIELD, userId)
             .orderBy("generatedAtMillis", Query.Direction.DESCENDING)
             .limit(params.limit + 1)
 
         if (params.cursor != null) {
-            val cursorDoc = firestore.collection(collection).document(params.cursor).get().get()
+            val cursorDoc = db.collection(COLLECTION).document(params.cursor).get().get()
             if (cursorDoc.exists()) query = query.startAfter(cursorDoc)
         }
 
@@ -44,7 +46,7 @@ class InsightService(private val db: Firestore) {
         val hasMore = docs.size > params.limit
         val items = docs.take(params.limit).map { docToInsight(it) }
 
-        return PagedInsights(
+        PagedInsights(
             items = items,
             meta = PaginationMeta(
                 cursor = if (hasMore && items.isNotEmpty()) items.last().id else "",
@@ -68,7 +70,7 @@ class InsightService(private val db: Firestore) {
         return DiaryInsightProto(
             id = doc.id,
             diaryId = doc.getString("diaryId") ?: "",
-            ownerId = doc.getString("ownerId") ?: "",
+            ownerId = doc.getString(OWNER_FIELD) ?: "",
             generatedAtMillis = doc.getLong("generatedAtMillis") ?: 0L,
             dayKey = doc.getString("dayKey") ?: "",
             sourceTimezone = doc.getString("sourceTimezone") ?: "",

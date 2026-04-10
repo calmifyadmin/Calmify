@@ -18,7 +18,7 @@ class KtorInsightRepository(
     override fun getInsightByDiaryId(diaryId: String): Flow<RequestState<DiaryInsight?>> = flow {
         emit(RequestState.Loading)
         val result = api.get<DiaryInsightResponse>("/api/v1/insights/diary/$diaryId")
-        emit(result.map { it.data?.toDomain() })
+        emit(result.map { if (it.success) it.data.toDomain() else null })
     }
 
     override fun getAllInsights(): Flow<RequestState<List<DiaryInsight>>> = flow {
@@ -29,7 +29,7 @@ class KtorInsightRepository(
 
     override suspend fun insertInsight(insight: DiaryInsight): RequestState<String> {
         val result = api.post<DiaryInsightResponse>("/api/v1/insights", insight.toProto())
-        return result.map { it.data?.id ?: "" }
+        return result.map { it.data.id }
     }
 
     override suspend fun submitFeedback(

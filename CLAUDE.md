@@ -43,6 +43,64 @@ Come Jarvis di Iron Man, opero con questi principi fondamentali:
 
 ---
 
+## QUALITY MANDATE — NASA-LEVEL, ZERO TOLERANCE
+
+> **QUESTA SEZIONE HA PRIORITA' ASSOLUTA SU TUTTO IL RESTO DEL FILE.**
+> **Ogni sessione DEVE leggere e rispettare queste regole PRIMA di scrivere qualsiasi codice.**
+
+### Principio Fondamentale
+
+**Il codice di Calmify deve funzionare nello spazio.** Ogni riga deve essere scritta come se un errore potesse costare la missione. Zero scorciatoie, zero "fix rapide", zero "lo sistemiamo dopo". Se una cosa va fatta, va fatta PERFETTA la prima volta. Non esiste limite di costo, tempo o complessita' — esiste solo lo standard.
+
+### Regole Inviolabili
+
+1. **MAI "la fix piu' rapida"** — Se la soluzione corretta richiede 30 file, si modificano 30 file. Se richiede un refactor architetturale, si fa il refactor. Nessuna scorciatoia. Mai.
+
+2. **VERIFICA PRIMA DI SCRIVERE** — Prima di scrivere una riga di codice server-side:
+   - Verificare i NOMI ESATTI delle collection Firestore leggendo il codice Android client (`data/mongo/src/androidMain/`)
+   - Verificare i NOMI ESATTI dei campi Firestore leggendo le repository esistenti
+   - Verificare che il tipo serializzazione (Protobuf/JSON) supporti il tipo di dato usato
+   - Verificare che le timezone siano gestite correttamente (MAI usare timezone del server)
+
+3. **PROTOBUF: ZERO NULLABLE** — `kotlinx.serialization.protobuf` NON supporta `T? = null`. Ogni campo in una classe `@Serializable` con `@ProtoNumber` DEVE essere non-nullable con un valore default. Nessuna eccezione. `JsonElement` e' incompatibile con Protobuf. Generici (`ApiResponse<T>`) non sono supportati.
+
+4. **FIRESTORE COLLECTION NAMES** — Il client Android usa **snake_case**: `diary_insights`, `chat_sessions`, `gratitude_entries`, `sleep_logs`, ecc. Il server DEVE usare gli STESSI IDENTICI nomi. MAI inventare nomi camelCase. Leggere il codice client per conferma.
+
+5. **BLOCKING CALLS IN COROUTINES** — `ApiFuture.get()` blocca il thread. In un server Ktor/Netty, DEVE essere wrappato in `withContext(Dispatchers.IO)` o convertito con `kotlinx-coroutines-guava` `.await()`. Mai bloccare il coroutine dispatcher.
+
+6. **AUTHORIZATION SU OGNI OPERAZIONE** — Ogni query Firestore DEVE filtrare per `ownerId`/`userId`. Ogni update/delete DEVE verificare ownership PRIMA di eseguire. Nessuna eccezione. Nessuna IDOR.
+
+7. **TIMEZONE** — MAI usare `LocalDate.now()` o `System.currentTimeMillis()` sul server per calcoli che riguardano il giorno dell'utente. Il client DEVE inviare la timezone, il server DEVE usarla. L'app deve funzionare correttamente per un utente a Tokyo, uno a New York, e uno sulla ISS.
+
+8. **BATCH LIMITS** — Firestore limita i batch a 500 operazioni. SEMPRE chunked in gruppi di 500 max. Mai assumere che una collection abbia meno di 500 documenti.
+
+9. **DOUBLE API CALLS** — MAI chiamare un'API esterna due volte per la stessa informazione. Se serve il token count, deve venire dalla stessa risposta, non da una chiamata separata.
+
+10. **RESPONSE CONSISTENCY** — TUTTI gli endpoint DEVONO restituire response wrapper consistenti (`{success, data, error, meta}`). Mai raw objects, mai response diverse per lo stesso tipo di errore.
+
+11. **RATE LIMITING** — Se e' definito, DEVE essere applicato alle routes. Codice morto e' un bug.
+
+12. **DEAD CODE** — Se non e' usato, non esiste. Se e' commentato, va rimosso. `ConflictResolver` definito ma mai chiamato = bug. `userOrThrow()` definito ma mai usato = bug.
+
+13. **AUDIT TRAIL** — Ogni modifica va verificata dopo l'implementazione. Build, test, log. Se non puoi provare che funziona, non funziona.
+
+### Lezione dal Backend Refactor (2026-04-10)
+
+Un audit completo del backend refactor ha rivelato **30+ problemi critici** causati dall'approccio "fix rapida":
+- 17 campi nullable incompatibili con Protobuf (runtime crash)
+- 24/26 collection names server diversi dal client (server legge collection vuote)
+- GDPR data export/delete che non trova i dati dell'utente
+- Double API call Gemini (2x costi)
+- Blocking `.get().get()` su tutti i 12 service (server freeze sotto carico)
+- IDOR su habit completions
+- Rate limiting definito ma mai applicato
+- Sync engine con retry che non retries
+- Dead code ovunque (ConflictResolver, userOrThrow, ecc.)
+
+**Questo NON deve accadere mai piu'.** Ogni riga va verificata contro il codice esistente.
+
+---
+
 ## Session Initialization — CRITICAL
 
 **Ad ogni nuova sessione, LEGGERE SUBITO questo file prima di fare qualsiasi cosa.**
@@ -51,14 +109,15 @@ Come Jarvis di Iron Man, opero con questi principi fondamentali:
 
 - **Branch attivo**: `backend-architecture-refactor` (base: master @ `08ef101`)
 - **Fase 1 KMP COMPLETATA**: 237 file commonMain / 90 file androidMain (72.5% shared)
-- **Backend Refactor COMPLETE + DEPLOYED**:
-  - W1 Ktor Server: 8 fasi COMPLETE, deployed su Cloud Run (`https://calmify-server-23546263069.europe-west1.run.app`)
-  - W2 Sync Engine: Week 1-2 COMPLETE + DeltaApplier wired
-  - W3 Protobuf: Days 1-5 COMPLETE (client + server protobuf CN)
-  - W4 AI Server: Days 1-4 COMPLETE + security hardened
-- **Security**: 16 vulnerabilities fixed, GDPR Art.17+20, audit logging, security headers
-- **Gradual Switch**: BackendConfig con 7 flag per-domain (tutti false/Firestore). Flip per migrare.
-- **Prossimo**: E2E test (flip DIARY_REST=true su emulatore), poi migrazione graduale dominio per dominio
+- **Backend Refactor: DEPLOYED MA CON 30+ BUG CRITICI DA FIXARE**:
+  - W1 Ktor Server: deployed su Cloud Run (`https://calmify-server-23546263069.europe-west1.run.app`)
+  - W2 Sync Engine: wired ma con bug (retry non funziona, ConflictResolver dead code, flows non reattivi)
+  - W3 Protobuf: 17 campi nullable incompatibili, JsonElement in SyncApi, generici non supportati
+  - W4 AI Server: double API calls, streaming senza quota tracking, safety settings mancanti
+  - **Firestore DB**: database `calmify-native` (NON `(default)` che e' in Datastore Mode)
+  - **Collection names**: 24/26 sbagliati sul server (camelCase vs snake_case del client)
+- **BackendConfig**: 7 flag tutti `true` ma il server NON funziona correttamente — riportare a `false` fino a fix completo
+- **Prossimo**: FIX COMPLETO di tutti i 30+ bug (vedi `.claude/BACKEND_AUDIT.md`), poi E2E test, poi migrazione graduale
 
 ### File da leggere in ordine di priorita'
 

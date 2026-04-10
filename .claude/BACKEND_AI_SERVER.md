@@ -5,13 +5,29 @@
 > **Effort stimato**: 1 settimana
 > **Risultato**: AI centralizzata server-side — caching, routing, prompt engineering, sicurezza
 >
-> ## STATUS: COMPLETE + SECURITY HARDENED (2026-04-10)
-> - Days 1-4 implementati: GeminiClient, PromptRegistry, ModelRouter, ResponseCache, ContentFilter, TokenTracker, AiOrchestrator
-> - Routes: POST /chat, POST /chat/stream (SSE), POST /insight, POST /analyze, GET /usage
-> - Security: API key in header (not URL), 35+ injection patterns, fail-fast key validation
-> - Caching: chat 1h TTL, insight 24h TTL, semantic hashing (~60% token savings)
-> - Quotas: 10K daily (FREE), 100K daily (PREMIUM), per-user Firestore counters
-> - Deployed on Cloud Run with GEMINI_API_KEY via Secret Manager
+> ## STATUS: REQUIRES FULL RE-ENGINEERING (2026-04-10)
+>
+> **L'AI pipeline ha problemi che raddoppiano i costi e bypassano i limiti.**
+> Vedi `.claude/BACKEND_AUDIT.md` per il catalogo completo.
+>
+> ### Problemi critici:
+> - **Double Gemini API call** in `generateInsight()` e `analyzeText()` — `generateJson()` + `generate()` per la stessa richiesta. Raddoppia costi e latenza.
+> - **Streaming bypassa quota tracking** — `chatStream()` non chiama `tokenTracker.record()`. Utenti possono usare infiniti token via streaming.
+> - **Streaming senza safety settings** — `generateStream()` non include `safetySettings`, usa default Gemini (piu' restrittivo). Contenuto terapeutico bloccato inaspettatamente.
+> - **SSE catch blocks dead code** — dopo `respondBytesWriter` la response e' gia' committed, i catch tentano `call.respond()` di nuovo → `ResponseAlreadySentException`
+> - **`AiChatResponse.error`** e' `ApiError? = null` — nullable, incompatibile con Protobuf
+> - **TokenTracker** usa blocking Firestore `.get().get()` senza `withContext(Dispatchers.IO)`
+> - **PromptRegistry** usa blocking Firestore `.get().get()` senza `withContext(Dispatchers.IO)`
+>
+> ### Direttiva: RE-ENGINEERING COMPLETO
+> Riscrivere l'AI pipeline con:
+> - Una singola chiamata Gemini per operazione (token count dalla stessa risposta)
+> - Quota tracking su TUTTI gli endpoint incluso streaming
+> - Safety settings su TUTTI gli endpoint incluso streaming
+> - SSE error handling corretto (errore nel flusso, non fuori)
+> - Tutti i campi API non-nullable per Protobuf
+> - Blocking calls wrappati in `withContext(Dispatchers.IO)`
+> - Seguire le regole NASA-level in CLAUDE.md
 
 ---
 

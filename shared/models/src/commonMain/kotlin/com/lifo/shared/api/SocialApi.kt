@@ -6,15 +6,17 @@ import kotlinx.serialization.protobuf.ProtoNumber
 
 @Serializable
 data class ThreadResponse(
-    @ProtoNumber(1) val data: ThreadProto? = null,
-    @ProtoNumber(2) val error: ApiError? = null,
+    @ProtoNumber(1) val success: Boolean = false,
+    @ProtoNumber(2) val data: ThreadProto = ThreadProto(),
+    @ProtoNumber(3) val error: ApiError = ApiError(),
 )
 
 @Serializable
 data class ThreadListResponse(
-    @ProtoNumber(1) val data: List<ThreadProto> = emptyList(),
-    @ProtoNumber(2) val error: ApiError? = null,
-    @ProtoNumber(3) val meta: PaginationMeta? = null,
+    @ProtoNumber(1) val success: Boolean = false,
+    @ProtoNumber(2) val data: List<ThreadProto> = emptyList(),
+    @ProtoNumber(3) val error: ApiError = ApiError(),
+    @ProtoNumber(4) val meta: PaginationMeta = PaginationMeta(),
 )
 
 @Serializable

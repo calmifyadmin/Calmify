@@ -5,13 +5,30 @@
 > **Effort stimato**: 2 settimane
 > **Risultato**: Offline-first vero — l'app funziona senza rete, sync automatico in background
 >
-> ## STATUS: COMPLETE + WIRED (2026-04-10)
-> - Week 1-2 implementate: SyncEngine, SyncDiaryRepository, SyncChatRepository, 13 SyncWellnessRepository
-> - SQLDelight tables: SyncOperation, SyncMetadata, Diary, ChatSession, ChatMessage, WellnessEntry
-> - ConnectivityObserver expect/actual, ConflictResolver (LWW), SyncIndicator UI
-> - DeltaApplier routes server deltas to correct sync repos
-> - KtorSyncExecutor bridges SyncEngine to server /sync endpoints
-> - SyncEngine.start() in Application.onCreate() lifecycle
+> ## STATUS: REQUIRES FULL RE-ENGINEERING (2026-04-10)
+>
+> **Il sync engine ha problemi strutturali che rendono impossibile il funzionamento.**
+> Vedi `.claude/BACKEND_AUDIT.md` per il catalogo completo.
+>
+> ### Problemi critici:
+> - **SyncDiaryRepository.asFlow()** emette una sola volta poi completa — le write locali non aggiornano la UI
+> - **SyncEngine drainQueue retry** marca come FAILED ma non re-fetcha — le operazioni fallite non vengono mai ritentate
+> - **ConflictResolver** e' dead code — mai chiamato da nessuna parte, server wins sempre
+> - **DeltaApplier.applySessionChanges** usa INSERT (non upsert) — aggiornamenti falliscono su PK constraint
+> - **deleteAllDiaries/deleteAllSessions** cancellano solo localmente — il server mantiene i dati
+> - **serializeDiary** double-encodes images come JSON-in-JSON
+> - **SyncKoinModule** non binda le interfacce (solo tipi concreti)
+> - **GenericDeltaResponse** usa `JsonElement` — incompatibile con Protobuf
+> - **SyncService collection map** ha TUTTI i nomi wellness sbagliati
+>
+> ### Direttiva: RE-ENGINEERING COMPLETO
+> Riscrivere il sync engine da zero con:
+> - SQLDelight reactive queries (`asFlow().mapToList()`)
+> - Retry reale con re-fetch delle operazioni FAILED
+> - Upsert (INSERT OR REPLACE) per tutti gli apply
+> - ConflictResolver effettivamente wired o rimosso
+> - Collection names verificati contro il client Android
+> - Seguire le regole NASA-level in CLAUDE.md
 
 ---
 

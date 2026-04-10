@@ -118,6 +118,17 @@ class GeminiClient(
                 put("temperature", temperature)
                 put("maxOutputTokens", maxTokens)
             }
+
+            // Safety settings — same as non-streaming generate
+            putJsonArray("safetySettings") {
+                for (cat in listOf("HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH",
+                    "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT")) {
+                    addJsonObject {
+                        put("category", cat)
+                        put("threshold", "BLOCK_ONLY_HIGH")
+                    }
+                }
+            }
         }
 
         val response = httpClient.preparePost("$baseUrl/models/$model:streamGenerateContent") {
@@ -157,6 +168,7 @@ class GeminiClient(
 
     /**
      * Generate content with JSON mode — for structured output (insights, analysis).
+     * Returns full GeminiResult (text + token count) to avoid needing a second call.
      */
     suspend fun generateJson(
         model: String,
@@ -164,7 +176,7 @@ class GeminiClient(
         contents: List<GeminiContent>,
         temperature: Float = 0.3f,
         maxTokens: Int = 2048,
-    ): String {
+    ): GeminiResult {
         val requestBody = buildJsonObject {
             if (systemInstruction.isNotEmpty()) {
                 putJsonObject("system_instruction") {
@@ -188,6 +200,17 @@ class GeminiClient(
                 put("maxOutputTokens", maxTokens)
                 put("responseMimeType", "application/json")
             }
+
+            // Safety settings — same as non-JSON generate
+            putJsonArray("safetySettings") {
+                for (cat in listOf("HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH",
+                    "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT")) {
+                    addJsonObject {
+                        put("category", cat)
+                        put("threshold", "BLOCK_ONLY_HIGH")
+                    }
+                }
+            }
         }
 
         val response = httpClient.post("$baseUrl/models/$model:generateContent") {
@@ -197,7 +220,7 @@ class GeminiClient(
         }
 
         val body = json.parseToJsonElement(response.bodyAsText())
-        return parseResponse(body).text
+        return parseResponse(body)
     }
 
     private fun parseResponse(body: JsonElement): GeminiResult {

@@ -9,13 +9,12 @@ import com.lifo.util.mapper.toDomain
 import com.lifo.util.model.*
 import com.lifo.util.sync.DeltaHandler
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
 
 /**
  * Routes server delta responses to the correct local sync repository.
  *
  * When the SyncEngine pulls changes via KtorSyncExecutor, it receives
- * a GenericDeltaResponse with created/updated/deleted items as JsonElements.
+ * a GenericDeltaResponse with created/updated/deleted items as JSON-encoded strings.
  * This class deserializes them and applies to the right SQLDelight table.
  */
 class DeltaApplier(
@@ -49,41 +48,40 @@ class DeltaApplier(
     }
 
     private suspend fun applyDiary(
-        created: List<JsonElement>,
-        updated: List<JsonElement>,
+        created: List<String>,
+        updated: List<String>,
         deletedIds: List<String>,
     ) {
-        // Decode as Proto, then map to domain
-        val createdItems = created.map { json.decodeFromJsonElement(DiaryProto.serializer(), it).toDomain() }
-        val updatedItems = updated.map { json.decodeFromJsonElement(DiaryProto.serializer(), it).toDomain() }
+        val createdItems = created.map { json.decodeFromString(DiaryProto.serializer(), it).toDomain() }
+        val updatedItems = updated.map { json.decodeFromString(DiaryProto.serializer(), it).toDomain() }
         syncDiaryRepository.applyServerChanges(createdItems, updatedItems, deletedIds)
     }
 
     private suspend fun applyChatSessions(
-        created: List<JsonElement>,
-        updated: List<JsonElement>,
+        created: List<String>,
+        updated: List<String>,
         deletedIds: List<String>,
     ) {
-        val createdItems = created.map { json.decodeFromJsonElement(ChatSessionProto.serializer(), it).toDomain() }
-        val updatedItems = updated.map { json.decodeFromJsonElement(ChatSessionProto.serializer(), it).toDomain() }
+        val createdItems = created.map { json.decodeFromString(ChatSessionProto.serializer(), it).toDomain() }
+        val updatedItems = updated.map { json.decodeFromString(ChatSessionProto.serializer(), it).toDomain() }
         syncChatRepository.applySessionChanges(createdItems, updatedItems, deletedIds)
     }
 
     private suspend fun applyChatMessages(
-        created: List<JsonElement>,
-        updated: List<JsonElement>,
+        created: List<String>,
+        updated: List<String>,
         deletedIds: List<String>,
     ) {
-        val createdItems = created.map { json.decodeFromJsonElement(ChatMessageProto.serializer(), it).toDomain() }
-        val updatedItems = updated.map { json.decodeFromJsonElement(ChatMessageProto.serializer(), it).toDomain() }
+        val createdItems = created.map { json.decodeFromString(ChatMessageProto.serializer(), it).toDomain() }
+        val updatedItems = updated.map { json.decodeFromString(ChatMessageProto.serializer(), it).toDomain() }
         syncChatRepository.applyMessageChanges(createdItems, updatedItems, deletedIds)
     }
 
     @Suppress("UNCHECKED_CAST")
     private suspend fun applyWellness(
         type: SyncEntityType,
-        created: List<JsonElement>,
-        updated: List<JsonElement>,
+        created: List<String>,
+        updated: List<String>,
         deletedIds: List<String>,
     ) {
         val repo = wellnessRepos[type] as? SyncWellnessRepository<Any>
@@ -93,8 +91,8 @@ class DeltaApplier(
         }
 
         val serializer = wellnessSerializer(type) ?: return
-        val createdItems = created.map { json.decodeFromJsonElement(serializer, it) }
-        val updatedItems = updated.map { json.decodeFromJsonElement(serializer, it) }
+        val createdItems = created.map { json.decodeFromString(serializer, it) }
+        val updatedItems = updated.map { json.decodeFromString(serializer, it) }
         repo.applyServerChanges(createdItems, updatedItems, deletedIds)
     }
 

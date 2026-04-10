@@ -5,12 +5,28 @@
 > **Effort stimato**: 1 settimana
 > **Risultato**: Comunicazione client-server 3-5x piu' compatta di JSON, type-safe, versionata
 >
-> ## STATUS: COMPLETE (2026-04-10)
-> - shared/models KMP module: 30+ Proto data classes with @ProtoNumber
-> - 6 API wrapper files, 6 Domain↔Proto mapper files in core:util
-> - Client: KtorApiClient protobuf ContentNegotiation (preferred) + JSON fallback
-> - Server: protobuf CN already in place from Phase 1
-> - Ktor version aligned to 3.0.3 (firebase-ai transitive dep)
+> ## STATUS: REQUIRES FULL RE-ENGINEERING (2026-04-10)
+>
+> **I modelli Protobuf hanno problemi fondamentali che causano crash runtime.**
+> Vedi `.claude/BACKEND_AUDIT.md` per il catalogo completo.
+>
+> ### Problemi critici:
+> - **17 campi nullable** (`T? = null`) nelle API wrapper — `kotlinx.serialization.protobuf` NON supporta nullable. Ogni serializzazione crasha con "'null' is not supported for optional properties in ProtoBuf"
+> - **`GenericDeltaResponse`** usa `List<JsonElement>` — `JsonElement` e' JSON-only, zero supporto Protobuf
+> - **`WellnessListDto<T>`** usa generici — `kotlinx.serialization.protobuf` NON supporta generici
+> - **API wrapper** (`DiaryResponse`, `ChatSessionResponse`, ecc.) usano pattern `data: T? = null` + `error: ApiError? = null` — tutto nullable, tutto incompatibile
+> - **Piano BACKEND_PROTOBUF.md stesso** ha esempi con nullable (`sentimentLabel: String? = null`, `todayPulse: TodayPulseProto? = null`) — gli esempi stessi violano le regole Protobuf
+>
+> ### Direttiva: RE-ENGINEERING COMPLETO
+> Riscrivere TUTTI i modelli API wrapper con:
+> - `success: Boolean = false` flag per distinguere data valido da errore
+> - `data: SomeProto = SomeProto()` — non-nullable con default vuoto
+> - `error: ApiError = ApiError()` — non-nullable con default vuoto
+> - `meta: PaginationMeta = PaginationMeta()` — non-nullable con default vuoto
+> - Eliminare TUTTI i `JsonElement` — usare `List<String>` (JSON-encoded) o typed deltas
+> - Eliminare TUTTI i generici nelle classi `@Serializable`
+> - Aggiornare TUTTI i client che controllano `response.data != null` per usare `response.success`
+> - Seguire le regole NASA-level in CLAUDE.md
 
 ---
 

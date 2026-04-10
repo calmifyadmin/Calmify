@@ -5,19 +5,24 @@ import com.google.cloud.firestore.Query
 import com.lifo.shared.model.ProfileSettingsProto
 import com.lifo.shared.model.PsychologicalProfileProto
 import com.lifo.shared.model.StressPeakProto
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 
 class ProfileService(private val db: Firestore) {
     private val logger = LoggerFactory.getLogger(ProfileService::class.java)
-    private val collection = "profileSettings"
-    private val psychCollection = "psychologicalProfiles"
 
-    suspend fun getProfile(userId: String): ProfileSettingsProto? {
-        val firestore = db
-        val doc = firestore.collection(collection).document(userId).get().get()
-        if (!doc.exists()) return null
+    companion object {
+        const val SETTINGS_COLLECTION = "profile_settings"
+        const val PSYCH_COLLECTION = "psychological_profiles"
+        private const val OWNER_FIELD = "ownerId"
+    }
 
-        return ProfileSettingsProto(
+    suspend fun getProfile(userId: String): ProfileSettingsProto? = withContext(Dispatchers.IO) {
+        val doc = db.collection(SETTINGS_COLLECTION).document(userId).get().get()
+        if (!doc.exists()) return@withContext null
+
+        ProfileSettingsProto(
             id = doc.id,
             ownerId = userId,
             createdAtMillis = doc.getLong("createdAtMillis") ?: 0L,
@@ -48,14 +53,14 @@ class ProfileService(private val db: Firestore) {
         )
     }
 
-    suspend fun updateProfile(userId: String, profile: ProfileSettingsProto): ProfileSettingsProto {
-        val firestore = db
+    suspend fun updateProfile(userId: String, profile: ProfileSettingsProto): ProfileSettingsProto = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
 
         val data = hashMapOf<String, Any>(
-            "ownerId" to userId,
+            OWNER_FIELD to userId,
             "createdAtMillis" to (profile.createdAtMillis.takeIf { it > 0 } ?: now),
             "updatedAtMillis" to now,
+            "updatedAt" to now,
             "isOnboardingCompleted" to profile.isOnboardingCompleted,
             "displayName" to profile.displayName,
             "fullName" to profile.fullName,
@@ -81,43 +86,40 @@ class ProfileService(private val db: Firestore) {
             "enableAdvancedInsights" to profile.enableAdvancedInsights,
         )
 
-        firestore.collection(collection).document(userId).set(data).get()
+        db.collection(SETTINGS_COLLECTION).document(userId).set(data).get()
         logger.info("Updated profile for user $userId")
-        return profile.copy(id = userId, ownerId = userId, updatedAtMillis = now)
+        profile.copy(id = userId, ownerId = userId, updatedAtMillis = now)
     }
 
-    suspend fun getPsychologicalProfiles(userId: String, weeks: Int): List<PsychologicalProfileProto> {
-        val firestore = db
-        val docs = firestore.collection(psychCollection)
-            .whereEqualTo("ownerId", userId)
+    suspend fun getPsychologicalProfiles(userId: String, weeks: Int): List<PsychologicalProfileProto> = withContext(Dispatchers.IO) {
+        val docs = db.collection(PSYCH_COLLECTION)
+            .whereEqualTo(OWNER_FIELD, userId)
             .orderBy("computedAtMillis", Query.Direction.DESCENDING)
             .limit(weeks)
             .get().get().documents
 
-        return docs.map { doc -> mapPsychProfile(doc) }
+        docs.map { doc -> mapPsychProfile(doc) }
     }
 
-    suspend fun getLatestPsychologicalProfile(userId: String): PsychologicalProfileProto? {
-        val firestore = db
-        val docs = firestore.collection(psychCollection)
-            .whereEqualTo("ownerId", userId)
+    suspend fun getLatestPsychologicalProfile(userId: String): PsychologicalProfileProto? = withContext(Dispatchers.IO) {
+        val docs = db.collection(PSYCH_COLLECTION)
+            .whereEqualTo(OWNER_FIELD, userId)
             .orderBy("computedAtMillis", Query.Direction.DESCENDING)
             .limit(1)
             .get().get().documents
 
-        return docs.firstOrNull()?.let { mapPsychProfile(it) }
+        docs.firstOrNull()?.let { mapPsychProfile(it) }
     }
 
-    suspend fun getPsychologicalProfileByWeek(userId: String, weekNumber: Int, year: Int): PsychologicalProfileProto? {
-        val firestore = db
-        val docs = firestore.collection(psychCollection)
-            .whereEqualTo("ownerId", userId)
+    suspend fun getPsychologicalProfileByWeek(userId: String, weekNumber: Int, year: Int): PsychologicalProfileProto? = withContext(Dispatchers.IO) {
+        val docs = db.collection(PSYCH_COLLECTION)
+            .whereEqualTo(OWNER_FIELD, userId)
             .whereEqualTo("weekNumber", weekNumber)
             .whereEqualTo("year", year)
             .limit(1)
             .get().get().documents
 
-        return docs.firstOrNull()?.let { mapPsychProfile(it) }
+        docs.firstOrNull()?.let { mapPsychProfile(it) }
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -133,7 +135,7 @@ class ProfileService(private val db: Firestore) {
 
         return PsychologicalProfileProto(
             id = doc.id,
-            ownerId = doc.getString("ownerId") ?: "",
+            ownerId = doc.getString(OWNER_FIELD) ?: "",
             weekNumber = doc.getLong("weekNumber")?.toInt() ?: 0,
             year = doc.getLong("year")?.toInt() ?: 2025,
             weekKey = doc.getString("weekKey") ?: "",
