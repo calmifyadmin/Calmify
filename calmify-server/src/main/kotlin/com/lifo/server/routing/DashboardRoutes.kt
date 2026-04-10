@@ -26,6 +26,9 @@ fun Route.dashboardRoutes() {
     // GET /api/v1/feature-flags — no auth needed, cached 5min
     get("/api/v1/feature-flags") {
         val flags = featureFlagService.getFlags()
-        call.respond(mapOf("flags" to flags))
+        val json = kotlinx.serialization.json.buildJsonObject {
+            put("flags", kotlinx.serialization.json.JsonObject(flags.mapValues { kotlinx.serialization.json.JsonPrimitive(it.value) }))
+        }
+        call.respondText(json.toString(), io.ktor.http.ContentType.Application.Json)
     }
 }

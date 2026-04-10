@@ -10,7 +10,13 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.encodeToJsonElement
 import org.koin.ktor.ext.inject
+
+private val profileJson = Json { encodeDefaults = true }
 
 fun Route.profileRoutes() {
     val profileService by inject<ProfileService>()
@@ -45,7 +51,10 @@ fun Route.profileRoutes() {
                 val user = call.principal<UserPrincipal>()!!
                 val weeks = call.parameters["weeks"]?.toIntOrNull() ?: 4
                 val profiles = profileService.getPsychologicalProfiles(user.uid, weeks)
-                call.respond(mapOf("data" to profiles))
+                val json = buildJsonObject {
+                    put("data", profileJson.encodeToJsonElement(ListSerializer(PsychologicalProfileProto.serializer()), profiles))
+                }
+                call.respondText(json.toString(), ContentType.Application.Json)
             }
 
             // GET /api/v1/profile/psychological/latest

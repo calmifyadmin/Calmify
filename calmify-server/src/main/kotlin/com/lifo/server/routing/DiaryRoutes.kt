@@ -104,7 +104,7 @@ fun Route.diaryRoutes() {
             delete {
                 val user = call.principal<UserPrincipal>()!!
                 val count = diaryService.deleteAllDiaries(user.uid)
-                call.respond(mapOf("deleted" to count))
+                call.respondText("""{"deleted":$count}""", io.ktor.http.ContentType.Application.Json)
             }
         }
     }

@@ -90,7 +90,7 @@ fun Route.chatRoutes() {
             delete("/sessions") {
                 val user = call.principal<UserPrincipal>()!!
                 val count = chatService.deleteAllSessions(user.uid)
-                call.respond(mapOf("deleted" to count))
+                call.respondText("""{"deleted":$count}""", io.ktor.http.ContentType.Application.Json)
             }
 
             // POST /api/v1/chat/sessions/{sessionId}/export — export session to diary
@@ -98,7 +98,7 @@ fun Route.chatRoutes() {
                 val user = call.principal<UserPrincipal>()!!
                 val sessionId = call.parameters["sessionId"]!!
                 val diaryId = chatService.exportSessionToDiary(user.uid, sessionId)
-                call.respond(mapOf("diaryId" to diaryId))
+                call.respondText("""{"diaryId":"$diaryId"}""", io.ktor.http.ContentType.Application.Json)
             }
 
             // POST /api/v1/chat/messages/{messageId}/retry — retry failed message

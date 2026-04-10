@@ -9,30 +9,38 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.protobuf.ProtoNumber
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.serializer
 
-@Serializable
-data class WellnessListResponse<T>(
-    @ProtoNumber(1) val data: List<T> = emptyList(),
-    @ProtoNumber(2) val error: ApiError? = null,
-    @ProtoNumber(3) val meta: com.lifo.shared.api.PaginationMeta? = null,
-)
+/**
+ * JSON instance for wellness list responses.
+ * List/day endpoints MUST use JSON because:
+ * - They wrap items in mapOf("data" to ...) which Protobuf can't serialize
+ * - Generic List<T> has no Protobuf schema
+ * Single-item endpoints (get by ID, create, update) use Protobuf normally.
+ */
+@PublishedApi internal val wellnessJson = Json { encodeDefaults = true }
 
 inline fun <reified T : Any> Route.wellnessCrudRoutes(
     service: GenericWellnessService<T>,
 ) {
     authenticate("firebase") {
-        // GET /
+        // GET / — JSON response (list + pagination meta can't be Protobuf)
         get {
             val user = call.principal<UserPrincipal>()!!
             val params = PaginationParams.fromCall(call)
             val result = service.list(user.uid, params)
-            call.respond(mapOf("data" to result.items, "meta" to result.meta))
+            val json = buildJsonObject {
+                put("data", wellnessJson.encodeToJsonElement(ListSerializer(serializer<T>()), result.items))
+                put("meta", wellnessJson.encodeToJsonElement(result.meta))
+            }
+            call.respondText(json.toString(), ContentType.Application.Json)
         }
 
-        // GET /{id}
+        // GET /{id} — single item, Protobuf OK
         get("/{id}") {
             val user = call.principal<UserPrincipal>()!!
             val id = call.parameters["id"]!!
@@ -47,15 +55,18 @@ inline fun <reified T : Any> Route.wellnessCrudRoutes(
             }
         }
 
-        // GET /day/{dayKey}
+        // GET /day/{dayKey} — JSON response (list wrapper)
         get("/day/{dayKey}") {
             val user = call.principal<UserPrincipal>()!!
             val dayKey = call.parameters["dayKey"]!!
             val items = service.getByDayKey(user.uid, dayKey)
-            call.respond(mapOf("data" to items))
+            val json = buildJsonObject {
+                put("data", wellnessJson.encodeToJsonElement(ListSerializer(serializer<T>()), items))
+            }
+            call.respondText(json.toString(), ContentType.Application.Json)
         }
 
-        // POST /
+        // POST / — single item, Protobuf OK
         post {
             val user = call.principal<UserPrincipal>()!!
             val item = call.receive<T>()
@@ -63,7 +74,7 @@ inline fun <reified T : Any> Route.wellnessCrudRoutes(
             call.respond(HttpStatusCode.Created, created)
         }
 
-        // PUT /{id}
+        // PUT /{id} — single item, Protobuf OK
         put("/{id}") {
             val user = call.principal<UserPrincipal>()!!
             val id = call.parameters["id"]!!
@@ -110,24 +121,25 @@ fun Route.habitCompletionRoutes(
             val dayKey = call.parameters["dayKey"]
                 ?: throw IllegalArgumentException("Missing dayKey parameter")
 
-            val firestore = db
-            val completionId = "${habitId}_$dayKey"
-            val docRef = firestore.collection("habit_completions").document(completionId)
-            val existing = docRef.get().get()
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                val completionId = "${habitId}_$dayKey"
+                val docRef = db.collection("habit_completions").document(completionId)
+                val existing = docRef.get().get()
 
-            if (existing.exists()) {
-                docRef.delete().get()
-                call.respond(mapOf("completed" to false))
-            } else {
-                docRef.set(
-                    hashMapOf<String, Any>(
-                        "habitId" to habitId,
-                        "ownerId" to user.uid,
-                        "dayKey" to dayKey,
-                        "completedAt" to System.currentTimeMillis(),
-                    ),
-                ).get()
-                call.respond(mapOf("completed" to true))
+                if (existing.exists()) {
+                    docRef.delete().get()
+                    call.respondText("""{"completed":false}""", ContentType.Application.Json)
+                } else {
+                    docRef.set(
+                        hashMapOf<String, Any>(
+                            "habitId" to habitId,
+                            "ownerId" to user.uid,
+                            "dayKey" to dayKey,
+                            "completedAt" to System.currentTimeMillis(),
+                        ),
+                    ).get()
+                    call.respondText("""{"completed":true}""", ContentType.Application.Json)
+                }
             }
         }
 
@@ -135,22 +147,24 @@ fun Route.habitCompletionRoutes(
         get("/completions/day/{dayKey}") {
             val user = call.principal<UserPrincipal>()!!
             val dayKey = call.parameters["dayKey"]!!
-            val firestore = db
 
-            val completions = firestore.collection("habit_completions")
-                .whereEqualTo("ownerId", user.uid)
-                .whereEqualTo("dayKey", dayKey)
-                .get().get().documents
-
-            val items = completions.map { doc ->
-                mapOf(
-                    "id" to doc.id,
-                    "habitId" to (doc.getString("habitId") ?: ""),
-                    "dayKey" to (doc.getString("dayKey") ?: ""),
-                    "completedAt" to (doc.getLong("completedAt") ?: 0L),
-                )
+            val items = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                db.collection("habit_completions")
+                    .whereEqualTo("ownerId", user.uid)
+                    .whereEqualTo("dayKey", dayKey)
+                    .get().get().documents.map { doc ->
+                        CompletionJson(
+                            id = doc.id,
+                            habitId = doc.getString("habitId") ?: "",
+                            dayKey = doc.getString("dayKey") ?: "",
+                            completedAt = doc.getLong("completedAt") ?: 0L,
+                        )
+                    }
             }
-            call.respond(mapOf("data" to items))
+            val json = buildJsonObject {
+                put("data", wellnessJson.encodeToJsonElement(items))
+            }
+            call.respondText(json.toString(), ContentType.Application.Json)
         }
 
         // GET /api/v1/wellness/habits/{habitId}/completions?limit=30
@@ -158,24 +172,35 @@ fun Route.habitCompletionRoutes(
             val user = call.principal<UserPrincipal>()!!
             val habitId = call.parameters["habitId"]!!
             val limit = call.parameters["limit"]?.toIntOrNull() ?: 30
-            val firestore = db
 
-            val completions = firestore.collection("habit_completions")
-                .whereEqualTo("ownerId", user.uid)
-                .whereEqualTo("habitId", habitId)
-                .orderBy("completedAt", com.google.cloud.firestore.Query.Direction.DESCENDING)
-                .limit(limit)
-                .get().get().documents
-
-            val items = completions.map { doc ->
-                mapOf(
-                    "id" to doc.id,
-                    "habitId" to (doc.getString("habitId") ?: ""),
-                    "dayKey" to (doc.getString("dayKey") ?: ""),
-                    "completedAt" to (doc.getLong("completedAt") ?: 0L),
-                )
+            val items = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                db.collection("habit_completions")
+                    .whereEqualTo("ownerId", user.uid)
+                    .whereEqualTo("habitId", habitId)
+                    .orderBy("completedAt", com.google.cloud.firestore.Query.Direction.DESCENDING)
+                    .limit(limit)
+                    .get().get().documents.map { doc ->
+                        CompletionJson(
+                            id = doc.id,
+                            habitId = doc.getString("habitId") ?: "",
+                            dayKey = doc.getString("dayKey") ?: "",
+                            completedAt = doc.getLong("completedAt") ?: 0L,
+                        )
+                    }
             }
-            call.respond(mapOf("data" to items))
+            val json = buildJsonObject {
+                put("data", wellnessJson.encodeToJsonElement(items))
+            }
+            call.respondText(json.toString(), ContentType.Application.Json)
         }
     }
 }
+
+/** Typed completion DTO for JSON serialization (no mapOf nonsense). */
+@kotlinx.serialization.Serializable
+private data class CompletionJson(
+    val id: String = "",
+    val habitId: String = "",
+    val dayKey: String = "",
+    val completedAt: Long = 0L,
+)
