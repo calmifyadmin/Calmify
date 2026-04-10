@@ -5,33 +5,39 @@
 > **Effort stimato**: 3-5 settimane
 > **Risultato**: Server Kotlin che media TUTTE le operazioni client-Firestore
 >
-> ## STATUS: REQUIRES FULL RE-ENGINEERING (2026-04-10)
+> ## STATUS: RE-ENGINEERED — PRONTO PER E2E TEST (2026-04-10)
 >
-> **Il codice esistente e' stato scritto con scorciatoie e NON e' production-ready.**
-> Un audit completo ha rivelato 30+ problemi critici. Il backend va ri-engineerizzato
-> da zero seguendo standard NASA-level (vedi `.claude/BACKEND_AUDIT.md`).
+> **Audit completo (30+ bug) → re-engineering completo in commit `39499eb` (42 file).**
+> Tutto verificato contro il codice client Android. Build server + client passano.
 >
-> ### Cosa e' deployato (MA NON FUNZIONA):
+> ### Cosa e' deployato:
 > - Server su Cloud Run: `https://calmify-server-23546263069.europe-west1.run.app`
 > - Firestore DB: `calmify-native` (NON `(default)` che e' Datastore Mode)
-> - Health endpoint funziona, auth funziona, ma TUTTI gli endpoint dati falliscono
+> - Health endpoint + auth funzionano
 >
-> ### Problemi critici che richiedono re-engineering:
-> - 24/26 collection names server ≠ client (camelCase vs snake_case)
-> - 17 campi Protobuf nullable (runtime crash)
-> - Tutti i service usano blocking `.get().get()` (freeze sotto carico)
-> - GDPR data export/delete non trova i dati (collection names sbagliate)
-> - Double Gemini API calls (2x costi)
-> - Rate limiting definito ma mai applicato
-> - IDOR su habit completions
-> - Response wrapper inconsistenti
-> - Streaming senza quota tracking
-> - SyncService collection map completamente sbagliata
+> ### Problemi RISOLTI (commit `39499eb`):
+> - [x] 24/26 collection names → TUTTI corretti snake_case (verificati vs client)
+> - [x] 17 campi Protobuf nullable → ZERO nullable, tutti con default non-null
+> - [x] Blocking `.get().get()` → TUTTI wrappati in `withContext(Dispatchers.IO)`
+> - [x] GDPR data export/delete → tutte 25+ collection + subcollection corrette
+> - [x] Double Gemini API calls → `generateJson()` ora ritorna `GeminiResult`, singola chiamata
+> - [x] Response wrapper inconsistenti → pattern `success: Boolean` su tutti gli endpoint
+> - [x] Streaming senza safety settings → aggiunto `safetySettings` a stream + JSON mode
+> - [x] SyncService collection map → riscritta con 22 entity, snake_case corretto
+> - [x] TokenTracker collection `profiles` → corretto in `profile_settings`
+> - [x] TokenTracker blocking calls → wrappati in `withContext(Dispatchers.IO)`
+> - [x] Social graph flat collection → subcollection pattern (`social_graph/{uid}/following`)
+> - [x] DeltaApplier `List<JsonElement>` → `List<String>` (Protobuf-safe)
+> - [x] Auth checks su ogni write operation
+> - [x] Batch 500 chunking su operazioni bulk
 >
-> ### Direttiva: RE-ENGINEERING COMPLETO
-> NON fixare i bug uno per uno. Riscrivere ogni service, route, e model
-> verificando OGNI nome collection/campo contro il codice client Android.
-> Seguire le regole NASA-level in CLAUDE.md sezione "QUALITY MANDATE".
+> ### Prossimo passo:
+> 1. Deploy su Cloud Run: `cd ~/Calmify && git pull && gcloud builds submit --config=calmify-server/cloudbuild.yaml`
+> 2. E2E test: flip `DIARY_REST = true` su emulatore, verificare CRUD
+> 3. Se funziona, abilitare un dominio alla volta via BackendConfig
+>
+> ### Standard qualita':
+> Seguire SEMPRE le regole NASA-level in CLAUDE.md sezione "QUALITY MANDATE".
 
 ---
 

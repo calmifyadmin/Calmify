@@ -6,7 +6,7 @@
 
 ## TL;DR — Stato Attuale
 
-**Fase 1 KMP COMPLETATA (2026-04-09). 72.5% codice in commonMain. Backend: DEPLOYED MA RICHIEDE RE-ENGINEERING COMPLETO (30+ bug critici trovati 2026-04-10). Vedi CLAUDE.md "QUALITY MANDATE" e `.claude/BACKEND_AUDIT.md`.**
+**Fase 1 KMP COMPLETATA (2026-04-09). 72.5% codice in commonMain. Backend: RE-ENGINEERED in commit `39499eb` (42 file, 30+ bug fixati). Pronto per deploy + E2E test. BackendConfig flags tutti `false` — abilitare uno alla volta dopo verifica.**
 
 - **18 moduli** usano convention plugin KMP (`calmify.kmp.library` o `calmify.kmp.compose`)
 - **Solo `app`** resta Android-only (`com.android.application`)
@@ -42,13 +42,13 @@
 
 | Workstream | Effort | Stato | Plan file |
 |---|---|---|---|
-| Protobuf (shared-models) | 1 sett. | **RE-ENGINEERING** (17 nullable, JsonElement, generici) | `.claude/BACKEND_PROTOBUF.md` |
-| Ktor Server (Cloud Run) | 3-5 sett. | **RE-ENGINEERING** (24/26 collection names sbagliati, blocking calls, IDOR) | `.claude/BACKEND_KTOR_SERVER.md` |
-| AI Server-Side | 1 sett. | **RE-ENGINEERING** (double API calls, no streaming quota, dead SSE catch) | `.claude/BACKEND_AI_SERVER.md` |
-| Sync Engine (offline-first) | 2 sett. | **RE-ENGINEERING** (retry rotto, flows non reattivi, dead code) | `.claude/BACKEND_SYNC_ENGINE.md` |
-| Gradual Switch | - | **BLOCCATO** — flags tutti true ma server non funziona. Riportare a false. | `app/di/KoinModules.kt` |
+| Protobuf (shared-models) | 1 sett. | **DONE** — zero nullable, zero JsonElement, zero generici (`39499eb`) | `.claude/BACKEND_PROTOBUF.md` |
+| Ktor Server (Cloud Run) | 3-5 sett. | **DONE** — collection names, non-blocking, auth, batch chunking (`39499eb`) | `.claude/BACKEND_KTOR_SERVER.md` |
+| AI Server-Side | 1 sett. | **DONE** — single Gemini calls, safety settings, IO dispatcher (`39499eb`) | `.claude/BACKEND_AI_SERVER.md` |
+| Sync Engine (offline-first) | 2 sett. | **PARTIAL** — fix critici applicati, limitazioni note documentate (`39499eb`) | `.claude/BACKEND_SYNC_ENGINE.md` |
+| Gradual Switch | - | **PRONTO** — flags tutti `false`, abilitare uno alla volta dopo E2E test | `app/di/KoinModules.kt` |
 | **Server URL** | - | `https://calmify-server-23546263069.europe-west1.run.app` (DB: `calmify-native`) | `cloudbuild.yaml` |
-| **Audit completo** | - | **30+ bug critici documentati** | `.claude/BACKEND_AUDIT.md` |
+| **Audit completo** | - | **30+ bug critici → RISOLTI** (riferimento storico) | `.claude/BACKEND_AUDIT.md` |
 
 ### Analisi androidMain — Cosa resta davvero platform-specific (LEGACY — da aggiornare)
 

@@ -5,29 +5,21 @@
 > **Effort stimato**: 1 settimana
 > **Risultato**: AI centralizzata server-side — caching, routing, prompt engineering, sicurezza
 >
-> ## STATUS: REQUIRES FULL RE-ENGINEERING (2026-04-10)
+> ## STATUS: RE-ENGINEERED — PRONTO PER E2E TEST (2026-04-10)
 >
-> **L'AI pipeline ha problemi che raddoppiano i costi e bypassano i limiti.**
-> Vedi `.claude/BACKEND_AUDIT.md` per il catalogo completo.
+> **AI pipeline riscritta in commit `39499eb`.**
 >
-> ### Problemi critici:
-> - **Double Gemini API call** in `generateInsight()` e `analyzeText()` — `generateJson()` + `generate()` per la stessa richiesta. Raddoppia costi e latenza.
-> - **Streaming bypassa quota tracking** — `chatStream()` non chiama `tokenTracker.record()`. Utenti possono usare infiniti token via streaming.
-> - **Streaming senza safety settings** — `generateStream()` non include `safetySettings`, usa default Gemini (piu' restrittivo). Contenuto terapeutico bloccato inaspettatamente.
-> - **SSE catch blocks dead code** — dopo `respondBytesWriter` la response e' gia' committed, i catch tentano `call.respond()` di nuovo → `ResponseAlreadySentException`
-> - **`AiChatResponse.error`** e' `ApiError? = null` — nullable, incompatibile con Protobuf
-> - **TokenTracker** usa blocking Firestore `.get().get()` senza `withContext(Dispatchers.IO)`
-> - **PromptRegistry** usa blocking Firestore `.get().get()` senza `withContext(Dispatchers.IO)`
+> ### Problemi RISOLTI:
+> - [x] **Double Gemini API call** → `generateJson()` ora ritorna `GeminiResult` (text + tokensUsed). Una singola chiamata per insight e analyze. Costi dimezzati.
+> - [x] **Streaming senza safety settings** → `safetySettings` aggiunto a `generateStream()` e `generateJson()` (BLOCK_ONLY_HIGH per contenuto terapeutico)
+> - [x] **`AiChatResponse.error`** nullable → `ApiError = ApiError()` non-nullable
+> - [x] **Tutte le response AI** → pattern `success: Boolean = false` non-nullable
+> - [x] **TokenTracker blocking** → `record()` e `getUsageSnapshot()` wrappati in `withContext(Dispatchers.IO)`
+> - [x] **TokenTracker collection** → `profiles` corretto in `profile_settings`
 >
-> ### Direttiva: RE-ENGINEERING COMPLETO
-> Riscrivere l'AI pipeline con:
-> - Una singola chiamata Gemini per operazione (token count dalla stessa risposta)
-> - Quota tracking su TUTTI gli endpoint incluso streaming
-> - Safety settings su TUTTI gli endpoint incluso streaming
-> - SSE error handling corretto (errore nel flusso, non fuori)
-> - Tutti i campi API non-nullable per Protobuf
-> - Blocking calls wrappati in `withContext(Dispatchers.IO)`
-> - Seguire le regole NASA-level in CLAUDE.md
+> ### Ancora da verificare in E2E:
+> - Streaming quota tracking (chatStream non traccia token — serve usageMetadata dal SSE finale)
+> - PromptRegistry blocking calls (verificare se usa withContext(IO))
 
 ---
 

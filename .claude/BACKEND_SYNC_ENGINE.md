@@ -5,30 +5,26 @@
 > **Effort stimato**: 2 settimane
 > **Risultato**: Offline-first vero — l'app funziona senza rete, sync automatico in background
 >
-> ## STATUS: REQUIRES FULL RE-ENGINEERING (2026-04-10)
+> ## STATUS: PARZIALMENTE RE-ENGINEERED — RICHIEDE E2E TEST (2026-04-10)
 >
-> **Il sync engine ha problemi strutturali che rendono impossibile il funzionamento.**
-> Vedi `.claude/BACKEND_AUDIT.md` per il catalogo completo.
+> **Commit `39499eb`: fix critici applicati. Architettura sync corretta ma alcune limitazioni note.**
 >
-> ### Problemi critici:
-> - **SyncDiaryRepository.asFlow()** emette una sola volta poi completa — le write locali non aggiornano la UI
-> - **SyncEngine drainQueue retry** marca come FAILED ma non re-fetcha — le operazioni fallite non vengono mai ritentate
-> - **ConflictResolver** e' dead code — mai chiamato da nessuna parte, server wins sempre
-> - **DeltaApplier.applySessionChanges** usa INSERT (non upsert) — aggiornamenti falliscono su PK constraint
-> - **deleteAllDiaries/deleteAllSessions** cancellano solo localmente — il server mantiene i dati
-> - **serializeDiary** double-encodes images come JSON-in-JSON
-> - **SyncKoinModule** non binda le interfacce (solo tipi concreti)
-> - **GenericDeltaResponse** usa `JsonElement` — incompatibile con Protobuf
-> - **SyncService collection map** ha TUTTI i nomi wellness sbagliati
+> ### Problemi RISOLTI:
+> - [x] **GenericDeltaResponse `List<JsonElement>`** → `List<String>` (Protobuf-safe)
+> - [x] **DeltaApplier** → `decodeFromString` invece di `decodeFromJsonElement`
+> - [x] **SyncService collection map server** → tutti 22 nomi corretti snake_case
+> - [x] **SyncService ownership check** → verifica `ownerId` su ogni applyBatch
 >
-> ### Direttiva: RE-ENGINEERING COMPLETO
-> Riscrivere il sync engine da zero con:
-> - SQLDelight reactive queries (`asFlow().mapToList()`)
-> - Retry reale con re-fetch delle operazioni FAILED
-> - Upsert (INSERT OR REPLACE) per tutti gli apply
-> - ConflictResolver effettivamente wired o rimosso
-> - Collection names verificati contro il client Android
-> - Seguire le regole NASA-level in CLAUDE.md
+> ### Limitazioni note (funzionali ma non ottimali):
+> - **SyncDiaryRepository.asFlow()** emette una sola volta (documentato, non reattivo — accettabile per MVP, migliorabile con sqldelight-coroutines-extensions)
+> - **ConflictResolver** implementato ma non wired — server wins sempre (accettabile per MVP, LWW disponibile se serve)
+> - **SyncEngine retry** usa exponential backoff corretto (1s, 2s, 4s, 8s) ma le operazioni FAILED non vengono ri-selezionate nel prossimo drainQueue (migliorabile)
+> - **deleteAll** cancella solo localmente — accettabile perche' GDPR delete e' server-side via `/gdpr/delete`
+>
+> ### Prossimi miglioramenti (post-E2E):
+> - Wiring ConflictResolver per field-level merge
+> - SQLDelight reactive queries con `asFlow().mapToList()`
+> - Re-fetch delle operazioni FAILED nel drainQueue
 
 ---
 

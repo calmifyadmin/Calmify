@@ -5,28 +5,28 @@
 > **Effort stimato**: 1 settimana
 > **Risultato**: Comunicazione client-server 3-5x piu' compatta di JSON, type-safe, versionata
 >
-> ## STATUS: REQUIRES FULL RE-ENGINEERING (2026-04-10)
+> ## STATUS: RE-ENGINEERED — PRONTO PER E2E TEST (2026-04-10)
 >
-> **I modelli Protobuf hanno problemi fondamentali che causano crash runtime.**
-> Vedi `.claude/BACKEND_AUDIT.md` per il catalogo completo.
+> **Tutti i modelli Protobuf riscritti in commit `39499eb` (42 file).**
 >
-> ### Problemi critici:
-> - **17 campi nullable** (`T? = null`) nelle API wrapper — `kotlinx.serialization.protobuf` NON supporta nullable. Ogni serializzazione crasha con "'null' is not supported for optional properties in ProtoBuf"
-> - **`GenericDeltaResponse`** usa `List<JsonElement>` — `JsonElement` e' JSON-only, zero supporto Protobuf
-> - **`WellnessListDto<T>`** usa generici — `kotlinx.serialization.protobuf` NON supporta generici
-> - **API wrapper** (`DiaryResponse`, `ChatSessionResponse`, ecc.) usano pattern `data: T? = null` + `error: ApiError? = null` — tutto nullable, tutto incompatibile
-> - **Piano BACKEND_PROTOBUF.md stesso** ha esempi con nullable (`sentimentLabel: String? = null`, `todayPulse: TodayPulseProto? = null`) — gli esempi stessi violano le regole Protobuf
+> ### Problemi RISOLTI:
+> - [x] **17 campi nullable** → ZERO nullable. Tutti i campi hanno default non-null
+> - [x] **`GenericDeltaResponse` con `List<JsonElement>`** → `List<String>` (Protobuf-safe)
+> - [x] **Generici nelle wrapper** → rimossi, classi concrete tipate
+> - [x] **Pattern `data: T? = null`** → `success: Boolean = false` + `data: T = T()` non-nullable
+> - [x] **Client `.data?` nullable access** → tutti aggiornati a usare `.success` flag
+> - [x] **DeltaApplier `decodeFromJsonElement`** → `decodeFromString`
 >
-> ### Direttiva: RE-ENGINEERING COMPLETO
-> Riscrivere TUTTI i modelli API wrapper con:
-> - `success: Boolean = false` flag per distinguere data valido da errore
-> - `data: SomeProto = SomeProto()` — non-nullable con default vuoto
-> - `error: ApiError = ApiError()` — non-nullable con default vuoto
-> - `meta: PaginationMeta = PaginationMeta()` — non-nullable con default vuoto
-> - Eliminare TUTTI i `JsonElement` — usare `List<String>` (JSON-encoded) o typed deltas
-> - Eliminare TUTTI i generici nelle classi `@Serializable`
-> - Aggiornare TUTTI i client che controllano `response.data != null` per usare `response.success`
-> - Seguire le regole NASA-level in CLAUDE.md
+> ### Pattern attuale (verificato e funzionante):
+> ```kotlin
+> @Serializable
+> data class DiaryResponse(
+>     @ProtoNumber(1) val success: Boolean = false,
+>     @ProtoNumber(2) val diary: DiaryProto = DiaryProto(),
+>     @ProtoNumber(3) val error: ApiError = ApiError(),
+> )
+> ```
+> ZERO nullable, ZERO JsonElement, ZERO generici.
 
 ---
 
