@@ -18,7 +18,7 @@ val serverModule = module {
     single { ProfileService(get()) }
     single { SocialService(get()) }
     single { NotificationService(get()) }
-    single { FeatureFlagService(get()) }
+    single { FeatureFlagService() }
     single { DashboardService(get(), get()) }
 
     // Wellness services — one per entity type
