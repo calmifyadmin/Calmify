@@ -37,7 +37,6 @@ class KtorInsightRepository(
         rating: Int,
         correction: String,
     ): RequestState<Boolean> {
-        val body = mapOf("rating" to rating, "correction" to correction)
         return api.postNoBody("/api/v1/insights/$insightId/feedback") {
             url { parameters.append("rating", rating.toString()); parameters.append("correction", correction) }
         }

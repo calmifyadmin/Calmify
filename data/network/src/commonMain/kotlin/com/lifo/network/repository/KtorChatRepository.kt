@@ -63,15 +63,8 @@ class KtorChatRepository(
     }
 
     override suspend fun retryMessage(messageId: String): RequestState<ChatMessage> {
-        val result = api.post<Map<String, String>>("/api/v1/chat/messages/$messageId/retry")
-        return result.map {
-            ChatMessage(
-                id = it["id"] ?: messageId,
-                sessionId = it["sessionId"] ?: "",
-                content = it["content"] ?: "",
-                isUser = it["isUser"]?.toBooleanStrictOrNull() ?: false,
-            )
-        }
+        return api.post<ChatMessageProto>("/api/v1/chat/messages/$messageId/retry")
+            .map { it.toDomain() }
     }
 
     override suspend fun generateAiResponse(
@@ -92,9 +85,12 @@ class KtorChatRepository(
     }
 
     override suspend fun exportSessionToDiary(sessionId: String): RequestState<String> {
-        val result = api.post<Map<String, String>>("/api/v1/chat/sessions/$sessionId/export")
-        return result.map { it["diaryId"] ?: "" }
+        val result = api.post<ExportResponse>("/api/v1/chat/sessions/$sessionId/export")
+        return result.map { it.diaryId }
     }
+
+    @kotlinx.serialization.Serializable
+    private data class ExportResponse(val diaryId: String = "")
 
     override suspend fun deleteAllSessions(): RequestState<Boolean> {
         return api.deleteNoBody("/api/v1/chat/sessions")
