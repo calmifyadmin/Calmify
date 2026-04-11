@@ -212,6 +212,8 @@ class ChatViewModel constructor(
 
             when (val result = repository.sendMessage(sessionId, content)) {
                 is RequestState.Success -> {
+                    // Add user message to UI immediately
+                    loadMessages(sessionId)
                     generateAiResponseWithVoice(sessionId, content)
                 }
                 is RequestState.Error -> {
@@ -234,9 +236,12 @@ class ChatViewModel constructor(
         scope.launch {
             when (val result = repository.deleteMessage(messageId)) {
                 is RequestState.Success -> {
+                    val sessionId = currentState.chat.currentSession?.id
                     if (currentState.chat.messages.size <= 1) {
                         updateState { copy(chat = chat.copy(sessionStarted = false)) }
                     }
+                    // Reload messages to reflect deletion
+                    if (sessionId != null) loadMessages(sessionId)
                 }
                 is RequestState.Error -> {
                     updateState {
@@ -409,6 +414,8 @@ class ChatViewModel constructor(
             if (fullContent.isNotEmpty()) {
                 repository.saveAiMessage(sessionId, fullContent)
                 updateState { copy(chat = chat.copy(streamingMessage = null)) }
+                // Reload messages from server so both user + AI messages persist in UI
+                loadMessages(sessionId)
 
                 if (voiceSystem.voiceState.value.isInitialized && pendingVoiceMessage != null) {
                     speakCompleteMessage(pendingVoiceMessage!!, currentMessageId)

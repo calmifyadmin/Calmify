@@ -34,7 +34,7 @@ class InsightService(private val db: Firestore) {
     suspend fun getInsights(userId: String, params: PaginationParams): PagedInsights = withContext(Dispatchers.IO) {
         var query = db.collection(COLLECTION)
             .whereEqualTo(OWNER_FIELD, userId)
-            .orderBy("generatedAtMillis", Query.Direction.DESCENDING)
+            .orderBy("generatedAt", Query.Direction.DESCENDING)
             .limit(params.limit + 1)
 
         if (params.cursor != null) {
@@ -71,7 +71,7 @@ class InsightService(private val db: Firestore) {
             id = doc.id,
             diaryId = doc.getString("diaryId") ?: "",
             ownerId = doc.getString(OWNER_FIELD) ?: "",
-            generatedAtMillis = doc.getLong("generatedAtMillis") ?: 0L,
+            generatedAtMillis = (doc.getTimestamp("generatedAt")?.toDate()?.time) ?: (doc.getLong("generatedAtMillis") ?: 0L),
             dayKey = doc.getString("dayKey") ?: "",
             sourceTimezone = doc.getString("sourceTimezone") ?: "",
             sentimentPolarity = doc.getDouble("sentimentPolarity")?.toFloat() ?: 0f,

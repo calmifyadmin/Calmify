@@ -136,6 +136,13 @@ val restOverrideModule = module {
     if (BackendConfig.WELLNESS_REST) {
         single<HabitRepository> { KtorHabitRepository(get()) }
         single<GratitudeRepository> { KtorGratitudeRepository(get()) }
+        single<EnergyRepository> { KtorEnergyRepository(get()) }
+        single<SleepRepository> { KtorSleepRepository(get()) }
+        single<MeditationRepository> { KtorMeditationRepository(get()) }
+        single<ReframeRepository> { KtorReframeRepository(get()) }
+        single<MovementRepository> { KtorMovementRepository(get()) }
+        single<ValuesRepository> { KtorValuesRepository(get()) }
+        single<ConnectionRepository> { KtorConnectionRepository(get()) }
     }
     if (BackendConfig.FLAGS_REST) {
         single<FeatureFlagRepository> { KtorFeatureFlagRepository(get()) }
