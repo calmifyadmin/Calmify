@@ -36,6 +36,11 @@ val serverModule = module {
     single(named("block")) { WellnessServiceFactory.block(get()) }
     single(named("values")) { WellnessServiceFactory.values(get()) }
 
+    // Search, Presence, Content Moderation
+    single { SearchService(get()) }
+    single { PresenceService(get()) }
+    single { ContentModerationService(get()) }
+
     // Sync
     single { com.lifo.server.service.SyncService(get()) }
 

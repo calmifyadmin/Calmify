@@ -35,6 +35,15 @@ fun Application.configureRouting() {
         // Sync — delta sync for offline-first
         syncRoutes()
 
+        // Search — threads + users
+        searchRoutes()
+
+        // Presence — online/offline status
+        presenceRoutes()
+
+        // Content Moderation — Gemini-powered toxicity, sentiment, mood
+        contentModerationRoutes()
+
         // Waitlist — PRO waitlist email signups
         waitlistRoutes()
 

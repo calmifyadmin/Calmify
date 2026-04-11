@@ -115,7 +115,7 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
   - W3 Protobuf: client/server protobuf CN con JSON fallback
   - W4 AI Server: GeminiClient con error handling, safety settings, API key server-side
   - **Firestore DB**: database `calmify-native` (NON `(default)` che e' in Datastore Mode)
-  - **24 Ktor REST repos** implementati e registrati in Koin (17 base + 7 Phase 1)
+  - **28 Ktor REST repos** implementati e registrati in Koin (17 base + 7 Phase 1 + 4 Phase 2)
 - **BackendConfig**: 7 flag tutti `true` — FUNZIONANTE, verificato dall'utente
 - **100% KMP REST Migration**: 24/36 repos done, 12 rimanenti in 3 fasi (~3 settimane)
   - Phase 1 (COMPLETATA): Waitlist, ProfileSettings, ThreadHydrator, Awe, Block, Recurring, Wellbeing
@@ -232,7 +232,7 @@ BackendConfig (7 per-domain flags)  →  restOverrideModule (Koin last-wins)
 | **core/ui** | `calmify.kmp.compose` | Theme (expect/actual), componenti UI condivisi, coach marks, SyncIndicator |
 | **core/social-ui** | `calmify.kmp.compose` | Componenti social: ThreadPostCard, MediaCarousel |
 | **data/mongo** | `calmify.kmp.library` + SQLDelight | SQLDelight schema (8 tabelle incl. sync) + 36 Firestore repos + SyncEngine + sync repos |
-| **data/network** | `calmify.kmp.library` | KtorApiClient, 10 REST-backed repos, KtorSyncExecutor, NetworkKoinModule |
+| **data/network** | `calmify.kmp.library` | KtorApiClient, 28 REST-backed repos, KtorSyncExecutor, NetworkKoinModule |
 | **shared/models** | `calmify.kmp.library` | 30+ Proto data classes, API wrappers, SyncApi DTOs, Domain↔Proto mappers |
 | **calmify-server** | Ktor 3.1.1 + Netty | Server su Cloud Run: CRUD, Social, AI, Sync, GDPR, Security, Audit |
 | **features/** (17) | `calmify.kmp.compose` | auth, home, write, chat, humanoid, history, insight, profile, settings, onboarding, feed, composer, social-profile, search, notifications, messaging, subscription, thread-detail, habits, meditation, avatar-creator |

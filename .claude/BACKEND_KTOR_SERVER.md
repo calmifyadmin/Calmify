@@ -25,12 +25,13 @@
 > - [x] Mood donut: InsightService reads `generatedAt` Timestamp (commit `ec97fb3`)
 > - [x] 7 missing REST repos: energy, sleep, meditation, reframe, movement, values, connection (commit `ec97fb3`)
 >
-> ### Prossimo obiettivo: 100% KMP REST (12 repos rimanenti)
+> ### Prossimo obiettivo: 100% KMP REST (8 repos rimanenti)
 > **Phase 1 COMPLETATA** (2026-04-11): 7 repos creati → 24/36 totali
-> **Roadmap rimanente (~3 settimane):**
-> 1. **Phase 2**: Search, Presence, UnifiedContent, ContentModeration (1 week — nuovi server endpoints)
-> 2. **Phase 3 + Stripe**: MediaUpload, SocialMessaging, Subscription (1 week — presigned URLs, WebSocket, Stripe)
-> 3. **Phase 4**: Avatar pipeline (1 week)
+> **Phase 2 COMPLETATA** (2026-04-11): 4 repos (Search, Presence, UnifiedContent, ContentModeration) + 3 server services → 28/36 totali
+> **Roadmap rimanente (~2 settimane):**
+> 1. **Stripe**: Subscription web-first integration
+> 2. **Phase 3**: MediaUpload, SocialMessaging (presigned URLs, WebSocket)
+> 3. **Phase 4**: Avatar pipeline
 >
 > **Subscription architecture**: Stripe hosted checkout (zero BillingClient/StoreKit/expect-actual)
 > - Server: checkout-session, webhook handler, subscription state

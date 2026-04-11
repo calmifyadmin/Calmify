@@ -118,6 +118,7 @@ val onboardingUiModule = module {
 val restOverrideModule = module {
     if (BackendConfig.DIARY_REST) {
         single<MongoRepository> { KtorDiaryRepository(get()) }
+        single<UnifiedContentRepository> { KtorUnifiedContentRepository(get()) }
     }
     if (BackendConfig.CHAT_REST) {
         single<ChatRepository> { KtorChatRepository(get()) }
@@ -135,6 +136,9 @@ val restOverrideModule = module {
         single<NotificationRepository> { KtorNotificationRepository(get()) }
         single<ThreadHydrator> { KtorThreadHydrator(get()) }
         single<WaitlistRepository> { KtorWaitlistRepository(get()) }
+        single<SearchRepository> { KtorSearchRepository(get()) }
+        single<UserPresenceRepository> { KtorUserPresenceRepository(get()) }
+        single<ContentModerationRepository> { KtorContentModerationRepository(get()) }
     }
     if (BackendConfig.WELLNESS_REST) {
         single<HabitRepository> { KtorHabitRepository(get()) }
