@@ -76,16 +76,18 @@ class GenericWellnessService<T>(
 
     suspend fun update(userId: String, id: String, item: T): T? = withContext(Dispatchers.IO) {
         val existing = db.collection(collectionName).document(id).get().get()
-        if (!existing.exists() || existing.getString(OWNER_FIELD) != userId) return@withContext null
+        // If exists but wrong owner → 403/null (IDOR protection)
+        if (existing.exists() && existing.getString(OWNER_FIELD) != userId) return@withContext null
 
         val now = System.currentTimeMillis()
         val data = toFirestoreMap(item, userId).toMutableMap()
         data["updatedAt"] = now
+        // Upsert: if doc doesn't exist, set createdAt too
+        if (!existing.exists()) data["createdAt"] = now
 
         db.collection(collectionName).document(id).set(data).get()
-        logger.info("Updated $collectionName $id for user $userId")
+        logger.info("${if (existing.exists()) "Updated" else "Upserted"} $collectionName $id for user $userId")
 
-        // Return the updated item (single read to get server-side state)
         mapper(db.collection(collectionName).document(id).get().get())
     }
 

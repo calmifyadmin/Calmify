@@ -82,7 +82,11 @@ class GeminiClient(
             setBody(requestBody.toString())
         }
 
-        val body = json.parseToJsonElement(response.bodyAsText())
+        val responseText = response.bodyAsText()
+        if (response.status.value !in 200..299) {
+            logger.error("Gemini HTTP ${response.status.value} for model $model: $responseText")
+        }
+        val body = json.parseToJsonElement(responseText)
         return parseResponse(body)
     }
 
@@ -219,16 +223,30 @@ class GeminiClient(
             setBody(requestBody.toString())
         }
 
-        val body = json.parseToJsonElement(response.bodyAsText())
+        val responseText = response.bodyAsText()
+        if (response.status.value !in 200..299) {
+            logger.error("Gemini HTTP ${response.status.value} for model $model (JSON): $responseText")
+        }
+        val body = json.parseToJsonElement(responseText)
         return parseResponse(body)
     }
 
     private fun parseResponse(body: JsonElement): GeminiResult {
+        // Check for API error responses (invalid key, quota, model not found, etc.)
+        val errorObj = body.jsonObject["error"]?.jsonObject
+        if (errorObj != null) {
+            val code = errorObj["code"]?.jsonPrimitive?.intOrNull ?: 0
+            val message = errorObj["message"]?.jsonPrimitive?.contentOrNull ?: "Unknown error"
+            val status = errorObj["status"]?.jsonPrimitive?.contentOrNull ?: ""
+            logger.error("Gemini API error: [$code] $status — $message")
+            return GeminiResult(text = "", tokensUsed = 0, blocked = false, blockReason = "API_ERROR: $message")
+        }
+
         val candidates = body.jsonObject["candidates"]?.jsonArray
         if (candidates.isNullOrEmpty()) {
             val blockReason = body.jsonObject["promptFeedback"]
                 ?.jsonObject?.get("blockReason")?.jsonPrimitive?.contentOrNull
-            logger.warn("Gemini returned no candidates. Block reason: $blockReason")
+            logger.warn("Gemini returned no candidates. Block reason: $blockReason. Full response: $body")
             return GeminiResult(
                 text = "",
                 tokensUsed = 0,

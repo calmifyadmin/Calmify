@@ -46,6 +46,18 @@ fun Route.profileRoutes() {
                 call.respond(updated)
             }
 
+            // POST /api/v1/profile/fcm-token?token=...
+            post("/fcm-token") {
+                val user = call.principal<UserPrincipal>()!!
+                val token = call.request.queryParameters["token"]
+                    ?: return@post call.respond(
+                        HttpStatusCode.BadRequest,
+                        ApiError(code = "MISSING_TOKEN", message = "token query parameter required"),
+                    )
+                profileService.saveFcmToken(user.uid, token)
+                call.respond(HttpStatusCode.OK)
+            }
+
             // GET /api/v1/profile/psychological?weeks=4
             get("/psychological") {
                 val user = call.principal<UserPrincipal>()!!

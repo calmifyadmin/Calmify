@@ -122,6 +122,13 @@ class ProfileService(private val db: Firestore) {
         docs.firstOrNull()?.let { mapPsychProfile(it) }
     }
 
+    suspend fun saveFcmToken(userId: String, token: String) = withContext(Dispatchers.IO) {
+        db.collection(SETTINGS_COLLECTION).document(userId)
+            .set(mapOf("fcmToken" to token, "ownerId" to userId, "updatedAtMillis" to System.currentTimeMillis()), com.google.cloud.firestore.SetOptions.merge())
+            .get()
+        logger.info("Saved FCM token for user $userId")
+    }
+
     @Suppress("UNCHECKED_CAST")
     private fun mapPsychProfile(doc: com.google.cloud.firestore.DocumentSnapshot): PsychologicalProfileProto {
         val peaks = (doc.get("stressPeaks") as? List<Map<String, Any>>)?.map { peak ->
