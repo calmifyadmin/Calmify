@@ -5,36 +5,39 @@
 > **Effort stimato**: 3-5 settimane
 > **Risultato**: Server Kotlin che media TUTTE le operazioni client-Firestore
 >
-> ## STATUS: RE-ENGINEERED — PRONTO PER E2E TEST (2026-04-10)
+> ## STATUS: FULLY OPERATIONAL — ALL FLAGS TRUE (2026-04-11)
 >
-> **Audit completo (30+ bug) → re-engineering completo in commit `39499eb` (42 file).**
-> Tutto verificato contro il codice client Android. Build server + client passano.
+> **Backend fully operational.** All 7 BackendConfig flags `true`. 17 Ktor REST repos.
+> User confirmed: "Funziona tutto, chat, diary, mood tutto"
 >
 > ### Cosa e' deployato:
 > - Server su Cloud Run: `https://calmify-server-23546263069.europe-west1.run.app`
 > - Firestore DB: `calmify-native` (NON `(default)` che e' Datastore Mode)
 > - Health endpoint + auth funzionano
+> - All CRUD, AI, Social, Wellness endpoints operative
 >
-> ### Problemi RISOLTI (commit `39499eb`):
-> - [x] 24/26 collection names → TUTTI corretti snake_case (verificati vs client)
-> - [x] 17 campi Protobuf nullable → ZERO nullable, tutti con default non-null
-> - [x] Blocking `.get().get()` → TUTTI wrappati in `withContext(Dispatchers.IO)`
-> - [x] GDPR data export/delete → tutte 25+ collection + subcollection corrette
-> - [x] Double Gemini API calls → `generateJson()` ora ritorna `GeminiResult`, singola chiamata
-> - [x] Response wrapper inconsistenti → pattern `success: Boolean` su tutti gli endpoint
-> - [x] Streaming senza safety settings → aggiunto `safetySettings` a stream + JSON mode
-> - [x] SyncService collection map → riscritta con 22 entity, snake_case corretto
-> - [x] TokenTracker collection `profiles` → corretto in `profile_settings`
-> - [x] TokenTracker blocking calls → wrappati in `withContext(Dispatchers.IO)`
-> - [x] Social graph flat collection → subcollection pattern (`social_graph/{uid}/following`)
-> - [x] DeltaApplier `List<JsonElement>` → `List<String>` (Protobuf-safe)
-> - [x] Auth checks su ogni write operation
-> - [x] Batch 500 chunking su operazioni bulk
+> ### Problemi RISOLTI:
+> - [x] 30+ bug da audit iniziale (commit `39499eb`, 42 file)
+> - [x] All mapOf responses → explicit JSON (commit `b898d4a`)
+> - [x] Wellness upsert, FCM token route, Gemini error logging (commit `2935520`)
+> - [x] Client Map<String,String> → typed DTOs (commit `7f2829a`)
+> - [x] Chat persistence: loadMessages after send/save/delete (commit `ec97fb3`)
+> - [x] Mood donut: InsightService reads `generatedAt` Timestamp (commit `ec97fb3`)
+> - [x] 7 missing REST repos: energy, sleep, meditation, reframe, movement, values, connection (commit `ec97fb3`)
 >
-> ### Prossimo passo:
-> 1. Deploy su Cloud Run: `cd ~/Calmify && git pull && gcloud builds submit --config=calmify-server/cloudbuild.yaml`
-> 2. E2E test: flip `DIARY_REST = true` su emulatore, verificare CRUD
-> 3. Se funziona, abilitare un dominio alla volta via BackendConfig
+> ### Prossimo obiettivo: 100% KMP REST (12 repos rimanenti)
+> **Phase 1 COMPLETATA** (2026-04-11): 7 repos creati → 24/36 totali
+> **Roadmap rimanente (~3 settimane):**
+> 1. **Phase 2**: Search, Presence, UnifiedContent, ContentModeration (1 week — nuovi server endpoints)
+> 2. **Phase 3 + Stripe**: MediaUpload, SocialMessaging, Subscription (1 week — presigned URLs, WebSocket, Stripe)
+> 3. **Phase 4**: Avatar pipeline (1 week)
+>
+> **Subscription architecture**: Stripe hosted checkout (zero BillingClient/StoreKit/expect-actual)
+> - Server: checkout-session, webhook handler, subscription state
+> - Client: PaywallUI in commonMain, openUrl() to stripe.com
+> - Wishlist mode: `subscription_enabled=false` until P.IVA opened
+>
+> **Pending**: Redeploy server per InsightService fix: `cd ~/Calmify && git pull && gcloud builds submit`
 >
 > ### Standard qualita':
 > Seguire SEMPRE le regole NASA-level in CLAUDE.md sezione "QUALITY MANDATE".

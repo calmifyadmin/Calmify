@@ -35,6 +35,9 @@ fun Application.configureRouting() {
         // Sync — delta sync for offline-first
         syncRoutes()
 
+        // Waitlist — PRO waitlist email signups
+        waitlistRoutes()
+
         // GDPR — data export + account deletion
         gdprRoutes()
     }

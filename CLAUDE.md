@@ -105,19 +105,25 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
 
 **Ad ogni nuova sessione, LEGGERE SUBITO questo file prima di fare qualsiasi cosa.**
 
-### Stato Attuale (aggiornato 2026-04-10)
+### Stato Attuale (aggiornato 2026-04-11)
 
 - **Branch attivo**: `backend-architecture-refactor` (base: master @ `08ef101`)
 - **Fase 1 KMP COMPLETATA**: 237 file commonMain / 90 file androidMain (72.5% shared)
-- **Backend Refactor: DEPLOYED MA CON 30+ BUG CRITICI DA FIXARE**:
+- **Backend Refactor: FULLY OPERATIONAL**:
   - W1 Ktor Server: deployed su Cloud Run (`https://calmify-server-23546263069.europe-west1.run.app`)
-  - W2 Sync Engine: wired ma con bug (retry non funziona, ConflictResolver dead code, flows non reattivi)
-  - W3 Protobuf: 17 campi nullable incompatibili, JsonElement in SyncApi, generici non supportati
-  - W4 AI Server: double API calls, streaming senza quota tracking, safety settings mancanti
+  - W2 Sync Engine: wired (KtorSyncExecutor + Koin + lifecycle)
+  - W3 Protobuf: client/server protobuf CN con JSON fallback
+  - W4 AI Server: GeminiClient con error handling, safety settings, API key server-side
   - **Firestore DB**: database `calmify-native` (NON `(default)` che e' in Datastore Mode)
-  - **Collection names**: 24/26 sbagliati sul server (camelCase vs snake_case del client)
-- **BackendConfig**: 7 flag tutti `true` ma il server NON funziona correttamente — riportare a `false` fino a fix completo
-- **Prossimo**: FIX COMPLETO di tutti i 30+ bug (vedi `.claude/BACKEND_AUDIT.md`), poi E2E test, poi migrazione graduale
+  - **24 Ktor REST repos** implementati e registrati in Koin (17 base + 7 Phase 1)
+- **BackendConfig**: 7 flag tutti `true` — FUNZIONANTE, verificato dall'utente
+- **100% KMP REST Migration**: 24/36 repos done, 12 rimanenti in 3 fasi (~3 settimane)
+  - Phase 1 (COMPLETATA): Waitlist, ProfileSettings, ThreadHydrator, Awe, Block, Recurring, Wellbeing
+  - Phase 2: Search, Presence, UnifiedContent, ContentModeration
+  - Phase 3 (+ Stripe): MediaUpload, SocialMessaging, Subscription
+  - Phase 4: Avatar pipeline
+- **Subscription**: Stripe hosted checkout — zero BillingClient/StoreKit, wishlist flag fino a P.IVA
+- **Prossimo**: deploy server (waitlist route), poi Phase 2
 
 ### File da leggere in ordine di priorita'
 

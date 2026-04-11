@@ -127,11 +127,14 @@ val restOverrideModule = module {
     }
     if (BackendConfig.PROFILE_REST) {
         single<ProfileRepository> { KtorProfileRepository(get()) }
+        single<ProfileSettingsRepository> { KtorProfileSettingsRepository(get()) }
     }
     if (BackendConfig.SOCIAL_REST) {
         single<ThreadRepository> { KtorThreadRepository(get()) }
         single<FeedRepository> { KtorFeedRepository(get()) }
         single<NotificationRepository> { KtorNotificationRepository(get()) }
+        single<ThreadHydrator> { KtorThreadHydrator(get()) }
+        single<WaitlistRepository> { KtorWaitlistRepository(get()) }
     }
     if (BackendConfig.WELLNESS_REST) {
         single<HabitRepository> { KtorHabitRepository(get()) }
@@ -143,6 +146,10 @@ val restOverrideModule = module {
         single<MovementRepository> { KtorMovementRepository(get()) }
         single<ValuesRepository> { KtorValuesRepository(get()) }
         single<ConnectionRepository> { KtorConnectionRepository(get()) }
+        single<AweRepository> { KtorAweRepository(get()) }
+        single<BlockRepository> { KtorBlockRepository(get()) }
+        single<RecurringThoughtRepository> { KtorRecurringThoughtRepository(get()) }
+        single<WellbeingRepository> { KtorWellbeingRepository(get()) }
     }
     if (BackendConfig.FLAGS_REST) {
         single<FeatureFlagRepository> { KtorFeatureFlagRepository(get()) }
