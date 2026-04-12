@@ -7,6 +7,7 @@ import com.lifo.calmifyapp.connectivity.NetworkConnectivityObserver
 import com.lifo.mongo.database.CalmifyDatabase
 import com.lifo.mongo.di.firebaseModule
 import com.lifo.mongo.di.repositoryModule
+import com.lifo.mongo.repository.WaitlistSubscriptionRepository
 import com.lifo.mongo.sync.SyncEngine
 import com.lifo.mongo.sync.syncModule
 import com.lifo.network.KtorApiClient
@@ -157,6 +158,18 @@ val restOverrideModule = module {
     }
     if (BackendConfig.FLAGS_REST) {
         single<FeatureFlagRepository> { KtorFeatureFlagRepository(get()) }
+    }
+
+    // Stripe subscription: runtime-gated by Remote Config `premium_enabled`.
+    // When true  → KtorSubscriptionRepository (live Stripe hosted checkout).
+    // When false → WaitlistSubscriptionRepository (wishlist UI, no checkout).
+    single<SubscriptionRepository> {
+        val flags = get<FeatureFlagRepository>()
+        if (flags.getBoolean(FeatureFlagRepository.PREMIUM_ENABLED)) {
+            KtorSubscriptionRepository(get())
+        } else {
+            WaitlistSubscriptionRepository()
+        }
     }
 }
 

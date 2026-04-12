@@ -68,6 +68,9 @@ dependencies {
     implementation("io.ktor:ktor-client-cio:$ktorVersion")
     implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
 
+    // Stripe SDK — web-first subscription & payments
+    implementation("com.stripe:stripe-java:28.1.0")
+
     // Test
     testImplementation("io.ktor:ktor-server-test-host:$ktorVersion")
     testImplementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")

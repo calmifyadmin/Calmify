@@ -21,134 +21,116 @@ class SubscriptionViewModel(
         get() = authProvider.currentUserId
 
     init {
-        observePurchaseUpdates()
+        observeSubscription()
     }
 
     override fun handleIntent(intent: SubscriptionContract.Intent) {
         when (intent) {
             is SubscriptionContract.Intent.LoadSubscriptionState -> loadSubscriptionState()
-            is SubscriptionContract.Intent.PurchaseSubscription -> purchaseSubscription(intent.productId)
-            is SubscriptionContract.Intent.RestorePurchases -> restorePurchases()
+            is SubscriptionContract.Intent.PurchaseSubscription -> purchaseSubscription(intent.lookupKey)
+            is SubscriptionContract.Intent.RefreshSubscriptionState -> refreshSubscriptionState()
             is SubscriptionContract.Intent.DismissPaywall -> sendEffect(SubscriptionContract.Effect.NavigateBack)
             is SubscriptionContract.Intent.UpdateWaitlistEmail -> updateState { copy(waitlistEmail = intent.email) }
             is SubscriptionContract.Intent.SubmitWaitlistEmail -> submitWaitlistEmail()
-            is SubscriptionContract.Intent.DismissWaitlistDialog -> updateState { copy(showWaitlistDialog = false, waitlistEmail = "", waitlistSubmitted = false) }
+            is SubscriptionContract.Intent.DismissWaitlistDialog ->
+                updateState { copy(showWaitlistDialog = false, waitlistEmail = "", waitlistSubmitted = false) }
         }
     }
 
-    /**
-     * Called by the UI after receiving LaunchBillingFlow effect.
-     * Passes the Activity context to the repository to launch Google Play's billing sheet.
-     */
-    fun launchBillingFlow(activityContext: Any, productId: String) {
+    private fun observeSubscription() {
         scope.launch {
-            when (val result = subscriptionRepository.launchPurchaseFlow(activityContext, productId)) {
+            subscriptionRepository.observeSubscription().collect { state ->
+                val prevTier = currentState.subscriptionTier
+                updateState { copy(subscriptionTier = state.tier) }
+                if (prevTier != state.tier &&
+                    state.tier == SubscriptionRepository.SubscriptionTier.PRO) {
+                    sendEffect(SubscriptionContract.Effect.PurchaseSuccess(state.tier))
+                }
+            }
+        }
+    }
+
+    private fun loadSubscriptionState() {
+        if (currentUserId == null) {
+            sendEffect(SubscriptionContract.Effect.ShowError("User not authenticated"))
+            return
+        }
+
+        updateState { copy(isLoading = true, error = null) }
+
+        scope.launch {
+            when (val result = subscriptionRepository.refreshSubscriptionState()) {
+                is RequestState.Success -> updateState {
+                    copy(subscriptionTier = result.data.tier, isLoading = false)
+                }
                 is RequestState.Error -> {
-                    if (result.error.message?.contains("waitlist", ignoreCase = true) == true) {
-                        // PRO Switch: premium not enabled yet — show waitlist dialog
-                        analyticsTracker.logEvent("paywall_viewed", mapOf("source" to "billing_attempt"))
+                    // Waitlist repo throws; treat that as waitlist mode rather than error.
+                    val isWaitlist = result.error.message?.contains("waitlist", true) == true
+                    updateState {
+                        copy(
+                            isLoading = false,
+                            isWaitlistMode = isWaitlist,
+                            error = if (isWaitlist) null else result.message,
+                        )
+                    }
+                }
+                else -> {}
+            }
+
+            when (val productsResult = subscriptionRepository.getAvailableProducts()) {
+                is RequestState.Success -> updateState {
+                    copy(availableProducts = productsResult.data, isLoading = false)
+                }
+                is RequestState.Error -> updateState { copy(isLoading = false) }
+                else -> {}
+            }
+        }
+    }
+
+    private fun refreshSubscriptionState() {
+        scope.launch {
+            when (val result = subscriptionRepository.refreshSubscriptionState()) {
+                is RequestState.Success -> {
+                    updateState { copy(subscriptionTier = result.data.tier) }
+                    if (result.data.tier == SubscriptionRepository.SubscriptionTier.PRO) {
+                        sendEffect(SubscriptionContract.Effect.PurchaseSuccess(result.data.tier))
+                    }
+                }
+                else -> {}
+            }
+        }
+    }
+
+    private fun purchaseSubscription(lookupKey: String) {
+        if (currentUserId == null) {
+            sendEffect(SubscriptionContract.Effect.ShowError("User not authenticated"))
+            return
+        }
+
+        updateState { copy(isLoading = true, error = null) }
+
+        scope.launch {
+            when (val result = subscriptionRepository.createCheckoutSession(lookupKey)) {
+                is RequestState.Success -> {
+                    analyticsTracker.logEvent(
+                        "checkout_session_created",
+                        mapOf("lookup_key" to lookupKey),
+                    )
+                    updateState { copy(isLoading = false) }
+                    sendEffect(SubscriptionContract.Effect.OpenUrl(result.data.url))
+                }
+                is RequestState.Error -> {
+                    if (result.error.message?.contains("waitlist", true) == true) {
+                        analyticsTracker.logEvent("paywall_viewed", mapOf("source" to "checkout_attempt"))
                         updateState { copy(isLoading = false, showWaitlistDialog = true) }
                     } else {
                         updateState { copy(isLoading = false, error = result.message) }
                         sendEffect(SubscriptionContract.Effect.ShowError(result.message))
                     }
                 }
-                else -> { /* Billing flow launched — result comes via purchaseUpdates */ }
+                else -> updateState { copy(isLoading = false) }
             }
         }
-    }
-
-    private fun observePurchaseUpdates() {
-        scope.launch {
-            subscriptionRepository.purchaseUpdates.collect { purchaseResult ->
-                if (purchaseResult.isSuccess) {
-                    handlePurchaseCompleted(purchaseResult.purchaseToken)
-                } else if (purchaseResult.errorMessage != null) {
-                    updateState { copy(isLoading = false) }
-                    sendEffect(SubscriptionContract.Effect.ShowError(purchaseResult.errorMessage ?: "Purchase failed"))
-                }
-            }
-        }
-    }
-
-    private suspend fun handlePurchaseCompleted(purchaseToken: String) {
-        val userId = currentUserId ?: return
-
-        when (val result = subscriptionRepository.acknowledgePurchase(userId, purchaseToken)) {
-            is RequestState.Success -> {
-                updateState {
-                    copy(
-                        subscriptionTier = result.data.tier,
-                        isLoading = false,
-                    )
-                }
-                sendEffect(SubscriptionContract.Effect.PurchaseSuccess(result.data.tier))
-            }
-            is RequestState.Error -> {
-                updateState { copy(isLoading = false, error = result.message) }
-                sendEffect(SubscriptionContract.Effect.ShowError(result.message))
-            }
-            else -> {}
-        }
-    }
-
-    private fun loadSubscriptionState() {
-        val userId = currentUserId ?: run {
-            sendEffect(SubscriptionContract.Effect.ShowError("User not authenticated"))
-            return
-        }
-
-        updateState { copy(isLoading = true, error = null) }
-
-        scope.launch {
-            // Load current subscription state
-            when (val result = subscriptionRepository.getSubscriptionState(userId)) {
-                is RequestState.Success -> {
-                    updateState {
-                        copy(
-                            subscriptionTier = result.data.tier,
-                            isLoading = false,
-                        )
-                    }
-                }
-                is RequestState.Error -> {
-                    updateState { copy(isLoading = false, error = result.message) }
-                    sendEffect(SubscriptionContract.Effect.ShowError(result.message))
-                }
-                else -> {}
-            }
-
-            // Load available products
-            when (val productsResult = subscriptionRepository.getAvailableProducts()) {
-                is RequestState.Success -> {
-                    // Detect waitlist mode: WaitlistSubscriptionRepository prefixes all
-                    // product IDs with "waitlist_" to signal that prices are placeholder only.
-                    val isWaitlist = productsResult.data.any { it.productId.startsWith("waitlist_") }
-                    updateState {
-                        copy(
-                            availableProducts = productsResult.data,
-                            isWaitlistMode = isWaitlist,
-                            isLoading = false,
-                        )
-                    }
-                }
-                is RequestState.Error -> {
-                    updateState { copy(isLoading = false) }
-                    sendEffect(SubscriptionContract.Effect.ShowError(productsResult.message))
-                }
-                else -> {}
-            }
-        }
-    }
-
-    private fun purchaseSubscription(productId: String) {
-        currentUserId ?: run {
-            sendEffect(SubscriptionContract.Effect.ShowError("User not authenticated"))
-            return
-        }
-
-        updateState { copy(isLoading = true, error = null) }
-        sendEffect(SubscriptionContract.Effect.LaunchBillingFlow(productId))
     }
 
     private fun submitWaitlistEmail() {
@@ -163,48 +145,22 @@ class SubscriptionViewModel(
             when (waitlistRepository.saveWaitlistEmail(
                 email = email,
                 userId = currentUserId,
-                source = "paywall"
+                source = "paywall",
             )) {
                 is RequestState.Success -> {
-                    analyticsTracker.logEvent("waitlist_signup", mapOf(
-                        "source" to "paywall",
-                        "email_domain" to email.substringAfter("@")
-                    ))
+                    analyticsTracker.logEvent(
+                        "waitlist_signup",
+                        mapOf(
+                            "source" to "paywall",
+                            "email_domain" to email.substringAfter("@"),
+                        ),
+                    )
                     updateState { copy(isLoading = false, waitlistSubmitted = true) }
                     sendEffect(SubscriptionContract.Effect.WaitlistSubmitSuccess)
                 }
                 is RequestState.Error -> {
                     updateState { copy(isLoading = false) }
                     sendEffect(SubscriptionContract.Effect.ShowError("Errore nel salvataggio. Riprova."))
-                }
-                else -> {}
-            }
-        }
-    }
-
-    private fun restorePurchases() {
-        val userId = currentUserId ?: run {
-            sendEffect(SubscriptionContract.Effect.ShowError("User not authenticated"))
-            return
-        }
-
-        updateState { copy(isLoading = true, error = null) }
-
-        scope.launch {
-            when (val result = subscriptionRepository.restorePurchases(userId)) {
-                is RequestState.Success -> {
-                    updateState {
-                        copy(
-                            subscriptionTier = result.data.tier,
-                            isLoading = false,
-                        )
-                    }
-                    val restoredCount = if (result.data.tier != SubscriptionRepository.SubscriptionTier.FREE) 1 else 0
-                    sendEffect(SubscriptionContract.Effect.ShowRestoreResult(restoredCount))
-                }
-                is RequestState.Error -> {
-                    updateState { copy(isLoading = false, error = result.message) }
-                    sendEffect(SubscriptionContract.Effect.ShowError(result.message))
                 }
                 else -> {}
             }

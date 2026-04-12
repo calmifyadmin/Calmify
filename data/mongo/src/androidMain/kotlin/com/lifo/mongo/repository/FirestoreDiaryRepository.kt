@@ -12,8 +12,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import kotlinx.datetime.LocalDate
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Firestore Diary Repository - 2025 Stack
@@ -22,8 +20,7 @@ import javax.inject.Singleton
  * Offline-first con cache persistente
  * Implements MongoRepository for backward compatibility
  */
-@Singleton
-class FirestoreDiaryRepository @Inject constructor(
+class FirestoreDiaryRepository constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth
 ) : MongoRepository {

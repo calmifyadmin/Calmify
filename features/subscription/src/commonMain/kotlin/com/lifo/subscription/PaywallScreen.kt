@@ -135,22 +135,23 @@ fun PaywallScreen(
 
                 Spacer(modifier = Modifier.height(28.dp))
 
-                // Single Pro card
-                val proProduct = state.availableProducts.firstOrNull()
+                // Single Pro card — prefer monthly, fall back to first product
+                val proProduct = state.availableProducts.firstOrNull { it.lookupKey == "calmify_premium_monthly" }
+                    ?: state.availableProducts.firstOrNull()
                 ProProductCard(
                     product = proProduct,
                     isCurrentTier = state.isPro,
                     isWaitlistMode = state.isWaitlistMode,
                     onPurchase = {
-                        val productId = proProduct?.productId ?: "calmify_pro"
-                        onIntent(SubscriptionContract.Intent.PurchaseSubscription(productId))
+                        val lookupKey = proProduct?.lookupKey ?: "calmify_premium_monthly"
+                        onIntent(SubscriptionContract.Intent.PurchaseSubscription(lookupKey))
                     },
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 TextButton(
-                    onClick = { onIntent(SubscriptionContract.Intent.RestorePurchases) },
+                    onClick = { onIntent(SubscriptionContract.Intent.RefreshSubscriptionState) },
                 ) {
                     Text(
                         text = stringResource(Res.string.paywall_restore),
@@ -559,15 +560,15 @@ private fun ProProductCard(
 
     val defaultTitle = stringResource(Res.string.paywall_title)
     val defaultDesc = stringResource(Res.string.paywall_default_desc)
-    val defaultPrice = stringResource(Res.string.paywall_default_price)
     val displayProduct = product ?: SubscriptionRepository.ProductInfo(
-        productId = "calmify_pro",
+        lookupKey = "calmify_premium_monthly",
         title = defaultTitle,
         description = defaultDesc,
-        price = defaultPrice,
-        priceMicros = 4_990_000,
-        currencyCode = "USD",
+        priceAmount = 499L,
+        currency = "EUR",
+        interval = "month",
     )
+    val formattedPrice = formatPrice(displayProduct.priceAmount, displayProduct.currency, displayProduct.interval)
 
     Card(
         modifier = Modifier
@@ -644,7 +645,7 @@ private fun ProProductCard(
             ) {
                 Column {
                     Text(
-                        text = displayProduct.price,
+                        text = formattedPrice,
                         style = MaterialTheme.typography.headlineMedium.copy(
                             fontWeight = FontWeight.ExtraBold,
                             letterSpacing = (-0.5).sp,
@@ -714,6 +715,29 @@ private fun ProProductCard(
 // =====================================================================
 // Error card
 // =====================================================================
+
+private fun formatPrice(amountInCents: Long, currency: String, interval: String): String {
+    val whole = amountInCents / 100L
+    val cents = (amountInCents % 100L).toInt()
+    val symbol = when (currency.uppercase()) {
+        "EUR" -> "€"
+        "USD" -> "$"
+        "GBP" -> "£"
+        else -> currency.uppercase() + " "
+    }
+    val amount = if (cents == 0) whole.toString() else {
+        val padded = if (cents < 10) "0$cents" else cents.toString()
+        "$whole,$padded"
+    }
+    val suffix = when (interval.lowercase()) {
+        "year" -> "/anno"
+        "month" -> "/mese"
+        "week" -> "/sett."
+        "day" -> "/giorno"
+        else -> ""
+    }
+    return "$symbol$amount$suffix"
+}
 
 @Composable
 private fun ErrorCard(message: String) {

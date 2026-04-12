@@ -87,11 +87,6 @@
 # Firebase AI / Gemini
 -keep class com.google.firebase.vertexai.** { *; }
 
-# ── Google Play Billing ─────────────────────────────────────
-
--keep class com.android.vending.billing.** { *; }
--keep class com.android.billingclient.** { *; }
-
 # ── OkHttp / Ktor ──────────────────────────────────────────
 
 -dontwarn okhttp3.**

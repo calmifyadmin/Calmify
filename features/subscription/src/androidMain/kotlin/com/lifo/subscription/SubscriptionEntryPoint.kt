@@ -1,8 +1,9 @@
 package com.lifo.subscription
 
-import android.app.Activity
-import android.content.ContextWrapper
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -20,11 +21,8 @@ fun SubscriptionRouteContent(
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
 
-    // Capture i18n strings in composable scope for use in LaunchedEffect
     val strUnableToPurchase = stringResource(Res.string.toast_unable_to_purchase)
     val strSubscriptionActivated = stringResource(Res.string.toast_subscription_activated)
-    val strSubscriptionRestored = stringResource(Res.string.toast_subscription_restored)
-    val strNoSubscription = stringResource(Res.string.toast_no_subscription_found)
     val strWaitlistSuccess = stringResource(Res.string.toast_waitlist_success)
 
     LaunchedEffect(Unit) {
@@ -35,11 +33,9 @@ fun SubscriptionRouteContent(
         viewModel.effects.collect { effect ->
             when (effect) {
                 is SubscriptionContract.Effect.NavigateBack -> onNavigateBack()
-                is SubscriptionContract.Effect.LaunchBillingFlow -> {
-                    val activity = context.findActivity()
-                    if (activity != null) {
-                        viewModel.launchBillingFlow(activity, effect.productId)
-                    } else {
+                is SubscriptionContract.Effect.OpenUrl -> {
+                    val opened = openCheckout(context, effect.url)
+                    if (!opened) {
                         Toast.makeText(context, strUnableToPurchase, Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -48,10 +44,6 @@ fun SubscriptionRouteContent(
                 }
                 is SubscriptionContract.Effect.ShowError -> {
                     Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
-                }
-                is SubscriptionContract.Effect.ShowRestoreResult -> {
-                    val msg = if (effect.count > 0) strSubscriptionRestored else strNoSubscription
-                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                 }
                 is SubscriptionContract.Effect.WaitlistSubmitSuccess -> {
                     Toast.makeText(context, strWaitlistSuccess, Toast.LENGTH_SHORT).show()
@@ -66,12 +58,26 @@ fun SubscriptionRouteContent(
     )
 }
 
-/** Walk up the Context chain to find the Activity. */
-private fun android.content.Context.findActivity(): Activity? {
-    var ctx = this
-    while (ctx is ContextWrapper) {
-        if (ctx is Activity) return ctx
-        ctx = ctx.baseContext
+/**
+ * Open the Stripe checkout URL in a Chrome Custom Tab, falling back to a
+ * standard browser intent. Returns false if nothing can handle the URL.
+ */
+private fun openCheckout(context: android.content.Context, url: String): Boolean {
+    val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return false
+    return try {
+        val intent = CustomTabsIntent.Builder().build()
+        intent.intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        intent.launchUrl(context, uri)
+        true
+    } catch (e: Exception) {
+        try {
+            val fallback = Intent(Intent.ACTION_VIEW, uri).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(fallback)
+            true
+        } catch (e2: Exception) {
+            false
+        }
     }
-    return null
 }

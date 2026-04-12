@@ -11,8 +11,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
 import android.util.Log
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * FirestoreSearchRepository Implementation
@@ -26,8 +24,7 @@ import javax.inject.Singleton
  *   - semanticSearch falls back to keyword search in MVP
  *   - For production, integrate with Algolia/Typesense or Vertex AI Vector Search
  */
-@Singleton
-class FirestoreSearchRepository @Inject constructor(
+class FirestoreSearchRepository constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth
 ) : SearchRepository {

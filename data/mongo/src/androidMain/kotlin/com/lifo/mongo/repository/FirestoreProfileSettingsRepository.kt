@@ -11,12 +11,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import kotlinx.datetime.Clock
-import javax.inject.Inject
 
 /**
  * Firestore implementation of ProfileSettingsRepository
  */
-class FirestoreProfileSettingsRepository @Inject constructor(
+class FirestoreProfileSettingsRepository constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth
 ) : ProfileSettingsRepository {

@@ -7,8 +7,10 @@ object SubscriptionContract {
 
     sealed interface Intent : MviContract.Intent {
         data object LoadSubscriptionState : Intent
-        data class PurchaseSubscription(val productId: String) : Intent
-        data object RestorePurchases : Intent
+        /** User tapped "Subscribe" for the given Stripe lookup_key (e.g. "calmify_premium_monthly"). */
+        data class PurchaseSubscription(val lookupKey: String) : Intent
+        /** User returned from checkout — pull canonical state from server. */
+        data object RefreshSubscriptionState : Intent
         data object DismissPaywall : Intent
         data class UpdateWaitlistEmail(val email: String) : Intent
         data object SubmitWaitlistEmail : Intent
@@ -23,7 +25,7 @@ object SubscriptionContract {
         val showWaitlistDialog: Boolean = false,
         val waitlistEmail: String = "",
         val waitlistSubmitted: Boolean = false,
-        /** True when products are placeholder waitlist previews (premium_enabled = false). */
+        /** True when running with `subscription_enabled = false` — WaitlistSubscriptionRepository is bound. */
         val isWaitlistMode: Boolean = false,
     ) : MviContract.State {
         val isPro: Boolean
@@ -34,8 +36,8 @@ object SubscriptionContract {
         data class ShowError(val message: String) : Effect
         data class PurchaseSuccess(val tier: SubscriptionRepository.SubscriptionTier) : Effect
         data object NavigateBack : Effect
-        data class ShowRestoreResult(val count: Int) : Effect
-        data class LaunchBillingFlow(val productId: String) : Effect
+        /** Open the given URL in the system browser (Stripe hosted checkout). */
+        data class OpenUrl(val url: String) : Effect
         data object WaitlistSubmitSuccess : Effect
     }
 }

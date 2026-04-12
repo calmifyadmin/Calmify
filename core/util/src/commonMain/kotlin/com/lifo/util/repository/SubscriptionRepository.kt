@@ -4,60 +4,52 @@ import com.lifo.util.model.RequestState
 import kotlinx.coroutines.flow.Flow
 
 /**
- * SubscriptionRepository Interface
+ * SubscriptionRepository — web-first Stripe semantics.
  *
- * Manages Google Play Billing subscriptions, premium tier state,
- * and purchase verification for the Calmify app.
+ * Design: the client never touches platform billing SDKs. All purchases flow through
+ * a Stripe hosted Checkout Session URL opened in the system browser. Subscription
+ * state is authoritative on the server (via webhook); the client only reads it.
+ *
+ * Products are identified by stable Stripe **lookup keys**, NOT price_ids, so the
+ * test→live switch happens without a client redeploy.
  */
 interface SubscriptionRepository {
 
     data class ProductInfo(
-        val productId: String,
+        val lookupKey: String,
         val title: String,
         val description: String,
-        val price: String,
-        val priceMicros: Long,
-        val currencyCode: String,
+        val priceAmount: Long,
+        val currency: String,
+        val interval: String,
     )
 
     enum class SubscriptionTier { FREE, PRO }
 
     data class SubscriptionState(
         val tier: SubscriptionTier,
-        val expiresAt: Long? = null,
+        val expiresAt: Long = 0L,
         val isAutoRenewing: Boolean = false,
+        val status: String = "none",
     )
 
-    /** Result of a completed purchase from the billing flow. */
-    data class PurchaseResult(
-        val productId: String,
-        val purchaseToken: String,
-        val isSuccess: Boolean,
-        val errorMessage: String? = null,
+    data class CheckoutSession(
+        val url: String,
+        val sessionId: String,
     )
 
-    /** Get current subscription state for the user. */
-    suspend fun getSubscriptionState(userId: String): RequestState<SubscriptionState>
-
-    /** Get available subscription products from Play Store. */
+    /** Fetch the current list of purchasable products (resolved server-side via lookup_keys). */
     suspend fun getAvailableProducts(): RequestState<List<ProductInfo>>
 
     /**
-     * Launch the platform billing flow.
-     * @param activityContext The Activity (passed as Any for KMP compatibility).
-     * @param productId The product to purchase.
+     * Create a hosted Stripe Checkout Session for the given lookup_key.
+     * The client must open the returned [CheckoutSession.url] in the system browser.
      */
-    suspend fun launchPurchaseFlow(activityContext: Any, productId: String): RequestState<Unit>
+    suspend fun createCheckoutSession(lookupKey: String): RequestState<CheckoutSession>
 
-    /** Observe purchase results from the billing flow. */
-    val purchaseUpdates: Flow<PurchaseResult>
+    /** Pull the authoritative subscription state from the server. */
+    suspend fun refreshSubscriptionState(): RequestState<SubscriptionState>
 
-    /** Verify and acknowledge a purchase (should be called after billing flow completes). */
-    suspend fun acknowledgePurchase(userId: String, purchaseToken: String): RequestState<SubscriptionState>
-
-    /** Restore purchases — query Play Store for existing subscriptions. */
-    suspend fun restorePurchases(userId: String): RequestState<SubscriptionState>
-
-    /** Observe subscription changes reactively. */
-    fun observeSubscription(userId: String): Flow<SubscriptionState>
+    /** Observe subscription state changes. Emits the latest known state. */
+    fun observeSubscription(): Flow<SubscriptionState>
 }

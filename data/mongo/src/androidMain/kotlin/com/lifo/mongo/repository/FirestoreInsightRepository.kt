@@ -10,7 +10,6 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
 
 /**
  * FirestoreInsightRepository Implementation
@@ -18,7 +17,7 @@ import javax.inject.Inject
  * Firestore-backed implementation of InsightRepository
  * Collection: diary_insights
  */
-class FirestoreInsightRepository @Inject constructor(
+class FirestoreInsightRepository constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth
 ) : InsightRepository {

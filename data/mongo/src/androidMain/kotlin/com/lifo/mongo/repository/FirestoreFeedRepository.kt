@@ -13,8 +13,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import android.util.Log
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * FirestoreFeedRepository Implementation
@@ -28,8 +26,7 @@ import javax.inject.Singleton
  *
  * MVP implementation — production would use Vertex AI ranking and Cloud Functions fan-out.
  */
-@Singleton
-class FirestoreFeedRepository @Inject constructor(
+class FirestoreFeedRepository constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth,
     private val cachedThreadQueries: CachedThreadQueries,

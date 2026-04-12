@@ -29,9 +29,7 @@ kotlin {
         androidMain.dependencies {
             implementation libs.core.ktx
             implementation libs.coroutines.android
-
-            // Google Play Billing (Android-only)
-            implementation libs.billing.ktx
+            implementation libs.androidx.browser
         }
 
         commonTest.dependencies {

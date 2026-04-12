@@ -12,8 +12,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import android.util.Log
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * FirestoreThreadRepository Implementation
@@ -24,8 +22,7 @@ import javax.inject.Singleton
  *
  * MVP implementation — social threads (posts/replies).
  */
-@Singleton
-class FirestoreThreadRepository @Inject constructor(
+class FirestoreThreadRepository constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth
 ) : ThreadRepository {

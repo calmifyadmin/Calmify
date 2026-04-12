@@ -47,6 +47,12 @@ fun Application.configureRouting() {
         // Waitlist — PRO waitlist email signups
         waitlistRoutes()
 
+        // Stripe — checkout session + subscription state (authenticated)
+        paymentRoutes()
+
+        // Stripe webhook — signature-validated, NOT Firebase-authenticated
+        stripeWebhookRoutes()
+
         // GDPR — data export + account deletion
         gdprRoutes()
     }

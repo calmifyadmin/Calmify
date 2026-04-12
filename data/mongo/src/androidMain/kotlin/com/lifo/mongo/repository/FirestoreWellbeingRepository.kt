@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import java.util.Date
-import javax.inject.Inject
 
 /**
  * FirestoreWellbeingRepository Implementation
@@ -20,7 +19,7 @@ import javax.inject.Inject
  * Firestore-backed implementation of WellbeingRepository
  * Collection: wellbeing_snapshots
  */
-class FirestoreWellbeingRepository @Inject constructor(
+class FirestoreWellbeingRepository constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth
 ) : WellbeingRepository {

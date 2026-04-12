@@ -47,6 +47,16 @@ val serverModule = module {
     // GDPR compliance
     single { GdprService(get()) }
 
+    // Stripe — web-first subscription & payments
+    single {
+        val apiKey = System.getenv("STRIPE_SECRET_KEY")
+        val isProduction = System.getenv("K_SERVICE") != null
+        if (apiKey.isNullOrEmpty() && isProduction) {
+            throw IllegalStateException("STRIPE_SECRET_KEY must be set in production")
+        }
+        StripeService(apiKey = apiKey ?: "", db = get())
+    }
+
     // AI components
     single {
         val apiKey = System.getenv("GEMINI_API_KEY")

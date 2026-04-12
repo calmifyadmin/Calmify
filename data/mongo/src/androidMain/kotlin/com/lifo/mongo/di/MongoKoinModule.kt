@@ -45,7 +45,6 @@ import com.lifo.mongo.repository.FirestorePresenceRepository
 import com.lifo.mongo.repository.FirebaseMediaUploadRepository
 import com.lifo.mongo.repository.CloudFunctionsContentModerationRepository
 import com.lifo.mongo.repository.FirestoreFeatureFlagRepository
-import com.lifo.mongo.repository.PlayBillingSubscriptionRepository
 import com.lifo.mongo.repository.WaitlistSubscriptionRepository
 import com.lifo.mongo.repository.UnifiedContentRepositoryImpl
 import com.lifo.util.repository.ChatRepository
@@ -91,7 +90,6 @@ import com.lifo.util.repository.SleepRepository
 import com.lifo.util.repository.WellbeingRepository
 import com.lifo.mongo.repository.FirestoreWaitlistRepository
 import com.lifo.mongo.repository.FirebaseAvatarRepository
-import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
 val firebaseModule = module {
@@ -162,17 +160,9 @@ val repositoryModule = module {
     // Feature Flags (Firestore-based, replaces Remote Config)
     single<FeatureFlagRepository> { FirestoreFeatureFlagRepository(get()) }
 
-    // Wave 9C: Subscription/Billing — PRO Switch
-    // When premium_enabled=false → WaitlistSubscriptionRepository (no billing, email capture)
-    // When premium_enabled=true  → PlayBillingSubscriptionRepository (real billing)
-    single<SubscriptionRepository> {
-        val flags = get<FeatureFlagRepository>()
-        if (flags.getBoolean(FeatureFlagRepository.PREMIUM_ENABLED)) {
-            PlayBillingSubscriptionRepository(androidContext(), get())
-        } else {
-            WaitlistSubscriptionRepository()
-        }
-    }
+    // Default binding: waitlist mode. The network module overrides this with
+    // KtorSubscriptionRepository when the PREMIUM_ENABLED flag is on.
+    single<SubscriptionRepository> { WaitlistSubscriptionRepository() }
 
     // PRO Switch: Waitlist email capture
     single<WaitlistRepository> { FirestoreWaitlistRepository(get()) }

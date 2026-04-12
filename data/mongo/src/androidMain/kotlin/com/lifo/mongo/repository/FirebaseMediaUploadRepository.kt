@@ -10,8 +10,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Firebase Storage implementation of MediaUploadRepository.
@@ -22,8 +20,7 @@ import javax.inject.Singleton
  * Storage structure:
  *   social-media/{userId}/{uuid}.{ext}
  */
-@Singleton
-class FirebaseMediaUploadRepository @Inject constructor(
+class FirebaseMediaUploadRepository constructor(
     private val storage: FirebaseStorage
 ) : MediaUploadRepository {
 

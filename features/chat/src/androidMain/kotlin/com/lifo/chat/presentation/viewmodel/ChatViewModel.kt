@@ -189,7 +189,7 @@ class ChatViewModel constructor(
             val userId = auth.currentUser?.uid
             if (userId != null) {
                 scope.launch {
-                    val result = subscriptionRepository.getSubscriptionState(userId)
+                    val result = subscriptionRepository.refreshSubscriptionState()
                     if (result is RequestState.Success &&
                         result.data.tier == SubscriptionRepository.SubscriptionTier.FREE
                     ) {

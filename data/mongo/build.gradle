@@ -65,9 +65,6 @@ kotlin {
 
                 // Ktor engine (Android)
                 implementation libs.ktor.client.okhttp
-
-                // Google Play Billing
-                implementation libs.billing.ktx
             }
         }
 

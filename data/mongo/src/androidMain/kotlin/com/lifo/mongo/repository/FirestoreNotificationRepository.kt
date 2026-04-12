@@ -12,8 +12,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import android.util.Log
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * FirestoreNotificationRepository Implementation
@@ -24,8 +22,7 @@ import javax.inject.Singleton
  * Notifications are created server-side (Cloud Functions) when social events occur
  * (new follower, like, reply, mention). This repository reads/manages them.
  */
-@Singleton
-class FirestoreNotificationRepository @Inject constructor(
+class FirestoreNotificationRepository constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth
 ) : NotificationRepository {

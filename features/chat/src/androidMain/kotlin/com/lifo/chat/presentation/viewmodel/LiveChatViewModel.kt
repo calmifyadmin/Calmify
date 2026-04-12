@@ -448,7 +448,7 @@ class LiveChatViewModel constructor(
         val userId = firebaseAuth.currentUser?.uid ?: return FREE_SESSION_LIMIT_SECONDS
 
         return try {
-            val result = subscriptionRepository.getSubscriptionState(userId)
+            val result = subscriptionRepository.refreshSubscriptionState()
             if (result is RequestState.Success &&
                 result.data.tier == SubscriptionRepository.SubscriptionTier.PRO
             ) {

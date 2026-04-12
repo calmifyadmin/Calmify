@@ -12,8 +12,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import android.util.Log
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * FirestoreSocialMessagingRepository Implementation
@@ -27,8 +25,7 @@ import javax.inject.Singleton
  * Real-time messaging via Firestore snapshot listeners.
  * MVP implementation — production may use Firebase Realtime Database for lower latency.
  */
-@Singleton
-class FirestoreSocialMessagingRepository @Inject constructor(
+class FirestoreSocialMessagingRepository constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth
 ) : SocialMessagingRepository {

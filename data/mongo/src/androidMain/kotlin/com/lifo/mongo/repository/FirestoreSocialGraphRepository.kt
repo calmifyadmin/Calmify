@@ -13,8 +13,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * FirestoreSocialGraphRepository Implementation
@@ -28,8 +26,7 @@ import javax.inject.Singleton
  *
  * MVP implementation — production would use Spanner Graph for traversal queries.
  */
-@Singleton
-class FirestoreSocialGraphRepository @Inject constructor(
+class FirestoreSocialGraphRepository constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth
 ) : SocialGraphRepository {
