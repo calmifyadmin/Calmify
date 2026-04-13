@@ -44,6 +44,10 @@ val serverModule = module {
     // Media — GCS V4 signed URLs (no Firestore dep)
     single { MediaService() }
 
+    // Messaging — REST + WebSocket fan-out
+    single { MessagingService(get()) }
+    single { MessagingHub() }
+
     // Sync
     single { com.lifo.server.service.SyncService(get()) }
 

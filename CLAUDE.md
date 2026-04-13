@@ -141,7 +141,13 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
   1. **Repo layer**: 29/36 (80%) — 7 rimanenti
   2. **Infrastructure services**: Stripe ✅, MediaUpload IN CORSO, SocialMessaging, Avatar
   3. **Full multiplatform (iOS+Web)**: Option C hybrid strategy — NOT STARTED
-- **Prossimo**: Phase 3 ATTIVA — MediaUpload presigned URL (GCS V4 signed URLs, client uploads direct). Server: `MediaService` + `MediaRoutes`. Client: `KtorMediaUploadRepository` in data/network. Flag `MEDIA_REST` in `BackendConfig`.
+- **Phase 3.1 DONE (`1c4256c`)**: MediaUpload presigned URL pattern (GCS V4 signed URLs, client uploads direct to GCS). Server: `MediaService` + `MediaRoutes`. Client: `KtorMediaUploadRepository`. Flag `MEDIA_REST=true`. IAM: `roles/iam.serviceAccountTokenCreator` (self) + `roles/storage.objectAdmin` sul bucket — applicati.
+- **Prossimo (Phase 3.2 — IN PROGRESS)**: **SocialMessaging — REST + WebSocket + broadcast hub**. Scope piu' grande di MediaUpload:
+  - **Server**: `MessagingService` (CRUD Firestore `conversations/{id}` + `messages/{id}` + `typing/{uid}`, ownership via `participantIds` array-contains caller). `MessagingHub` (registry in-memory WS sessions per userId, fan-out `MessagingEvent` ai soli partecipanti: `message.created` / `conversation.updated` / `typing.updated`). `MessagingRoutes`: REST (GET/POST conversations, messages, read, typing) + WS `/api/v1/messaging/ws` autenticato via JWT in query param (Firebase non supporta header Auth su WS handshake standard).
+  - **Client KMP**: `KtorSocialMessagingRepository` Flow-based. Ogni `getConversations/getMessages/getTypingStatus` apre WS collector filtrato, merge con snapshot REST iniziale per cold-start. Reconnection con backoff esponenziale.
+  - **Rischi noti**: (1) WS auth — Firebase JWT max 1h, client deve inviare frame `{type:"auth.refresh",token:...}` periodicamente. (2) Scale — hub in-memory single-instance, con `max-instances=10` se 2 utenti finiscono su istanze diverse il fan-out perde messages. Fix futuro: Pub/Sub fanout; per MVP tradeoff accettabile o session affinity.
+  - **Fuori scope iterazione**: presence integration, push notifications server-side, pagination cursor (limit=50), E2E encryption.
+  - Vedi `memory/project_phase3_socialmessaging.md` per design completo.
 
 ### File da leggere in ordine di priorita'
 

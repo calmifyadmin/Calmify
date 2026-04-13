@@ -6,8 +6,10 @@ import com.lifo.server.plugins.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
+import io.ktor.server.websocket.*
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
+import kotlin.time.Duration.Companion.seconds
 
 fun main() {
     embeddedServer(
@@ -34,6 +36,14 @@ fun Application.module() {
     // Plugins
     configureAuthentication()
     configureSerialization()
+
+    // WebSockets — messaging fan-out
+    install(WebSockets) {
+        pingPeriod = 30.seconds
+        timeout = 90.seconds
+        maxFrameSize = Long.MAX_VALUE
+        masking = false
+    }
     configureRateLimiting()
     configureCORS()
     configureMonitoring()

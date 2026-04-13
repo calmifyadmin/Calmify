@@ -50,6 +50,9 @@ fun Application.configureRouting() {
         // Media — presigned GCS upload/read URLs
         mediaRoutes()
 
+        // Messaging — REST + WebSocket fan-out
+        messagingRoutes()
+
         // Stripe — checkout session + subscription state (authenticated)
         paymentRoutes()
 

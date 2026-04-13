@@ -8,6 +8,7 @@ import io.ktor.client.engine.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
+import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -27,7 +28,7 @@ import kotlinx.serialization.protobuf.ProtoBuf
  */
 class KtorApiClient(
     @PublishedApi internal val authProvider: AuthProvider,
-    private val baseUrl: String,
+    val baseUrl: String,
 ) {
     private val json = Json {
         ignoreUnknownKeys = true
@@ -46,6 +47,10 @@ class KtorApiClient(
         install(Logging) {
             logger = Logger.DEFAULT
             level = LogLevel.NONE
+        }
+
+        install(WebSockets) {
+            pingIntervalMillis = 30_000
         }
 
         install(HttpTimeout) {
@@ -163,6 +168,9 @@ class KtorApiClient(
             RequestState.Error(e)
         }
     }
+
+    suspend fun getIdToken(forceRefresh: Boolean = false): String? =
+        authProvider.getIdToken(forceRefresh = forceRefresh)
 
     fun close() {
         client.close()

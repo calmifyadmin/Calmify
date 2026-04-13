@@ -19,6 +19,7 @@ kotlin {
             implementation(libs.ktor.serialization.kotlinx.json)
             implementation(libs.ktor.serialization.kotlinx.protobuf)
             implementation(libs.ktor.client.logging)
+            implementation(libs.ktor.client.websockets)
 
             // Serialization
             implementation(libs.kotlinx.serialization.json)

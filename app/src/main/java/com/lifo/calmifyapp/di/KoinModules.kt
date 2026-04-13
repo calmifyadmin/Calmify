@@ -81,6 +81,9 @@ object BackendConfig {
 
     /** Media uploads via presigned GCS URLs (Phase 3) */
     const val MEDIA_REST = true
+
+    /** Direct messaging via REST + WebSocket fan-out (Phase 3.2) */
+    const val MESSAGING_REST = true
 }
 
 // Database module: SQLDelight database, queries, connectivity
@@ -164,6 +167,9 @@ val restOverrideModule = module {
     }
     if (BackendConfig.MEDIA_REST) {
         single<MediaUploadRepository> { KtorMediaUploadRepository(get()) }
+    }
+    if (BackendConfig.MESSAGING_REST) {
+        single<SocialMessagingRepository> { KtorSocialMessagingRepository(get()) }
     }
 
     // Stripe subscription: runtime-gated by Remote Config `premium_enabled`.
