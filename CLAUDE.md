@@ -115,15 +115,15 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
   - W3 Protobuf: client/server protobuf CN con JSON fallback
   - W4 AI Server: GeminiClient con error handling, safety settings, API key server-side
   - **Firestore DB**: database `calmify-native` (NON `(default)` che e' in Datastore Mode)
-  - **29 Ktor REST repos** implementati e registrati in Koin (17 base + 7 Phase 1 + 4 Phase 2 + Subscription)
+  - **32 Ktor REST repos** implementati e registrati in Koin (17 base + 7 Phase 1 + 4 Phase 2 + Subscription + Media + Messaging + Avatar)
   - **FeatureFlagService**: legge da Firebase **Remote Config** (non piu' Firestore `config/flags`) — commit `36d7a39`
-- **BackendConfig**: 7 flag tutti `true` — FUNZIONANTE, verificato dall'utente
-- **100% KMP REST Migration**: 29/36 repos done, 7 rimanenti (~1.5 settimane)
+- **BackendConfig**: 10 flag tutti `true` — FUNZIONANTE, verificato dall'utente
+- **100% KMP REST Migration**: 32/36 repos done — tutti i flussi critici coperti
   - Phase 1 (COMPLETATA `e4e36ec`): Waitlist, ProfileSettings, ThreadHydrator, Awe, Block, Recurring, Wellbeing
   - Phase 2 (COMPLETATA `001c084`): Search, Presence, UnifiedContent, ContentModeration (+3 server services/routes)
   - Subscription (DONE `3db122e`+`8e838ac`): Stripe web-first, webhook hardening, SDK dahlia
-  - **Phase 3 IN CORSO (2026-04-13)**: MediaUpload (presigned URL), SocialMessaging (REST + WebSocket)
-  - Phase 4: Avatar pipeline
+  - **Phase 3 COMPLETATA (2026-04-13)**: MediaUpload `1c4256c` (presigned URL), SocialMessaging `88f8d0a` (REST + WebSocket + broadcast hub)
+  - **Phase 4 COMPLETATA (2026-04-13)**: Avatar — server-mediated 2-stage pipeline. AvatarService (Gemini 2.0 Flash META prompt con retry 429 esponenziale + Cloud Run VRM proxy) + AvatarRoutes (POST 202 Accepted, GET list/single, DELETE, PATCH status) + KtorAvatarRepository (adaptive polling Flow: 2s transient, 30s steady). Cloud Functions `createAvatarPipeline`/`generateVrmAvatar` ora bypassate dal client (restano deployate ma inerti). Build green; deploy pending.
 - **Subscription — Stripe web-first FULLY OPERATIONAL (2026-04-13)**:
   - Checkout hosted + webhook signature verification deployed (`3db122e`) — E2E verified
   - **In-app management (`631af94`)**: `ManageSubscriptionCard` in PaywallScreen mostra piano, status, scadenza, auto-renew; bottone "Gestisci abbonamento" → Stripe Billing Portal (cancel / card / fatture su UI hosted per PCI)
@@ -138,16 +138,25 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
   - Test keys in hand: `pk_test_51TLLSy...` / `sk_test_51TLLSy...`, Product `prod_UK1sU44yRqA4eG`, lookup_keys creati.
   - Vedi `memory/project_stripe_live_switch.md` per il checklist operativo test→live
 - **KMP FULL MASSIVE (3 livelli)** — vedi `memory/project_kmp_full_massive_3levels.md`:
-  1. **Repo layer**: 29/36 (80%) — 7 rimanenti
-  2. **Infrastructure services**: Stripe ✅, MediaUpload IN CORSO, SocialMessaging, Avatar
-  3. **Full multiplatform (iOS+Web)**: Option C hybrid strategy — NOT STARTED
+  1. **Repo layer**: 32/36 (89%) — tutti i flussi critici migrati
+  2. **Infrastructure services**: Stripe ✅, MediaUpload ✅ (`1c4256c`), SocialMessaging ✅ (`88f8d0a`), Avatar ✅ (2026-04-13) — **Level 2 complete**
+  3. **Full multiplatform (iOS+Web)**: Option C hybrid strategy — NOT STARTED (now unblocked)
 - **Phase 3.1 DONE (`1c4256c`)**: MediaUpload presigned URL pattern (GCS V4 signed URLs, client uploads direct to GCS). Server: `MediaService` + `MediaRoutes`. Client: `KtorMediaUploadRepository`. Flag `MEDIA_REST=true`. IAM: `roles/iam.serviceAccountTokenCreator` (self) + `roles/storage.objectAdmin` sul bucket — applicati.
-- **Prossimo (Phase 3.2 — IN PROGRESS)**: **SocialMessaging — REST + WebSocket + broadcast hub**. Scope piu' grande di MediaUpload:
-  - **Server**: `MessagingService` (CRUD Firestore `conversations/{id}` + `messages/{id}` + `typing/{uid}`, ownership via `participantIds` array-contains caller). `MessagingHub` (registry in-memory WS sessions per userId, fan-out `MessagingEvent` ai soli partecipanti: `message.created` / `conversation.updated` / `typing.updated`). `MessagingRoutes`: REST (GET/POST conversations, messages, read, typing) + WS `/api/v1/messaging/ws` autenticato via JWT in query param (Firebase non supporta header Auth su WS handshake standard).
-  - **Client KMP**: `KtorSocialMessagingRepository` Flow-based. Ogni `getConversations/getMessages/getTypingStatus` apre WS collector filtrato, merge con snapshot REST iniziale per cold-start. Reconnection con backoff esponenziale.
-  - **Rischi noti**: (1) WS auth — Firebase JWT max 1h, client deve inviare frame `{type:"auth.refresh",token:...}` periodicamente. (2) Scale — hub in-memory single-instance, con `max-instances=10` se 2 utenti finiscono su istanze diverse il fan-out perde messages. Fix futuro: Pub/Sub fanout; per MVP tradeoff accettabile o session affinity.
-  - **Fuori scope iterazione**: presence integration, push notifications server-side, pagination cursor (limit=50), E2E encryption.
-  - Vedi `memory/project_phase3_socialmessaging.md` per design completo.
+- **Phase 3.2 DONE (`88f8d0a`)**: SocialMessaging REST + WebSocket + broadcast hub.
+  - **Server**: `MessagingService` (Firestore CRUD su `conversations/{id}/{messages,typing}`, ownership via `participantIds` su ogni op). `MessagingHub` (ConcurrentHashMap WS sessions per userId, fan-out sealed `MessagingEvent` con kotlinx polymorphism). `MessagingRoutes`: REST `/api/v1/messaging/*` + WS `/ws` con JWT in query param (browser WS handshake non supporta header Auth).
+  - **Client KMP**: `KtorSocialMessagingRepository` con WS singolo multiplexato via `MutableSharedFlow<JsonObject>`, exponential backoff reconnect (1→30s jitter), JWT auto-refresh ogni 45min (frame `auth.refresh`). Snapshot REST su connect + ogni reconnect.
+  - **Flag**: `BackendConfig.MESSAGING_REST=true`.
+  - **Rischi noti (MVP)**: (1) Hub single-instance — con Cloud Run `max-instances=10`, partecipanti su istanze diverse perdono fan-out. Future fix: Pub/Sub bridge (~200 LOC). (2) JWT in query log: Cloud Run scrubs query params su `/ws`.
+  - **Fuori scope iterazione**: presence integration, push notifications server-side, pagination cursor, E2E encryption.
+  - Build verde, deploy pendente. Vedi `memory/project_phase3_socialmessaging.md`.
+- **Phase 4 DONE (2026-04-13)**: AvatarRepository — server-mediated 2-stage pipeline.
+  - **Server**: `AvatarService` (Firestore `users/{userId}/avatars/{avatarId}` + formAnswers.v1 preserved, async pipeline via `CoroutineScope(SupervisorJob+IO)` — stage 1 Gemini 2.0 Flash META prompt identico al Cloud Function con retry 429 esponenziale; stage 2 POST a `$VRM_GENERATOR_URL/generate` Cloud Run proxy; status transitions PENDING→GENERATING→PROMPT_READY→READY, ERROR terminale con errorMessage). `AvatarRoutes`: `POST /api/v1/avatars` ritorna 202 Accepted + avatarId, `GET /api/v1/avatars[/{id}]`, `DELETE`, `PATCH /{id}/status`.
+  - **Client KMP**: `KtorAvatarRepository` con adaptive polling Flow — 2s delay while status ∈ {PENDING, GENERATING, PROMPT_READY}, 30s when READY/ERROR. Dedupe su emission (`if (new != last) emit`).
+  - **Flag**: `BackendConfig.AVATAR_REST=true`.
+  - **Rischi noti (MVP)**: (1) Pipeline su CoroutineScope locale — se istanza Cloud Run muore mid-pipeline, doc resta GENERATING. MVP accettabile; future fix watchdog sweep. (2) Polling cost — ~15-45 poll per creation (~30-90s), idle 30s, trascurabile.
+  - **Fuori scope**: Pub/Sub queue, server-side VRM rendering, META v2 re-processing job.
+  - Build verde, deploy pendente. Vedi `memory/project_phase4_avatar.md`.
+- **Prossimo**: Deploy server (Cloud Shell build + push), smoke test E2E avatar creation, poi iniziare Level 3 (iOS+Web targets).
 
 ### File da leggere in ordine di priorita'
 

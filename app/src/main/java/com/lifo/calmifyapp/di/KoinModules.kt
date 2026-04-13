@@ -84,6 +84,9 @@ object BackendConfig {
 
     /** Direct messaging via REST + WebSocket fan-out (Phase 3.2) */
     const val MESSAGING_REST = true
+
+    /** Avatar pipeline via server-mediated REST + polling (Phase 4) */
+    const val AVATAR_REST = true
 }
 
 // Database module: SQLDelight database, queries, connectivity
@@ -170,6 +173,9 @@ val restOverrideModule = module {
     }
     if (BackendConfig.MESSAGING_REST) {
         single<SocialMessagingRepository> { KtorSocialMessagingRepository(get()) }
+    }
+    if (BackendConfig.AVATAR_REST) {
+        single<AvatarRepository> { KtorAvatarRepository(get()) }
     }
 
     // Stripe subscription: runtime-gated by Remote Config `premium_enabled`.

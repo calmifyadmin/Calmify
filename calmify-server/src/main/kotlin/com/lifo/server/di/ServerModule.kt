@@ -48,6 +48,9 @@ val serverModule = module {
     single { MessagingService(get()) }
     single { MessagingHub() }
 
+    // Avatar — server-mediated 2-stage pipeline
+    single { AvatarService(get(), get()) }
+
     // Sync
     single { com.lifo.server.service.SyncService(get()) }
 

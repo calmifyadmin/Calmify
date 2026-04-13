@@ -53,6 +53,9 @@ fun Application.configureRouting() {
         // Messaging — REST + WebSocket fan-out
         messagingRoutes()
 
+        // Avatar — 2-stage pipeline (Gemini systemPrompt + VRM generation)
+        avatarRoutes()
+
         // Stripe — checkout session + subscription state (authenticated)
         paymentRoutes()
 
