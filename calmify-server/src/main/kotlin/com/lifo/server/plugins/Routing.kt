@@ -47,6 +47,9 @@ fun Application.configureRouting() {
         // Waitlist — PRO waitlist email signups
         waitlistRoutes()
 
+        // Media — presigned GCS upload/read URLs
+        mediaRoutes()
+
         // Stripe — checkout session + subscription state (authenticated)
         paymentRoutes()
 

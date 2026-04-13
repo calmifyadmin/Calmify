@@ -78,6 +78,9 @@ object BackendConfig {
 
     /** Feature flags */
     const val FLAGS_REST = true
+
+    /** Media uploads via presigned GCS URLs (Phase 3) */
+    const val MEDIA_REST = true
 }
 
 // Database module: SQLDelight database, queries, connectivity
@@ -158,6 +161,9 @@ val restOverrideModule = module {
     }
     if (BackendConfig.FLAGS_REST) {
         single<FeatureFlagRepository> { KtorFeatureFlagRepository(get()) }
+    }
+    if (BackendConfig.MEDIA_REST) {
+        single<MediaUploadRepository> { KtorMediaUploadRepository(get()) }
     }
 
     // Stripe subscription: runtime-gated by Remote Config `premium_enabled`.

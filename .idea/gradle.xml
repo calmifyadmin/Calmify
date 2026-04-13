@@ -31,12 +31,14 @@
             <option value="$PROJECT_DIR$/build-logic" />
             <option value="$PROJECT_DIR$/build-logic/convention" />
             <option value="$PROJECT_DIR$/buildSrc" />
+            <option value="$PROJECT_DIR$/calmify-server" />
             <option value="$PROJECT_DIR$/core" />
             <option value="$PROJECT_DIR$/core/social-ui" />
             <option value="$PROJECT_DIR$/core/ui" />
             <option value="$PROJECT_DIR$/core/util" />
             <option value="$PROJECT_DIR$/data" />
             <option value="$PROJECT_DIR$/data/mongo" />
+            <option value="$PROJECT_DIR$/data/network" />
             <option value="$PROJECT_DIR$/features" />
             <option value="$PROJECT_DIR$/features/auth" />
             <option value="$PROJECT_DIR$/features/avatar-creator" />
@@ -59,6 +61,8 @@
             <option value="$PROJECT_DIR$/features/subscription" />
             <option value="$PROJECT_DIR$/features/thread-detail" />
             <option value="$PROJECT_DIR$/features/write" />
+            <option value="$PROJECT_DIR$/shared" />
+            <option value="$PROJECT_DIR$/shared/models" />
           </set>
         </option>
       </GradleProjectSettings>

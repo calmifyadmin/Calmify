@@ -115,13 +115,14 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
   - W3 Protobuf: client/server protobuf CN con JSON fallback
   - W4 AI Server: GeminiClient con error handling, safety settings, API key server-side
   - **Firestore DB**: database `calmify-native` (NON `(default)` che e' in Datastore Mode)
-  - **28 Ktor REST repos** implementati e registrati in Koin (17 base + 7 Phase 1 + 4 Phase 2)
+  - **29 Ktor REST repos** implementati e registrati in Koin (17 base + 7 Phase 1 + 4 Phase 2 + Subscription)
   - **FeatureFlagService**: legge da Firebase **Remote Config** (non piu' Firestore `config/flags`) — commit `36d7a39`
 - **BackendConfig**: 7 flag tutti `true` — FUNZIONANTE, verificato dall'utente
-- **100% KMP REST Migration**: 28/36 repos done, 8 rimanenti in 2 fasi (~2 settimane)
+- **100% KMP REST Migration**: 29/36 repos done, 7 rimanenti (~1.5 settimane)
   - Phase 1 (COMPLETATA `e4e36ec`): Waitlist, ProfileSettings, ThreadHydrator, Awe, Block, Recurring, Wellbeing
   - Phase 2 (COMPLETATA `001c084`): Search, Presence, UnifiedContent, ContentModeration (+3 server services/routes)
-  - Phase 3 (+ Stripe): MediaUpload, SocialMessaging, Subscription
+  - Subscription (DONE `3db122e`+`8e838ac`): Stripe web-first, webhook hardening, SDK dahlia
+  - **Phase 3 IN CORSO (2026-04-13)**: MediaUpload (presigned URL), SocialMessaging (REST + WebSocket)
   - Phase 4: Avatar pipeline
 - **Subscription — Stripe web-first FULLY OPERATIONAL (2026-04-13)**:
   - Checkout hosted + webhook signature verification deployed (`3db122e`) — E2E verified
@@ -137,10 +138,10 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
   - Test keys in hand: `pk_test_51TLLSy...` / `sk_test_51TLLSy...`, Product `prod_UK1sU44yRqA4eG`, lookup_keys creati.
   - Vedi `memory/project_stripe_live_switch.md` per il checklist operativo test→live
 - **KMP FULL MASSIVE (3 livelli)** — vedi `memory/project_kmp_full_massive_3levels.md`:
-  1. **Repo layer**: 28/36 (78%) — 8 rimanenti
-  2. **Infrastructure services**: Stripe ✅, MediaUpload, SocialMessaging, Avatar — Stripe DONE
+  1. **Repo layer**: 29/36 (80%) — 7 rimanenti
+  2. **Infrastructure services**: Stripe ✅, MediaUpload IN CORSO, SocialMessaging, Avatar
   3. **Full multiplatform (iOS+Web)**: Option C hybrid strategy — NOT STARTED
-- **Prossimo**: Phase 3 (MediaUpload, SocialMessaging) → Phase 4 (Avatar) → gate PRO features mancanti (unlimited diaries, custom avatar, advanced insights, social messages)
+- **Prossimo**: Phase 3 ATTIVA — MediaUpload presigned URL (GCS V4 signed URLs, client uploads direct). Server: `MediaService` + `MediaRoutes`. Client: `KtorMediaUploadRepository` in data/network. Flag `MEDIA_REST` in `BackendConfig`.
 
 ### File da leggere in ordine di priorita'
 

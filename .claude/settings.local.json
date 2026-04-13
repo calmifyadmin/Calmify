@@ -129,7 +129,27 @@
       "Bash(tasklist)",
       "Bash(tee /tmp/kotlin_migration_build.log)",
       "Read(//tmp/**)",
-      "Bash(tee /tmp/kotlin_migration_tests.log)"
+      "Bash(tee /tmp/kotlin_migration_tests.log)",
+      "Bash([ -f \"$dir/build.gradle\" ])",
+      "Bash([ -f \"/c/Users/lifoe/AndroidStudioProjects/CalmifyAppAndroid/features/$module/build.gradle.kts\" ])",
+      "Bash(mv features/home/src/androidMain/kotlin/com/lifo/home/domain/usecase/CalculateMoodDistributionUseCase.kt features/home/src/commonMain/kotlin/com/lifo/home/domain/usecase/)",
+      "Bash(mv features/home/src/androidMain/kotlin/com/lifo/home/domain/usecase/AggregateCognitivePatternsUseCase.kt features/home/src/commonMain/kotlin/com/lifo/home/domain/usecase/)",
+      "Bash(mv features/home/src/androidMain/kotlin/com/lifo/home/domain/usecase/CalculateStreaksUseCase.kt features/home/src/commonMain/kotlin/com/lifo/home/domain/usecase/)",
+      "Bash(mv features/home/src/androidMain/kotlin/com/lifo/home/domain/usecase/CalculateTodayPulseUseCase.kt features/home/src/commonMain/kotlin/com/lifo/home/domain/usecase/)",
+      "Bash(mv features/home/src/androidMain/kotlin/com/lifo/home/domain/usecase/CalculateTopicsFrequencyUseCase.kt features/home/src/commonMain/kotlin/com/lifo/home/domain/usecase/)",
+      "Bash([ -f \"C:/Users/lifoe/AndroidStudioProjects/CalmifyAppAndroid/features/write/src/androidMain/kotlin/com/lifo/write/$f\" ])",
+      "Bash(unzip -l app/build/outputs/apk/debug/app-x86_64-debug.apk)",
+      "Bash(docker --version)",
+      "Bash(git push:*)",
+      "Bash(../gradlew :calmify-server:buildFatJar)",
+      "Bash(bash /tmp/check_registration.sh)",
+      "Bash(../gradlew :calmify-server:compileKotlin)",
+      "Bash(unzip -p /c/Users/lifoe/.gradle/caches/modules-2/files-2.1/com.stripe/stripe-java/28.1.0/9ee6652187c14cd407d67e34ef12c9c458946f89/stripe-java-28.1.0.jar com/stripe/model/Price.class)",
+      "Bash(unzip -o /c/Users/lifoe/.gradle/caches/modules-2/files-2.1/com.stripe/stripe-java/28.1.0/9ee6652187c14cd407d67e34ef12c9c458946f89/stripe-java-28.1.0.jar \"com/stripe/model/StripeCollection.class\" \"com/stripe/model/checkout/Session.class\" \"com/stripe/model/Subscription.class\" \"com/stripe/model/Invoice.class\")",
+      "Read(//c/Users/lifoe/AppData/Local/Android/Sdk/platform-tools/**)",
+      "Read(//c/Program Files/Android/Android Studio/platform-tools/**)",
+      "Read(//c/Users/**)",
+      "Bash(/c/Users/lifoe/AppData/Local/Android/Sdk/platform-tools/adb.exe devices:*)"
     ],
     "deny": []
   }

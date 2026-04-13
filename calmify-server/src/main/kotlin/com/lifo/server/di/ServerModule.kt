@@ -41,6 +41,9 @@ val serverModule = module {
     single { PresenceService(get()) }
     single { ContentModerationService(get()) }
 
+    // Media — GCS V4 signed URLs (no Firestore dep)
+    single { MediaService() }
+
     // Sync
     single { com.lifo.server.service.SyncService(get()) }
 
