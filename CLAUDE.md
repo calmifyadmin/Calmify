@@ -125,12 +125,15 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
   - Phase 4: Avatar pipeline
 - **Subscription — Stripe web-first FULLY OPERATIONAL (2026-04-13)**:
   - Checkout hosted + webhook signature verification deployed (`3db122e`) — E2E verified
-  - **In-app management (2026-04-13)**: `ManageSubscriptionCard` in PaywallScreen mostra piano, status, scadenza, auto-renew; bottone "Gestisci abbonamento" → Stripe Billing Portal (cancel / card / fatture su UI hosted per PCI)
-  - **Server endpoint**: `POST /api/v1/payments/portal-session` — require redeploy
+  - **In-app management (`631af94`)**: `ManageSubscriptionCard` in PaywallScreen mostra piano, status, scadenza, auto-renew; bottone "Gestisci abbonamento" → Stripe Billing Portal (cancel / card / fatture su UI hosted per PCI)
+  - **Server endpoint**: `POST /api/v1/payments/portal-session`
   - **PRO badge UI**: `core/ui/ProBadge.kt` — visibile accanto a "Calmify" in Home topbar + Drawer header quando tier=PRO
   - **Drawer entry**: "Abbonamento" / "Gestisci abbonamento" (label dinamica) — naviga a SubscriptionRoute
   - **Auto-refresh on resume**: `SubscriptionEntryPoint` ascolta `Lifecycle.ON_RESUME` → rinfresca tier dopo ritorno da Chrome Custom Tab
   - **Root-level tier observation**: `DecomposeApp` osserva `SubscriptionRepository.observeSubscription()` una sola volta + refresh all'avvio, propaga `isPro` al drawer; HomeScreen usa stesso pattern via `koinInject`
+  - **Webhook hardening (`a1d9b40`)**: `subscription_data.metadata.userId` su checkout session (elimina dipendenza da `resolveUserIdFromCustomer` per i `customer.subscription.*` events) + warn log espliciti su ogni silent failure path (deserializer null, userId non risolto, subscriptionId mancante)
+  - **stripe-java bumped 28.1.0 → 32.0.0 (`8e838ac`)**: SDK ora pinned su API `2026-03-25.dahlia` matchando il webhook destination. Field relocations gestite: `Subscription.currentPeriodEnd` → `sub.items.data[].currentPeriodEnd` (max), `Invoice.subscription` → `invoice.parent.subscriptionDetails.subscription`
+  - **Firestore source of truth**: `subscriptions/{userId}` scritto SOLO dal webhook firmato. `tier=PRO` se `status in ["active","trialing"]`, expiresAt da subscription items
   - Test keys in hand: `pk_test_51TLLSy...` / `sk_test_51TLLSy...`, Product `prod_UK1sU44yRqA4eG`, lookup_keys creati.
   - Vedi `memory/project_stripe_live_switch.md` per il checklist operativo test→live
 - **KMP FULL MASSIVE (3 livelli)** — vedi `memory/project_kmp_full_massive_3levels.md`:
