@@ -15,6 +15,7 @@ import com.stripe.param.billingportal.SessionCreateParams as BillingPortalSessio
 import com.stripe.param.checkout.SessionCreateParams
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.slf4j.LoggerFactory
 
 /**
  * StripeService — web-first subscription lifecycle.
@@ -27,6 +28,8 @@ class StripeService(
     private val apiKey: String,
     private val db: Firestore,
 ) {
+    private val log = LoggerFactory.getLogger(StripeService::class.java)
+
     init {
         if (apiKey.isNotEmpty()) {
             Stripe.apiKey = apiKey
@@ -55,6 +58,11 @@ class StripeService(
             )
             .setClientReferenceId(userId)
             .putMetadata("userId", userId)
+            .setSubscriptionData(
+                SessionCreateParams.SubscriptionData.builder()
+                    .putMetadata("userId", userId)
+                    .build()
+            )
             .setAllowPromotionCodes(true)
 
         userEmail?.takeIf { it.isNotBlank() }?.let { paramsBuilder.setCustomerEmail(it) }
@@ -130,31 +138,63 @@ class StripeService(
 
     suspend fun applyEvent(event: Event): Unit = withContext(Dispatchers.IO) {
         val eventRef = db.collection("stripe_events").document(event.id)
-        if (eventRef.get().get().exists()) return@withContext
+        if (eventRef.get().get().exists()) {
+            log.info("Stripe event ${event.id} type=${event.type} already processed — skipping")
+            return@withContext
+        }
+
+        log.info("Stripe event received id=${event.id} type=${event.type} apiVersion=${event.apiVersion}")
 
         when (event.type) {
             "checkout.session.completed" -> {
-                val session = event.dataObjectDeserializer.`object`.orElse(null) as? Session ?: return@withContext
+                val session = event.dataObjectDeserializer.`object`.orElse(null) as? Session
+                if (session == null) {
+                    log.warn("checkout.session.completed: dataObjectDeserializer returned null — likely API version mismatch (event=${event.apiVersion}, sdk pinned). Skipping ${event.id}")
+                    return@withContext
+                }
                 val userId = session.clientReferenceId
                     ?: session.metadata?.get("userId")
-                    ?: return@withContext
-                val subscriptionId = session.subscription ?: return@withContext
+                if (userId.isNullOrBlank()) {
+                    log.warn("checkout.session.completed: no userId resolvable (clientReferenceId+metadata both null) for session=${session.id}, event=${event.id}")
+                    return@withContext
+                }
+                val subscriptionId = session.subscription
+                if (subscriptionId.isNullOrBlank()) {
+                    log.warn("checkout.session.completed: no subscription on session=${session.id}, mode=${session.mode}, event=${event.id}")
+                    return@withContext
+                }
                 val sub = Subscription.retrieve(subscriptionId)
                 writeSubscriptionState(userId, sub)
+                log.info("checkout.session.completed processed: user=$userId subscription=$subscriptionId status=${sub.status}")
             }
             "customer.subscription.created",
             "customer.subscription.updated" -> {
-                val sub = event.dataObjectDeserializer.`object`.orElse(null) as? Subscription ?: return@withContext
+                val sub = event.dataObjectDeserializer.`object`.orElse(null) as? Subscription
+                if (sub == null) {
+                    log.warn("${event.type}: dataObjectDeserializer returned null — API version mismatch likely. Skipping ${event.id}")
+                    return@withContext
+                }
                 val userId = sub.metadata?.get("userId")
                     ?: resolveUserIdFromCustomer(sub.customer)
-                    ?: return@withContext
+                if (userId.isNullOrBlank()) {
+                    log.warn("${event.type}: no userId in metadata and no doc with stripeCustomerId=${sub.customer}. Skipping ${event.id}")
+                    return@withContext
+                }
                 writeSubscriptionState(userId, sub)
+                log.info("${event.type} processed: user=$userId subscription=${sub.id} status=${sub.status}")
             }
             "customer.subscription.deleted" -> {
-                val sub = event.dataObjectDeserializer.`object`.orElse(null) as? Subscription ?: return@withContext
+                val sub = event.dataObjectDeserializer.`object`.orElse(null) as? Subscription
+                if (sub == null) {
+                    log.warn("customer.subscription.deleted: dataObjectDeserializer returned null. Skipping ${event.id}")
+                    return@withContext
+                }
                 val userId = sub.metadata?.get("userId")
                     ?: resolveUserIdFromCustomer(sub.customer)
-                    ?: return@withContext
+                if (userId.isNullOrBlank()) {
+                    log.warn("customer.subscription.deleted: no userId resolvable for customer=${sub.customer}. Skipping ${event.id}")
+                    return@withContext
+                }
                 db.collection("subscriptions").document(userId).set(
                     mapOf(
                         "tier" to "FREE",
@@ -164,18 +204,34 @@ class StripeService(
                         "updatedAt" to System.currentTimeMillis(),
                     )
                 ).get()
+                log.info("customer.subscription.deleted processed: user=$userId tier=FREE")
             }
             "invoice.payment_failed" -> {
-                val invoice = event.dataObjectDeserializer.`object`.orElse(null) as? Invoice ?: return@withContext
-                val subscriptionId = invoice.subscription ?: return@withContext
+                val invoice = event.dataObjectDeserializer.`object`.orElse(null) as? Invoice
+                if (invoice == null) {
+                    log.warn("invoice.payment_failed: dataObjectDeserializer returned null. Skipping ${event.id}")
+                    return@withContext
+                }
+                val subscriptionId = invoice.subscription
+                if (subscriptionId.isNullOrBlank()) {
+                    log.warn("invoice.payment_failed: no subscription on invoice=${invoice.id}. Skipping ${event.id}")
+                    return@withContext
+                }
                 val sub = Subscription.retrieve(subscriptionId)
                 val userId = sub.metadata?.get("userId")
                     ?: resolveUserIdFromCustomer(sub.customer)
-                    ?: return@withContext
+                if (userId.isNullOrBlank()) {
+                    log.warn("invoice.payment_failed: no userId resolvable for customer=${sub.customer}. Skipping ${event.id}")
+                    return@withContext
+                }
                 db.collection("subscriptions").document(userId).set(
                     mapOf("status" to "past_due", "updatedAt" to System.currentTimeMillis()),
                     SetOptions.merge()
                 ).get()
+                log.info("invoice.payment_failed processed: user=$userId status=past_due")
+            }
+            else -> {
+                log.info("Stripe event ${event.type} not handled — id=${event.id}")
             }
         }
 
@@ -199,9 +255,10 @@ class StripeService(
     private fun writeSubscriptionState(userId: String, sub: Subscription) {
         val active = sub.status in ACTIVE_STATUSES
         val expiresMillis = (sub.currentPeriodEnd ?: 0L) * 1000L
+        val tier = if (active) "PRO" else "FREE"
         db.collection("subscriptions").document(userId).set(
             mapOf(
-                "tier" to if (active) "PRO" else "FREE",
+                "tier" to tier,
                 "expiresAt" to expiresMillis,
                 "isAutoRenewing" to (sub.cancelAtPeriodEnd == false && active),
                 "status" to (sub.status ?: "none"),
@@ -210,6 +267,7 @@ class StripeService(
                 "updatedAt" to System.currentTimeMillis(),
             )
         ).get()
+        log.info("writeSubscriptionState: user=$userId tier=$tier status=${sub.status} expiresAt=$expiresMillis customer=${sub.customer}")
     }
 
     private fun resolveUserIdFromCustomer(customerId: String?): String? {
