@@ -212,9 +212,10 @@ class StripeService(
                     log.warn("invoice.payment_failed: dataObjectDeserializer returned null. Skipping ${event.id}")
                     return@withContext
                 }
-                val subscriptionId = invoice.subscription
+                // dahlia (API 2026-03-25): invoice.subscription moved under invoice.parent.subscriptionDetails.
+                val subscriptionId = invoice.parent?.subscriptionDetails?.subscription
                 if (subscriptionId.isNullOrBlank()) {
-                    log.warn("invoice.payment_failed: no subscription on invoice=${invoice.id}. Skipping ${event.id}")
+                    log.warn("invoice.payment_failed: no subscription on invoice=${invoice.id} (parent=${invoice.parent?.type}). Skipping ${event.id}")
                     return@withContext
                 }
                 val sub = Subscription.retrieve(subscriptionId)
@@ -254,7 +255,13 @@ class StripeService(
 
     private fun writeSubscriptionState(userId: String, sub: Subscription) {
         val active = sub.status in ACTIVE_STATUSES
-        val expiresMillis = (sub.currentPeriodEnd ?: 0L) * 1000L
+        // dahlia (API 2026-03-25): currentPeriodEnd moved from Subscription to SubscriptionItem.
+        // Take the max across items so multi-item subscriptions reflect the latest period boundary.
+        val periodEndSec = sub.items?.data
+            ?.mapNotNull { it.currentPeriodEnd }
+            ?.maxOrNull()
+            ?: 0L
+        val expiresMillis = periodEndSec * 1000L
         val tier = if (active) "PRO" else "FREE"
         db.collection("subscriptions").document(userId).set(
             mapOf(

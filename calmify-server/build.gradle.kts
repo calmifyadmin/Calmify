@@ -69,7 +69,8 @@ dependencies {
     implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
 
     // Stripe SDK — web-first subscription & payments
-    implementation("com.stripe:stripe-java:28.1.0")
+    // 32.0.0 pins API version 2026-03-25.dahlia (matches our webhook destination)
+    implementation("com.stripe:stripe-java:32.0.0")
 
     // Test
     testImplementation("io.ktor:ktor-server-test-host:$ktorVersion")
