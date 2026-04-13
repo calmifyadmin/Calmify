@@ -105,7 +105,7 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
 
 **Ad ogni nuova sessione, LEGGERE SUBITO questo file prima di fare qualsiasi cosa.**
 
-### Stato Attuale (aggiornato 2026-04-11)
+### Stato Attuale (aggiornato 2026-04-13)
 
 - **Branch attivo**: `backend-architecture-refactor` (base: master @ `08ef101`)
 - **Fase 1 KMP COMPLETATA**: 237 file commonMain / 90 file androidMain (72.5% shared)
@@ -116,14 +116,28 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
   - W4 AI Server: GeminiClient con error handling, safety settings, API key server-side
   - **Firestore DB**: database `calmify-native` (NON `(default)` che e' in Datastore Mode)
   - **28 Ktor REST repos** implementati e registrati in Koin (17 base + 7 Phase 1 + 4 Phase 2)
+  - **FeatureFlagService**: legge da Firebase **Remote Config** (non piu' Firestore `config/flags`) — commit `36d7a39`
 - **BackendConfig**: 7 flag tutti `true` — FUNZIONANTE, verificato dall'utente
-- **100% KMP REST Migration**: 24/36 repos done, 12 rimanenti in 3 fasi (~3 settimane)
-  - Phase 1 (COMPLETATA): Waitlist, ProfileSettings, ThreadHydrator, Awe, Block, Recurring, Wellbeing
-  - Phase 2: Search, Presence, UnifiedContent, ContentModeration
+- **100% KMP REST Migration**: 28/36 repos done, 8 rimanenti in 2 fasi (~2 settimane)
+  - Phase 1 (COMPLETATA `e4e36ec`): Waitlist, ProfileSettings, ThreadHydrator, Awe, Block, Recurring, Wellbeing
+  - Phase 2 (COMPLETATA `001c084`): Search, Presence, UnifiedContent, ContentModeration (+3 server services/routes)
   - Phase 3 (+ Stripe): MediaUpload, SocialMessaging, Subscription
   - Phase 4: Avatar pipeline
-- **Subscription**: Stripe hosted checkout — zero BillingClient/StoreKit, wishlist flag fino a P.IVA
-- **Prossimo**: deploy server (waitlist route), poi Phase 2
+- **Subscription — Stripe web-first FULLY OPERATIONAL (2026-04-13)**:
+  - Checkout hosted + webhook signature verification deployed (`3db122e`) — E2E verified
+  - **In-app management (2026-04-13)**: `ManageSubscriptionCard` in PaywallScreen mostra piano, status, scadenza, auto-renew; bottone "Gestisci abbonamento" → Stripe Billing Portal (cancel / card / fatture su UI hosted per PCI)
+  - **Server endpoint**: `POST /api/v1/payments/portal-session` — require redeploy
+  - **PRO badge UI**: `core/ui/ProBadge.kt` — visibile accanto a "Calmify" in Home topbar + Drawer header quando tier=PRO
+  - **Drawer entry**: "Abbonamento" / "Gestisci abbonamento" (label dinamica) — naviga a SubscriptionRoute
+  - **Auto-refresh on resume**: `SubscriptionEntryPoint` ascolta `Lifecycle.ON_RESUME` → rinfresca tier dopo ritorno da Chrome Custom Tab
+  - **Root-level tier observation**: `DecomposeApp` osserva `SubscriptionRepository.observeSubscription()` una sola volta + refresh all'avvio, propaga `isPro` al drawer; HomeScreen usa stesso pattern via `koinInject`
+  - Test keys in hand: `pk_test_51TLLSy...` / `sk_test_51TLLSy...`, Product `prod_UK1sU44yRqA4eG`, lookup_keys creati.
+  - Vedi `memory/project_stripe_live_switch.md` per il checklist operativo test→live
+- **KMP FULL MASSIVE (3 livelli)** — vedi `memory/project_kmp_full_massive_3levels.md`:
+  1. **Repo layer**: 28/36 (78%) — 8 rimanenti
+  2. **Infrastructure services**: Stripe ✅, MediaUpload, SocialMessaging, Avatar — Stripe DONE
+  3. **Full multiplatform (iOS+Web)**: Option C hybrid strategy — NOT STARTED
+- **Prossimo**: Phase 3 (MediaUpload, SocialMessaging) → Phase 4 (Avatar) → gate PRO features mancanti (unlimited diaries, custom avatar, advanced insights, social messages)
 
 ### File da leggere in ordine di priorita'
 

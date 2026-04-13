@@ -47,6 +47,14 @@ interface SubscriptionRepository {
      */
     suspend fun createCheckoutSession(lookupKey: String): RequestState<CheckoutSession>
 
+    /**
+     * Create a Stripe Billing Portal session so the user can manage their active
+     * subscription (cancel, change plan, update card, view invoices) on Stripe-hosted UI.
+     * The client must open the returned URL in the system browser.
+     * Fails if the user has never completed a checkout (no stripeCustomerId on record).
+     */
+    suspend fun createBillingPortalSession(): RequestState<String>
+
     /** Pull the authoritative subscription state from the server. */
     suspend fun refreshSubscriptionState(): RequestState<SubscriptionState>
 

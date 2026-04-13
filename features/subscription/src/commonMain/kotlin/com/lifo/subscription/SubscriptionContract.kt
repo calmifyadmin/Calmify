@@ -9,6 +9,8 @@ object SubscriptionContract {
         data object LoadSubscriptionState : Intent
         /** User tapped "Subscribe" for the given Stripe lookup_key (e.g. "calmify_premium_monthly"). */
         data class PurchaseSubscription(val lookupKey: String) : Intent
+        /** PRO user tapped "Manage subscription" — open Stripe Customer Portal. */
+        data object OpenManagePortal : Intent
         /** User returned from checkout — pull canonical state from server. */
         data object RefreshSubscriptionState : Intent
         data object DismissPaywall : Intent
@@ -19,6 +21,9 @@ object SubscriptionContract {
 
     data class State(
         val subscriptionTier: SubscriptionRepository.SubscriptionTier = SubscriptionRepository.SubscriptionTier.FREE,
+        val expiresAt: Long = 0L,
+        val isAutoRenewing: Boolean = false,
+        val subscriptionStatus: String = "none",
         val isLoading: Boolean = false,
         val availableProducts: List<SubscriptionRepository.ProductInfo> = emptyList(),
         val error: String? = null,

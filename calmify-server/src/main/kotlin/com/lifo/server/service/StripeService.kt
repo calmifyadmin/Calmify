@@ -7,9 +7,11 @@ import com.stripe.model.Event
 import com.stripe.model.Invoice
 import com.stripe.model.Price
 import com.stripe.model.Subscription
+import com.stripe.model.billingportal.Session as BillingPortalSession
 import com.stripe.model.checkout.Session
 import com.stripe.net.Webhook
 import com.stripe.param.PriceListParams
+import com.stripe.param.billingportal.SessionCreateParams as BillingPortalSessionCreateParams
 import com.stripe.param.checkout.SessionCreateParams
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -62,6 +64,30 @@ class StripeService(
             url = session.url ?: error("Stripe returned session without url"),
             sessionId = session.id,
         )
+    }
+
+    /**
+     * Create a Stripe Customer Portal session so the user can manage their subscription
+     * (cancel, change plan, update card, view invoices) on Stripe-hosted UI.
+     *
+     * Requires the user to have a stripeCustomerId persisted in `subscriptions/{userId}`
+     * (written by the webhook on first successful checkout).
+     */
+    suspend fun createBillingPortalSession(
+        userId: String,
+        returnUrl: String,
+    ): BillingPortalSessionResult = withContext(Dispatchers.IO) {
+        val snap = db.collection("subscriptions").document(userId).get().get()
+        val customerId = snap.getString("stripeCustomerId")
+            ?: error("No Stripe customer found for user $userId — active subscription required")
+
+        val session = BillingPortalSession.create(
+            BillingPortalSessionCreateParams.builder()
+                .setCustomer(customerId)
+                .setReturnUrl(returnUrl)
+                .build()
+        )
+        BillingPortalSessionResult(url = session.url)
     }
 
     suspend fun getSubscriptionState(userId: String): SubscriptionStateDto = withContext(Dispatchers.IO) {
@@ -205,6 +231,10 @@ class StripeService(
 data class CheckoutSessionResult(
     val url: String,
     val sessionId: String,
+)
+
+data class BillingPortalSessionResult(
+    val url: String,
 )
 
 data class SubscriptionStateDto(

@@ -56,6 +56,20 @@ class KtorSubscriptionRepository(
         }
     }
 
+    override suspend fun createBillingPortalSession(): RequestState<String> {
+        val response = api.post<PortalSessionResponseDto>(
+            path = "/api/v1/payments/portal-session",
+            body = PortalSessionRequestDto(),
+        )
+        return when (val data = response.getDataOrNull()) {
+            null -> when (response) {
+                is RequestState.Error -> response
+                else -> RequestState.Error(Exception("Portal session creation failed"))
+            }
+            else -> RequestState.Success(data.url)
+        }
+    }
+
     override suspend fun refreshSubscriptionState(): RequestState<SubscriptionState> {
         val response = api.get<SubscriptionStateResponseDto>("/api/v1/subscription/state")
         return when (val data = response.getDataOrNull()) {
@@ -98,6 +112,16 @@ private data class SubscriptionStateResponseDto(
     val expiresAt: Long = 0L,
     val isAutoRenewing: Boolean = false,
     val status: String = "none",
+)
+
+@Serializable
+private data class PortalSessionRequestDto(
+    val returnUrl: String = "",
+)
+
+@Serializable
+private data class PortalSessionResponseDto(
+    val url: String = "",
 )
 
 @Serializable

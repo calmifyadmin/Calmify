@@ -48,6 +48,10 @@ class WaitlistSubscriptionRepository : SubscriptionRepository {
         return RequestState.Error(WaitlistException())
     }
 
+    override suspend fun createBillingPortalSession(): RequestState<String> {
+        return RequestState.Error(WaitlistException())
+    }
+
     override suspend fun refreshSubscriptionState(): RequestState<SubscriptionState> {
         return RequestState.Success(SubscriptionState(tier = SubscriptionTier.FREE))
     }

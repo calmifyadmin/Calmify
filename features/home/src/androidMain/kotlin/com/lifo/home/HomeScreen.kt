@@ -21,10 +21,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lifo.home.components.*
 import com.lifo.util.repository.Diaries
+import com.lifo.util.repository.SubscriptionRepository
 import com.lifo.ui.components.CalmifyTopBar
+import com.lifo.ui.components.ProBadge
 import com.lifo.ui.components.loading.*
 import com.lifo.util.model.RequestState
 import com.lifo.util.model.HomeContentItem
+import kotlinx.coroutines.flow.map
 import org.koin.compose.koinInject
 import java.time.ZonedDateTime
 import org.jetbrains.compose.resources.stringResource
@@ -75,6 +78,13 @@ internal fun HomeScreen(
     val colorScheme = MaterialTheme.colorScheme
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
+    val subscriptionRepository: SubscriptionRepository = koinInject()
+    val isPro by remember(subscriptionRepository) {
+        subscriptionRepository.observeSubscription().map {
+            it.tier == SubscriptionRepository.SubscriptionTier.PRO
+        }
+    }.collectAsState(initial = false)
+
     Box(modifier = Modifier.fillMaxSize()) {
 
     Scaffold(
@@ -87,6 +97,9 @@ internal fun HomeScreen(
                 title = "Calmify",
                 onMenuClick = onMenuClicked,
                 scrollBehavior = scrollBehavior,
+                trailingBadge = if (isPro) {
+                    { ProBadge() }
+                } else null,
                 actions = {
                     IconButton(onClick = onNotificationsClick) {
                         BadgedBox(

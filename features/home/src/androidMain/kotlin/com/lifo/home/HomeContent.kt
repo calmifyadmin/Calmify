@@ -129,7 +129,6 @@ internal fun HomeContent(
     val quickActionState by viewModel.quickActionState.collectAsState()
     val communityThreads by viewModel.communityThreads.collectAsState()
     val socialAvatarUrl by viewModel.socialAvatarUrl.collectAsState()
-
     val onRefresh: () -> Unit = {
         isRefreshing = true
         coroutineScope.launch {

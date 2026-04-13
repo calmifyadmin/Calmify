@@ -39,6 +39,8 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Diamond
 import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -73,6 +75,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifo.ui.resources.*
 import com.lifo.util.repository.SubscriptionRepository
+import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -135,29 +138,38 @@ fun PaywallScreen(
 
                 Spacer(modifier = Modifier.height(28.dp))
 
-                // Single Pro card — prefer monthly, fall back to first product
-                val proProduct = state.availableProducts.firstOrNull { it.lookupKey == "calmify_premium_monthly" }
-                    ?: state.availableProducts.firstOrNull()
-                ProProductCard(
-                    product = proProduct,
-                    isCurrentTier = state.isPro,
-                    isWaitlistMode = state.isWaitlistMode,
-                    onPurchase = {
-                        val lookupKey = proProduct?.lookupKey ?: "calmify_premium_monthly"
-                        onIntent(SubscriptionContract.Intent.PurchaseSubscription(lookupKey))
-                    },
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                TextButton(
-                    onClick = { onIntent(SubscriptionContract.Intent.RefreshSubscriptionState) },
-                ) {
-                    Text(
-                        text = stringResource(Res.string.paywall_restore),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                if (state.isPro) {
+                    ManageSubscriptionCard(
+                        expiresAt = state.expiresAt,
+                        isAutoRenewing = state.isAutoRenewing,
+                        status = state.subscriptionStatus,
+                        onManage = { onIntent(SubscriptionContract.Intent.OpenManagePortal) },
                     )
+                } else {
+                    // Single Pro card — prefer monthly, fall back to first product
+                    val proProduct = state.availableProducts.firstOrNull { it.lookupKey == "calmify_premium_monthly" }
+                        ?: state.availableProducts.firstOrNull()
+                    ProProductCard(
+                        product = proProduct,
+                        isCurrentTier = false,
+                        isWaitlistMode = state.isWaitlistMode,
+                        onPurchase = {
+                            val lookupKey = proProduct?.lookupKey ?: "calmify_premium_monthly"
+                            onIntent(SubscriptionContract.Intent.PurchaseSubscription(lookupKey))
+                        },
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    TextButton(
+                        onClick = { onIntent(SubscriptionContract.Intent.RefreshSubscriptionState) },
+                    ) {
+                        Text(
+                            text = stringResource(Res.string.paywall_restore),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
 
                 state.error?.let { errorMessage ->
@@ -710,6 +722,157 @@ private fun ProProductCard(
             }
         }
     }
+}
+
+// =====================================================================
+// Manage subscription card (shown when user is PRO)
+// =====================================================================
+
+@Composable
+private fun ManageSubscriptionCard(
+    expiresAt: Long,
+    isAutoRenewing: Boolean,
+    status: String,
+    onManage: () -> Unit,
+) {
+    val primaryColor = MaterialTheme.colorScheme.primary
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(
+                width = 2.dp,
+                color = primaryColor.copy(alpha = 0.6f),
+                shape = RoundedCornerShape(16.dp),
+            ),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(primaryColor.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Verified,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = primaryColor,
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Calmify PRO",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = manageStatusLine(status, isAutoRenewing),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(modifier = Modifier.height(12.dp))
+
+            InfoRow(
+                label = if (isAutoRenewing) "Prossimo rinnovo" else "Scade il",
+                value = formatExpiry(expiresAt),
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            InfoRow(
+                label = "Rinnovo automatico",
+                value = if (isAutoRenewing) "Attivo" else "Disattivato",
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Button(
+                onClick = onManage,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = primaryColor),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Gestisci abbonamento",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Cancella, cambia piano, aggiorna il metodo di pagamento o scarica le fatture sul portale Stripe.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun InfoRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+private fun manageStatusLine(status: String, isAutoRenewing: Boolean): String = when (status.lowercase()) {
+    "active" -> if (isAutoRenewing) "Abbonamento attivo" else "Attivo — cancellato a fine periodo"
+    "trialing" -> "Periodo di prova attivo"
+    "past_due" -> "Pagamento in sospeso"
+    "canceled" -> "Cancellato"
+    else -> status.ifBlank { "Stato sconosciuto" }
+}
+
+private fun formatExpiry(expiresAt: Long): String {
+    if (expiresAt <= 0L) return "—"
+    val instant = kotlinx.datetime.Instant.fromEpochMilliseconds(expiresAt)
+    val dt = instant.toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault())
+    val day = dt.dayOfMonth.toString().padStart(2, '0')
+    val month = dt.monthNumber.toString().padStart(2, '0')
+    return "$day/$month/${dt.year}"
 }
 
 // =====================================================================

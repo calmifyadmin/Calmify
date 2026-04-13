@@ -28,6 +28,7 @@ class SubscriptionViewModel(
         when (intent) {
             is SubscriptionContract.Intent.LoadSubscriptionState -> loadSubscriptionState()
             is SubscriptionContract.Intent.PurchaseSubscription -> purchaseSubscription(intent.lookupKey)
+            is SubscriptionContract.Intent.OpenManagePortal -> openManagePortal()
             is SubscriptionContract.Intent.RefreshSubscriptionState -> refreshSubscriptionState()
             is SubscriptionContract.Intent.DismissPaywall -> sendEffect(SubscriptionContract.Effect.NavigateBack)
             is SubscriptionContract.Intent.UpdateWaitlistEmail -> updateState { copy(waitlistEmail = intent.email) }
@@ -41,7 +42,14 @@ class SubscriptionViewModel(
         scope.launch {
             subscriptionRepository.observeSubscription().collect { state ->
                 val prevTier = currentState.subscriptionTier
-                updateState { copy(subscriptionTier = state.tier) }
+                updateState {
+                    copy(
+                        subscriptionTier = state.tier,
+                        expiresAt = state.expiresAt,
+                        isAutoRenewing = state.isAutoRenewing,
+                        subscriptionStatus = state.status,
+                    )
+                }
                 if (prevTier != state.tier &&
                     state.tier == SubscriptionRepository.SubscriptionTier.PRO) {
                     sendEffect(SubscriptionContract.Effect.PurchaseSuccess(state.tier))
@@ -61,7 +69,13 @@ class SubscriptionViewModel(
         scope.launch {
             when (val result = subscriptionRepository.refreshSubscriptionState()) {
                 is RequestState.Success -> updateState {
-                    copy(subscriptionTier = result.data.tier, isLoading = false)
+                    copy(
+                        subscriptionTier = result.data.tier,
+                        expiresAt = result.data.expiresAt,
+                        isAutoRenewing = result.data.isAutoRenewing,
+                        subscriptionStatus = result.data.status,
+                        isLoading = false,
+                    )
                 }
                 is RequestState.Error -> {
                     // Waitlist repo throws; treat that as waitlist mode rather than error.
@@ -91,12 +105,36 @@ class SubscriptionViewModel(
         scope.launch {
             when (val result = subscriptionRepository.refreshSubscriptionState()) {
                 is RequestState.Success -> {
-                    updateState { copy(subscriptionTier = result.data.tier) }
+                    updateState {
+                        copy(
+                            subscriptionTier = result.data.tier,
+                            expiresAt = result.data.expiresAt,
+                            isAutoRenewing = result.data.isAutoRenewing,
+                            subscriptionStatus = result.data.status,
+                        )
+                    }
                     if (result.data.tier == SubscriptionRepository.SubscriptionTier.PRO) {
                         sendEffect(SubscriptionContract.Effect.PurchaseSuccess(result.data.tier))
                     }
                 }
                 else -> {}
+            }
+        }
+    }
+
+    private fun openManagePortal() {
+        updateState { copy(isLoading = true, error = null) }
+        scope.launch {
+            when (val result = subscriptionRepository.createBillingPortalSession()) {
+                is RequestState.Success -> {
+                    updateState { copy(isLoading = false) }
+                    sendEffect(SubscriptionContract.Effect.OpenUrl(result.data))
+                }
+                is RequestState.Error -> {
+                    updateState { copy(isLoading = false, error = result.message) }
+                    sendEffect(SubscriptionContract.Effect.ShowError(result.message))
+                }
+                else -> updateState { copy(isLoading = false) }
             }
         }
     }

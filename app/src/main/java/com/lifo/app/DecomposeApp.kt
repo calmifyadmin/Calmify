@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.*
@@ -65,6 +66,9 @@ import com.lifo.ui.components.DisplayAlertDialog
 import com.lifo.ui.components.navigation.NavigationDestination
 import com.lifo.util.model.RequestState
 import com.lifo.util.repository.MongoRepository
+import com.lifo.util.repository.SubscriptionRepository
+import com.lifo.ui.components.ProBadge
+import kotlinx.coroutines.flow.map
 import com.lifo.write.navigation.ActivityGardenRouteContent
 import com.lifo.write.navigation.GardenRouteContent
 import com.lifo.write.navigation.JournalHomeRouteContent
@@ -198,6 +202,19 @@ fun DecomposeApp(
         else kotlinx.coroutines.flow.flowOf(0)
     }.collectAsState(initial = 0)
 
+    // ── Subscription tier observed once at root and propagated down ──
+    val subscriptionRepository: SubscriptionRepository = koinInject()
+    val isPro by remember(subscriptionRepository) {
+        subscriptionRepository.observeSubscription().map {
+            it.tier == SubscriptionRepository.SubscriptionTier.PRO
+        }
+    }.collectAsState(initial = false)
+    LaunchedEffect(currentUserId) {
+        if (currentUserId != null) {
+            runCatching { subscriptionRepository.refreshSubscriptionState() }
+        }
+    }
+
     // Dialog states
     var signOutDialogOpened by remember { mutableStateOf(false) }
     var deleteAllDialogOpened by remember { mutableStateOf(false) }
@@ -213,6 +230,7 @@ fun DecomposeApp(
             ) {
                 DrawerContent(
                     userProfileImageUrl = userProfileImageUrl,
+                    isPro = isPro,
                     onHeaderClicked = {
                         scope.launch { drawerState.close() }
                         rootComponent.navigateToSettings()
@@ -228,6 +246,10 @@ fun DecomposeApp(
                     onCreateAvatarClicked = {
                         scope.launch { drawerState.close() }
                         rootComponent.navigateToAvatarCreator()
+                    },
+                    onSubscriptionClicked = {
+                        scope.launch { drawerState.close() }
+                        rootComponent.navigateToSubscription()
                     },
                     onSignOutClicked = {
                         scope.launch { drawerState.close() }
@@ -1216,10 +1238,12 @@ private fun DecomposeBottomBar(
 @Composable
 private fun DrawerContent(
     userProfileImageUrl: String?,
+    isPro: Boolean,
     onHeaderClicked: () -> Unit,
     onHistoryClicked: () -> Unit,
     onAvatarClicked: () -> Unit,
     onCreateAvatarClicked: () -> Unit,
+    onSubscriptionClicked: () -> Unit,
     onSignOutClicked: () -> Unit,
     onDeleteAllClicked: () -> Unit
 ) {
@@ -1257,6 +1281,10 @@ private fun DrawerContent(
                         text = "Calmify",
                         style = MaterialTheme.typography.headlineSmall
                     )
+                    if (isPro) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        ProBadge()
+                    }
                 }
 
                 Row(
@@ -1338,6 +1366,29 @@ private fun DrawerContent(
             label = { Text("Crea Avatar") },
             selected = false,
             onClick = onCreateAvatarClicked,
+            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+        )
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+        NavigationDrawerItem(
+            icon = {
+                Icon(
+                    imageVector = Icons.Filled.WorkspacePremium,
+                    contentDescription = null
+                )
+            },
+            label = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(if (isPro) "Gestisci abbonamento" else "Abbonamento")
+                    if (isPro) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        ProBadge()
+                    }
+                }
+            },
+            selected = false,
+            onClick = onSubscriptionClicked,
             modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
         )
 

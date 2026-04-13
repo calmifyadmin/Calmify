@@ -41,6 +41,25 @@ fun Route.paymentRoutes() {
                 )
             }
 
+            // POST /api/v1/payments/portal-session
+            post("/portal-session") {
+                val user = call.principal<UserPrincipal>()!!
+                val body = runCatching { call.receive<PortalSessionRequestDto>() }
+                    .getOrElse { PortalSessionRequestDto() }
+
+                val result = runCatching {
+                    stripe.createBillingPortalSession(
+                        userId = user.uid,
+                        returnUrl = body.returnUrl.takeIf { it.isNotBlank() } ?: DEFAULT_PORTAL_RETURN_URL,
+                    )
+                }
+
+                result.fold(
+                    onSuccess = { call.respond(HttpStatusCode.Created, PortalSessionResponseDto(url = it.url)) },
+                    onFailure = { call.respond(HttpStatusCode.BadRequest, ErrorDto(it.message ?: "portal_unavailable")) },
+                )
+            }
+
             // GET /api/v1/payments/products
             get("/products") {
                 val products = stripe.listProducts().map {
@@ -81,6 +100,7 @@ fun Route.paymentRoutes() {
 // Client deep-link scheme: calmify://subscription/{success|cancel}
 private const val DEFAULT_SUCCESS_URL = "https://calmify.app/subscription/success?session_id={CHECKOUT_SESSION_ID}"
 private const val DEFAULT_CANCEL_URL = "https://calmify.app/subscription/cancel"
+private const val DEFAULT_PORTAL_RETURN_URL = "https://calmify.app/subscription/manage"
 
 @Serializable
 data class CheckoutSessionRequestDto(
@@ -117,6 +137,16 @@ data class ProductInfoResponseDto(
 @Serializable
 data class ProductListResponseDto(
     val products: List<ProductInfoResponseDto> = emptyList(),
+)
+
+@Serializable
+data class PortalSessionRequestDto(
+    val returnUrl: String = "",
+)
+
+@Serializable
+data class PortalSessionResponseDto(
+    val url: String = "",
 )
 
 @Serializable
