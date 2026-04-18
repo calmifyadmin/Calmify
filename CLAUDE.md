@@ -105,7 +105,7 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
 
 **Ad ogni nuova sessione, LEGGERE SUBITO questo file prima di fare qualsiasi cosa.**
 
-### Stato Attuale (aggiornato 2026-04-13)
+### Stato Attuale (aggiornato 2026-04-15)
 
 - **Branch attivo**: `backend-architecture-refactor` (base: master @ `08ef101`)
 - **Fase 1 KMP COMPLETATA**: 237 file commonMain / 90 file androidMain (72.5% shared)
@@ -115,15 +115,19 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
   - W3 Protobuf: client/server protobuf CN con JSON fallback
   - W4 AI Server: GeminiClient con error handling, safety settings, API key server-side
   - **Firestore DB**: database `calmify-native` (NON `(default)` che e' in Datastore Mode)
-  - **32 Ktor REST repos** implementati e registrati in Koin (17 base + 7 Phase 1 + 4 Phase 2 + Subscription + Media + Messaging + Avatar)
+  - **36 Ktor REST repos** implementati e registrati in Koin (17 base + 7 Phase 1 + 4 Phase 2 + Subscription + Media + Messaging + Avatar + 4 Phase 5)
   - **FeatureFlagService**: legge da Firebase **Remote Config** (non piu' Firestore `config/flags`) — commit `36d7a39`
-- **BackendConfig**: 10 flag tutti `true` — FUNZIONANTE, verificato dall'utente
-- **100% KMP REST Migration**: 32/36 repos done — tutti i flussi critici coperti
+- **BackendConfig**: 12 flag tutti `true` — FUNZIONANTE, verificato dall'utente
+- **100% KMP REST Migration COMPLETATA**: 36/36 repos — Level 1 CHIUSO
   - Phase 1 (COMPLETATA `e4e36ec`): Waitlist, ProfileSettings, ThreadHydrator, Awe, Block, Recurring, Wellbeing
   - Phase 2 (COMPLETATA `001c084`): Search, Presence, UnifiedContent, ContentModeration (+3 server services/routes)
   - Subscription (DONE `3db122e`+`8e838ac`): Stripe web-first, webhook hardening, SDK dahlia
   - **Phase 3 COMPLETATA (2026-04-13)**: MediaUpload `1c4256c` (presigned URL), SocialMessaging `88f8d0a` (REST + WebSocket + broadcast hub)
   - **Phase 4 COMPLETATA (2026-04-13)**: Avatar — server-mediated 2-stage pipeline. AvatarService (Gemini 2.0 Flash META prompt con retry 429 esponenziale + Cloud Run VRM proxy) + AvatarRoutes (POST 202 Accepted, GET list/single, DELETE, PATCH status) + KtorAvatarRepository (adaptive polling Flow: 2s transient, 30s steady). Cloud Functions `createAvatarPipeline`/`generateVrmAvatar` ora bypassate dal client (restano deployate ma inerti). Build green; deploy pending.
+  - **Phase 5 COMPLETATA (2026-04-15)**: Environment / Garden / Ikigai / SocialGraph — Firestore-server pattern (no Spanner, deliberate per ship-before-infra rule, vedi `memory/feedback_ship_before_infra.md`).
+    - **Server**: 4 services + 4 route groups. Layout legacy preservato: `environment_design/{userId}`, `garden/{userId}` (exploredActivities + favorites con transazioni Firestore idempotenti), `ikigai_exploration/{userId}` (DELETE solo se id == userId), `social_graph/{userId}/{following,followers,blocked}` + `user_profiles/{userId}`. SocialGraph enforce `principal.uid` come follower/blocker/profile owner su ogni mutation. `PATCH /profiles/me` whitelista `username,displayName,avatarUrl,coverPhotoUrl,bio,interests,links` (blocca override di `followerCount,isVerified,...`).
+    - **Client KMP**: 4 Ktor repos. **Flow semantics change**: `Flow<Boolean>` (isFollowing/isBlocked) e `Flow<EnvironmentChecklist?>`/`Flow<IkigaiExploration?>` ora single-emission (no snapshot listener). Screens dovranno re-subscribe su refresh/re-open. Accettato come MVP tradeoff. `updateProfile(map)` serializza Map<String,Any?> su JsonObject (helper `toJsonElement` supporta String/Boolean/Number/List/Map/null).
+    - **Flag**: `HOLISTIC_REST=true`, `SOCIAL_GRAPH_REST=true`. Build verde; deploy pendente.
 - **Subscription — Stripe web-first FULLY OPERATIONAL (2026-04-13)**:
   - Checkout hosted + webhook signature verification deployed (`3db122e`) — E2E verified
   - **In-app management (`631af94`)**: `ManageSubscriptionCard` in PaywallScreen mostra piano, status, scadenza, auto-renew; bottone "Gestisci abbonamento" → Stripe Billing Portal (cancel / card / fatture su UI hosted per PCI)
@@ -138,9 +142,9 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
   - Test keys in hand: `pk_test_51TLLSy...` / `sk_test_51TLLSy...`, Product `prod_UK1sU44yRqA4eG`, lookup_keys creati.
   - Vedi `memory/project_stripe_live_switch.md` per il checklist operativo test→live
 - **KMP FULL MASSIVE (3 livelli)** — vedi `memory/project_kmp_full_massive_3levels.md`:
-  1. **Repo layer**: 32/36 (89%) — tutti i flussi critici migrati
+  1. **Repo layer**: 36/36 (100%) — **Level 1 COMPLETE 2026-04-15**
   2. **Infrastructure services**: Stripe ✅, MediaUpload ✅ (`1c4256c`), SocialMessaging ✅ (`88f8d0a`), Avatar ✅ (2026-04-13) — **Level 2 complete**
-  3. **Full multiplatform (iOS+Web)**: Option C hybrid strategy — NOT STARTED (now unblocked)
+  3. **Full multiplatform (iOS+Web)**: Option C hybrid strategy — NOT STARTED (now fully unblocked)
 - **Phase 3.1 DONE (`1c4256c`)**: MediaUpload presigned URL pattern (GCS V4 signed URLs, client uploads direct to GCS). Server: `MediaService` + `MediaRoutes`. Client: `KtorMediaUploadRepository`. Flag `MEDIA_REST=true`. IAM: `roles/iam.serviceAccountTokenCreator` (self) + `roles/storage.objectAdmin` sul bucket — applicati.
 - **Phase 3.2 DONE (`88f8d0a`)**: SocialMessaging REST + WebSocket + broadcast hub.
   - **Server**: `MessagingService` (Firestore CRUD su `conversations/{id}/{messages,typing}`, ownership via `participantIds` su ogni op). `MessagingHub` (ConcurrentHashMap WS sessions per userId, fan-out sealed `MessagingEvent` con kotlinx polymorphism). `MessagingRoutes`: REST `/api/v1/messaging/*` + WS `/ws` con JWT in query param (browser WS handshake non supporta header Auth).
@@ -156,7 +160,7 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
   - **Rischi noti (MVP)**: (1) Pipeline su CoroutineScope locale — se istanza Cloud Run muore mid-pipeline, doc resta GENERATING. MVP accettabile; future fix watchdog sweep. (2) Polling cost — ~15-45 poll per creation (~30-90s), idle 30s, trascurabile.
   - **Fuori scope**: Pub/Sub queue, server-side VRM rendering, META v2 re-processing job.
   - Build verde, deploy pendente. Vedi `memory/project_phase4_avatar.md`.
-- **Prossimo**: Deploy server (Cloud Shell build + push), smoke test E2E avatar creation, poi iniziare Level 3 (iOS+Web targets).
+- **Prossimo**: Deploy server (Cloud Shell build + push), smoke test E2E (avatar creation + 4 nuovi endpoint Phase 5), poi iniziare Level 3 (iOS+Web targets — ora completamente sbloccato).
 
 ### File da leggere in ordine di priorita'
 

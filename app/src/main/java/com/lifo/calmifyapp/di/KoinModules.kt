@@ -87,6 +87,12 @@ object BackendConfig {
 
     /** Avatar pipeline via server-mediated REST + polling (Phase 4) */
     const val AVATAR_REST = true
+
+    /** Holistic growth — Environment / Garden / Ikigai (Phase 5) */
+    const val HOLISTIC_REST = true
+
+    /** SocialGraph — follow/block + public profile (Phase 5) */
+    const val SOCIAL_GRAPH_REST = true
 }
 
 // Database module: SQLDelight database, queries, connectivity
@@ -176,6 +182,14 @@ val restOverrideModule = module {
     }
     if (BackendConfig.AVATAR_REST) {
         single<AvatarRepository> { KtorAvatarRepository(get()) }
+    }
+    if (BackendConfig.HOLISTIC_REST) {
+        single<EnvironmentRepository> { KtorEnvironmentRepository(get()) }
+        single<GardenRepository> { KtorGardenRepository(get()) }
+        single<IkigaiRepository> { KtorIkigaiRepository(get()) }
+    }
+    if (BackendConfig.SOCIAL_GRAPH_REST) {
+        single<SocialGraphRepository> { KtorSocialGraphRepository(get()) }
     }
 
     // Stripe subscription: runtime-gated by Remote Config `premium_enabled`.

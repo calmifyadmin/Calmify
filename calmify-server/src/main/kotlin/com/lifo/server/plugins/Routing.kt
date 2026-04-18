@@ -56,6 +56,14 @@ fun Application.configureRouting() {
         // Avatar — 2-stage pipeline (Gemini systemPrompt + VRM generation)
         avatarRoutes()
 
+        // Holistic growth — environment design + garden + ikigai
+        environmentRoutes()
+        gardenRoutes()
+        ikigaiRoutes()
+
+        // SocialGraph — follow/block + public profile CRUD
+        socialGraphRoutes()
+
         // Stripe — checkout session + subscription state (authenticated)
         paymentRoutes()
 

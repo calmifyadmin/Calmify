@@ -51,6 +51,12 @@ val serverModule = module {
     // Avatar — server-mediated 2-stage pipeline
     single { AvatarService(get(), get()) }
 
+    // Holistic growth — Environment / Garden / Ikigai + SocialGraph
+    single { EnvironmentService(get()) }
+    single { GardenService(get()) }
+    single { IkigaiService(get()) }
+    single { SocialGraphService(get()) }
+
     // Sync
     single { com.lifo.server.service.SyncService(get()) }
 
