@@ -693,4 +693,34 @@
     <string name="screen_thread_detail_replying_to">En réponse à %1$s</string>
     <string name="screen_thread_detail_replies_header">Réponses</string>
     <string name="screen_thread_detail_loading_error">Erreur de chargement</string>
+
+    <!-- i18n Phase C.4 / Avatar Creator (2026-04-19) -->
+    <string name="screen_avatar_progress_sending">Envoi en cours…</string>
+    <string name="screen_avatar_progress_preparing">Préparation de votre avatar…</string>
+    <string name="screen_avatar_progress_generating">Génération en cours…</string>
+    <string name="screen_avatar_stage_personality_done">Personnalité créée !</string>
+    <string name="screen_avatar_stage_body_now">Génération du corps 3D…</string>
+    <string name="screen_avatar_ready">Avatar prêt !</string>
+    <string name="screen_avatar_ready_detail">Votre avatar a été créé avec succès.</string>
+    <string name="screen_avatar_error_title">Quelque chose s\'est mal passé</string>
+    <string name="screen_avatar_voice_label">Voix : %1$s</string>
+    <string name="screen_avatar_attachment_style">Style d\'attachement</string>
+    <string name="screen_avatar_personality_pressure">Comment réagit-il sous pression ?</string>
+    <string name="screen_avatar_personality_decisions">Comment prend-il des décisions ?</string>
+    <string name="screen_avatar_voice_choose">Choisissez la voix</string>
+    <string name="screen_avatar_voice_tone">Ton émotionnel prédominant</string>
+
+    <!-- i18n Phase C.4 / Insight (2026-04-19) -->
+    <string name="screen_insight_loading">Chargement de l\'insight…</string>
+    <string name="screen_insight_feedback_dialog_title">Qu\'est-ce qui ne va pas ?</string>
+    <string name="screen_insight_feedback_placeholder">Décrivez ce qui devrait être amélioré…</string>
+    <string name="screen_insight_feedback_send">Envoyer</string>
+    <string name="screen_insight_feedback_useful">Utile</string>
+    <string name="screen_insight_feedback_not_useful">Non utile</string>
+
+    <!-- i18n Phase C.4 / Meditation (2026-04-19) -->
+    <string name="screen_meditation_start">Commencer la pratique</string>
+    <string name="screen_meditation_notes_placeholder">Écrivez vos sensations… (facultatif)</string>
+    <string name="screen_meditation_save_session">Enregistrer la session</string>
+    <string name="screen_meditation_discard_back">Annuler et revenir</string>
 </resources>

@@ -174,6 +174,42 @@ object Strings {
             val a11yRemoveAttachment: StringResource get() = Res.string.a11y_messaging_remove_attachment
         }
 
+        /** Avatar Creator feature — wizard + creation pipeline + list. */
+        object Avatar {
+            val progressSending: StringResource get() = Res.string.screen_avatar_progress_sending
+            val progressPreparing: StringResource get() = Res.string.screen_avatar_progress_preparing
+            val progressGenerating: StringResource get() = Res.string.screen_avatar_progress_generating
+            val stagePersonalityDone: StringResource get() = Res.string.screen_avatar_stage_personality_done
+            val stageBodyNow: StringResource get() = Res.string.screen_avatar_stage_body_now
+            val ready: StringResource get() = Res.string.screen_avatar_ready
+            val readyDetail: StringResource get() = Res.string.screen_avatar_ready_detail
+            val errorTitle: StringResource get() = Res.string.screen_avatar_error_title
+            val voiceLabel: StringResource get() = Res.string.screen_avatar_voice_label
+            val attachmentStyle: StringResource get() = Res.string.screen_avatar_attachment_style
+            val personalityPressure: StringResource get() = Res.string.screen_avatar_personality_pressure
+            val personalityDecisions: StringResource get() = Res.string.screen_avatar_personality_decisions
+            val voiceChoose: StringResource get() = Res.string.screen_avatar_voice_choose
+            val voiceTone: StringResource get() = Res.string.screen_avatar_voice_tone
+        }
+
+        /** Insight feature — diary insight view + feedback dialog. */
+        object Insight {
+            val loading: StringResource get() = Res.string.screen_insight_loading
+            val feedbackDialogTitle: StringResource get() = Res.string.screen_insight_feedback_dialog_title
+            val feedbackPlaceholder: StringResource get() = Res.string.screen_insight_feedback_placeholder
+            val feedbackSend: StringResource get() = Res.string.screen_insight_feedback_send
+            val feedbackUseful: StringResource get() = Res.string.screen_insight_feedback_useful
+            val feedbackNotUseful: StringResource get() = Res.string.screen_insight_feedback_not_useful
+        }
+
+        /** Meditation feature — practice screen + post-session dialog. */
+        object Meditation {
+            val start: StringResource get() = Res.string.screen_meditation_start
+            val notesPlaceholder: StringResource get() = Res.string.screen_meditation_notes_placeholder
+            val saveSession: StringResource get() = Res.string.screen_meditation_save_session
+            val discardBack: StringResource get() = Res.string.screen_meditation_discard_back
+        }
+
         /** Thread Detail feature — thread view with replies. */
         object ThreadDetail {
             val replyingTo: StringResource get() = Res.string.screen_thread_detail_replying_to

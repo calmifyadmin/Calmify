@@ -134,4 +134,34 @@
     <string name="screen_thread_detail_replies_header">जवाब</string>
     <string name="screen_thread_detail_loading_error">लोडिंग त्रुटि</string>
 
+    <!-- i18n Phase C.4 / Avatar Creator (2026-04-19) -->
+    <string name="screen_avatar_progress_sending">भेज रहा है…</string>
+    <string name="screen_avatar_progress_preparing">आपका अवतार तैयार किया जा रहा है…</string>
+    <string name="screen_avatar_progress_generating">जनरेशन जारी…</string>
+    <string name="screen_avatar_stage_personality_done">व्यक्तित्व बनाया गया!</string>
+    <string name="screen_avatar_stage_body_now">अब 3D बॉडी जनरेट कर रहा है…</string>
+    <string name="screen_avatar_ready">अवतार तैयार!</string>
+    <string name="screen_avatar_ready_detail">आपका अवतार सफलतापूर्वक बनाया गया।</string>
+    <string name="screen_avatar_error_title">कुछ गलत हुआ</string>
+    <string name="screen_avatar_voice_label">आवाज़: %1$s</string>
+    <string name="screen_avatar_attachment_style">अटैचमेंट शैली</string>
+    <string name="screen_avatar_personality_pressure">दबाव में कैसे प्रतिक्रिया करते हैं?</string>
+    <string name="screen_avatar_personality_decisions">निर्णय कैसे लेते हैं?</string>
+    <string name="screen_avatar_voice_choose">आवाज़ चुनें</string>
+    <string name="screen_avatar_voice_tone">प्रमुख भावनात्मक स्वर</string>
+
+    <!-- i18n Phase C.4 / Insight (2026-04-19) -->
+    <string name="screen_insight_loading">इनसाइट लोड हो रहा है…</string>
+    <string name="screen_insight_feedback_dialog_title">क्या गलत है?</string>
+    <string name="screen_insight_feedback_placeholder">बताएं क्या सुधारना चाहिए…</string>
+    <string name="screen_insight_feedback_send">भेजें</string>
+    <string name="screen_insight_feedback_useful">उपयोगी</string>
+    <string name="screen_insight_feedback_not_useful">अनुपयोगी</string>
+
+    <!-- i18n Phase C.4 / Meditation (2026-04-19) -->
+    <string name="screen_meditation_start">अभ्यास शुरू करें</string>
+    <string name="screen_meditation_notes_placeholder">अपनी संवेदनाएं लिखें… (वैकल्पिक)</string>
+    <string name="screen_meditation_save_session">सत्र सहेजें</string>
+    <string name="screen_meditation_discard_back">रद्द करें और वापस जाएं</string>
+
 </resources>

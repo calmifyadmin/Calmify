@@ -24,8 +24,10 @@ import com.lifo.avatarcreator.presentation.AvatarCreatorContract.State
 import com.lifo.avatarcreator.presentation.components.SectionHeader
 import com.lifo.avatarcreator.presentation.components.SliderWithLabel
 import com.lifo.avatarcreator.presentation.components.TagPicker
+import com.lifo.ui.i18n.Strings
 import com.lifo.util.model.GeminiVoice
 import com.lifo.util.model.VoiceTone
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun VoiceSection(
@@ -46,7 +48,7 @@ fun VoiceSection(
 
         // Voice Selection Cards
         Text(
-            text = "Scegli la voce",
+            text = stringResource(Strings.Screen.Avatar.voiceChoose),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(bottom = 8.dp),
         )
@@ -102,7 +104,7 @@ fun VoiceSection(
 
         // Voice Tone
         Text(
-            text = "Tono emotivo predominante",
+            text = stringResource(Strings.Screen.Avatar.voiceTone),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
         )

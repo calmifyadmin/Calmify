@@ -15,9 +15,11 @@ import com.lifo.avatarcreator.presentation.AvatarCreatorContract.State
 import com.lifo.avatarcreator.presentation.components.SectionHeader
 import com.lifo.avatarcreator.presentation.components.SliderWithLabel
 import com.lifo.avatarcreator.presentation.components.TagPicker
+import com.lifo.ui.i18n.Strings
 import com.lifo.util.model.DecisionStyle
 import com.lifo.util.model.PersonalityTraits
 import com.lifo.util.model.StressResponse
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun PersonalitySection(
@@ -48,7 +50,7 @@ fun PersonalitySection(
 
         // Stress Response
         Text(
-            text = "Come reagisce sotto pressione?",
+            text = stringResource(Strings.Screen.Avatar.personalityPressure),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
         )
@@ -83,7 +85,7 @@ fun PersonalitySection(
 
         // Decision Style
         Text(
-            text = "Come prende decisioni?",
+            text = stringResource(Strings.Screen.Avatar.personalityDecisions),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
         )

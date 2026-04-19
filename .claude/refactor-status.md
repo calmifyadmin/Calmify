@@ -3,10 +3,10 @@
 > Questo file viene letto da Jarvis all'inizio di ogni sessione.
 > Aggiornato automaticamente dopo ogni operazione completata.
 
-## STATO ATTUALE 2026-04-19 (Fase A→C.3 i18n DONE)
+## STATO ATTUALE 2026-04-19 (Fase A→C.4 i18n DONE)
 
 **Level 1 KMP REST CHIUSO + DEPLOYED**. Smoke test E2E 91/92 verdi.
-**Sprint i18n in corso**: Fase A/A'/A''/B DONE (scaffold + EN default + 12 locales + common facade). C.1 home + C.2 search/social-profile + C.3 composer/messaging/thread-detail = 78 keys × 12 lang + ~81 hardcoded migrati. Full app compile verde. Next: Fase C.4 (avatar-creator + insight + meditation ~30 strings). Sprint totale stimato ~5-6 gg.
+**Sprint i18n in corso**: Cumulative C.1→C.4 = 102 keys × 12 lang + ~106 hardcoded migrati su 22 file Kotlin. Full app compile verde. Next: Fase C.5 (settings + habits + chat + SnapshotScreen + tail ~36 strings). Sprint totale stimato ~5-6 gg.
 Vedi `memory/i18n_strategy.md`, `memory/project_phase5_deploy_results.md`.
 
 ## EVENTO: Backend Audit (2026-04-10) — RISOLTO 2026-04-18

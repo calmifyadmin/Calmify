@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.lifo.avatarcreator.presentation.AvatarCreatorContract.CreationStatus
+import com.lifo.ui.i18n.Strings
 import org.jetbrains.compose.resources.stringResource
 import com.lifo.ui.resources.Res
 import com.lifo.ui.resources.*
@@ -54,11 +55,11 @@ fun CreationProgressScreen(
                 CircularProgressIndicator(modifier = Modifier.size(64.dp))
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
-                    text = "Invio in corso...",
+                    text = stringResource(Strings.Screen.Avatar.progressSending),
                     style = MaterialTheme.typography.headlineSmall,
                 )
                 Text(
-                    text = "Stiamo preparando la creazione del tuo avatar",
+                    text = stringResource(Strings.Screen.Avatar.progressPreparing),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -70,7 +71,7 @@ fun CreationProgressScreen(
                 CircularProgressIndicator(modifier = Modifier.size(64.dp))
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
-                    text = "Generazione in corso...",
+                    text = stringResource(Strings.Screen.Avatar.progressGenerating),
                     style = MaterialTheme.typography.headlineSmall,
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -91,7 +92,7 @@ fun CreationProgressScreen(
                 CircularProgressIndicator(modifier = Modifier.size(64.dp))
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
-                    text = "Personalita' creata!",
+                    text = stringResource(Strings.Screen.Avatar.stagePersonalityDone),
                     style = MaterialTheme.typography.headlineSmall,
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -101,7 +102,7 @@ fun CreationProgressScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Ora genero il corpo 3D...",
+                    text = stringResource(Strings.Screen.Avatar.stageBodyNow),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -116,11 +117,11 @@ fun CreationProgressScreen(
                 )
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
-                    text = "Avatar pronto!",
+                    text = stringResource(Strings.Screen.Avatar.ready),
                     style = MaterialTheme.typography.headlineMedium,
                 )
                 Text(
-                    text = "Il tuo avatar e' stato creato con successo",
+                    text = stringResource(Strings.Screen.Avatar.readyDetail),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 8.dp),
@@ -136,7 +137,7 @@ fun CreationProgressScreen(
                 )
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
-                    text = "Qualcosa e' andato storto",
+                    text = stringResource(Strings.Screen.Avatar.errorTitle),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.error,
                 )

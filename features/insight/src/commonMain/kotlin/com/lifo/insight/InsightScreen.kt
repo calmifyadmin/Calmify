@@ -25,6 +25,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.lifo.ui.components.CalmifyTopBar
+import com.lifo.ui.i18n.Strings
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import com.lifo.util.model.*
 
@@ -79,7 +81,7 @@ fun InsightScreen(
                     ) {
                         CircularProgressIndicator()
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("Caricamento insight...", style = MaterialTheme.typography.bodyLarge)
+                        Text(stringResource(Strings.Screen.Insight.loading), style = MaterialTheme.typography.bodyLarge)
                     }
                 }
                 uiState.error != null && uiState.insight == null -> {
@@ -191,12 +193,12 @@ fun InsightScreen(
             if (uiState.showCorrectionDialog) {
                 AlertDialog(
                     onDismissRequest = { viewModel.onIntent(InsightContract.Intent.ShowCorrectionDialog(false)) },
-                    title = { Text("Cosa non è corretto?") },
+                    title = { Text(stringResource(Strings.Screen.Insight.feedbackDialogTitle)) },
                     text = {
                         OutlinedTextField(
                             value = correctionText,
                             onValueChange = { correctionText = it },
-                            placeholder = { Text("Descrivi cosa dovrebbe essere migliorato...") },
+                            placeholder = { Text(stringResource(Strings.Screen.Insight.feedbackPlaceholder)) },
                             minLines = 3,
                             maxLines = 6,
                             modifier = Modifier.fillMaxWidth()
@@ -211,7 +213,7 @@ fun InsightScreen(
                             },
                             enabled = correctionText.isNotBlank()
                         ) {
-                            Text("Invia")
+                            Text(stringResource(Strings.Screen.Insight.feedbackSend))
                         }
                     },
                     dismissButton = {
@@ -219,7 +221,7 @@ fun InsightScreen(
                             viewModel.onIntent(InsightContract.Intent.ShowCorrectionDialog(false))
                             correctionText = ""
                         }) {
-                            Text("Annulla")
+                            Text(stringResource(Strings.Action.cancel))
                         }
                     }
                 )
@@ -629,7 +631,7 @@ private fun FeedbackCard(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Utile")
+                            Text(stringResource(Strings.Screen.Insight.feedbackUseful))
                         }
                         OutlinedButton(
                             onClick = { onFeedbackClick(false) },
@@ -642,7 +644,7 @@ private fun FeedbackCard(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Non utile")
+                            Text(stringResource(Strings.Screen.Insight.feedbackNotUseful))
                         }
                     }
                 }

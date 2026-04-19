@@ -45,6 +45,7 @@ import com.lifo.util.model.AvatarStatus
 import org.jetbrains.compose.resources.stringResource
 import com.lifo.ui.resources.Res
 import com.lifo.ui.resources.*
+import com.lifo.ui.i18n.Strings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -195,7 +196,7 @@ private fun AvatarCard(
                 }
                 if (avatar.voiceId.isNotBlank()) {
                     Text(
-                        text = "Voce: ${avatar.voiceId}",
+                        text = stringResource(Strings.Screen.Avatar.voiceLabel, avatar.voiceId),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

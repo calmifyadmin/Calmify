@@ -6,7 +6,7 @@
 
 ## Milestones macro (2026-04-19)
 - [x] **Level 1 KMP REST (2026-04-18)** — 36/36 repos migrate, server Cloud Run operational, smoke E2E 91/92 verdi
-- [~] **Sprint i18n pre-Level 3 (~5-6 gg, Fase A→C.3 DONE 2026-04-19)** — EN default + 12 lingue + common keys + home (37) + search + social-profile (22) + composer/messaging/thread-detail (22). Total: 92 keys × 12 lang + ~84 hardcoded migrati. Next: Fase C.4 (avatar-creator + insight + meditation). Vedi `memory/i18n_strategy.md`
+- [~] **Sprint i18n pre-Level 3 (~5-6 gg, Fase A→C.4 DONE 2026-04-19)** — Cumulative: 102 keys × 12 lang + ~106 hardcoded migrati. Modules covered: home, search, social-profile, composer, messaging, thread-detail, avatar-creator, insight, meditation. Next: Fase C.5 (settings + habits + chat + SnapshotScreen + tail). Vedi `memory/i18n_strategy.md`
 - [ ] **Level 3 iOS + Web** — targets KMP aggiuntivi (stimato ~25 gg dopo sprint i18n). Vedi `memory/kmp_action_blocks.md`
 
 ## Legenda

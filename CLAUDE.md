@@ -182,7 +182,8 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
   - **Fase C.1 DONE 2026-04-19** (home migration): 29 new keys × 12 lang + ~37 hardcoded migrati su 11 home file. `Strings.Screen.Home` facade popolata. Full app compile verde. Skip: SnapshotScreen.kt (separate commit), "!" decorativi, @Preview.
   - **Fase C.2 DONE 2026-04-19** (search + social-profile): 24 new keys × 12 lang + ~22 hardcoded migrati su SearchScreen, EditProfileScreen, SocialProfileScreen, FollowListScreen. `Strings.Screen.Search`/`SocialProfile` + `Strings.SharedA11y` popolati. Full compile verde.
   - **Fase C.3 DONE 2026-04-19** (composer + messaging + thread-detail): 25 new keys × 12 lang + ~22 hardcoded migrati su ComposerScreen, ChatRoomScreen, ConversationListScreen, ThreadDetailScreen. `Strings.Screen.Composer`/`Messaging`/`ThreadDetail` popolati. Visibility.label() refactored a labelKey() (StringResource-based). Full compile verde.
-  - **Fasi residue**: C tail (~58 strings su avatar-creator + insight/meditation/humanoid + settings/habits/chat + SnapshotScreen + altro), D (Noto fonts bundle + RTL/CJK verify + cleanup values-en/), E (docs+commit).
+  - **Fase C.4 DONE 2026-04-19** (avatar-creator + insight + meditation): 24 new keys × 12 lang + ~22 hardcoded migrati su CreationProgressScreen (8 stati pipeline), AvatarListScreen, EmotionalSection/PersonalitySection/VoiceSection (5 headers), InsightScreen (6 dialog/buttons), MeditationScreen (4). `Strings.Screen.Avatar`/`Insight`/`Meditation` popolati. Full compile verde.
+  - **Fasi residue**: C.5 (~36 strings su settings/habits/chat + SnapshotScreen + tail), D (Noto fonts bundle + RTL/CJK verify + cleanup values-en/), E (docs+commit).
   - **Post-sprint**: iOS + Web ereditano automaticamente tutte le 12 lingue (Compose Resources e' KMP-native).
 
 - **Deploy workflow consolidato** (rule of thumb):

@@ -20,6 +20,7 @@ import com.lifo.util.model.AttachmentStyle
 import org.jetbrains.compose.resources.stringResource
 import com.lifo.ui.resources.Res
 import com.lifo.ui.resources.*
+import com.lifo.ui.i18n.Strings
 
 @Composable
 fun EmotionalSection(
@@ -40,7 +41,7 @@ fun EmotionalSection(
 
         // Attachment Style
         Text(
-            text = "Stile di attaccamento",
+            text = stringResource(Strings.Screen.Avatar.attachmentStyle),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = 8.dp, bottom = 8.dp),
         )

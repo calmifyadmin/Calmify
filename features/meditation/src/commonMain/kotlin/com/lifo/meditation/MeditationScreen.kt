@@ -40,9 +40,11 @@ import com.lifo.ui.tutorial.InfoTooltip
 import com.lifo.util.model.BreathingPattern
 import com.lifo.util.model.MeditationType
 import kotlinx.coroutines.delay
+import com.lifo.ui.i18n.Strings
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -128,7 +130,7 @@ private fun SetupContent(state: MeditationContract.State, onIntent: (MeditationC
                     onClick = { onIntent(MeditationContract.Intent.RetryLoadStats) },
                     shape = RoundedCornerShape(20.dp)
                 ) {
-                    Text("Riprova")
+                    Text(stringResource(Strings.Action.retry))
                 }
             }
         }
@@ -187,7 +189,7 @@ private fun SetupContent(state: MeditationContract.State, onIntent: (MeditationC
         ) {
             Icon(Icons.Default.PlayArrow, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text("Inizia la pratica", style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(Strings.Screen.Meditation.start), style = MaterialTheme.typography.labelLarge)
         }
 
         Spacer(Modifier.height(16.dp))
@@ -995,7 +997,7 @@ private fun CompletedContent(
                         value = state.postNote,
                         onValueChange = { onIntent(MeditationContract.Intent.SetPostNote(it)) },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Scrivi le tue sensazioni... (opzionale)") },
+                        placeholder = { Text(stringResource(Strings.Screen.Meditation.notesPlaceholder)) },
                         minLines = 3,
                         maxLines = 5,
                         shape = RoundedCornerShape(16.dp),
@@ -1024,7 +1026,7 @@ private fun CompletedContent(
             } else {
                 Icon(Icons.Default.Check, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Salva sessione", style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(Strings.Screen.Meditation.saveSession), style = MaterialTheme.typography.labelLarge)
             }
         }
 
@@ -1032,7 +1034,7 @@ private fun CompletedContent(
             onIntent(MeditationContract.Intent.DiscardSession)
             onBackPressed()
         }) {
-            Text("Scarta e torna indietro")
+            Text(stringResource(Strings.Screen.Meditation.discardBack))
         }
 
         Spacer(Modifier.height(16.dp))
