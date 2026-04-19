@@ -647,4 +647,22 @@
     <!-- Generic error messages — added 2026-04-19 -->
     <string name="error_loading">Impossibile caricare i dati</string>
     <string name="error_connection">Verifica la connessione</string>
+
+    <!-- ============================================================ -->
+    <!-- i18n Phase B (2026-04-19) — common actions/errors/states/a11y -->
+    <!-- ============================================================ -->
+    <string name="action_continue">Continua</string>
+    <string name="action_edit">Modifica</string>
+    <!-- error_generic already defined above; reused via Strings.Error.generic -->
+    <string name="error_unauthorized">Non hai accesso</string>
+    <string name="error_validation">Controlla i dati inseriti</string>
+    <string name="error_rate_limit">Troppi tentativi, riprova più tardi</string>
+    <string name="state_loading">Caricamento…</string>
+    <string name="state_empty">Ancora nulla qui</string>
+    <string name="state_offline">Sei offline</string>
+    <string name="a11y_close">Chiudi</string>
+    <string name="a11y_menu">Menu</string>
+    <string name="a11y_user_profile">Profilo utente</string>
+    <string name="a11y_back">Torna indietro</string>
+    <string name="a11y_search">Cerca</string>
 </resources>

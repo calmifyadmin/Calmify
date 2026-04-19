@@ -36,4 +36,20 @@
     <string name="error_loading">تعذر تحميل البيانات</string>
     <string name="error_connection">تحقق من اتصالك</string>
 
+    <!-- i18n Phase B (2026-04-19) — common actions/errors/states/a11y -->
+    <string name="action_continue">متابعة</string>
+    <string name="action_edit">تعديل</string>
+    <string name="error_generic">حدث خطأ ما</string>
+    <string name="error_unauthorized">لا تملك صلاحية الوصول</string>
+    <string name="error_validation">يرجى التحقق من المدخلات</string>
+    <string name="error_rate_limit">محاولات كثيرة، حاول لاحقاً</string>
+    <string name="state_loading">جارٍ التحميل…</string>
+    <string name="state_empty">لا شيء هنا بعد</string>
+    <string name="state_offline">أنت غير متصل</string>
+    <string name="a11y_close">إغلاق</string>
+    <string name="a11y_menu">القائمة</string>
+    <string name="a11y_user_profile">الملف الشخصي</string>
+    <string name="a11y_back">رجوع</string>
+    <string name="a11y_search">بحث</string>
+
 </resources>

@@ -28,4 +28,20 @@
     <string name="error_loading">데이터를 불러올 수 없음</string>
     <string name="error_connection">연결을 확인하세요</string>
 
+    <!-- i18n Phase B (2026-04-19) — common actions/errors/states/a11y -->
+    <string name="action_continue">계속</string>
+    <string name="action_edit">편집</string>
+    <string name="error_generic">문제가 발생했습니다</string>
+    <string name="error_unauthorized">접근 권한이 없습니다</string>
+    <string name="error_validation">입력 내용을 확인하세요</string>
+    <string name="error_rate_limit">시도가 너무 많습니다. 나중에 다시 시도하세요</string>
+    <string name="state_loading">로딩 중…</string>
+    <string name="state_empty">아직 아무것도 없습니다</string>
+    <string name="state_offline">오프라인 상태입니다</string>
+    <string name="a11y_close">닫기</string>
+    <string name="a11y_menu">메뉴</string>
+    <string name="a11y_user_profile">사용자 프로필</string>
+    <string name="a11y_back">뒤로</string>
+    <string name="a11y_search">검색</string>
+
 </resources>

@@ -28,4 +28,20 @@
     <string name="error_loading">ไม่สามารถโหลดข้อมูลได้</string>
     <string name="error_connection">ตรวจสอบการเชื่อมต่อ</string>
 
+    <!-- i18n Phase B (2026-04-19) — common actions/errors/states/a11y -->
+    <string name="action_continue">ดำเนินการต่อ</string>
+    <string name="action_edit">แก้ไข</string>
+    <string name="error_generic">เกิดข้อผิดพลาด</string>
+    <string name="error_unauthorized">คุณไม่มีสิทธิ์เข้าถึง</string>
+    <string name="error_validation">กรุณาตรวจสอบข้อมูลที่กรอก</string>
+    <string name="error_rate_limit">พยายามมากเกินไป ลองใหม่ภายหลัง</string>
+    <string name="state_loading">กำลังโหลด…</string>
+    <string name="state_empty">ยังไม่มีอะไรที่นี่</string>
+    <string name="state_offline">คุณออฟไลน์อยู่</string>
+    <string name="a11y_close">ปิด</string>
+    <string name="a11y_menu">เมนู</string>
+    <string name="a11y_user_profile">โปรไฟล์ผู้ใช้</string>
+    <string name="a11y_back">กลับ</string>
+    <string name="a11y_search">ค้นหา</string>
+
 </resources>

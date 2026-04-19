@@ -6,7 +6,7 @@
 
 ## Milestones macro (2026-04-19)
 - [x] **Level 1 KMP REST (2026-04-18)** — 36/36 repos migrate, server Cloud Run operational, smoke E2E 91/92 verdi
-- [~] **Sprint i18n pre-Level 3 (~5-6 gg, Fase A + A' + A'' DONE 2026-04-19)** — EN default + 12 lingue ALL SCAFFOLDED (6 new: AR/ZH/JA/KO/HI/TH, baseline keys per ognuna) + Detekt + typed `Strings` facade. Next: Fase B (40 common actions × 12 lang). Vedi `memory/i18n_strategy.md`
+- [~] **Sprint i18n pre-Level 3 (~5-6 gg, Fase A + A' + A'' + B DONE 2026-04-19)** — EN default + 12 lingue ALL SCAFFOLDED + common keys populated + Strings facade Action/Error/State/A11y ready + HomeTopBar showcase migration. Next: Fase C (~139 strings per-module × 12 lang). Vedi `memory/i18n_strategy.md`
 - [ ] **Level 3 iOS + Web** — targets KMP aggiuntivi (stimato ~25 gg dopo sprint i18n). Vedi `memory/kmp_action_blocks.md`
 
 ## Legenda

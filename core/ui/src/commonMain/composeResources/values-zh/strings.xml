@@ -28,4 +28,20 @@
     <string name="error_loading">无法加载数据</string>
     <string name="error_connection">检查您的连接</string>
 
+    <!-- i18n Phase B (2026-04-19) — common actions/errors/states/a11y -->
+    <string name="action_continue">继续</string>
+    <string name="action_edit">编辑</string>
+    <string name="error_generic">出错了</string>
+    <string name="error_unauthorized">无权访问</string>
+    <string name="error_validation">请检查输入内容</string>
+    <string name="error_rate_limit">尝试次数过多，请稍后再试</string>
+    <string name="state_loading">加载中…</string>
+    <string name="state_empty">这里还没有内容</string>
+    <string name="state_offline">您已离线</string>
+    <string name="a11y_close">关闭</string>
+    <string name="a11y_menu">菜单</string>
+    <string name="a11y_user_profile">用户资料</string>
+    <string name="a11y_back">返回</string>
+    <string name="a11y_search">搜索</string>
+
 </resources>

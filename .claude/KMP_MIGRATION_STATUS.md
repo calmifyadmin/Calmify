@@ -6,7 +6,7 @@
 ## STATUS 2026-04-19
 
 **Level 1 KMP REST**: ✅ **DEPLOYED** (2026-04-18) — 36/36 repos, server Cloud Run live, smoke E2E 91/92 verdi.
-**Sprint i18n**: 🚧 **IN PROGRESS — Fase A + A' + A'' DONE 2026-04-19** (pre-Level 3, ~5-6 gg totali). Scaffold: Strings facade + Helpers + LocaleController (12 lang) + Detekt wired. Default lang switched IT→EN; 14-key drift fixed. 6 new locale folders (AR/ZH/JA/KO/HI/TH) scaffolded with baseline keys. Next: Fase B (40 common actions × 12 lang). Vedi `memory/i18n_strategy.md`.
+**Sprint i18n**: 🚧 **IN PROGRESS — Fase A + A' + A'' + B DONE 2026-04-19** (pre-Level 3, ~5-6 gg totali). Scaffold: Strings facade + Helpers + LocaleController (12 lang) + Detekt wired. Default lang switched IT→EN; 14-key drift fixed. 6 new locale folders (AR/ZH/JA/KO/HI/TH) scaffolded. Fase B: 14 nuove chiavi common × 12 lang + Strings facade populated + HomeTopBar showcase migration. Next: Fase C (~139 strings per-module × 12 lang). Vedi `memory/i18n_strategy.md`.
 **Level 3 (iOS + Web)**: 🔓 **UNBLOCKED** ma parte solo DOPO sprint i18n. Vedi `memory/kmp_action_blocks.md`.
 
 ## Strategia data layer: EVOLUTA da Option C → Server-Mediated

@@ -602,4 +602,22 @@
     <string name="error_loading">Unable to load data</string>
     <string name="error_connection">Check your connection</string>
 
+    <!-- ============================================================ -->
+    <!-- i18n Phase B (2026-04-19) — common actions/errors/states/a11y -->
+    <!-- ============================================================ -->
+    <string name="action_continue">Continue</string>
+    <string name="action_edit">Edit</string>
+    <!-- error_generic already defined above; reused via Strings.Error.generic -->
+    <string name="error_unauthorized">You don\'t have access</string>
+    <string name="error_validation">Please check your input</string>
+    <string name="error_rate_limit">Too many attempts, try again later</string>
+    <string name="state_loading">Loading…</string>
+    <string name="state_empty">Nothing here yet</string>
+    <string name="state_offline">You\'re offline</string>
+    <string name="a11y_close">Close</string>
+    <string name="a11y_menu">Menu</string>
+    <string name="a11y_user_profile">User profile</string>
+    <string name="a11y_back">Go back</string>
+    <string name="a11y_search">Search</string>
+
 </resources>

@@ -43,36 +43,47 @@ object Strings {
         val delete: StringResource get() = Res.string.delete
         val retry: StringResource get() = Res.string.retry
         val back: StringResource get() = Res.string.back
+        val continue_: StringResource get() = Res.string.action_continue  // `continue` is a reserved word
+        val edit: StringResource get() = Res.string.action_edit
+        val add: StringResource get() = Res.string.add          // pre-existing key
+        val remove: StringResource get() = Res.string.remove    // pre-existing key
+        val share: StringResource get() = Res.string.share      // pre-existing key
     }
 
     /**
      * Error messages shown in UI (snackbars, dialogs, inline).
      * Do NOT use for exceptions logged — those stay as raw strings.
-     *
-     * TODO(i18n phase B): populate with error_* keys after migration pass.
      */
     object Error {
-        // Populated incrementally as hardcoded errors are migrated from features/*.
+        val generic: StringResource get() = Res.string.error_generic
+        val unauthorized: StringResource get() = Res.string.error_unauthorized
+        val validation: StringResource get() = Res.string.error_validation
+        val rateLimit: StringResource get() = Res.string.error_rate_limit
+        val loading: StringResource get() = Res.string.error_loading       // pre-existing
+        val connection: StringResource get() = Res.string.error_connection // pre-existing
     }
 
     /**
-     * UI states (loading, empty, error placeholders).
-     *
-     * TODO(i18n phase B): populate with state_* keys after migration pass.
+     * UI states (loading, empty, offline placeholders).
      */
     object State {
-        // Populated incrementally.
+        val loading: StringResource get() = Res.string.state_loading
+        val empty: StringResource get() = Res.string.state_empty
+        val offline: StringResource get() = Res.string.state_offline
+        val noResults: StringResource get() = Res.string.no_results        // pre-existing
     }
 
     /**
      * Accessibility contentDescription strings.
      * All icon/image contentDescription MUST come from here — never hardcoded,
      * never English-only. Screen readers read these.
-     *
-     * TODO(i18n phase B): populate with a11y_* keys after migration pass.
      */
     object A11y {
-        // Populated incrementally.
+        val close: StringResource get() = Res.string.a11y_close
+        val menu: StringResource get() = Res.string.a11y_menu
+        val userProfile: StringResource get() = Res.string.a11y_user_profile
+        val back: StringResource get() = Res.string.a11y_back
+        val search: StringResource get() = Res.string.a11y_search
     }
 
     /**

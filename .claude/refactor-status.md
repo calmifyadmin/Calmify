@@ -3,10 +3,10 @@
 > Questo file viene letto da Jarvis all'inizio di ogni sessione.
 > Aggiornato automaticamente dopo ogni operazione completata.
 
-## STATO ATTUALE 2026-04-19 (Fase A + A' + A'' i18n DONE)
+## STATO ATTUALE 2026-04-19 (Fase A + A' + A'' + B i18n DONE)
 
 **Level 1 KMP REST CHIUSO + DEPLOYED**. Smoke test E2E 91/92 verdi.
-**Sprint i18n in corso**: Fase A (Strings facade + AppText helpers + LocaleController 12 lang + Detekt) DONE. Fase A' (default IT→EN switch + values-it/ + 14-key drift fix) DONE. Fase A'' (6 new locale folders AR/ZH/JA/KO/HI/TH baseline + font README scaffold) DONE. Full app compile verde. Next: Fase B (40 common actions × 12 lang). Sprint totale stimato ~5-6 gg con 12 lingue.
+**Sprint i18n in corso**: Fase A (Strings facade + AppText helpers + LocaleController 12 lang + Detekt) DONE. Fase A' (default IT→EN switch + values-it/ + 14-key drift fix) DONE. Fase A'' (6 new locale folders AR/ZH/JA/KO/HI/TH baseline + font README scaffold) DONE. Fase B (14 new common keys × 12 lang + Strings facade populated + HomeTopBar 3 a11y showcase migration) DONE. Full app compile verde. Next: Fase C (~139 hardcoded per-module × 12 lang). Sprint totale stimato ~5-6 gg.
 Vedi `memory/i18n_strategy.md`, `memory/project_phase5_deploy_results.md`.
 
 ## EVENTO: Backend Audit (2026-04-10) — RISOLTO 2026-04-18

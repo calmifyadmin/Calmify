@@ -178,7 +178,8 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
   - **Fase A DONE 2026-04-19**: `core/ui/.../i18n/` scaffold — Strings.kt typed facade, AppText/LocalizedIconButton/LocalizedTextButton helpers, LocaleController con 12 SupportedLocale (AR isRtl=true), Detekt 1.23.7 wired. Compile green.
   - **Fase A' DONE 2026-04-19**: default language switched IT→EN. `values/` now EN (default), new `values-it/` per Italian, 14-key drift fixed (nav_* + error_*). `values-en/` preserved redundantly for safety. Full app compile green. I18N_GUIDE.md updated.
   - **Fase A'' DONE 2026-04-19**: 6 new locale folders creati (`values-ar/zh/ja/ko/hi/th/`) con baseline 15 chiavi ciascuno. Fallback automatico a EN per chiavi non tradotte. Font scaffold (`font/README.md`) — binaries Noto bundle in Fase D. AR isRtl=true tramite `LocalLayoutDirection`.
-  - **Fasi residue**: B (common actions ~40 × 12 lang, Gemini-assisted), C (per-module ~100 × 12 lang), D (bundle Noto fonts + RTL/CJK verify + delete redundant values-en/), E (docs+commit).
+  - **Fase B DONE 2026-04-19**: 14 nuove chiavi common (action_*, error_*, state_*, a11y_*) × 12 lingue. `Strings.Action/Error/State/A11y` facade popolata (niente piu' TODO). Showcase migration: `HomeTopBar.kt` 3 a11y hardcoded migrati. Full app compile verde.
+  - **Fasi residue**: C (per-module ~139 × 12 lang), D (bundle Noto fonts + RTL/CJK verify + delete redundant values-en/), E (docs+commit).
   - **Post-sprint**: iOS + Web ereditano automaticamente tutte le 12 lingue (Compose Resources e' KMP-native).
 
 - **Deploy workflow consolidato** (rule of thumb):

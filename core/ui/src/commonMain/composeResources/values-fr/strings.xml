@@ -587,4 +587,20 @@
     <string name="tutorial_profile_desc">Voyez comment vous avez évolué au fil du temps. Données, graphiques et réflexions sur votre voyage.</string>
     <string name="tutorial_social_title">La communauté</string>
     <string name="tutorial_social_desc">Connectez-vous avec d\'autres explorateurs intérieurs. Partagez ce que vous souhaitez, gardez le reste pour vous.</string>
+
+    <!-- i18n Phase B (2026-04-19) — common actions/errors/states/a11y -->
+    <string name="action_continue">Continuer</string>
+    <string name="action_edit">Modifier</string>
+    <!-- error_generic already defined above -->
+    <string name="error_unauthorized">Vous n\'avez pas accès</string>
+    <string name="error_validation">Vérifiez les données saisies</string>
+    <string name="error_rate_limit">Trop de tentatives, réessayez plus tard</string>
+    <string name="state_loading">Chargement…</string>
+    <string name="state_empty">Rien ici pour le moment</string>
+    <string name="state_offline">Vous êtes hors ligne</string>
+    <string name="a11y_close">Fermer</string>
+    <string name="a11y_menu">Menu</string>
+    <string name="a11y_user_profile">Profil utilisateur</string>
+    <string name="a11y_back">Retour</string>
+    <string name="a11y_search">Rechercher</string>
 </resources>

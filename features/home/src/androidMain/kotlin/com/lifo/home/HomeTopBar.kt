@@ -17,6 +17,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import coil3.compose.rememberAsyncImagePainter
+import com.lifo.ui.i18n.Strings
+import org.jetbrains.compose.resources.stringResource
 import com.maxkeppeker.sheets.core.models.base.rememberSheetState
 import com.maxkeppeler.sheets.calendar.CalendarDialog
 import com.maxkeppeler.sheets.calendar.models.CalendarConfig
@@ -54,7 +56,7 @@ fun HomeTopBar(
             }) {
                 Icon(
                     imageVector = Icons.Default.Menu,
-                    contentDescription = "Hamburger Menu Icon"
+                    contentDescription = stringResource(Strings.A11y.menu)
                 )
             }
         },
@@ -72,7 +74,7 @@ fun HomeTopBar(
                         error = painterResource(id = com.lifo.ui.R.drawable.google_logo_ic),
                         placeholder = painterResource(id = com.lifo.ui.R.drawable.google_logo_ic)
                     ),
-                    contentDescription = "User Profile Image",
+                    contentDescription = stringResource(Strings.A11y.userProfile),
                     modifier = Modifier
                         .padding(end = 8.dp)
                         .size(32.dp)
@@ -85,7 +87,7 @@ fun HomeTopBar(
                 IconButton(onClick = onDateReset) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Close Icon"
+                        contentDescription = stringResource(Strings.A11y.close)
                     )
                 }
             } else {

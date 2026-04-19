@@ -28,4 +28,20 @@
     <string name="error_loading">データを読み込めません</string>
     <string name="error_connection">接続を確認してください</string>
 
+    <!-- i18n Phase B (2026-04-19) — common actions/errors/states/a11y -->
+    <string name="action_continue">続ける</string>
+    <string name="action_edit">編集</string>
+    <string name="error_generic">エラーが発生しました</string>
+    <string name="error_unauthorized">アクセス権がありません</string>
+    <string name="error_validation">入力内容をご確認ください</string>
+    <string name="error_rate_limit">試行回数が多すぎます。後でもう一度お試しください</string>
+    <string name="state_loading">読み込み中…</string>
+    <string name="state_empty">まだ何もありません</string>
+    <string name="state_offline">オフラインです</string>
+    <string name="a11y_close">閉じる</string>
+    <string name="a11y_menu">メニュー</string>
+    <string name="a11y_user_profile">ユーザープロフィール</string>
+    <string name="a11y_back">戻る</string>
+    <string name="a11y_search">検索</string>
+
 </resources>

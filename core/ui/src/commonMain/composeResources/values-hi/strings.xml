@@ -28,4 +28,20 @@
     <string name="error_loading">डेटा लोड नहीं हो सका</string>
     <string name="error_connection">अपना कनेक्शन जांचें</string>
 
+    <!-- i18n Phase B (2026-04-19) — common actions/errors/states/a11y -->
+    <string name="action_continue">जारी रखें</string>
+    <string name="action_edit">संपादित करें</string>
+    <string name="error_generic">कुछ गलत हो गया</string>
+    <string name="error_unauthorized">आपको पहुंच नहीं है</string>
+    <string name="error_validation">कृपया जानकारी जांचें</string>
+    <string name="error_rate_limit">बहुत अधिक प्रयास, बाद में फिर से प्रयास करें</string>
+    <string name="state_loading">लोड हो रहा है…</string>
+    <string name="state_empty">अभी यहाँ कुछ नहीं है</string>
+    <string name="state_offline">आप ऑफ़लाइन हैं</string>
+    <string name="a11y_close">बंद करें</string>
+    <string name="a11y_menu">मेनू</string>
+    <string name="a11y_user_profile">उपयोगकर्ता प्रोफ़ाइल</string>
+    <string name="a11y_back">वापस</string>
+    <string name="a11y_search">खोज</string>
+
 </resources>
