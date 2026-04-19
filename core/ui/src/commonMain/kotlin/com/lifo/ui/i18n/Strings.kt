@@ -31,6 +31,22 @@ object Strings {
         val name: StringResource get() = Res.string.app_name
     }
 
+    /** Navigation labels (drawer + bottom bar). Reused as screen titles when applicable. */
+    object Nav {
+        val home: StringResource get() = Res.string.nav_home
+        val activity: StringResource get() = Res.string.nav_activity
+        val settings: StringResource get() = Res.string.nav_settings
+        val write: StringResource get() = Res.string.nav_write
+        val profile: StringResource get() = Res.string.nav_profile
+        val avatar: StringResource get() = Res.string.nav_avatar
+        val feed: StringResource get() = Res.string.nav_feed
+        val journal: StringResource get() = Res.string.nav_journal
+        val aiChat: StringResource get() = Res.string.nav_ai_chat
+        val community: StringResource get() = Res.string.nav_community
+        val journey: StringResource get() = Res.string.nav_journey
+        val garden: StringResource get() = Res.string.nav_garden
+    }
+
     /**
      * Reusable action verbs (button labels, menu items).
      * These are generic — specific actions belong in their screen group.
@@ -210,6 +226,42 @@ object Strings {
             val discardBack: StringResource get() = Res.string.screen_meditation_discard_back
         }
 
+        /** Snapshot wellness onboarding screen. */
+        object Snapshot {
+            val momentTitle: StringResource get() = Res.string.screen_snapshot_moment_title
+            val momentSubtitle: StringResource get() = Res.string.screen_snapshot_moment_subtitle
+            val whyImportant: StringResource get() = Res.string.screen_snapshot_why_important
+            val whySelfAwareness: StringResource get() = Res.string.screen_snapshot_why_self_awareness
+            val whyTracking: StringResource get() = Res.string.screen_snapshot_why_tracking
+            val whyInsights: StringResource get() = Res.string.screen_snapshot_why_insights
+            val howWorks: StringResource get() = Res.string.screen_snapshot_how_works
+            val dataPrivate: StringResource get() = Res.string.screen_snapshot_data_private
+            val dataPrivateDetail: StringResource get() = Res.string.screen_snapshot_data_private_detail
+            val addMore: StringResource get() = Res.string.screen_snapshot_add_more
+            val addMorePlaceholder: StringResource get() = Res.string.screen_snapshot_add_more_placeholder
+            val start: StringResource get() = Res.string.screen_snapshot_start
+            val complete: StringResource get() = Res.string.screen_snapshot_complete
+            val next: StringResource get() = Res.string.screen_snapshot_next
+        }
+
+        /** Settings feature — small misc keys. */
+        object Settings {
+            val selectLanguage: StringResource get() = Res.string.screen_settings_select_language
+        }
+
+        /** Chat feature — toast + voice button labels. */
+        object Chat {
+            val copiedClipboard: StringResource get() = Res.string.screen_chat_copied_clipboard
+            val listen: StringResource get() = Res.string.screen_chat_listen
+            val stopVoice: StringResource get() = Res.string.screen_chat_stop_voice
+        }
+
+        /** Humanoid (avatar viewer) feature — buttons + titles. */
+        object Humanoid {
+            val create: StringResource get() = Res.string.screen_humanoid_create
+            val loadDemo: StringResource get() = Res.string.screen_humanoid_load_demo
+        }
+
         /** Thread Detail feature — thread view with replies. */
         object ThreadDetail {
             val replyingTo: StringResource get() = Res.string.screen_thread_detail_replying_to
@@ -234,5 +286,11 @@ object Strings {
     // Shared a11y across multiple features
     object SharedA11y {
         val verifiedBadge: StringResource get() = Res.string.a11y_verified_badge
+        val reply: StringResource get() = Res.string.a11y_reply
+        val repost: StringResource get() = Res.string.a11y_repost
+        val share: StringResource get() = Res.string.a11y_share
+        val options: StringResource get() = Res.string.a11y_options
+        val copyCode: StringResource get() = Res.string.a11y_copy_code
+        val appLogo: StringResource get() = Res.string.a11y_app_logo
     }
 }

@@ -723,4 +723,36 @@
     <string name="screen_meditation_notes_placeholder">Schreibe deine Empfindungen… (optional)</string>
     <string name="screen_meditation_save_session">Sitzung speichern</string>
     <string name="screen_meditation_discard_back">Verwerfen und zurück</string>
+
+    <!-- i18n Phase C.5 / Snapshot wellness screen (2026-04-19) -->
+    <string name="screen_snapshot_moment_title">Dein Moment der Achtsamkeit</string>
+    <string name="screen_snapshot_moment_subtitle">Nimm dir 2 Minuten Zeit, um zu reflektieren</string>
+    <string name="screen_snapshot_why_important">Warum ist es wichtig?</string>
+    <string name="screen_snapshot_why_self_awareness">Selbsterkenntnis</string>
+    <string name="screen_snapshot_why_tracking">Verfolgung im Zeitverlauf</string>
+    <string name="screen_snapshot_why_insights">Personalisierte Insights</string>
+    <string name="screen_snapshot_how_works">So funktioniert\'s</string>
+    <string name="screen_snapshot_data_private">Deine Daten sind privat</string>
+    <string name="screen_snapshot_data_private_detail">Antworten sind nur für dich sichtbar und werden für deine Insights verwendet.</string>
+    <string name="screen_snapshot_add_more">Möchtest du etwas hinzufügen?</string>
+    <string name="screen_snapshot_add_more_placeholder">Schreibe frei eine Reflexion…</string>
+    <string name="screen_snapshot_start">Fragebogen starten</string>
+    <string name="screen_snapshot_complete">Fragebogen abschließen</string>
+    <string name="screen_snapshot_next">Weiter</string>
+
+    <!-- i18n Phase C.5 / Settings + Chat + Humanoid (2026-04-19) -->
+    <string name="screen_settings_select_language">Sprache auswählen</string>
+    <string name="screen_chat_copied_clipboard">In Zwischenablage kopiert</string>
+    <string name="screen_chat_listen">Anhören</string>
+    <string name="screen_chat_stop_voice">Stimme stoppen</string>
+    <string name="screen_humanoid_create">Avatar erstellen</string>
+    <string name="screen_humanoid_load_demo">Demo-Avatar laden</string>
+
+    <!-- i18n Phase C.5 / a11y shared icons (social-ui + app) -->
+    <string name="a11y_reply">Antworten</string>
+    <string name="a11y_repost">Reposten</string>
+    <string name="a11y_share">Teilen</string>
+    <string name="a11y_options">Optionen</string>
+    <string name="a11y_copy_code">Code kopieren</string>
+    <string name="a11y_app_logo">Calmify-Logo</string>
 </resources>

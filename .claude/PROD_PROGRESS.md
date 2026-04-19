@@ -6,7 +6,7 @@
 
 ## Milestones macro (2026-04-19)
 - [x] **Level 1 KMP REST (2026-04-18)** — 36/36 repos migrate, server Cloud Run operational, smoke E2E 91/92 verdi
-- [~] **Sprint i18n pre-Level 3 (~5-6 gg, Fase A→C.4 DONE 2026-04-19)** — Cumulative: 102 keys × 12 lang + ~106 hardcoded migrati. Modules covered: home, search, social-profile, composer, messaging, thread-detail, avatar-creator, insight, meditation. Next: Fase C.5 (settings + habits + chat + SnapshotScreen + tail). Vedi `memory/i18n_strategy.md`
+- [~] **Sprint i18n pre-Level 3 (~5-6 gg, Fase A→C.5 DONE 2026-04-19, Fase C COMPLETE)** — Cumulative: 130 keys × 12 lang + ~128 hardcoded migrati su 27 file Kotlin. Tutti i moduli per-module migrati: home, search, social-profile, composer, messaging, thread-detail, avatar-creator, insight, meditation, snapshot, settings, chat, humanoid + Nav facade. Next: Fase D (Noto fonts bundle + RTL/CJK verify + cleanup). Vedi `memory/i18n_strategy.md`
 - [ ] **Level 3 iOS + Web** — targets KMP aggiuntivi (stimato ~25 gg dopo sprint i18n). Vedi `memory/kmp_action_blocks.md`
 
 ## Legenda

@@ -183,7 +183,9 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
   - **Fase C.2 DONE 2026-04-19** (search + social-profile): 24 new keys × 12 lang + ~22 hardcoded migrati su SearchScreen, EditProfileScreen, SocialProfileScreen, FollowListScreen. `Strings.Screen.Search`/`SocialProfile` + `Strings.SharedA11y` popolati. Full compile verde.
   - **Fase C.3 DONE 2026-04-19** (composer + messaging + thread-detail): 25 new keys × 12 lang + ~22 hardcoded migrati su ComposerScreen, ChatRoomScreen, ConversationListScreen, ThreadDetailScreen. `Strings.Screen.Composer`/`Messaging`/`ThreadDetail` popolati. Visibility.label() refactored a labelKey() (StringResource-based). Full compile verde.
   - **Fase C.4 DONE 2026-04-19** (avatar-creator + insight + meditation): 24 new keys × 12 lang + ~22 hardcoded migrati su CreationProgressScreen (8 stati pipeline), AvatarListScreen, EmotionalSection/PersonalitySection/VoiceSection (5 headers), InsightScreen (6 dialog/buttons), MeditationScreen (4). `Strings.Screen.Avatar`/`Insight`/`Meditation` popolati. Full compile verde.
-  - **Fasi residue**: C.5 (~36 strings su settings/habits/chat + SnapshotScreen + tail), D (Noto fonts bundle + RTL/CJK verify + cleanup values-en/), E (docs+commit).
+  - **Fase C.5 DONE 2026-04-19** (snapshot + settings + chat + humanoid + nav facade): 28 new keys × 12 lang (336 entries) + ~22 hardcoded migrati. SnapshotScreen wellness onboarding (12 strings), Settings dialog, ChatBubble voice + ChatScreen toast (refactored non-composable to accept pre-resolved String), Humanoid 4 buttons. `Strings.Nav` aggiunto (12 nav labels). Full compile verde.
+  - **Fase C COMPLETE.** Cumulative C: 102 + 28 = 130 nuove keys × 12 lang + ~128 hardcoded migrati su 27 file Kotlin.
+  - **Fasi residue**: D (Noto fonts bundle + RTL/CJK verify + cleanup values-en/ + tail residuals), E (docs+commit).
   - **Post-sprint**: iOS + Web ereditano automaticamente tutte le 12 lingue (Compose Resources e' KMP-native).
 
 - **Deploy workflow consolidato** (rule of thumb):

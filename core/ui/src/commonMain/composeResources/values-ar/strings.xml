@@ -172,4 +172,36 @@
     <string name="screen_meditation_save_session">حفظ الجلسة</string>
     <string name="screen_meditation_discard_back">تجاهل والعودة</string>
 
+    <!-- i18n Phase C.5 / Snapshot wellness screen (2026-04-19) -->
+    <string name="screen_snapshot_moment_title">لحظة وعيك</string>
+    <string name="screen_snapshot_moment_subtitle">خصص دقيقتين للتأمل في ذاتك</string>
+    <string name="screen_snapshot_why_important">لماذا هو مهم؟</string>
+    <string name="screen_snapshot_why_self_awareness">الوعي الذاتي</string>
+    <string name="screen_snapshot_why_tracking">التتبع عبر الزمن</string>
+    <string name="screen_snapshot_why_insights">رؤى مخصصة</string>
+    <string name="screen_snapshot_how_works">كيف يعمل</string>
+    <string name="screen_snapshot_data_private">بياناتك خاصة</string>
+    <string name="screen_snapshot_data_private_detail">الإجابات مرئية لك فقط وتُستخدم لإنشاء رؤاك.</string>
+    <string name="screen_snapshot_add_more">هل تريد إضافة شيء؟</string>
+    <string name="screen_snapshot_add_more_placeholder">اكتب تأملاً بحرية…</string>
+    <string name="screen_snapshot_start">ابدأ الاستبيان</string>
+    <string name="screen_snapshot_complete">أكمل الاستبيان</string>
+    <string name="screen_snapshot_next">التالي</string>
+
+    <!-- i18n Phase C.5 / Settings + Chat + Humanoid (2026-04-19) -->
+    <string name="screen_settings_select_language">اختر اللغة</string>
+    <string name="screen_chat_copied_clipboard">تم النسخ إلى الحافظة</string>
+    <string name="screen_chat_listen">استمع</string>
+    <string name="screen_chat_stop_voice">إيقاف الصوت</string>
+    <string name="screen_humanoid_create">إنشاء صورة رمزية</string>
+    <string name="screen_humanoid_load_demo">تحميل صورة رمزية تجريبية</string>
+
+    <!-- i18n Phase C.5 / a11y shared icons (social-ui + app) -->
+    <string name="a11y_reply">رد</string>
+    <string name="a11y_repost">إعادة نشر</string>
+    <string name="a11y_share">مشاركة</string>
+    <string name="a11y_options">خيارات</string>
+    <string name="a11y_copy_code">نسخ الكود</string>
+    <string name="a11y_app_logo">شعار Calmify</string>
+
 </resources>

@@ -34,6 +34,7 @@ import com.lifo.util.model.ChatMessage
 import org.jetbrains.compose.resources.stringResource
 import com.lifo.ui.resources.Res
 import com.lifo.ui.resources.*
+import com.lifo.ui.i18n.Strings
 
 /**
  * Simplified chat bubble with integrated natural voice indicators
@@ -127,7 +128,7 @@ fun ChatBubble(
 
             if (isAi) {
                 DropdownMenuItem(
-                    text = { Text(if (isSpeaking) "Ferma voce" else "Ascolta") },
+                    text = { Text(stringResource(if (isSpeaking) Strings.Screen.Chat.stopVoice else Strings.Screen.Chat.listen)) },
                     onClick = {
                         haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onSpeak()

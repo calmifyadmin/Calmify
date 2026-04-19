@@ -8,9 +8,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.lifo.humanoid.presentation.components.FilamentView
+import com.lifo.ui.i18n.Strings
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.lifo.humanoid.presentation.components.FilamentView
 
 /**
  * Main Humanoid Avatar screen.
@@ -47,7 +49,7 @@ fun HumanoidScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Avatar") },
+                title = { Text(stringResource(Strings.Nav.avatar)) },
                 navigationIcon = {
                     IconButton(onClick = navigateBack) {
                         Icon(
@@ -93,7 +95,7 @@ fun HumanoidScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Button(onClick = { viewModel.loadDefaultAvatar() }) {
-                                Text("Riprova")
+                                Text(stringResource(Strings.Action.retry))
                             }
                         }
                     }
@@ -132,10 +134,10 @@ fun HumanoidScreen(
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Button(onClick = onCreateAvatar) {
-                                Text("Crea Avatar")
+                                Text(stringResource(Strings.Screen.Humanoid.create))
                             }
                             OutlinedButton(onClick = { viewModel.loadDefaultAvatar() }) {
-                                Text("Carica avatar demo")
+                                Text(stringResource(Strings.Screen.Humanoid.loadDemo))
                             }
                         }
                     }

@@ -164,4 +164,36 @@
     <string name="screen_meditation_save_session">세션 저장</string>
     <string name="screen_meditation_discard_back">취소하고 돌아가기</string>
 
+    <!-- i18n Phase C.5 / Snapshot wellness screen (2026-04-19) -->
+    <string name="screen_snapshot_moment_title">당신의 자각의 순간</string>
+    <string name="screen_snapshot_moment_subtitle">2분간 자신을 돌아보세요</string>
+    <string name="screen_snapshot_why_important">왜 중요한가요?</string>
+    <string name="screen_snapshot_why_self_awareness">자기 인식</string>
+    <string name="screen_snapshot_why_tracking">시간 추적</string>
+    <string name="screen_snapshot_why_insights">개인화된 인사이트</string>
+    <string name="screen_snapshot_how_works">작동 방식</string>
+    <string name="screen_snapshot_data_private">당신의 데이터는 비공개입니다</string>
+    <string name="screen_snapshot_data_private_detail">답변은 당신에게만 보이며 인사이트 생성에 사용됩니다.</string>
+    <string name="screen_snapshot_add_more">무언가 추가하시겠어요?</string>
+    <string name="screen_snapshot_add_more_placeholder">자유롭게 성찰을 적어보세요…</string>
+    <string name="screen_snapshot_start">설문 시작</string>
+    <string name="screen_snapshot_complete">설문 완료</string>
+    <string name="screen_snapshot_next">다음</string>
+
+    <!-- i18n Phase C.5 / Settings + Chat + Humanoid (2026-04-19) -->
+    <string name="screen_settings_select_language">언어 선택</string>
+    <string name="screen_chat_copied_clipboard">클립보드에 복사됨</string>
+    <string name="screen_chat_listen">듣기</string>
+    <string name="screen_chat_stop_voice">음성 중지</string>
+    <string name="screen_humanoid_create">아바타 만들기</string>
+    <string name="screen_humanoid_load_demo">데모 아바타 로드</string>
+
+    <!-- i18n Phase C.5 / a11y shared icons (social-ui + app) -->
+    <string name="a11y_reply">답글</string>
+    <string name="a11y_repost">리포스트</string>
+    <string name="a11y_share">공유</string>
+    <string name="a11y_options">옵션</string>
+    <string name="a11y_copy_code">코드 복사</string>
+    <string name="a11y_app_logo">Calmify 로고</string>
+
 </resources>

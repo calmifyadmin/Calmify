@@ -71,6 +71,7 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import com.lifo.ui.resources.Res
 import com.lifo.ui.resources.*
+import com.lifo.ui.i18n.Strings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -150,6 +151,7 @@ fun ChatScreen(
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
     val context = LocalContext.current
+    val copiedClipboardMessage = stringResource(Strings.Screen.Chat.copiedClipboard)
 
     // Get user info
     val userDisplayName = viewModel.getUserDisplayName()
@@ -359,7 +361,7 @@ fun ChatScreen(
                             },
                             onCopy = {
                                 haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                copyToClipboard(context, message.content)
+                                copyToClipboard(context, message.content, copiedClipboardMessage)
                             }
                         )
                     }
@@ -936,9 +938,9 @@ private fun LiveChatMuteUnmuteSection(
     }
 }
 
-private fun copyToClipboard(context: Context, text: String) {
+private fun copyToClipboard(context: Context, text: String, toastMessage: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     val clip = ClipData.newPlainText("Chat Message", text)
     clipboard.setPrimaryClip(clip)
-    Toast.makeText(context, "Copiato negli appunti", Toast.LENGTH_SHORT).show()
+    Toast.makeText(context, toastMessage, Toast.LENGTH_SHORT).show()
 }

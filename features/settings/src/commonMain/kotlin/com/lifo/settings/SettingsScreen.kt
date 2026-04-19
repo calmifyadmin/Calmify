@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.lifo.ui.i18n.Strings
 import com.lifo.ui.resources.*
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -652,7 +653,7 @@ private fun LanguageSection(
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
-            title = { Text("Seleziona lingua") },
+            title = { Text(stringResource(Strings.Screen.Settings.selectLanguage)) },
             text = {
                 Column {
                     languages.forEach { (code, flag, name) ->
@@ -690,7 +691,7 @@ private fun LanguageSection(
             },
             confirmButton = {
                 TextButton(onClick = { showDialog = false }) {
-                    Text("Chiudi")
+                    Text(stringResource(Strings.Action.close))
                 }
             }
         )

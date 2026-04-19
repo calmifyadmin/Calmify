@@ -31,6 +31,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.jetbrains.compose.resources.stringResource
 import com.lifo.ui.resources.Res
 import com.lifo.ui.resources.*
+import com.lifo.ui.i18n.Strings
 
 // ── Question definitions ─────────────────────────────────────────────────────
 
@@ -357,14 +358,14 @@ private fun IntroductionPage(modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Il Tuo Momento\ndi Consapevolezza",
+            text = stringResource(Strings.Screen.Snapshot.momentTitle),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Dedicati 2 minuti per fare il punto su come stai davvero.",
+            text = stringResource(Strings.Screen.Snapshot.momentSubtitle),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -380,27 +381,27 @@ private fun IntroductionPage(modifier: Modifier = Modifier) {
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(
-                    text = "Perche' e' importante?",
+                    text = stringResource(Strings.Screen.Snapshot.whyImportant),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 BenefitItem(
-                    title = "Autoconsapevolezza",
+                    title = stringResource(Strings.Screen.Snapshot.whySelfAwareness),
                     description = "Fermarsi a riflettere su come stai e' il primo passo " +
                         "per migliorare. Spesso non ci rendiamo conto di come ci sentiamo " +
                         "finche' non ce lo chiediamo esplicitamente."
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 BenefitItem(
-                    title = "Tracciamento nel tempo",
+                    title = stringResource(Strings.Screen.Snapshot.whyTracking),
                     description = "Ogni settimana costruisci un quadro sempre piu' completo " +
                         "del tuo benessere. Potrai vedere trend, progressi e aree su cui lavorare."
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 BenefitItem(
-                    title = "Insight personalizzati",
+                    title = stringResource(Strings.Screen.Snapshot.whyInsights),
                     description = "Le tue risposte vengono analizzate dall'AI per offrirti " +
                         "riflessioni psicologiche su misura: pattern emotivi, punti di forza " +
                         "e suggerimenti concreti."
@@ -419,7 +420,7 @@ private fun IntroductionPage(modifier: Modifier = Modifier) {
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(
-                    text = "Come funziona",
+                    text = stringResource(Strings.Screen.Snapshot.howWorks),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -454,15 +455,14 @@ private fun IntroductionPage(modifier: Modifier = Modifier) {
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(
-                    text = "I tuoi dati sono privati",
+                    text = stringResource(Strings.Screen.Snapshot.dataPrivate),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Le risposte sono visibili solo a te. Non esistono risposte " +
-                        "giuste o sbagliate — l'unica cosa che conta e' la tua onesta'.",
+                    text = stringResource(Strings.Screen.Snapshot.dataPrivateDetail),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                 )
@@ -621,7 +621,7 @@ private fun NotesPage(
         Spacer(modifier = Modifier.height(32.dp))
 
         Text(
-            text = "Vuoi aggiungere qualcosa?",
+            text = stringResource(Strings.Screen.Snapshot.addMore),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
@@ -631,7 +631,7 @@ private fun NotesPage(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Scrivi liberamente una riflessione, un pensiero o qualcosa che vuoi ricordare di questa settimana.",
+            text = stringResource(Strings.Screen.Snapshot.addMorePlaceholder),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -691,7 +691,7 @@ private fun BottomNavBar(
                 shape = MaterialTheme.shapes.large
             ) {
                 Text(
-                    "Inizia il Questionario",
+                    stringResource(Strings.Screen.Snapshot.start),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -714,7 +714,7 @@ private fun BottomNavBar(
                     )
                 } else {
                     Text(
-                        "Completa Questionario",
+                        stringResource(Strings.Screen.Snapshot.complete),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -735,7 +735,7 @@ private fun BottomNavBar(
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        "Avanti",
+                        stringResource(Strings.Screen.Snapshot.next),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )

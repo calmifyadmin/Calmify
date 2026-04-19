@@ -164,4 +164,36 @@
     <string name="screen_meditation_save_session">บันทึกเซสชัน</string>
     <string name="screen_meditation_discard_back">ทิ้งและย้อนกลับ</string>
 
+    <!-- i18n Phase C.5 / Snapshot wellness screen (2026-04-19) -->
+    <string name="screen_snapshot_moment_title">ช่วงเวลาแห่งการตระหนักรู้ของคุณ</string>
+    <string name="screen_snapshot_moment_subtitle">ใช้เวลา 2 นาทีเพื่อสำรวจตนเอง</string>
+    <string name="screen_snapshot_why_important">ทำไมจึงสำคัญ?</string>
+    <string name="screen_snapshot_why_self_awareness">การตระหนักรู้ตนเอง</string>
+    <string name="screen_snapshot_why_tracking">การติดตามตามเวลา</string>
+    <string name="screen_snapshot_why_insights">ข้อมูลเชิงลึกส่วนบุคคล</string>
+    <string name="screen_snapshot_how_works">วิธีการทำงาน</string>
+    <string name="screen_snapshot_data_private">ข้อมูลของคุณเป็นส่วนตัว</string>
+    <string name="screen_snapshot_data_private_detail">คำตอบมองเห็นได้เฉพาะคุณและใช้สร้างข้อมูลเชิงลึกของคุณ</string>
+    <string name="screen_snapshot_add_more">ต้องการเพิ่มอะไรไหม?</string>
+    <string name="screen_snapshot_add_more_placeholder">เขียนการสะท้อนความคิดอย่างอิสระ…</string>
+    <string name="screen_snapshot_start">เริ่มแบบสอบถาม</string>
+    <string name="screen_snapshot_complete">ทำแบบสอบถามเสร็จสิ้น</string>
+    <string name="screen_snapshot_next">ถัดไป</string>
+
+    <!-- i18n Phase C.5 / Settings + Chat + Humanoid (2026-04-19) -->
+    <string name="screen_settings_select_language">เลือกภาษา</string>
+    <string name="screen_chat_copied_clipboard">คัดลอกไปยังคลิปบอร์ดแล้ว</string>
+    <string name="screen_chat_listen">ฟัง</string>
+    <string name="screen_chat_stop_voice">หยุดเสียง</string>
+    <string name="screen_humanoid_create">สร้างอวตาร</string>
+    <string name="screen_humanoid_load_demo">โหลดอวตารตัวอย่าง</string>
+
+    <!-- i18n Phase C.5 / a11y shared icons (social-ui + app) -->
+    <string name="a11y_reply">ตอบกลับ</string>
+    <string name="a11y_repost">โพสต์ซ้ำ</string>
+    <string name="a11y_share">แชร์</string>
+    <string name="a11y_options">ตัวเลือก</string>
+    <string name="a11y_copy_code">คัดลอกโค้ด</string>
+    <string name="a11y_app_logo">โลโก้ Calmify</string>
+
 </resources>

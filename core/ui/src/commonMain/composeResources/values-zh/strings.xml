@@ -164,4 +164,36 @@
     <string name="screen_meditation_save_session">保存会话</string>
     <string name="screen_meditation_discard_back">放弃并返回</string>
 
+    <!-- i18n Phase C.5 / Snapshot wellness screen (2026-04-19) -->
+    <string name="screen_snapshot_moment_title">您的觉察时刻</string>
+    <string name="screen_snapshot_moment_subtitle">用 2 分钟来反思自己</string>
+    <string name="screen_snapshot_why_important">为什么重要？</string>
+    <string name="screen_snapshot_why_self_awareness">自我觉察</string>
+    <string name="screen_snapshot_why_tracking">长期追踪</string>
+    <string name="screen_snapshot_why_insights">个性化洞察</string>
+    <string name="screen_snapshot_how_works">如何运作</string>
+    <string name="screen_snapshot_data_private">您的数据是私密的</string>
+    <string name="screen_snapshot_data_private_detail">答案仅对您可见，用于生成您的洞察。</string>
+    <string name="screen_snapshot_add_more">想添加什么吗？</string>
+    <string name="screen_snapshot_add_more_placeholder">自由地写下反思…</string>
+    <string name="screen_snapshot_start">开始问卷</string>
+    <string name="screen_snapshot_complete">完成问卷</string>
+    <string name="screen_snapshot_next">下一步</string>
+
+    <!-- i18n Phase C.5 / Settings + Chat + Humanoid (2026-04-19) -->
+    <string name="screen_settings_select_language">选择语言</string>
+    <string name="screen_chat_copied_clipboard">已复制到剪贴板</string>
+    <string name="screen_chat_listen">收听</string>
+    <string name="screen_chat_stop_voice">停止语音</string>
+    <string name="screen_humanoid_create">创建头像</string>
+    <string name="screen_humanoid_load_demo">加载演示头像</string>
+
+    <!-- i18n Phase C.5 / a11y shared icons (social-ui + app) -->
+    <string name="a11y_reply">回复</string>
+    <string name="a11y_repost">转发</string>
+    <string name="a11y_share">分享</string>
+    <string name="a11y_options">选项</string>
+    <string name="a11y_copy_code">复制代码</string>
+    <string name="a11y_app_logo">Calmify 标志</string>
+
 </resources>

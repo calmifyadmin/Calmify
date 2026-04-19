@@ -164,4 +164,36 @@
     <string name="screen_meditation_save_session">सत्र सहेजें</string>
     <string name="screen_meditation_discard_back">रद्द करें और वापस जाएं</string>
 
+    <!-- i18n Phase C.5 / Snapshot wellness screen (2026-04-19) -->
+    <string name="screen_snapshot_moment_title">आपकी जागरूकता का क्षण</string>
+    <string name="screen_snapshot_moment_subtitle">अपने आप पर ध्यान देने के लिए 2 मिनट निकालें</string>
+    <string name="screen_snapshot_why_important">यह क्यों महत्वपूर्ण है?</string>
+    <string name="screen_snapshot_why_self_awareness">आत्म जागरूकता</string>
+    <string name="screen_snapshot_why_tracking">समय के साथ ट्रैकिंग</string>
+    <string name="screen_snapshot_why_insights">वैयक्तिकृत अंतर्दृष्टि</string>
+    <string name="screen_snapshot_how_works">यह कैसे काम करता है</string>
+    <string name="screen_snapshot_data_private">आपका डेटा निजी है</string>
+    <string name="screen_snapshot_data_private_detail">उत्तर केवल आपको दिखाई देते हैं और आपकी अंतर्दृष्टि बनाने के लिए उपयोग होते हैं।</string>
+    <string name="screen_snapshot_add_more">क्या आप कुछ जोड़ना चाहते हैं?</string>
+    <string name="screen_snapshot_add_more_placeholder">स्वतंत्र रूप से एक प्रतिबिंब लिखें…</string>
+    <string name="screen_snapshot_start">प्रश्नावली शुरू करें</string>
+    <string name="screen_snapshot_complete">प्रश्नावली पूरी करें</string>
+    <string name="screen_snapshot_next">अगला</string>
+
+    <!-- i18n Phase C.5 / Settings + Chat + Humanoid (2026-04-19) -->
+    <string name="screen_settings_select_language">भाषा चुनें</string>
+    <string name="screen_chat_copied_clipboard">क्लिपबोर्ड पर कॉपी किया गया</string>
+    <string name="screen_chat_listen">सुनें</string>
+    <string name="screen_chat_stop_voice">आवाज़ रोकें</string>
+    <string name="screen_humanoid_create">अवतार बनाएं</string>
+    <string name="screen_humanoid_load_demo">डेमो अवतार लोड करें</string>
+
+    <!-- i18n Phase C.5 / a11y shared icons (social-ui + app) -->
+    <string name="a11y_reply">जवाब</string>
+    <string name="a11y_repost">रिपोस्ट</string>
+    <string name="a11y_share">शेयर</string>
+    <string name="a11y_options">विकल्प</string>
+    <string name="a11y_copy_code">कोड कॉपी करें</string>
+    <string name="a11y_app_logo">Calmify लोगो</string>
+
 </resources>

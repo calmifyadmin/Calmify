@@ -164,4 +164,36 @@
     <string name="screen_meditation_save_session">セッションを保存</string>
     <string name="screen_meditation_discard_back">破棄して戻る</string>
 
+    <!-- i18n Phase C.5 / Snapshot wellness screen (2026-04-19) -->
+    <string name="screen_snapshot_moment_title">あなたの気づきの瞬間</string>
+    <string name="screen_snapshot_moment_subtitle">2分間、自分自身を見つめ直しましょう</string>
+    <string name="screen_snapshot_why_important">なぜ大切なのか？</string>
+    <string name="screen_snapshot_why_self_awareness">自己認識</string>
+    <string name="screen_snapshot_why_tracking">時系列での追跡</string>
+    <string name="screen_snapshot_why_insights">パーソナライズされたインサイト</string>
+    <string name="screen_snapshot_how_works">仕組み</string>
+    <string name="screen_snapshot_data_private">あなたのデータはプライベートです</string>
+    <string name="screen_snapshot_data_private_detail">回答はあなただけに表示され、インサイト生成に使用されます。</string>
+    <string name="screen_snapshot_add_more">何か追加しますか？</string>
+    <string name="screen_snapshot_add_more_placeholder">自由に振り返りを書く…</string>
+    <string name="screen_snapshot_start">アンケートを開始</string>
+    <string name="screen_snapshot_complete">アンケートを完了</string>
+    <string name="screen_snapshot_next">次へ</string>
+
+    <!-- i18n Phase C.5 / Settings + Chat + Humanoid (2026-04-19) -->
+    <string name="screen_settings_select_language">言語を選択</string>
+    <string name="screen_chat_copied_clipboard">クリップボードにコピーされました</string>
+    <string name="screen_chat_listen">聴く</string>
+    <string name="screen_chat_stop_voice">音声を停止</string>
+    <string name="screen_humanoid_create">アバターを作成</string>
+    <string name="screen_humanoid_load_demo">デモアバターを読み込む</string>
+
+    <!-- i18n Phase C.5 / a11y shared icons (social-ui + app) -->
+    <string name="a11y_reply">返信</string>
+    <string name="a11y_repost">リポスト</string>
+    <string name="a11y_share">共有</string>
+    <string name="a11y_options">オプション</string>
+    <string name="a11y_copy_code">コードをコピー</string>
+    <string name="a11y_app_logo">Calmify ロゴ</string>
+
 </resources>
