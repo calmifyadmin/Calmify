@@ -620,4 +620,37 @@
     <string name="a11y_back">Go back</string>
     <string name="a11y_search">Search</string>
 
+    <!-- ============================================================ -->
+    <!-- i18n Phase C / Home module (2026-04-19)                       -->
+    <!-- ============================================================ -->
+    <string name="screen_home_title">Diary</string>
+    <string name="screen_home_fab_write">Write</string>
+    <string name="a11y_home_new_diary">New diary</string>
+    <string name="a11y_home_date_picker">Select date</string>
+    <string name="screen_home_search_placeholder">Search diary entries and chats…</string>
+    <string name="screen_home_search_recent">Recent searches</string>
+    <string name="screen_home_search_type_hint">Start typing to search</string>
+    <string name="a11y_home_clear_search">Clear search</string>
+    <string name="a11y_home_remove_history">Remove from history</string>
+    <string name="screen_home_qa_talk_title">Talk to Eve</string>
+    <string name="screen_home_qa_talk_subtitle">Voice AI</string>
+    <string name="screen_home_qa_voice_assistant_subtitle">Your voice AI assistant</string>
+    <string name="screen_home_qa_write_title">Write</string>
+    <string name="screen_home_qa_write_subtitle">New diary</string>
+    <string name="screen_home_qa_wellbeing_title">Wellbeing Snapshot</string>
+    <string name="screen_home_qa_snapshot_label">Snapshot</string>
+    <string name="screen_home_community_likes">Likes</string>
+    <string name="screen_home_community_replies">Replies</string>
+    <string name="screen_home_community_photo_by">Photo by %1$s</string>
+    <string name="screen_home_signout_title">Sign Out</string>
+    <string name="screen_home_signout_message">Are you sure you want to sign out?</string>
+    <string name="screen_home_signout_progress">Signing out…</string>
+    <string name="screen_home_signout_failure">Failed to sign out. Please try again.</string>
+    <string name="screen_home_delete_all_title">Delete All Diaries</string>
+    <string name="screen_home_delete_all_message">This action cannot be undone. All your diaries will be permanently deleted.</string>
+    <string name="screen_home_delete_all_success">All diaries deleted successfully</string>
+    <string name="screen_home_topics_tooltip_title">What are recurring themes?</string>
+    <string name="screen_home_streak_tooltip_title">What is the daily streak?</string>
+    <string name="screen_home_diary_fallback_title">My Diary</string>
+
 </resources>

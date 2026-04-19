@@ -44,4 +44,35 @@
     <string name="a11y_back">返回</string>
     <string name="a11y_search">搜索</string>
 
+    <!-- i18n Phase C / Home module (2026-04-19) -->
+    <string name="screen_home_title">日记</string>
+    <string name="screen_home_fab_write">写作</string>
+    <string name="a11y_home_new_diary">新建日记</string>
+    <string name="a11y_home_date_picker">选择日期</string>
+    <string name="screen_home_search_placeholder">在日记和聊天中搜索…</string>
+    <string name="screen_home_search_recent">最近搜索</string>
+    <string name="screen_home_search_type_hint">开始输入以搜索</string>
+    <string name="a11y_home_clear_search">清除搜索</string>
+    <string name="a11y_home_remove_history">从历史记录中移除</string>
+    <string name="screen_home_qa_talk_title">与 Eve 对话</string>
+    <string name="screen_home_qa_talk_subtitle">语音 AI</string>
+    <string name="screen_home_qa_voice_assistant_subtitle">您的语音 AI 助手</string>
+    <string name="screen_home_qa_write_title">写作</string>
+    <string name="screen_home_qa_write_subtitle">新建日记</string>
+    <string name="screen_home_qa_wellbeing_title">Wellbeing Snapshot</string>
+    <string name="screen_home_qa_snapshot_label">快照</string>
+    <string name="screen_home_community_likes">赞</string>
+    <string name="screen_home_community_replies">回复</string>
+    <string name="screen_home_community_photo_by">照片来自 %1$s</string>
+    <string name="screen_home_signout_title">退出登录</string>
+    <string name="screen_home_signout_message">您确定要退出登录吗？</string>
+    <string name="screen_home_signout_progress">正在退出…</string>
+    <string name="screen_home_signout_failure">退出登录失败，请重试。</string>
+    <string name="screen_home_delete_all_title">删除所有日记</string>
+    <string name="screen_home_delete_all_message">此操作无法撤销。您的所有日记将被永久删除。</string>
+    <string name="screen_home_delete_all_success">所有日记已删除</string>
+    <string name="screen_home_topics_tooltip_title">什么是反复出现的主题？</string>
+    <string name="screen_home_streak_tooltip_title">什么是每日连续记录？</string>
+    <string name="screen_home_diary_fallback_title">我的日记</string>
+
 </resources>

@@ -52,4 +52,35 @@
     <string name="a11y_back">رجوع</string>
     <string name="a11y_search">بحث</string>
 
+    <!-- i18n Phase C / Home module (2026-04-19) -->
+    <string name="screen_home_title">اليوميات</string>
+    <string name="screen_home_fab_write">كتابة</string>
+    <string name="a11y_home_new_diary">إدخال جديد</string>
+    <string name="a11y_home_date_picker">اختر التاريخ</string>
+    <string name="screen_home_search_placeholder">ابحث في اليوميات والمحادثات…</string>
+    <string name="screen_home_search_recent">عمليات البحث الأخيرة</string>
+    <string name="screen_home_search_type_hint">ابدأ بالكتابة للبحث</string>
+    <string name="a11y_home_clear_search">مسح البحث</string>
+    <string name="a11y_home_remove_history">إزالة من السجل</string>
+    <string name="screen_home_qa_talk_title">تحدث مع إيف</string>
+    <string name="screen_home_qa_talk_subtitle">الصوت بالذكاء الاصطناعي</string>
+    <string name="screen_home_qa_voice_assistant_subtitle">مساعدتك الصوتية بالذكاء الاصطناعي</string>
+    <string name="screen_home_qa_write_title">كتابة</string>
+    <string name="screen_home_qa_write_subtitle">إدخال جديد</string>
+    <string name="screen_home_qa_wellbeing_title">Wellbeing Snapshot</string>
+    <string name="screen_home_qa_snapshot_label">لقطة</string>
+    <string name="screen_home_community_likes">الإعجابات</string>
+    <string name="screen_home_community_replies">الردود</string>
+    <string name="screen_home_community_photo_by">صورة بواسطة %1$s</string>
+    <string name="screen_home_signout_title">تسجيل الخروج</string>
+    <string name="screen_home_signout_message">هل أنت متأكد من تسجيل الخروج؟</string>
+    <string name="screen_home_signout_progress">جارٍ تسجيل الخروج…</string>
+    <string name="screen_home_signout_failure">فشل تسجيل الخروج. حاول مرة أخرى.</string>
+    <string name="screen_home_delete_all_title">حذف جميع اليوميات</string>
+    <string name="screen_home_delete_all_message">لا يمكن التراجع عن هذا الإجراء. ستُحذف جميع إدخالاتك نهائيًا.</string>
+    <string name="screen_home_delete_all_success">تم حذف جميع الإدخالات</string>
+    <string name="screen_home_topics_tooltip_title">ما هي الموضوعات المتكررة؟</string>
+    <string name="screen_home_streak_tooltip_title">ما هي السلسلة اليومية؟</string>
+    <string name="screen_home_diary_fallback_title">يومياتي</string>
+
 </resources>

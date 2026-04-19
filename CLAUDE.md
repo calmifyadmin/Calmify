@@ -179,7 +179,8 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
   - **Fase A' DONE 2026-04-19**: default language switched IT→EN. `values/` now EN (default), new `values-it/` per Italian, 14-key drift fixed (nav_* + error_*). `values-en/` preserved redundantly for safety. Full app compile green. I18N_GUIDE.md updated.
   - **Fase A'' DONE 2026-04-19**: 6 new locale folders creati (`values-ar/zh/ja/ko/hi/th/`) con baseline 15 chiavi ciascuno. Fallback automatico a EN per chiavi non tradotte. Font scaffold (`font/README.md`) — binaries Noto bundle in Fase D. AR isRtl=true tramite `LocalLayoutDirection`.
   - **Fase B DONE 2026-04-19**: 14 nuove chiavi common (action_*, error_*, state_*, a11y_*) × 12 lingue. `Strings.Action/Error/State/A11y` facade popolata (niente piu' TODO). Showcase migration: `HomeTopBar.kt` 3 a11y hardcoded migrati. Full app compile verde.
-  - **Fasi residue**: C (per-module ~139 × 12 lang), D (bundle Noto fonts + RTL/CJK verify + delete redundant values-en/), E (docs+commit).
+  - **Fase C.1 DONE 2026-04-19** (home migration): 29 new keys × 12 lang + ~37 hardcoded migrati su 11 home file. `Strings.Screen.Home` facade popolata. Full app compile verde. Skip: SnapshotScreen.kt (separate commit), "!" decorativi, @Preview.
+  - **Fasi residue**: C tail (~100 strings su search + social-profile + composer + messaging + avatar-creator + insight/meditation + settings/habits + altro), D (Noto fonts bundle + RTL/CJK verify + cleanup values-en/), E (docs+commit).
   - **Post-sprint**: iOS + Web ereditano automaticamente tutte le 12 lingue (Compose Resources e' KMP-native).
 
 - **Deploy workflow consolidato** (rule of thumb):

@@ -44,4 +44,35 @@
     <string name="a11y_back">वापस</string>
     <string name="a11y_search">खोज</string>
 
+    <!-- i18n Phase C / Home module (2026-04-19) -->
+    <string name="screen_home_title">डायरी</string>
+    <string name="screen_home_fab_write">लिखें</string>
+    <string name="a11y_home_new_diary">नई प्रविष्टि</string>
+    <string name="a11y_home_date_picker">तारीख चुनें</string>
+    <string name="screen_home_search_placeholder">डायरी और चैट में खोजें…</string>
+    <string name="screen_home_search_recent">हाल की खोजें</string>
+    <string name="screen_home_search_type_hint">खोजने के लिए टाइप करना शुरू करें</string>
+    <string name="a11y_home_clear_search">खोज साफ़ करें</string>
+    <string name="a11y_home_remove_history">इतिहास से हटाएं</string>
+    <string name="screen_home_qa_talk_title">Eve से बात करें</string>
+    <string name="screen_home_qa_talk_subtitle">आवाज़ AI</string>
+    <string name="screen_home_qa_voice_assistant_subtitle">आपकी आवाज़ AI सहायक</string>
+    <string name="screen_home_qa_write_title">लिखें</string>
+    <string name="screen_home_qa_write_subtitle">नई प्रविष्टि</string>
+    <string name="screen_home_qa_wellbeing_title">Wellbeing Snapshot</string>
+    <string name="screen_home_qa_snapshot_label">स्नैपशॉट</string>
+    <string name="screen_home_community_likes">पसंद</string>
+    <string name="screen_home_community_replies">उत्तर</string>
+    <string name="screen_home_community_photo_by">%1$s द्वारा फ़ोटो</string>
+    <string name="screen_home_signout_title">साइन आउट</string>
+    <string name="screen_home_signout_message">क्या आप वाकई साइन आउट करना चाहते हैं?</string>
+    <string name="screen_home_signout_progress">साइन आउट हो रहा है…</string>
+    <string name="screen_home_signout_failure">साइन आउट विफल। कृपया पुनः प्रयास करें।</string>
+    <string name="screen_home_delete_all_title">सभी डायरी हटाएं</string>
+    <string name="screen_home_delete_all_message">इस क्रिया को वापस नहीं किया जा सकता। आपकी सभी प्रविष्टियां स्थायी रूप से हट जाएंगी।</string>
+    <string name="screen_home_delete_all_success">सभी प्रविष्टियां हटा दी गईं</string>
+    <string name="screen_home_topics_tooltip_title">बार-बार आने वाले विषय क्या हैं?</string>
+    <string name="screen_home_streak_tooltip_title">दैनिक श्रृंखला क्या है?</string>
+    <string name="screen_home_diary_fallback_title">मेरी डायरी</string>
+
 </resources>

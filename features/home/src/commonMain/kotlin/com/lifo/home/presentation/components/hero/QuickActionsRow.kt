@@ -19,6 +19,8 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.lifo.ui.i18n.Strings
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Quick Actions Row - 3 primary action buttons with Material3 Expressive styling
@@ -48,7 +50,7 @@ fun QuickActionsRow(
         // Button 1: Left - "Parla con Eve" takes 2 spaces, fully rounded
         QuickActionButton(
             icon = Icons.Default.AutoAwesome,
-            label = "Parla con Eve",
+            label = stringResource(Strings.Screen.Home.qaTalkTitle),
             onClick = onStartLive,
             containerColor = MaterialTheme.colorScheme.secondary,
             contentColor = MaterialTheme.colorScheme.onSecondary,
@@ -63,7 +65,7 @@ fun QuickActionsRow(
         // Button 2: Right - "Snapshot" takes 1 space
         QuickActionButton(
             icon = Icons.Default.SelfImprovement,
-            label = "Snapshot",
+            label = stringResource(Strings.Screen.Home.qaSnapshotLabel),
             onClick = onTakeSnapshot,
             containerColor = MaterialTheme.colorScheme.tertiaryContainer,
             contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
@@ -313,12 +315,12 @@ fun PrimaryWriteActionButton(
     ) {
         Icon(
             imageVector = Icons.Default.Edit,
-            contentDescription = "Scrivi",
+            contentDescription = stringResource(Strings.Screen.Home.qaWriteTitle),
             modifier = Modifier.size(24.dp)
         )
         Spacer(modifier = Modifier.width(12.dp))
         Text(
-            text = "Scrivi",
+            text = stringResource(Strings.Screen.Home.qaWriteTitle),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold
         )

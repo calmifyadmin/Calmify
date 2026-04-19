@@ -665,4 +665,35 @@
     <string name="a11y_user_profile">Profilo utente</string>
     <string name="a11y_back">Torna indietro</string>
     <string name="a11y_search">Cerca</string>
+
+    <!-- i18n Phase C / Home module (2026-04-19) -->
+    <string name="screen_home_title">Diario</string>
+    <string name="screen_home_fab_write">Scrivi</string>
+    <string name="a11y_home_new_diary">Nuovo diario</string>
+    <string name="a11y_home_date_picker">Seleziona data</string>
+    <string name="screen_home_search_placeholder">Cerca nel diario e nelle chat…</string>
+    <string name="screen_home_search_recent">Ricerche recenti</string>
+    <string name="screen_home_search_type_hint">Inizia a scrivere per cercare</string>
+    <string name="a11y_home_clear_search">Cancella ricerca</string>
+    <string name="a11y_home_remove_history">Rimuovi dalla cronologia</string>
+    <string name="screen_home_qa_talk_title">Parla con Eve</string>
+    <string name="screen_home_qa_talk_subtitle">Voce AI</string>
+    <string name="screen_home_qa_voice_assistant_subtitle">La tua assistente AI vocale</string>
+    <string name="screen_home_qa_write_title">Scrivi</string>
+    <string name="screen_home_qa_write_subtitle">Nuovo diario</string>
+    <string name="screen_home_qa_wellbeing_title">Wellbeing Snapshot</string>
+    <string name="screen_home_qa_snapshot_label">Snapshot</string>
+    <string name="screen_home_community_likes">Mi piace</string>
+    <string name="screen_home_community_replies">Risposte</string>
+    <string name="screen_home_community_photo_by">Foto di %1$s</string>
+    <string name="screen_home_signout_title">Disconnetti</string>
+    <string name="screen_home_signout_message">Sei sicuro di voler disconnetterti?</string>
+    <string name="screen_home_signout_progress">Disconnessione…</string>
+    <string name="screen_home_signout_failure">Disconnessione fallita. Riprova.</string>
+    <string name="screen_home_delete_all_title">Elimina tutti i diari</string>
+    <string name="screen_home_delete_all_message">Questa azione non può essere annullata. Tutti i tuoi diari verranno eliminati definitivamente.</string>
+    <string name="screen_home_delete_all_success">Tutti i diari sono stati eliminati</string>
+    <string name="screen_home_topics_tooltip_title">Cosa sono i temi ricorrenti?</string>
+    <string name="screen_home_streak_tooltip_title">Cos\'è la serie di giorni?</string>
+    <string name="screen_home_diary_fallback_title">Il mio diario</string>
 </resources>

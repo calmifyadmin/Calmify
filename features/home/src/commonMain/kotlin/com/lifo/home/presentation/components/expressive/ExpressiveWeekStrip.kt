@@ -25,7 +25,9 @@ import com.lifo.home.domain.model.WeeklyGoal
 import com.lifo.home.presentation.components.common.animatedCounter
 import com.lifo.home.util.EmotionAwareColors
 import com.lifo.ui.components.tooltips.InfoTooltip
+import com.lifo.ui.i18n.Strings
 import kotlinx.datetime.*
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun ExpressiveWeekStrip(
@@ -100,7 +102,7 @@ internal fun ExpressiveWeekStrip(
                                 color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                             )
                             InfoTooltip(
-                                title = "Cos'e' la serie di giorni?",
+                                title = stringResource(Strings.Screen.Home.streakTooltipTitle),
                                 description = "Indica quanti giorni consecutivi hai scritto nel diario. " +
                                     "Costruire una serie continua rinforza l'abitudine e ti aiuta a " +
                                     "mantenere costanza nel tuo percorso di crescita."

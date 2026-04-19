@@ -12,10 +12,12 @@ import androidx.compose.runtime.collectAsState
 import com.lifo.home.HomeScreen
 import com.lifo.home.HomeViewModel
 import com.lifo.ui.components.DisplayAlertDialog
+import com.lifo.ui.i18n.Strings
 import com.lifo.util.model.RequestState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Public entry point composable for the Home feature.
@@ -54,6 +56,15 @@ fun HomeRouteContent(
 
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    // i18n pre-resolved strings (Toast is called from non-composable scopes)
+    val signoutTitleText = stringResource(Strings.Screen.Home.signoutTitle)
+    val signoutMessageText = stringResource(Strings.Screen.Home.signoutMessage)
+    val signoutProgressText = stringResource(Strings.Screen.Home.signoutProgress)
+    val signoutFailureText = stringResource(Strings.Screen.Home.signoutFailure)
+    val deleteAllTitleText = stringResource(Strings.Screen.Home.deleteAllTitle)
+    val deleteAllMessageText = stringResource(Strings.Screen.Home.deleteAllMessage)
+    val deleteAllSuccessText = stringResource(Strings.Screen.Home.deleteAllSuccess)
 
     val hasCalledOnDataLoaded = rememberSaveable { mutableStateOf(false) }
 
@@ -123,8 +134,8 @@ fun HomeRouteContent(
         exit = fadeOut() + scaleOut()
     ) {
         DisplayAlertDialog(
-            title = "Sign Out",
-            message = "Are you sure you want to sign out from your Google Account? You'll need to sign in again to access your diaries.",
+            title = signoutTitleText,
+            message = signoutMessageText,
             dialogOpened = signOutDialogOpened,
             onDialogClosed = { signOutDialogOpened = false },
             onYesClicked = {
@@ -132,7 +143,7 @@ fun HomeRouteContent(
                 scope.launch {
                     try {
                         withContext(Dispatchers.Main) {
-                            Toast.makeText(context, "Signing out...", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, signoutProgressText, Toast.LENGTH_SHORT).show()
                         }
                         withContext(Dispatchers.IO) {
                             viewModel.signOut()
@@ -142,7 +153,7 @@ fun HomeRouteContent(
                         }
                     } catch (e: Exception) {
                         withContext(Dispatchers.Main) {
-                            Toast.makeText(context, "Failed to sign out. Please try again.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, signoutFailureText, Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -157,15 +168,15 @@ fun HomeRouteContent(
         exit = fadeOut() + scaleOut()
     ) {
         DisplayAlertDialog(
-            title = "Delete All Diaries",
-            message = "This action cannot be undone. All your diaries and associated images will be permanently deleted.",
+            title = deleteAllTitleText,
+            message = deleteAllMessageText,
             dialogOpened = deleteAllDialogOpened,
             onDialogClosed = { deleteAllDialogOpened = false },
             onYesClicked = {
                 deleteAllDialogOpened = false
                 viewModel.deleteAllDiaries(
                     onSuccess = {
-                        Toast.makeText(context, "All diaries deleted successfully", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, deleteAllSuccessText, Toast.LENGTH_SHORT).show()
                         scope.launch {
                             try {
                                 if (!drawerState.isAnimationRunning) {

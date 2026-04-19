@@ -603,4 +603,35 @@
     <string name="a11y_user_profile">Perfil de usuario</string>
     <string name="a11y_back">Volver</string>
     <string name="a11y_search">Buscar</string>
+
+    <!-- i18n Phase C / Home module (2026-04-19) -->
+    <string name="screen_home_title">Diario</string>
+    <string name="screen_home_fab_write">Escribir</string>
+    <string name="a11y_home_new_diary">Nueva entrada</string>
+    <string name="a11y_home_date_picker">Seleccionar fecha</string>
+    <string name="screen_home_search_placeholder">Buscar en diario y chats…</string>
+    <string name="screen_home_search_recent">Búsquedas recientes</string>
+    <string name="screen_home_search_type_hint">Empiece a escribir para buscar</string>
+    <string name="a11y_home_clear_search">Borrar búsqueda</string>
+    <string name="a11y_home_remove_history">Eliminar del historial</string>
+    <string name="screen_home_qa_talk_title">Hablar con Eve</string>
+    <string name="screen_home_qa_talk_subtitle">Voz IA</string>
+    <string name="screen_home_qa_voice_assistant_subtitle">Tu asistente de IA por voz</string>
+    <string name="screen_home_qa_write_title">Escribir</string>
+    <string name="screen_home_qa_write_subtitle">Nueva entrada</string>
+    <string name="screen_home_qa_wellbeing_title">Wellbeing Snapshot</string>
+    <string name="screen_home_qa_snapshot_label">Snapshot</string>
+    <string name="screen_home_community_likes">Me gusta</string>
+    <string name="screen_home_community_replies">Respuestas</string>
+    <string name="screen_home_community_photo_by">Foto de %1$s</string>
+    <string name="screen_home_signout_title">Cerrar sesión</string>
+    <string name="screen_home_signout_message">¿Seguro que quieres cerrar sesión?</string>
+    <string name="screen_home_signout_progress">Cerrando sesión…</string>
+    <string name="screen_home_signout_failure">No se pudo cerrar sesión. Inténtalo de nuevo.</string>
+    <string name="screen_home_delete_all_title">Eliminar todas las entradas</string>
+    <string name="screen_home_delete_all_message">Esta acción no se puede deshacer. Todas tus entradas se eliminarán permanentemente.</string>
+    <string name="screen_home_delete_all_success">Todas las entradas se han eliminado</string>
+    <string name="screen_home_topics_tooltip_title">¿Qué son los temas recurrentes?</string>
+    <string name="screen_home_streak_tooltip_title">¿Qué es la racha diaria?</string>
+    <string name="screen_home_diary_fallback_title">Mi diario</string>
 </resources>

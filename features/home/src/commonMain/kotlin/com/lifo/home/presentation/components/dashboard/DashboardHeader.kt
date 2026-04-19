@@ -42,7 +42,9 @@ import coil3.compose.AsyncImage
 import com.lifo.home.domain.model.TrendDirection
 import com.lifo.home.domain.model.TodayPulse
 import com.lifo.home.util.EmotionAwareColors
+import com.lifo.ui.i18n.Strings
 import com.lifo.util.model.SentimentLabel
+import org.jetbrains.compose.resources.stringResource
 
 private const val PHOTO_ID = "profile_photo"
 
@@ -239,7 +241,7 @@ private fun InlineProfilePhoto(
         if (userPhotoUrl != null) {
             AsyncImage(
                 model = userPhotoUrl,
-                contentDescription = "Profile",
+                contentDescription = stringResource(Strings.A11y.userProfile),
                 modifier = Modifier
                     .fillMaxSize()
                     .clip(CircleShape),

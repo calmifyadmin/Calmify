@@ -28,6 +28,7 @@ import androidx.compose.material.icons.outlined.Warning
 import org.jetbrains.compose.resources.stringResource
 import com.lifo.ui.resources.Res
 import com.lifo.ui.resources.*
+import com.lifo.ui.i18n.Strings
 
 /**
  * Loading state representation
@@ -436,7 +437,7 @@ private fun ErrorStateComponent(
         ) {
             Icon(
                 imageVector = Icons.Outlined.Warning,
-                contentDescription = "Error",
+                contentDescription = stringResource(Strings.Error.loading),
                 modifier = Modifier.size(64.dp),
                 tint = MaterialTheme.colorScheme.error
             )

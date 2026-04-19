@@ -89,10 +89,41 @@ object Strings {
     /**
      * Screen-specific strings, grouped by feature/screen.
      * Use when a string has no reusable semantics (it belongs to one place).
-     *
-     * TODO(i18n phase C): populate per-module during migration sweep.
+     * Sub-objects added per-feature during Fase C migration.
      */
     object Screen {
-        // Sub-objects added per-feature during Fase C migration.
+        /** Home feature — screen-specific strings for top bar, search, dialogs, community cards. */
+        object Home {
+            val title: StringResource get() = Res.string.screen_home_title
+            val fabWrite: StringResource get() = Res.string.screen_home_fab_write
+            val searchPlaceholder: StringResource get() = Res.string.screen_home_search_placeholder
+            val searchRecent: StringResource get() = Res.string.screen_home_search_recent
+            val searchTypeHint: StringResource get() = Res.string.screen_home_search_type_hint
+            val qaTalkTitle: StringResource get() = Res.string.screen_home_qa_talk_title
+            val qaTalkSubtitle: StringResource get() = Res.string.screen_home_qa_talk_subtitle
+            val qaVoiceAssistantSubtitle: StringResource get() = Res.string.screen_home_qa_voice_assistant_subtitle
+            val qaWriteTitle: StringResource get() = Res.string.screen_home_qa_write_title
+            val qaWriteSubtitle: StringResource get() = Res.string.screen_home_qa_write_subtitle
+            val qaWellbeingTitle: StringResource get() = Res.string.screen_home_qa_wellbeing_title
+            val qaSnapshotLabel: StringResource get() = Res.string.screen_home_qa_snapshot_label
+            val communityLikes: StringResource get() = Res.string.screen_home_community_likes
+            val communityReplies: StringResource get() = Res.string.screen_home_community_replies
+            val communityPhotoBy: StringResource get() = Res.string.screen_home_community_photo_by
+            val signoutTitle: StringResource get() = Res.string.screen_home_signout_title
+            val signoutMessage: StringResource get() = Res.string.screen_home_signout_message
+            val signoutProgress: StringResource get() = Res.string.screen_home_signout_progress
+            val signoutFailure: StringResource get() = Res.string.screen_home_signout_failure
+            val deleteAllTitle: StringResource get() = Res.string.screen_home_delete_all_title
+            val deleteAllMessage: StringResource get() = Res.string.screen_home_delete_all_message
+            val deleteAllSuccess: StringResource get() = Res.string.screen_home_delete_all_success
+            val topicsTooltipTitle: StringResource get() = Res.string.screen_home_topics_tooltip_title
+            val streakTooltipTitle: StringResource get() = Res.string.screen_home_streak_tooltip_title
+            val diaryFallbackTitle: StringResource get() = Res.string.screen_home_diary_fallback_title
+            // a11y grouping for Home screen
+            val a11yNewDiary: StringResource get() = Res.string.a11y_home_new_diary
+            val a11yDatePicker: StringResource get() = Res.string.a11y_home_date_picker
+            val a11yClearSearch: StringResource get() = Res.string.a11y_home_clear_search
+            val a11yRemoveHistory: StringResource get() = Res.string.a11y_home_remove_history
+        }
     }
 }

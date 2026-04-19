@@ -33,6 +33,7 @@ import java.time.ZonedDateTime
 import org.jetbrains.compose.resources.stringResource
 import com.lifo.ui.resources.Res
 import com.lifo.ui.resources.*
+import com.lifo.ui.i18n.Strings
 
 // Screen state management
 sealed class HomeScreenState {
@@ -165,13 +166,13 @@ internal fun HomeScreen(
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                text = "Error loading diaries",
+                                text = stringResource(Strings.Error.loading),
                                 style = MaterialTheme.typography.titleLarge,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = diaries.error.message ?: "Unknown error",
+                                text = diaries.error.message ?: stringResource(Strings.Error.generic),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -217,7 +218,7 @@ private fun AnimatedFAB(
         icon = {
             Icon(
                 imageVector = Icons.Default.Edit,
-                contentDescription = "New Diary",
+                contentDescription = stringResource(Strings.Screen.Home.a11yNewDiary),
                 modifier = Modifier.animateContentSize()
             )
         },
@@ -227,7 +228,7 @@ private fun AnimatedFAB(
                 enter = fadeIn() + expandHorizontally(),
                 exit = fadeOut() + shrinkHorizontally()
             ) {
-                Text("Write")
+                Text(stringResource(Strings.Screen.Home.fabWrite))
             }
         },
         modifier = Modifier

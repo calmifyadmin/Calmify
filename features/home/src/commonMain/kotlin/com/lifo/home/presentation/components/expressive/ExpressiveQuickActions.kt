@@ -25,6 +25,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifo.home.presentation.components.common.pressScale
+import com.lifo.ui.i18n.Strings
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun ExpressiveQuickActions(
@@ -44,8 +46,8 @@ internal fun ExpressiveQuickActions(
     ) {
         HeroActionCard(
             icon = Icons.Default.AutoAwesome,
-            title = "Parla con Eve",
-            subtitle = "La tua assistente AI vocale",
+            title = stringResource(Strings.Screen.Home.qaTalkTitle),
+            subtitle = stringResource(Strings.Screen.Home.qaVoiceAssistantSubtitle),
             onClick = onTalkToEve,
             accentColor = colorScheme.primary,
             modifier = Modifier.fillMaxWidth().then(eveCardModifier)

@@ -27,7 +27,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.lifo.ui.i18n.Strings
 import com.lifo.util.repository.ThreadRepository
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun CommunityPreviewCard(
@@ -232,14 +234,14 @@ private fun ThreadPreviewRow(
                         EngagementPill(
                             icon = Icons.Outlined.Favorite,
                             count = thread.likeCount,
-                            contentDescription = "Mi piace"
+                            contentDescription = stringResource(Strings.Screen.Home.communityLikes)
                         )
                     }
                     if (thread.replyCount > 0) {
                         EngagementPill(
                             icon = Icons.Outlined.Forum,
                             count = thread.replyCount,
-                            contentDescription = "Risposte"
+                            contentDescription = stringResource(Strings.Screen.Home.communityReplies)
                         )
                     }
                 }
@@ -271,7 +273,7 @@ private fun AuthorAvatar(
         if (!photoUrl.isNullOrBlank()) {
             AsyncImage(
                 model = photoUrl,
-                contentDescription = "Foto di $name",
+                contentDescription = stringResource(Strings.Screen.Home.communityPhotoBy, name),
                 modifier = Modifier.fillMaxSize().clip(CircleShape),
                 contentScale = ContentScale.Crop
             )

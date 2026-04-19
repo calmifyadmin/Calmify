@@ -44,4 +44,35 @@
     <string name="a11y_back">뒤로</string>
     <string name="a11y_search">검색</string>
 
+    <!-- i18n Phase C / Home module (2026-04-19) -->
+    <string name="screen_home_title">일기</string>
+    <string name="screen_home_fab_write">작성</string>
+    <string name="a11y_home_new_diary">새 일기</string>
+    <string name="a11y_home_date_picker">날짜 선택</string>
+    <string name="screen_home_search_placeholder">일기와 채팅 검색…</string>
+    <string name="screen_home_search_recent">최근 검색</string>
+    <string name="screen_home_search_type_hint">검색하려면 입력을 시작하세요</string>
+    <string name="a11y_home_clear_search">검색 지우기</string>
+    <string name="a11y_home_remove_history">기록에서 제거</string>
+    <string name="screen_home_qa_talk_title">Eve와 대화</string>
+    <string name="screen_home_qa_talk_subtitle">음성 AI</string>
+    <string name="screen_home_qa_voice_assistant_subtitle">당신의 음성 AI 어시스턴트</string>
+    <string name="screen_home_qa_write_title">작성</string>
+    <string name="screen_home_qa_write_subtitle">새 일기</string>
+    <string name="screen_home_qa_wellbeing_title">Wellbeing Snapshot</string>
+    <string name="screen_home_qa_snapshot_label">스냅샷</string>
+    <string name="screen_home_community_likes">좋아요</string>
+    <string name="screen_home_community_replies">답글</string>
+    <string name="screen_home_community_photo_by">%1$s의 사진</string>
+    <string name="screen_home_signout_title">로그아웃</string>
+    <string name="screen_home_signout_message">정말 로그아웃하시겠습니까?</string>
+    <string name="screen_home_signout_progress">로그아웃 중…</string>
+    <string name="screen_home_signout_failure">로그아웃 실패. 다시 시도하세요.</string>
+    <string name="screen_home_delete_all_title">모든 일기 삭제</string>
+    <string name="screen_home_delete_all_message">이 작업은 취소할 수 없습니다. 모든 일기가 영구적으로 삭제됩니다.</string>
+    <string name="screen_home_delete_all_success">모든 일기가 삭제되었습니다</string>
+    <string name="screen_home_topics_tooltip_title">반복되는 주제란?</string>
+    <string name="screen_home_streak_tooltip_title">일일 연속 기록이란?</string>
+    <string name="screen_home_diary_fallback_title">내 일기</string>
+
 </resources>

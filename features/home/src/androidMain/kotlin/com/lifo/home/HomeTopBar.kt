@@ -94,7 +94,7 @@ fun HomeTopBar(
                 IconButton(onClick = { dateDialog.show() }) {
                     Icon(
                         imageVector = Icons.Default.DateRange,
-                        contentDescription = "Date Icon"
+                        contentDescription = stringResource(Strings.Screen.Home.a11yDatePicker)
                     )
                 }
             }

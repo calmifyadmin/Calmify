@@ -22,6 +22,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lifo.home.presentation.components.common.pressScale
 import com.lifo.home.util.EmotionAwareColors
+import com.lifo.ui.i18n.Strings
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun QuickActionCards(
@@ -46,8 +48,8 @@ internal fun QuickActionCards(
         ) {
             QuickActionCard(
                 icon = Icons.Default.AutoAwesome,
-                title = "Parla con Eve",
-                subtitle = "Voce AI",
+                title = stringResource(Strings.Screen.Home.qaTalkTitle),
+                subtitle = stringResource(Strings.Screen.Home.qaTalkSubtitle),
                 onClick = onTalkToEve,
                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                 overlayBrush = EmotionAwareColors.accentGradient(primary),
@@ -57,8 +59,8 @@ internal fun QuickActionCards(
 
             QuickActionCard(
                 icon = Icons.Default.Edit,
-                title = "Scrivi",
-                subtitle = "Nuovo diario",
+                title = stringResource(Strings.Screen.Home.qaWriteTitle),
+                subtitle = stringResource(Strings.Screen.Home.qaWriteSubtitle),
                 onClick = onWrite,
                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                 accentColor = colorScheme.onSurface,
@@ -69,7 +71,7 @@ internal fun QuickActionCards(
         // Bottom row: Snapshot
         QuickActionCard(
             icon = Icons.Default.SelfImprovement,
-            title = "Wellbeing Snapshot",
+            title = stringResource(Strings.Screen.Home.qaWellbeingTitle),
             subtitle = if (isSnapshotDue) "$daysSinceSnapshot giorni dall'ultimo"
             else "Verifica il tuo benessere",
             onClick = onSnapshot,

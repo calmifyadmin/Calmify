@@ -603,4 +603,35 @@
     <string name="a11y_user_profile">Perfil do usuário</string>
     <string name="a11y_back">Voltar</string>
     <string name="a11y_search">Pesquisar</string>
+
+    <!-- i18n Phase C / Home module (2026-04-19) -->
+    <string name="screen_home_title">Diário</string>
+    <string name="screen_home_fab_write">Escrever</string>
+    <string name="a11y_home_new_diary">Nova entrada</string>
+    <string name="a11y_home_date_picker">Selecionar data</string>
+    <string name="screen_home_search_placeholder">Buscar no diário e conversas…</string>
+    <string name="screen_home_search_recent">Buscas recentes</string>
+    <string name="screen_home_search_type_hint">Comece a digitar para buscar</string>
+    <string name="a11y_home_clear_search">Limpar busca</string>
+    <string name="a11y_home_remove_history">Remover do histórico</string>
+    <string name="screen_home_qa_talk_title">Falar com Eve</string>
+    <string name="screen_home_qa_talk_subtitle">Voz IA</string>
+    <string name="screen_home_qa_voice_assistant_subtitle">Sua assistente de IA por voz</string>
+    <string name="screen_home_qa_write_title">Escrever</string>
+    <string name="screen_home_qa_write_subtitle">Nova entrada</string>
+    <string name="screen_home_qa_wellbeing_title">Wellbeing Snapshot</string>
+    <string name="screen_home_qa_snapshot_label">Snapshot</string>
+    <string name="screen_home_community_likes">Curtidas</string>
+    <string name="screen_home_community_replies">Respostas</string>
+    <string name="screen_home_community_photo_by">Foto de %1$s</string>
+    <string name="screen_home_signout_title">Sair</string>
+    <string name="screen_home_signout_message">Tem certeza que deseja sair?</string>
+    <string name="screen_home_signout_progress">Saindo…</string>
+    <string name="screen_home_signout_failure">Falha ao sair. Tente novamente.</string>
+    <string name="screen_home_delete_all_title">Excluir todos os diários</string>
+    <string name="screen_home_delete_all_message">Esta ação não pode ser desfeita. Todas as suas entradas serão excluídas permanentemente.</string>
+    <string name="screen_home_delete_all_success">Todas as entradas foram excluídas</string>
+    <string name="screen_home_topics_tooltip_title">O que são temas recorrentes?</string>
+    <string name="screen_home_streak_tooltip_title">O que é a sequência diária?</string>
+    <string name="screen_home_diary_fallback_title">Meu diário</string>
 </resources>

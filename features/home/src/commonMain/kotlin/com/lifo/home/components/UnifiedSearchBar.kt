@@ -21,6 +21,8 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.lifo.ui.i18n.Strings
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Material3 DockedSearchBar component for the unified feed
@@ -34,9 +36,10 @@ fun UnifiedSearchBar(
     onQueryChange: (String) -> Unit,
     onClearSearch: () -> Unit,
     modifier: Modifier = Modifier,
-    placeholder: String = "Search diary entries and chats...",
+    placeholder: String? = null,
     isActive: Boolean = false
 ) {
+    val placeholderText = placeholder ?: stringResource(Strings.Screen.Home.searchPlaceholder)
     val keyboardController = LocalSoftwareKeyboardController.current
     var expanded by rememberSaveable { mutableStateOf(false) }
 
@@ -64,7 +67,7 @@ fun UnifiedSearchBar(
                     onExpandedChange = { expanded = it },
                     placeholder = {
                         Text(
-                            text = placeholder,
+                            text = placeholderText,
                             style = MaterialTheme.typography.bodyMedium
                         )
                     },
@@ -92,7 +95,7 @@ fun UnifiedSearchBar(
                                     } else {
                                         Icons.Default.Search
                                     },
-                                    contentDescription = if (isExpanded) "Close search" else "Search",
+                                    contentDescription = if (isExpanded) stringResource(Strings.A11y.close) else stringResource(Strings.A11y.search),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -111,7 +114,7 @@ fun UnifiedSearchBar(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Clear,
-                                    contentDescription = "Clear search",
+                                    contentDescription = stringResource(Strings.Screen.Home.a11yClearSearch),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -140,7 +143,7 @@ fun UnifiedSearchBar(
                 ) {
                     item {
                         Text(
-                            text = "Recent searches",
+                            text = stringResource(Strings.Screen.Home.searchRecent),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -165,7 +168,7 @@ fun UnifiedSearchBar(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Clear,
-                                        contentDescription = "Remove from history",
+                                        contentDescription = stringResource(Strings.Screen.Home.a11yRemoveHistory),
                                         modifier = Modifier.size(20.dp),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -194,7 +197,7 @@ fun UnifiedSearchBar(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Start typing to search",
+                        text = stringResource(Strings.Screen.Home.searchTypeHint),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -213,22 +216,23 @@ fun CompactSearchBar(
     onQueryChange: (String) -> Unit,
     onClearSearch: () -> Unit,
     modifier: Modifier = Modifier,
-    placeholder: String = "Search..."
+    placeholder: String? = null
 ) {
+    val placeholderText = placeholder ?: stringResource(Strings.Screen.Home.searchPlaceholder)
     OutlinedTextField(
         value = query,
         onValueChange = onQueryChange,
         modifier = modifier.fillMaxWidth(),
         placeholder = {
             Text(
-                text = placeholder,
+                text = placeholderText,
                 style = MaterialTheme.typography.bodyMedium
             )
         },
         leadingIcon = {
             Icon(
                 imageVector = Icons.Default.Search,
-                contentDescription = "Search",
+                contentDescription = stringResource(Strings.A11y.search),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         },
@@ -241,7 +245,7 @@ fun CompactSearchBar(
                 IconButton(onClick = onClearSearch) {
                     Icon(
                         imageVector = Icons.Default.Clear,
-                        contentDescription = "Clear search",
+                        contentDescription = stringResource(Strings.Screen.Home.a11yClearSearch),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }

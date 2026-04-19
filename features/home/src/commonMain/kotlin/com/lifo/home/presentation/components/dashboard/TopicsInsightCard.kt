@@ -14,9 +14,11 @@ import androidx.compose.ui.unit.sp
 import com.lifo.home.domain.model.TopicFrequency
 import com.lifo.home.domain.model.TopicTrend
 import com.lifo.ui.components.tooltips.InfoTooltip
+import com.lifo.ui.i18n.Strings
 import com.lifo.ui.theme.Sage
 import com.lifo.ui.theme.SageSoft
 import com.lifo.ui.theme.SageMedium
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -53,7 +55,7 @@ internal fun TopicsInsightCard(
                         color = colorScheme.onSurface
                     )
                     InfoTooltip(
-                        title = "Cosa sono i temi ricorrenti?",
+                        title = stringResource(Strings.Screen.Home.topicsTooltipTitle),
                         description = "Sono gli argomenti che compaiono più spesso nei tuoi diari. " +
                             "Riconoscere i temi che tornano ti aiuta a capire cosa occupa la tua mente " +
                             "e su cosa vale la pena riflettere con più attenzione."

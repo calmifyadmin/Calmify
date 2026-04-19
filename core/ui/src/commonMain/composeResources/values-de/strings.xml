@@ -603,4 +603,35 @@
     <string name="a11y_user_profile">Benutzerprofil</string>
     <string name="a11y_back">Zurück</string>
     <string name="a11y_search">Suchen</string>
+
+    <!-- i18n Phase C / Home module (2026-04-19) -->
+    <string name="screen_home_title">Tagebuch</string>
+    <string name="screen_home_fab_write">Schreiben</string>
+    <string name="a11y_home_new_diary">Neuer Eintrag</string>
+    <string name="a11y_home_date_picker">Datum auswählen</string>
+    <string name="screen_home_search_placeholder">Im Tagebuch und Chats suchen…</string>
+    <string name="screen_home_search_recent">Zuletzt gesucht</string>
+    <string name="screen_home_search_type_hint">Zum Suchen tippen</string>
+    <string name="a11y_home_clear_search">Suche löschen</string>
+    <string name="a11y_home_remove_history">Aus Verlauf entfernen</string>
+    <string name="screen_home_qa_talk_title">Mit Eve sprechen</string>
+    <string name="screen_home_qa_talk_subtitle">Sprach-KI</string>
+    <string name="screen_home_qa_voice_assistant_subtitle">Dein Sprach-KI-Assistent</string>
+    <string name="screen_home_qa_write_title">Schreiben</string>
+    <string name="screen_home_qa_write_subtitle">Neuer Eintrag</string>
+    <string name="screen_home_qa_wellbeing_title">Wellbeing Snapshot</string>
+    <string name="screen_home_qa_snapshot_label">Snapshot</string>
+    <string name="screen_home_community_likes">Gefällt mir</string>
+    <string name="screen_home_community_replies">Antworten</string>
+    <string name="screen_home_community_photo_by">Foto von %1$s</string>
+    <string name="screen_home_signout_title">Abmelden</string>
+    <string name="screen_home_signout_message">Möchten Sie sich wirklich abmelden?</string>
+    <string name="screen_home_signout_progress">Abmelden…</string>
+    <string name="screen_home_signout_failure">Abmeldung fehlgeschlagen. Bitte erneut versuchen.</string>
+    <string name="screen_home_delete_all_title">Alle Einträge löschen</string>
+    <string name="screen_home_delete_all_message">Diese Aktion kann nicht rückgängig gemacht werden. Alle Ihre Einträge werden unwiderruflich gelöscht.</string>
+    <string name="screen_home_delete_all_success">Alle Einträge wurden gelöscht</string>
+    <string name="screen_home_topics_tooltip_title">Was sind wiederkehrende Themen?</string>
+    <string name="screen_home_streak_tooltip_title">Was ist die tägliche Serie?</string>
+    <string name="screen_home_diary_fallback_title">Mein Tagebuch</string>
 </resources>
