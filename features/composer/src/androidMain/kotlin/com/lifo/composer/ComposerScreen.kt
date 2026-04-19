@@ -83,6 +83,7 @@ import com.lifo.socialui.avatar.UserAvatar
 import org.jetbrains.compose.resources.stringResource
 import com.lifo.ui.resources.Res
 import com.lifo.ui.resources.*
+import com.lifo.ui.i18n.Strings
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -112,7 +113,8 @@ fun ComposerScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = if (state.replyToAuthorName != null) "Rispondi" else "Nuovo post",
+                        text = if (state.replyToAuthorName != null) stringResource(Strings.Screen.Composer.titleReply)
+                               else stringResource(Strings.Screen.Composer.titleNew),
                         fontWeight = FontWeight.Bold,
                     )
                 },
@@ -333,7 +335,8 @@ fun ComposerScreen(
                                 Box {
                                     if (state.content.isEmpty()) {
                                         Text(
-                                            text = if (state.replyToAuthorName != null) "Rispondi..." else "Cosa hai in mente?",
+                                            text = if (state.replyToAuthorName != null) stringResource(Strings.Screen.Composer.titleReply) + "…"
+                                                   else stringResource(Strings.Screen.Composer.placeholder),
                                             style = MaterialTheme.typography.bodyLarge,
                                             color = colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                         )
@@ -363,16 +366,16 @@ fun ComposerScreen(
                                 Icon(Icons.Outlined.Image, contentDescription = stringResource(Res.string.composer_add_image_cd), modifier = Modifier.size(20.dp), tint = toolbarTint)
                             }
                             IconButton(onClick = { }, modifier = Modifier.size(36.dp)) {
-                                Icon(Icons.Outlined.Gif, contentDescription = "GIF", modifier = Modifier.size(20.dp), tint = toolbarTint)
+                                Icon(Icons.Outlined.Gif, contentDescription = stringResource(Strings.Screen.Composer.a11yGif), modifier = Modifier.size(20.dp), tint = toolbarTint)
                             }
                             IconButton(onClick = { }, modifier = Modifier.size(36.dp)) {
-                                Icon(Icons.Outlined.AttachFile, contentDescription = "Attach", modifier = Modifier.size(20.dp), tint = toolbarTint)
+                                Icon(Icons.Outlined.AttachFile, contentDescription = stringResource(Strings.Screen.Composer.a11yAttach), modifier = Modifier.size(20.dp), tint = toolbarTint)
                             }
                             IconButton(onClick = { }, modifier = Modifier.size(36.dp)) {
-                                Icon(Icons.Outlined.FormatQuote, contentDescription = "Quote", modifier = Modifier.size(20.dp), tint = toolbarTint)
+                                Icon(Icons.Outlined.FormatQuote, contentDescription = stringResource(Strings.Screen.Composer.a11yQuote), modifier = Modifier.size(20.dp), tint = toolbarTint)
                             }
                             IconButton(onClick = { }, modifier = Modifier.size(36.dp)) {
-                                Icon(Icons.Outlined.MoreHoriz, contentDescription = "More", modifier = Modifier.size(20.dp), tint = toolbarTint)
+                                Icon(Icons.Outlined.MoreHoriz, contentDescription = stringResource(Strings.Screen.Composer.a11yMore), modifier = Modifier.size(20.dp), tint = toolbarTint)
                             }
                         }
 
@@ -674,9 +677,9 @@ fun ComposerScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     val replyLabel = when (state.replyPermission) {
-                        ComposerContract.ReplyPermission.Everyone -> "Tutti possono rispondere"
-                        ComposerContract.ReplyPermission.Followers -> "Solo follower"
-                        ComposerContract.ReplyPermission.Mentioned -> "Solo menzionati"
+                        ComposerContract.ReplyPermission.Everyone -> stringResource(Strings.Screen.Composer.replyPermAll)
+                        ComposerContract.ReplyPermission.Followers -> stringResource(Strings.Screen.Composer.replyPermFollowers)
+                        ComposerContract.ReplyPermission.Mentioned -> stringResource(Strings.Screen.Composer.replyPermMentioned)
                     }
                     Surface(
                         onClick = {
@@ -910,7 +913,7 @@ private fun VisibilitySelector(
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = currentVisibility.label(),
+                    text = stringResource(currentVisibility.labelKey()),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -931,7 +934,7 @@ private fun VisibilitySelector(
                                 modifier = Modifier.size(18.dp),
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(visibility.label())
+                            Text(stringResource(visibility.labelKey()))
                         }
                     },
                     onClick = {
@@ -950,8 +953,8 @@ private fun ComposerContract.Visibility.icon(): ImageVector = when (this) {
     ComposerContract.Visibility.PRIVATE -> Icons.Default.Lock
 }
 
-private fun ComposerContract.Visibility.label(): String = when (this) {
-    ComposerContract.Visibility.PUBLIC -> "Pubblico"
-    ComposerContract.Visibility.FOLLOWERS_ONLY -> "Follower"
-    ComposerContract.Visibility.PRIVATE -> "Privato"
+private fun ComposerContract.Visibility.labelKey(): org.jetbrains.compose.resources.StringResource = when (this) {
+    ComposerContract.Visibility.PUBLIC -> Strings.Screen.Composer.visibilityPublic
+    ComposerContract.Visibility.FOLLOWERS_ONLY -> Strings.Screen.Composer.visibilityFollowers
+    ComposerContract.Visibility.PRIVATE -> Strings.Screen.Composer.visibilityPrivate
 }

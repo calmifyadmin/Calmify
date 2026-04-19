@@ -662,4 +662,35 @@
     <string name="a11y_social_profile_cover_photo">Photo de couverture</string>
     <string name="a11y_social_profile_remove_interest">Supprimer l\'intérêt</string>
     <string name="a11y_social_profile_add_interest">Ajouter un intérêt</string>
+
+    <!-- i18n Phase C.3 / Composer module (2026-04-19) -->
+    <string name="screen_composer_title_new">Nouvelle publication</string>
+    <string name="screen_composer_title_reply">Répondre</string>
+    <string name="screen_composer_placeholder">À quoi pensez-vous ?</string>
+    <string name="a11y_composer_gif">GIF</string>
+    <string name="a11y_composer_attach">Joindre</string>
+    <string name="a11y_composer_quote">Citer</string>
+    <string name="a11y_composer_more">Plus</string>
+    <string name="screen_composer_reply_perm_all">Tout le monde peut répondre</string>
+    <string name="screen_composer_reply_perm_followers">Abonnés uniquement</string>
+    <string name="screen_composer_reply_perm_mentioned">Mentionnés uniquement</string>
+    <string name="screen_composer_visibility_public">Public</string>
+    <string name="screen_composer_visibility_followers">Abonnés</string>
+    <string name="screen_composer_visibility_private">Privé</string>
+
+    <!-- i18n Phase C.3 / Messaging module (2026-04-19) -->
+    <string name="screen_messaging_placeholder">Tapez un message…</string>
+    <string name="a11y_messaging_send">Envoyer</string>
+    <string name="a11y_messaging_attach_image">Joindre une image</string>
+    <string name="a11y_messaging_camera">Appareil photo</string>
+    <string name="a11y_messaging_image">Image</string>
+    <string name="a11y_messaging_attachment_n">Pièce jointe %1$d</string>
+    <string name="a11y_messaging_remove_attachment">Supprimer la pièce jointe</string>
+    <string name="screen_messaging_keep_authentic">Restez authentique dans les DM</string>
+    <string name="screen_messaging_disappear_info">Les messages disparaîtront après 24 heures</string>
+
+    <!-- i18n Phase C.3 / Thread Detail module (2026-04-19) -->
+    <string name="screen_thread_detail_replying_to">En réponse à %1$s</string>
+    <string name="screen_thread_detail_replies_header">Réponses</string>
+    <string name="screen_thread_detail_loading_error">Erreur de chargement</string>
 </resources>

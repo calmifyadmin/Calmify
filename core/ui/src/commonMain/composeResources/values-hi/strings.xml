@@ -103,4 +103,35 @@
     <string name="a11y_social_profile_remove_interest">रुचि हटाएं</string>
     <string name="a11y_social_profile_add_interest">रुचि जोड़ें</string>
 
+    <!-- i18n Phase C.3 / Composer module (2026-04-19) -->
+    <string name="screen_composer_title_new">नई पोस्ट</string>
+    <string name="screen_composer_title_reply">जवाब दें</string>
+    <string name="screen_composer_placeholder">आप क्या सोच रहे हैं?</string>
+    <string name="a11y_composer_gif">GIF</string>
+    <string name="a11y_composer_attach">अटैच करें</string>
+    <string name="a11y_composer_quote">उद्धृत करें</string>
+    <string name="a11y_composer_more">अधिक</string>
+    <string name="screen_composer_reply_perm_all">सभी जवाब दे सकते हैं</string>
+    <string name="screen_composer_reply_perm_followers">केवल फॉलोअर</string>
+    <string name="screen_composer_reply_perm_mentioned">केवल उल्लेखित</string>
+    <string name="screen_composer_visibility_public">सार्वजनिक</string>
+    <string name="screen_composer_visibility_followers">फॉलोअर</string>
+    <string name="screen_composer_visibility_private">निजी</string>
+
+    <!-- i18n Phase C.3 / Messaging module (2026-04-19) -->
+    <string name="screen_messaging_placeholder">संदेश टाइप करें…</string>
+    <string name="a11y_messaging_send">भेजें</string>
+    <string name="a11y_messaging_attach_image">छवि अटैच करें</string>
+    <string name="a11y_messaging_camera">कैमरा</string>
+    <string name="a11y_messaging_image">छवि</string>
+    <string name="a11y_messaging_attachment_n">अटैचमेंट %1$d</string>
+    <string name="a11y_messaging_remove_attachment">अटैचमेंट हटाएं</string>
+    <string name="screen_messaging_keep_authentic">DM में प्रामाणिकता बनाए रखें</string>
+    <string name="screen_messaging_disappear_info">संदेश 24 घंटे बाद गायब हो जाएंगे</string>
+
+    <!-- i18n Phase C.3 / Thread Detail module (2026-04-19) -->
+    <string name="screen_thread_detail_replying_to">%1$s को जवाब</string>
+    <string name="screen_thread_detail_replies_header">जवाब</string>
+    <string name="screen_thread_detail_loading_error">लोडिंग त्रुटि</string>
+
 </resources>

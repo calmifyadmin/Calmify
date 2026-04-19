@@ -103,4 +103,35 @@
     <string name="a11y_social_profile_remove_interest">관심사 제거</string>
     <string name="a11y_social_profile_add_interest">관심사 추가</string>
 
+    <!-- i18n Phase C.3 / Composer module (2026-04-19) -->
+    <string name="screen_composer_title_new">새 게시물</string>
+    <string name="screen_composer_title_reply">답글</string>
+    <string name="screen_composer_placeholder">무슨 생각을 하고 계신가요?</string>
+    <string name="a11y_composer_gif">GIF</string>
+    <string name="a11y_composer_attach">첨부</string>
+    <string name="a11y_composer_quote">인용</string>
+    <string name="a11y_composer_more">더보기</string>
+    <string name="screen_composer_reply_perm_all">모두가 답글 가능</string>
+    <string name="screen_composer_reply_perm_followers">팔로워만</string>
+    <string name="screen_composer_reply_perm_mentioned">언급된 사람만</string>
+    <string name="screen_composer_visibility_public">공개</string>
+    <string name="screen_composer_visibility_followers">팔로워</string>
+    <string name="screen_composer_visibility_private">비공개</string>
+
+    <!-- i18n Phase C.3 / Messaging module (2026-04-19) -->
+    <string name="screen_messaging_placeholder">메시지 입력…</string>
+    <string name="a11y_messaging_send">보내기</string>
+    <string name="a11y_messaging_attach_image">이미지 첨부</string>
+    <string name="a11y_messaging_camera">카메라</string>
+    <string name="a11y_messaging_image">이미지</string>
+    <string name="a11y_messaging_attachment_n">첨부 %1$d</string>
+    <string name="a11y_messaging_remove_attachment">첨부 제거</string>
+    <string name="screen_messaging_keep_authentic">DM에서 진정성을 유지하세요</string>
+    <string name="screen_messaging_disappear_info">메시지는 24시간 후 사라집니다</string>
+
+    <!-- i18n Phase C.3 / Thread Detail module (2026-04-19) -->
+    <string name="screen_thread_detail_replying_to">%1$s에게 답글</string>
+    <string name="screen_thread_detail_replies_header">답글</string>
+    <string name="screen_thread_detail_loading_error">로딩 오류</string>
+
 </resources>

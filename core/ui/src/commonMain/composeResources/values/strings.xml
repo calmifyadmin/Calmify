@@ -685,4 +685,41 @@
     <string name="a11y_social_profile_remove_interest">Remove interest</string>
     <string name="a11y_social_profile_add_interest">Add interest</string>
 
+    <!-- ============================================================ -->
+    <!-- i18n Phase C.3 / Composer module (2026-04-19)                 -->
+    <!-- ============================================================ -->
+    <string name="screen_composer_title_new">New post</string>
+    <string name="screen_composer_title_reply">Reply</string>
+    <string name="screen_composer_placeholder">What\'s on your mind?</string>
+    <string name="a11y_composer_gif">GIF</string>
+    <string name="a11y_composer_attach">Attach</string>
+    <string name="a11y_composer_quote">Quote</string>
+    <string name="a11y_composer_more">More</string>
+    <string name="screen_composer_reply_perm_all">Everyone can reply</string>
+    <string name="screen_composer_reply_perm_followers">Followers only</string>
+    <string name="screen_composer_reply_perm_mentioned">Mentioned only</string>
+    <string name="screen_composer_visibility_public">Public</string>
+    <string name="screen_composer_visibility_followers">Followers</string>
+    <string name="screen_composer_visibility_private">Private</string>
+
+    <!-- ============================================================ -->
+    <!-- i18n Phase C.3 / Messaging module (2026-04-19)                -->
+    <!-- ============================================================ -->
+    <string name="screen_messaging_placeholder">Type a message…</string>
+    <string name="a11y_messaging_send">Send</string>
+    <string name="a11y_messaging_attach_image">Attach image</string>
+    <string name="a11y_messaging_camera">Camera</string>
+    <string name="a11y_messaging_image">Image</string>
+    <string name="a11y_messaging_attachment_n">Attachment %1$d</string>
+    <string name="a11y_messaging_remove_attachment">Remove attachment</string>
+    <string name="screen_messaging_keep_authentic">Keep it authentic in DMs</string>
+    <string name="screen_messaging_disappear_info">Messages will disappear after 24 hours</string>
+
+    <!-- ============================================================ -->
+    <!-- i18n Phase C.3 / Thread Detail module (2026-04-19)            -->
+    <!-- ============================================================ -->
+    <string name="screen_thread_detail_replying_to">Replying to %1$s</string>
+    <string name="screen_thread_detail_replies_header">Replies</string>
+    <string name="screen_thread_detail_loading_error">Loading error</string>
+
 </resources>

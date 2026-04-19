@@ -111,4 +111,35 @@
     <string name="a11y_social_profile_remove_interest">إزالة الاهتمام</string>
     <string name="a11y_social_profile_add_interest">إضافة اهتمام</string>
 
+    <!-- i18n Phase C.3 / Composer module (2026-04-19) -->
+    <string name="screen_composer_title_new">منشور جديد</string>
+    <string name="screen_composer_title_reply">رد</string>
+    <string name="screen_composer_placeholder">بماذا تفكر؟</string>
+    <string name="a11y_composer_gif">GIF</string>
+    <string name="a11y_composer_attach">إرفاق</string>
+    <string name="a11y_composer_quote">اقتباس</string>
+    <string name="a11y_composer_more">المزيد</string>
+    <string name="screen_composer_reply_perm_all">يمكن للجميع الرد</string>
+    <string name="screen_composer_reply_perm_followers">المتابعون فقط</string>
+    <string name="screen_composer_reply_perm_mentioned">المذكورون فقط</string>
+    <string name="screen_composer_visibility_public">عام</string>
+    <string name="screen_composer_visibility_followers">المتابعون</string>
+    <string name="screen_composer_visibility_private">خاص</string>
+
+    <!-- i18n Phase C.3 / Messaging module (2026-04-19) -->
+    <string name="screen_messaging_placeholder">اكتب رسالة…</string>
+    <string name="a11y_messaging_send">إرسال</string>
+    <string name="a11y_messaging_attach_image">إرفاق صورة</string>
+    <string name="a11y_messaging_camera">الكاميرا</string>
+    <string name="a11y_messaging_image">صورة</string>
+    <string name="a11y_messaging_attachment_n">المرفق %1$d</string>
+    <string name="a11y_messaging_remove_attachment">إزالة المرفق</string>
+    <string name="screen_messaging_keep_authentic">حافظ على الأصالة في الرسائل المباشرة</string>
+    <string name="screen_messaging_disappear_info">ستختفي الرسائل بعد 24 ساعة</string>
+
+    <!-- i18n Phase C.3 / Thread Detail module (2026-04-19) -->
+    <string name="screen_thread_detail_replying_to">رد على %1$s</string>
+    <string name="screen_thread_detail_replies_header">الردود</string>
+    <string name="screen_thread_detail_loading_error">خطأ في التحميل</string>
+
 </resources>

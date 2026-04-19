@@ -103,4 +103,35 @@
     <string name="a11y_social_profile_remove_interest">ลบความสนใจ</string>
     <string name="a11y_social_profile_add_interest">เพิ่มความสนใจ</string>
 
+    <!-- i18n Phase C.3 / Composer module (2026-04-19) -->
+    <string name="screen_composer_title_new">โพสต์ใหม่</string>
+    <string name="screen_composer_title_reply">ตอบกลับ</string>
+    <string name="screen_composer_placeholder">คุณกำลังคิดอะไรอยู่?</string>
+    <string name="a11y_composer_gif">GIF</string>
+    <string name="a11y_composer_attach">แนบ</string>
+    <string name="a11y_composer_quote">อ้างอิง</string>
+    <string name="a11y_composer_more">เพิ่มเติม</string>
+    <string name="screen_composer_reply_perm_all">ทุกคนตอบกลับได้</string>
+    <string name="screen_composer_reply_perm_followers">เฉพาะผู้ติดตาม</string>
+    <string name="screen_composer_reply_perm_mentioned">เฉพาะที่ถูกกล่าวถึง</string>
+    <string name="screen_composer_visibility_public">สาธารณะ</string>
+    <string name="screen_composer_visibility_followers">ผู้ติดตาม</string>
+    <string name="screen_composer_visibility_private">ส่วนตัว</string>
+
+    <!-- i18n Phase C.3 / Messaging module (2026-04-19) -->
+    <string name="screen_messaging_placeholder">พิมพ์ข้อความ…</string>
+    <string name="a11y_messaging_send">ส่ง</string>
+    <string name="a11y_messaging_attach_image">แนบรูปภาพ</string>
+    <string name="a11y_messaging_camera">กล้อง</string>
+    <string name="a11y_messaging_image">รูปภาพ</string>
+    <string name="a11y_messaging_attachment_n">ไฟล์แนบ %1$d</string>
+    <string name="a11y_messaging_remove_attachment">ลบไฟล์แนบ</string>
+    <string name="screen_messaging_keep_authentic">รักษาความจริงใจในข้อความส่วนตัว</string>
+    <string name="screen_messaging_disappear_info">ข้อความจะหายไปหลังจาก 24 ชั่วโมง</string>
+
+    <!-- i18n Phase C.3 / Thread Detail module (2026-04-19) -->
+    <string name="screen_thread_detail_replying_to">ตอบกลับ %1$s</string>
+    <string name="screen_thread_detail_replies_header">การตอบกลับ</string>
+    <string name="screen_thread_detail_loading_error">ข้อผิดพลาดในการโหลด</string>
+
 </resources>

@@ -55,6 +55,7 @@ import com.lifo.util.repository.SocialMessagingRepository
 import org.jetbrains.compose.resources.stringResource
 import com.lifo.ui.resources.Res
 import com.lifo.ui.resources.*
+import com.lifo.ui.i18n.Strings
 
 /**
  * Conversation list screen displaying all active conversations.
@@ -184,13 +185,13 @@ fun ConversationListScreen(
                             )
                             Spacer(modifier = Modifier.height(24.dp))
                             Text(
-                                text = "Keep it authentic in DMs",
+                                text = stringResource(Strings.Screen.Messaging.keepAuthentic),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Messages will disappear if you don't follow each other",
+                                text = stringResource(Strings.Screen.Messaging.disappearInfo),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center,

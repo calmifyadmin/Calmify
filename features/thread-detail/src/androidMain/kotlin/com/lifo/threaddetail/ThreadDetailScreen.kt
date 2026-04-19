@@ -55,7 +55,9 @@ import androidx.compose.ui.unit.dp
 import com.lifo.socialui.avatar.UserAvatar
 import com.lifo.socialui.post.ThreadPostCard
 import com.lifo.socialui.post.formatCount
+import com.lifo.ui.i18n.Strings
 import com.lifo.util.model.RequestState
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -125,7 +127,7 @@ fun ThreadDetailScreen(
                                 Spacer(Modifier.width(10.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Rispondendo a ${replyAuthorName ?: ""}",
+                                        text = stringResource(Strings.Screen.ThreadDetail.replyingTo, replyAuthorName ?: ""),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = colorScheme.primary,
                                         fontWeight = FontWeight.SemiBold,
@@ -249,7 +251,7 @@ fun ThreadDetailScreen(
             }
             is RequestState.Error -> {
                 Box(Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                    Text("Errore nel caricamento", color = colorScheme.error)
+                    Text(stringResource(Strings.Screen.ThreadDetail.loadingError), color = colorScheme.error)
                 }
             }
             is RequestState.Success -> {
@@ -328,7 +330,7 @@ fun ThreadDetailScreen(
                         // Replies header
                         item {
                             Text(
-                                text = "Risposte",
+                                text = stringResource(Strings.Screen.ThreadDetail.repliesHeader),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.SemiBold,
                                 color = colorScheme.onSurface,
@@ -492,7 +494,7 @@ fun ThreadDetailScreen(
                                                         }
                                                         is RequestState.Error -> {
                                                             Text(
-                                                                text = "Errore nel caricamento",
+                                                                text = stringResource(Strings.Screen.ThreadDetail.loadingError),
                                                                 style = MaterialTheme.typography.bodySmall,
                                                                 color = colorScheme.error,
                                                                 modifier = Modifier.padding(start = 56.dp, bottom = 8.dp),

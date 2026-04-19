@@ -6,7 +6,7 @@
 ## STATUS 2026-04-19
 
 **Level 1 KMP REST**: ✅ **DEPLOYED** (2026-04-18) — 36/36 repos, server Cloud Run live, smoke E2E 91/92 verdi.
-**Sprint i18n**: 🚧 **IN PROGRESS — Fase A + A' + A'' + B + C.1 + C.2 DONE 2026-04-19** (pre-Level 3, ~5-6 gg totali). Scaffold + 12 locales + EN default + facade populated. Fase C.1: home (29 keys × 12 lang + ~37 migrati). Fase C.2: search + social-profile (24 keys × 12 lang + ~22 migrati). Next: Fase C.3 (composer + messaging + thread-detail). Vedi `memory/i18n_strategy.md`.
+**Sprint i18n**: 🚧 **IN PROGRESS — Fase A→C.3 DONE 2026-04-19** (pre-Level 3, ~5-6 gg totali). Scaffold + 12 locales + EN default + facade populated. Cumulative: C.1 home + C.2 search/social-profile + C.3 composer/messaging/thread-detail = 78 keys × 12 lang + ~81 hardcoded migrati. Next: Fase C.4 (avatar-creator + insight + meditation). Vedi `memory/i18n_strategy.md`.
 **Level 3 (iOS + Web)**: 🔓 **UNBLOCKED** ma parte solo DOPO sprint i18n. Vedi `memory/kmp_action_blocks.md`.
 
 ## Strategia data layer: EVOLUTA da Option C → Server-Mediated

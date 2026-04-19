@@ -103,4 +103,35 @@
     <string name="a11y_social_profile_remove_interest">興味を削除</string>
     <string name="a11y_social_profile_add_interest">興味を追加</string>
 
+    <!-- i18n Phase C.3 / Composer module (2026-04-19) -->
+    <string name="screen_composer_title_new">新しい投稿</string>
+    <string name="screen_composer_title_reply">返信</string>
+    <string name="screen_composer_placeholder">今何を考えていますか？</string>
+    <string name="a11y_composer_gif">GIF</string>
+    <string name="a11y_composer_attach">添付</string>
+    <string name="a11y_composer_quote">引用</string>
+    <string name="a11y_composer_more">その他</string>
+    <string name="screen_composer_reply_perm_all">全員が返信できます</string>
+    <string name="screen_composer_reply_perm_followers">フォロワーのみ</string>
+    <string name="screen_composer_reply_perm_mentioned">メンションされた人のみ</string>
+    <string name="screen_composer_visibility_public">公開</string>
+    <string name="screen_composer_visibility_followers">フォロワー</string>
+    <string name="screen_composer_visibility_private">非公開</string>
+
+    <!-- i18n Phase C.3 / Messaging module (2026-04-19) -->
+    <string name="screen_messaging_placeholder">メッセージを入力…</string>
+    <string name="a11y_messaging_send">送信</string>
+    <string name="a11y_messaging_attach_image">画像を添付</string>
+    <string name="a11y_messaging_camera">カメラ</string>
+    <string name="a11y_messaging_image">画像</string>
+    <string name="a11y_messaging_attachment_n">添付 %1$d</string>
+    <string name="a11y_messaging_remove_attachment">添付を削除</string>
+    <string name="screen_messaging_keep_authentic">DMでは誠実さを保ってください</string>
+    <string name="screen_messaging_disappear_info">メッセージは24時間後に消えます</string>
+
+    <!-- i18n Phase C.3 / Thread Detail module (2026-04-19) -->
+    <string name="screen_thread_detail_replying_to">%1$s への返信</string>
+    <string name="screen_thread_detail_replies_header">返信</string>
+    <string name="screen_thread_detail_loading_error">読み込みエラー</string>
+
 </resources>

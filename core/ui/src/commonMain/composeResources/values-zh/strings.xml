@@ -103,4 +103,35 @@
     <string name="a11y_social_profile_remove_interest">移除兴趣</string>
     <string name="a11y_social_profile_add_interest">添加兴趣</string>
 
+    <!-- i18n Phase C.3 / Composer module (2026-04-19) -->
+    <string name="screen_composer_title_new">新帖子</string>
+    <string name="screen_composer_title_reply">回复</string>
+    <string name="screen_composer_placeholder">你在想什么？</string>
+    <string name="a11y_composer_gif">GIF</string>
+    <string name="a11y_composer_attach">附件</string>
+    <string name="a11y_composer_quote">引用</string>
+    <string name="a11y_composer_more">更多</string>
+    <string name="screen_composer_reply_perm_all">所有人都可以回复</string>
+    <string name="screen_composer_reply_perm_followers">仅关注者</string>
+    <string name="screen_composer_reply_perm_mentioned">仅被提及者</string>
+    <string name="screen_composer_visibility_public">公开</string>
+    <string name="screen_composer_visibility_followers">关注者</string>
+    <string name="screen_composer_visibility_private">私密</string>
+
+    <!-- i18n Phase C.3 / Messaging module (2026-04-19) -->
+    <string name="screen_messaging_placeholder">输入消息…</string>
+    <string name="a11y_messaging_send">发送</string>
+    <string name="a11y_messaging_attach_image">附加图片</string>
+    <string name="a11y_messaging_camera">相机</string>
+    <string name="a11y_messaging_image">图片</string>
+    <string name="a11y_messaging_attachment_n">附件 %1$d</string>
+    <string name="a11y_messaging_remove_attachment">移除附件</string>
+    <string name="screen_messaging_keep_authentic">在私信中保持真实</string>
+    <string name="screen_messaging_disappear_info">消息将在 24 小时后消失</string>
+
+    <!-- i18n Phase C.3 / Thread Detail module (2026-04-19) -->
+    <string name="screen_thread_detail_replying_to">回复 %1$s</string>
+    <string name="screen_thread_detail_replies_header">回复</string>
+    <string name="screen_thread_detail_loading_error">加载错误</string>
+
 </resources>

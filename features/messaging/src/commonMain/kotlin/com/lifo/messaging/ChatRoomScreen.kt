@@ -64,11 +64,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.lifo.socialui.avatar.UserAvatar
+import com.lifo.ui.i18n.Strings
 import com.lifo.util.repository.SocialMessagingRepository
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Chat room screen for a specific conversation.
@@ -196,7 +198,7 @@ private fun ChatRoomTopBar(
             IconButton(onClick = onNavigateBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back"
+                    contentDescription = stringResource(Strings.A11y.back)
                 )
             }
         },
@@ -369,7 +371,7 @@ private fun GroupedMessageBubble(
                     if (imageUrls.size == 1) {
                         AsyncImage(
                             model = imageUrls[0],
-                            contentDescription = "Image",
+                            contentDescription = stringResource(Strings.Screen.Messaging.a11yImage),
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -384,7 +386,7 @@ private fun GroupedMessageBubble(
                                     row.forEach { url ->
                                         AsyncImage(
                                             model = url,
-                                            contentDescription = "Image",
+                                            contentDescription = stringResource(Strings.Screen.Messaging.a11yImage),
                                             contentScale = ContentScale.Crop,
                                             modifier = Modifier
                                                 .weight(1f)
@@ -557,7 +559,7 @@ private fun ChatInputBar(
                     Box {
                         AsyncImage(
                             model = uri,
-                            contentDescription = "Attachment $index",
+                            contentDescription = stringResource(Strings.Screen.Messaging.a11yAttachmentN, index),
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .size(64.dp)
@@ -576,7 +578,7 @@ private fun ChatInputBar(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Remove attachment",
+                                contentDescription = stringResource(Strings.Screen.Messaging.a11yRemoveAttachment),
                                 tint = MaterialTheme.colorScheme.onErrorContainer,
                                 modifier = Modifier.size(12.dp)
                             )
@@ -599,7 +601,7 @@ private fun ChatInputBar(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.AttachFile,
-                    contentDescription = "Attach image",
+                    contentDescription = stringResource(Strings.Screen.Messaging.a11yAttachImage),
                     tint = if (pendingAttachmentUris.isNotEmpty())
                         MaterialTheme.colorScheme.primary
                     else
@@ -615,7 +617,7 @@ private fun ChatInputBar(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.CameraAlt,
-                    contentDescription = "Camera",
+                    contentDescription = stringResource(Strings.Screen.Messaging.a11yCamera),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                     modifier = Modifier.size(22.dp)
                 )
@@ -630,7 +632,7 @@ private fun ChatInputBar(
                 modifier = Modifier.weight(1f),
                 placeholder = {
                     Text(
-                        text = "Type a message...",
+                        text = stringResource(Strings.Screen.Messaging.placeholder),
                         style = MaterialTheme.typography.bodyMedium
                     )
                 },
@@ -670,7 +672,7 @@ private fun ChatInputBar(
                 } else {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "Send",
+                        contentDescription = stringResource(Strings.Screen.Messaging.a11ySend),
                         tint = if (canSend)
                             MaterialTheme.colorScheme.onPrimary
                         else

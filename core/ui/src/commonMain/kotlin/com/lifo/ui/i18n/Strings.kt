@@ -144,6 +144,43 @@ object Strings {
             val error: StringResource get() = Res.string.screen_search_error
         }
 
+        /** Composer feature — new post / reply form. */
+        object Composer {
+            val titleNew: StringResource get() = Res.string.screen_composer_title_new
+            val titleReply: StringResource get() = Res.string.screen_composer_title_reply
+            val placeholder: StringResource get() = Res.string.screen_composer_placeholder
+            val a11yGif: StringResource get() = Res.string.a11y_composer_gif
+            val a11yAttach: StringResource get() = Res.string.a11y_composer_attach
+            val a11yQuote: StringResource get() = Res.string.a11y_composer_quote
+            val a11yMore: StringResource get() = Res.string.a11y_composer_more
+            val replyPermAll: StringResource get() = Res.string.screen_composer_reply_perm_all
+            val replyPermFollowers: StringResource get() = Res.string.screen_composer_reply_perm_followers
+            val replyPermMentioned: StringResource get() = Res.string.screen_composer_reply_perm_mentioned
+            val visibilityPublic: StringResource get() = Res.string.screen_composer_visibility_public
+            val visibilityFollowers: StringResource get() = Res.string.screen_composer_visibility_followers
+            val visibilityPrivate: StringResource get() = Res.string.screen_composer_visibility_private
+        }
+
+        /** Messaging feature — chat room + conversation list. */
+        object Messaging {
+            val placeholder: StringResource get() = Res.string.screen_messaging_placeholder
+            val keepAuthentic: StringResource get() = Res.string.screen_messaging_keep_authentic
+            val disappearInfo: StringResource get() = Res.string.screen_messaging_disappear_info
+            val a11ySend: StringResource get() = Res.string.a11y_messaging_send
+            val a11yAttachImage: StringResource get() = Res.string.a11y_messaging_attach_image
+            val a11yCamera: StringResource get() = Res.string.a11y_messaging_camera
+            val a11yImage: StringResource get() = Res.string.a11y_messaging_image
+            val a11yAttachmentN: StringResource get() = Res.string.a11y_messaging_attachment_n
+            val a11yRemoveAttachment: StringResource get() = Res.string.a11y_messaging_remove_attachment
+        }
+
+        /** Thread Detail feature — thread view with replies. */
+        object ThreadDetail {
+            val replyingTo: StringResource get() = Res.string.screen_thread_detail_replying_to
+            val repliesHeader: StringResource get() = Res.string.screen_thread_detail_replies_header
+            val loadingError: StringResource get() = Res.string.screen_thread_detail_loading_error
+        }
+
         /** Social Profile feature — edit + view profile screens. */
         object SocialProfile {
             val changePhoto: StringResource get() = Res.string.screen_social_profile_change_photo

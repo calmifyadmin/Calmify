@@ -662,4 +662,35 @@
     <string name="a11y_social_profile_cover_photo">Titelbild</string>
     <string name="a11y_social_profile_remove_interest">Interesse entfernen</string>
     <string name="a11y_social_profile_add_interest">Interesse hinzufügen</string>
+
+    <!-- i18n Phase C.3 / Composer module (2026-04-19) -->
+    <string name="screen_composer_title_new">Neuer Beitrag</string>
+    <string name="screen_composer_title_reply">Antworten</string>
+    <string name="screen_composer_placeholder">Was geht dir durch den Kopf?</string>
+    <string name="a11y_composer_gif">GIF</string>
+    <string name="a11y_composer_attach">Anhängen</string>
+    <string name="a11y_composer_quote">Zitieren</string>
+    <string name="a11y_composer_more">Mehr</string>
+    <string name="screen_composer_reply_perm_all">Jeder kann antworten</string>
+    <string name="screen_composer_reply_perm_followers">Nur Follower</string>
+    <string name="screen_composer_reply_perm_mentioned">Nur Erwähnte</string>
+    <string name="screen_composer_visibility_public">Öffentlich</string>
+    <string name="screen_composer_visibility_followers">Follower</string>
+    <string name="screen_composer_visibility_private">Privat</string>
+
+    <!-- i18n Phase C.3 / Messaging module (2026-04-19) -->
+    <string name="screen_messaging_placeholder">Nachricht eingeben…</string>
+    <string name="a11y_messaging_send">Senden</string>
+    <string name="a11y_messaging_attach_image">Bild anhängen</string>
+    <string name="a11y_messaging_camera">Kamera</string>
+    <string name="a11y_messaging_image">Bild</string>
+    <string name="a11y_messaging_attachment_n">Anhang %1$d</string>
+    <string name="a11y_messaging_remove_attachment">Anhang entfernen</string>
+    <string name="screen_messaging_keep_authentic">Bleibe authentisch in DMs</string>
+    <string name="screen_messaging_disappear_info">Nachrichten verschwinden nach 24 Stunden</string>
+
+    <!-- i18n Phase C.3 / Thread Detail module (2026-04-19) -->
+    <string name="screen_thread_detail_replying_to">Antwort an %1$s</string>
+    <string name="screen_thread_detail_replies_header">Antworten</string>
+    <string name="screen_thread_detail_loading_error">Ladefehler</string>
 </resources>
