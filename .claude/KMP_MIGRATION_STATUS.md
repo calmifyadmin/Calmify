@@ -6,7 +6,7 @@
 ## STATUS 2026-04-19
 
 **Level 1 KMP REST**: ✅ **DEPLOYED** (2026-04-18) — 36/36 repos, server Cloud Run live, smoke E2E 91/92 verdi.
-**Sprint i18n**: 🚧 **IN PROGRESS — Fase A→C.5 DONE 2026-04-19** (pre-Level 3, ~5-6 gg totali). **All per-module migration complete.** Cumulative: 130 keys × 12 lang + ~128 hardcoded migrati su 27 file Kotlin. Modules: home, search, social-profile, composer, messaging, thread-detail, avatar-creator, insight, meditation, snapshot, settings, chat, humanoid + Nav facade. Next: Fase D (cleanup + RTL/CJK verify + Noto fonts). Vedi `memory/i18n_strategy.md`.
+**Sprint i18n**: 🚧 **IN PROGRESS — Fase A→D DONE 2026-04-19** (pre-Level 3, ~5-6 gg totali). **All per-module migration + tail residuals + cleanup complete.** Cumulative: 140 keys × 12 lang + ~145 hardcoded migrati su 31 file Kotlin (27 feature + 4 core/social-ui). Modules: home, search, social-profile (+tail), follow-list, composer, messaging, thread-detail, avatar-creator, insight, meditation, snapshot, settings, chat, humanoid, core/social-ui quartet + Nav facade. Phase D cleanup: `values-en/` deleted (redundant with default EN), MainActivity.kt revert (app/ is `com.android.application` — no Compose Resources). Next: Fase E (final docs consolidation). Vedi `memory/i18n_strategy.md`.
 **Level 3 (iOS + Web)**: 🔓 **UNBLOCKED** ma parte solo DOPO sprint i18n. Vedi `memory/kmp_action_blocks.md`.
 
 ## Strategia data layer: EVOLUTA da Option C → Server-Mediated

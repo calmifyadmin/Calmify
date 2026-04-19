@@ -27,6 +27,8 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.lifo.ui.i18n.Strings
+import org.jetbrains.compose.resources.stringResource
 
 private val LikeRed = Color(0xFFFF3040)
 private val RepostGreen = Color(0xFF00BA7C)
@@ -71,7 +73,7 @@ fun EngagementBar(
         EngagementAction(
             icon = Icons.Outlined.ChatBubbleOutline,
             count = replyCount,
-            contentDescription = "Reply",
+            contentDescription = stringResource(Strings.SharedA11y.reply),
             onClick = onReply
         )
 
@@ -81,7 +83,7 @@ fun EngagementBar(
         EngagementAction(
             icon = Icons.Outlined.Repeat,
             count = repostCount,
-            contentDescription = "Repost",
+            contentDescription = stringResource(Strings.SharedA11y.repost),
             tint = if (isReposted) RepostGreen else MaterialTheme.colorScheme.onSurfaceVariant,
             onClick = {
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -104,7 +106,7 @@ fun EngagementBar(
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Outlined.Send,
-                contentDescription = "Share",
+                contentDescription = stringResource(Strings.SharedA11y.share),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )

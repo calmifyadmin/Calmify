@@ -280,6 +280,20 @@ object Strings {
             val a11yCoverPhoto: StringResource get() = Res.string.a11y_social_profile_cover_photo
             val a11yRemoveInterest: StringResource get() = Res.string.a11y_social_profile_remove_interest
             val a11yAddInterest: StringResource get() = Res.string.a11y_social_profile_add_interest
+            // Phase D additions
+            val editButton: StringResource get() = Res.string.screen_social_profile_edit_button
+            val shareButton: StringResource get() = Res.string.screen_social_profile_share_button
+            val followButton: StringResource get() = Res.string.screen_social_profile_follow_button
+            val followingButton: StringResource get() = Res.string.screen_social_profile_following_button
+            val userFallback: StringResource get() = Res.string.screen_social_profile_user_fallback
+            val followersSuffix: StringResource get() = Res.string.screen_social_profile_followers_suffix
+            val followingSuffix: StringResource get() = Res.string.screen_social_profile_following_suffix
+        }
+
+        /** Follow List screen tabs. */
+        object FollowList {
+            val tabFollowers: StringResource get() = Res.string.screen_follow_list_tab_followers
+            val tabFollowing: StringResource get() = Res.string.screen_follow_list_tab_following
         }
     }
 
@@ -292,5 +306,6 @@ object Strings {
         val options: StringResource get() = Res.string.a11y_options
         val copyCode: StringResource get() = Res.string.a11y_copy_code
         val appLogo: StringResource get() = Res.string.a11y_app_logo
+        val image: StringResource get() = Res.string.a11y_image_generic
     }
 }

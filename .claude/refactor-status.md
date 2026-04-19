@@ -3,10 +3,10 @@
 > Questo file viene letto da Jarvis all'inizio di ogni sessione.
 > Aggiornato automaticamente dopo ogni operazione completata.
 
-## STATO ATTUALE 2026-04-19 (Fase A→C.5 i18n DONE — tutta C complete)
+## STATO ATTUALE 2026-04-19 (Fase A→D i18n DONE — tail + cleanup complete)
 
 **Level 1 KMP REST CHIUSO + DEPLOYED**. Smoke test E2E 91/92 verdi.
-**Sprint i18n in corso**: **Fase C COMPLETE** — Cumulative 130 keys × 12 lang + ~128 hardcoded migrati su 27 file Kotlin (home, search, social-profile, composer, messaging, thread-detail, avatar-creator, insight, meditation, snapshot, settings, chat, humanoid + Nav facade). Full app compile verde. Next: Fase D (cleanup + RTL/CJK verify + Noto fonts bundle + tail residuals). Sprint totale stimato ~5-6 gg.
+**Sprint i18n in corso**: **Fase D COMPLETE** — Cumulative 140 keys × 12 lang + ~145 hardcoded migrati su 31 file Kotlin (27 feature + 4 core/social-ui). Phase D additions: SocialProfile tail (Modifica/Condividi/Seguito/Segui + User fallback + follower/seguiti suffixes), FollowList tabs, core/social-ui quartet (CodeBlock/EngagementBar/ThreadPostCard/FullscreenImageViewer a11y). Cleanup: `values-en/` eliminato (redundante con default EN), MainActivity revert (app/ e' `com.android.application` — no Compose Resources). Full app compile verde. Next: Fase E (final docs consolidation + sprint summary). Sprint totale stimato ~5-6 gg.
 Vedi `memory/i18n_strategy.md`, `memory/project_phase5_deploy_results.md`.
 
 ## EVENTO: Backend Audit (2026-04-10) — RISOLTO 2026-04-18

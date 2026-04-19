@@ -796,4 +796,18 @@
     <string name="a11y_copy_code">Copy code</string>
     <string name="a11y_app_logo">Calmify logo</string>
 
+    <!-- ============================================================ -->
+    <!-- i18n Phase D / Tail residuals (2026-04-19)                    -->
+    <!-- ============================================================ -->
+    <string name="screen_social_profile_edit_button">Edit profile</string>
+    <string name="screen_social_profile_share_button">Share</string>
+    <string name="screen_social_profile_follow_button">Follow</string>
+    <string name="screen_social_profile_following_button">Following</string>
+    <string name="screen_social_profile_user_fallback">User</string>
+    <string name="screen_social_profile_followers_suffix">followers</string>
+    <string name="screen_social_profile_following_suffix">following</string>
+    <string name="screen_follow_list_tab_followers">Followers</string>
+    <string name="screen_follow_list_tab_following">Following</string>
+    <string name="a11y_image_generic">Image</string>
+
 </resources>

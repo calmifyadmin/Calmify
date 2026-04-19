@@ -755,4 +755,16 @@
     <string name="a11y_options">Options</string>
     <string name="a11y_copy_code">Copier le code</string>
     <string name="a11y_app_logo">Logo Calmify</string>
+
+    <!-- i18n Phase D / Tail residuals (2026-04-19) -->
+    <string name="screen_social_profile_edit_button">Modifier le profil</string>
+    <string name="screen_social_profile_share_button">Partager</string>
+    <string name="screen_social_profile_follow_button">Suivre</string>
+    <string name="screen_social_profile_following_button">Suivi(e)</string>
+    <string name="screen_social_profile_user_fallback">Utilisateur</string>
+    <string name="screen_social_profile_followers_suffix">abonnés</string>
+    <string name="screen_social_profile_following_suffix">abonnements</string>
+    <string name="screen_follow_list_tab_followers">Abonnés</string>
+    <string name="screen_follow_list_tab_following">Abonnements</string>
+    <string name="a11y_image_generic">Image</string>
 </resources>

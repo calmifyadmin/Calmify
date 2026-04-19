@@ -23,6 +23,8 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lifo.ui.i18n.Strings
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Code block rendering for posts containing triple-backtick code.
@@ -70,7 +72,7 @@ fun CodeBlock(
         ) {
             Icon(
                 Icons.Outlined.ContentCopy,
-                contentDescription = "Copy code",
+                contentDescription = stringResource(Strings.SharedA11y.copyCode),
                 modifier = Modifier.size(16.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )

@@ -516,7 +516,7 @@ private fun InitializingScreen() {
     ) {
         Icon(
             painter = painterResource(id = com.lifo.ui.R.drawable.logo_calmify),
-            contentDescription = "Calmify",
+            contentDescription = "Calmify",  // app launcher Android-only — no Compose Resources access
             modifier = Modifier
                 .size(88.dp)
                 .scale(scale),

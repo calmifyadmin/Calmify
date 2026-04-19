@@ -65,7 +65,8 @@ fun FollowListScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = if (selectedTab == 0) "Follower" else "Seguiti",
+                        text = if (selectedTab == 0) stringResource(Strings.Screen.FollowList.tabFollowers)
+                               else stringResource(Strings.Screen.FollowList.tabFollowing),
                         style = MaterialTheme.typography.titleLarge
                     )
                 },

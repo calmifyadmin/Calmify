@@ -196,4 +196,16 @@
     <string name="a11y_copy_code">कोड कॉपी करें</string>
     <string name="a11y_app_logo">Calmify लोगो</string>
 
+    <!-- i18n Phase D / Tail residuals (2026-04-19) -->
+    <string name="screen_social_profile_edit_button">प्रोफ़ाइल संपादित करें</string>
+    <string name="screen_social_profile_share_button">शेयर</string>
+    <string name="screen_social_profile_follow_button">फॉलो</string>
+    <string name="screen_social_profile_following_button">फॉलो कर रहे हैं</string>
+    <string name="screen_social_profile_user_fallback">उपयोगकर्ता</string>
+    <string name="screen_social_profile_followers_suffix">फॉलोअर</string>
+    <string name="screen_social_profile_following_suffix">फॉलो कर रहे</string>
+    <string name="screen_follow_list_tab_followers">फॉलोअर</string>
+    <string name="screen_follow_list_tab_following">फॉलो कर रहे</string>
+    <string name="a11y_image_generic">छवि</string>
+
 </resources>

@@ -196,4 +196,16 @@
     <string name="a11y_copy_code">复制代码</string>
     <string name="a11y_app_logo">Calmify 标志</string>
 
+    <!-- i18n Phase D / Tail residuals (2026-04-19) -->
+    <string name="screen_social_profile_edit_button">编辑资料</string>
+    <string name="screen_social_profile_share_button">分享</string>
+    <string name="screen_social_profile_follow_button">关注</string>
+    <string name="screen_social_profile_following_button">已关注</string>
+    <string name="screen_social_profile_user_fallback">用户</string>
+    <string name="screen_social_profile_followers_suffix">关注者</string>
+    <string name="screen_social_profile_following_suffix">关注中</string>
+    <string name="screen_follow_list_tab_followers">关注者</string>
+    <string name="screen_follow_list_tab_following">关注中</string>
+    <string name="a11y_image_generic">图片</string>
+
 </resources>

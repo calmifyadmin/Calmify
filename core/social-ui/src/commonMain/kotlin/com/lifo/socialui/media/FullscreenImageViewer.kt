@@ -46,8 +46,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
+import com.lifo.ui.i18n.Strings
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Fullscreen image viewer with:
@@ -126,7 +128,7 @@ fun FullscreenImageViewer(
             ) {
                 Icon(
                     Icons.Filled.Close,
-                    contentDescription = "Close",
+                    contentDescription = stringResource(Strings.A11y.close),
                     tint = Color.White,
                     modifier = Modifier
                         .size(28.dp)
@@ -239,7 +241,7 @@ private fun ZoomableImage(
     ) {
         AsyncImage(
             model = imageUrl,
-            contentDescription = "Image",
+            contentDescription = stringResource(Strings.SharedA11y.image),
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .fillMaxSize()

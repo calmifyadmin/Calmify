@@ -196,4 +196,16 @@
     <string name="a11y_copy_code">코드 복사</string>
     <string name="a11y_app_logo">Calmify 로고</string>
 
+    <!-- i18n Phase D / Tail residuals (2026-04-19) -->
+    <string name="screen_social_profile_edit_button">프로필 수정</string>
+    <string name="screen_social_profile_share_button">공유</string>
+    <string name="screen_social_profile_follow_button">팔로우</string>
+    <string name="screen_social_profile_following_button">팔로잉</string>
+    <string name="screen_social_profile_user_fallback">사용자</string>
+    <string name="screen_social_profile_followers_suffix">팔로워</string>
+    <string name="screen_social_profile_following_suffix">팔로잉</string>
+    <string name="screen_follow_list_tab_followers">팔로워</string>
+    <string name="screen_follow_list_tab_following">팔로잉</string>
+    <string name="a11y_image_generic">이미지</string>
+
 </resources>

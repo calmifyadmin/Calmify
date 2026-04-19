@@ -34,7 +34,9 @@ import com.lifo.socialui.avatar.ClusteredAvatars
 import com.lifo.socialui.avatar.UserAvatar
 import com.lifo.socialui.media.MediaCarousel
 import com.lifo.socialui.thread.ThreadLine
+import com.lifo.ui.i18n.Strings
 import com.lifo.util.repository.ThreadRepository
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Threads-style post card with 2-column grid layout.
@@ -155,7 +157,7 @@ fun ThreadPostCard(
                     Spacer(Modifier.width(4.dp))
                     Icon(
                         imageVector = Icons.Default.Verified,
-                        contentDescription = "Verified",
+                        contentDescription = stringResource(Strings.SharedA11y.verifiedBadge),
                         modifier = Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.primary
                     )
@@ -180,7 +182,7 @@ fun ThreadPostCard(
                 // Options menu
                 Icon(
                     imageVector = Icons.Default.MoreHoriz,
-                    contentDescription = "Options",
+                    contentDescription = stringResource(Strings.SharedA11y.options),
                     modifier = Modifier
                         .size(18.dp)
                         .clickable(

@@ -284,7 +284,7 @@ private fun ProfileHeader(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         Text(
-                            text = profile?.displayName ?: "User",
+                            text = profile?.displayName ?: stringResource(Strings.Screen.SocialProfile.userFallback),
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold,
                             color = colorScheme.onSurface,
@@ -372,7 +372,8 @@ private fun ProfileHeader(
                             append(formatCount(followerCount))
                         }
                         withStyle(SpanStyle(color = colorScheme.onSurfaceVariant)) {
-                            append(" follower")
+                            append(" ")
+                            append(stringResource(Strings.Screen.SocialProfile.followersSuffix))
                         }
                     },
                     style = MaterialTheme.typography.bodyMedium,
@@ -395,7 +396,8 @@ private fun ProfileHeader(
                             append(formatCount(followingCount))
                         }
                         withStyle(SpanStyle(color = colorScheme.onSurfaceVariant)) {
-                            append(" seguiti")
+                            append(" ")
+                            append(stringResource(Strings.Screen.SocialProfile.followingSuffix))
                         }
                     },
                     style = MaterialTheme.typography.bodyMedium,
@@ -427,14 +429,14 @@ private fun ProfileHeader(
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(20.dp),
                     ) {
-                        Text("Modifica profilo", fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(Strings.Screen.SocialProfile.editButton), fontWeight = FontWeight.SemiBold)
                     }
                     OutlinedButton(
                         onClick = onShareProfileClick,
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(20.dp),
                     ) {
-                        Text("Condividi", fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(Strings.Screen.SocialProfile.shareButton), fontWeight = FontWeight.SemiBold)
                     }
                 }
             } else {
@@ -460,7 +462,7 @@ private fun ProfileHeader(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(20.dp),
                         ) {
-                            Text("Seguito", fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(Strings.Screen.SocialProfile.followingButton), fontWeight = FontWeight.SemiBold)
                         }
                     } else {
                         Button(
@@ -475,7 +477,7 @@ private fun ProfileHeader(
                                 contentColor = colorScheme.onPrimary,
                             ),
                         ) {
-                            Text("Segui", fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(Strings.Screen.SocialProfile.followButton), fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
