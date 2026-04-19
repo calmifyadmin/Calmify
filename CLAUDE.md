@@ -105,11 +105,11 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
 
 **Ad ogni nuova sessione, LEGGERE SUBITO questo file prima di fare qualsiasi cosa.**
 
-### Stato Attuale (aggiornato 2026-04-15)
+### Stato Attuale (aggiornato 2026-04-18)
 
-- **Branch attivo**: `backend-architecture-refactor` (base: master @ `08ef101`)
+- **Branch attivo**: `backend-architecture-refactor` (base: master @ `08ef101`), HEAD = `2c8ea0b`
 - **Fase 1 KMP COMPLETATA**: 237 file commonMain / 90 file androidMain (72.5% shared)
-- **Backend Refactor: FULLY OPERATIONAL**:
+- **Backend Refactor: FULLY OPERATIONAL + LEVEL 1 DEPLOYED 2026-04-18**:
   - W1 Ktor Server: deployed su Cloud Run (`https://calmify-server-23546263069.europe-west1.run.app`)
   - W2 Sync Engine: wired (KtorSyncExecutor + Koin + lifecycle)
   - W3 Protobuf: client/server protobuf CN con JSON fallback
@@ -124,10 +124,14 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
   - Subscription (DONE `3db122e`+`8e838ac`): Stripe web-first, webhook hardening, SDK dahlia
   - **Phase 3 COMPLETATA (2026-04-13)**: MediaUpload `1c4256c` (presigned URL), SocialMessaging `88f8d0a` (REST + WebSocket + broadcast hub)
   - **Phase 4 COMPLETATA (2026-04-13)**: Avatar — server-mediated 2-stage pipeline. AvatarService (Gemini 2.0 Flash META prompt con retry 429 esponenziale + Cloud Run VRM proxy) + AvatarRoutes (POST 202 Accepted, GET list/single, DELETE, PATCH status) + KtorAvatarRepository (adaptive polling Flow: 2s transient, 30s steady). Cloud Functions `createAvatarPipeline`/`generateVrmAvatar` ora bypassate dal client (restano deployate ma inerti). Build green; deploy pending.
-  - **Phase 5 COMPLETATA (2026-04-15)**: Environment / Garden / Ikigai / SocialGraph — Firestore-server pattern (no Spanner, deliberate per ship-before-infra rule, vedi `memory/feedback_ship_before_infra.md`).
-    - **Server**: 4 services + 4 route groups. Layout legacy preservato: `environment_design/{userId}`, `garden/{userId}` (exploredActivities + favorites con transazioni Firestore idempotenti), `ikigai_exploration/{userId}` (DELETE solo se id == userId), `social_graph/{userId}/{following,followers,blocked}` + `user_profiles/{userId}`. SocialGraph enforce `principal.uid` come follower/blocker/profile owner su ogni mutation. `PATCH /profiles/me` whitelista `username,displayName,avatarUrl,coverPhotoUrl,bio,interests,links` (blocca override di `followerCount,isVerified,...`).
+  - **Phase 5 COMPLETATA + DEPLOYED (2026-04-18 `292c46c`+`2c8ea0b`, Cloud Build `9a7a2a70`)**: Environment / Garden / Ikigai / SocialGraph — Firestore-server pattern (no Spanner, deliberate per ship-before-infra rule, vedi `memory/feedback_ship_before_infra.md`).
+    - **Server**: 4 services + 4 route groups (21 endpoints). Layout legacy preservato: `environment_design/{userId}`, `garden/{userId}` (exploredActivities + favorites con transazioni Firestore idempotenti), `ikigai_exploration/{userId}` (DELETE solo se id == userId), `social_graph/{userId}/{following,followers,blocked}` + `user_profiles/{userId}`. SocialGraph enforce `principal.uid` come follower/blocker/profile owner su ogni mutation. `PATCH /profiles/me` whitelista `username,displayName,avatarUrl,coverPhotoUrl,bio,interests,links` (blocca override di `followerCount,isVerified,...`).
     - **Client KMP**: 4 Ktor repos. **Flow semantics change**: `Flow<Boolean>` (isFollowing/isBlocked) e `Flow<EnvironmentChecklist?>`/`Flow<IkigaiExploration?>` ora single-emission (no snapshot listener). Screens dovranno re-subscribe su refresh/re-open. Accettato come MVP tradeoff. `updateProfile(map)` serializza Map<String,Any?> su JsonObject (helper `toJsonElement` supporta String/Boolean/Number/List/Map/null).
-    - **Flag**: `HOLISTIC_REST=true`, `SOCIAL_GRAPH_REST=true`. Build verde; deploy pendente.
+    - **Flag**: `HOLISTIC_REST=true`, `SOCIAL_GRAPH_REST=true`.
+    - **Smoke test verificato 2026-04-18**: 59/59 comportamenti auth attesi. Health 200, feature flags 200 (no auth), 35 endpoint pre-Phase 5 + 21 endpoint Phase 5 tornano 401 senza token, Stripe webhook 400 `missing_signature` senza firma. Vedi `memory/project_phase5_deploy_results.md`.
+    - **Full E2E test con token 2026-04-19**: 91/92 test PASS, 0 bug server. Inclusi tutti gli endpoint originariamente skippati: Gemini AI (chat/insight/analyze 3/3 200), Stripe checkout (201 URL reale) + portal (400 expected per utente senza sub), Avatar pipeline (POST 202 → PROMPT_READY 10s → READY 20s + VRM URL + DELETE 204), GDPR delete (200 {47 docs deleted} + verify 404/empty). Unico gap: Messaging WS mutations (richiedono secondo utente, scope E2E orchestrato).
+    - **Indexes Firestore**: 3 deploy correttivi (`cab2b47`+`46c17f7`) per aggiungere 30+ composite indexes mancanti per wellness/chat/notifications/dashboard. Lezione: ogni index Firestore con campo DESC come ultimo sort field richiede esplicito `__name__ DESC` tie-breaker nel JSON, altrimenti Firestore rifiuta la query. `recurring_thoughts` usa `lastSeenMillis`, `values_discovery` usa `createdAtMillis`.
+    - **Lesson appresa (hard way)**: primo deploy `ba22950b` ha SUCCEEDED ma ha shippato il binary pre-Phase 5 perche' il commit era ancora uncommitted localmente. Fix: sempre commit+push PRIMA di `gcloud builds submit`. Regola salvata in `memory/feedback_commit_before_deploy.md`.
 - **Subscription — Stripe web-first FULLY OPERATIONAL (2026-04-13)**:
   - Checkout hosted + webhook signature verification deployed (`3db122e`) — E2E verified
   - **In-app management (`631af94`)**: `ManageSubscriptionCard` in PaywallScreen mostra piano, status, scadenza, auto-renew; bottone "Gestisci abbonamento" → Stripe Billing Portal (cancel / card / fatture su UI hosted per PCI)
@@ -142,9 +146,11 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
   - Test keys in hand: `pk_test_51TLLSy...` / `sk_test_51TLLSy...`, Product `prod_UK1sU44yRqA4eG`, lookup_keys creati.
   - Vedi `memory/project_stripe_live_switch.md` per il checklist operativo test→live
 - **KMP FULL MASSIVE (3 livelli)** — vedi `memory/project_kmp_full_massive_3levels.md`:
-  1. **Repo layer**: 36/36 (100%) — **Level 1 COMPLETE 2026-04-15**
+  1. **Repo layer**: 36/36 (100%) — **Level 1 COMPLETE + DEPLOYED 2026-04-18**
   2. **Infrastructure services**: Stripe ✅, MediaUpload ✅ (`1c4256c`), SocialMessaging ✅ (`88f8d0a`), Avatar ✅ (2026-04-13) — **Level 2 complete**
   3. **Full multiplatform (iOS+Web)**: Option C hybrid strategy — NOT STARTED (now fully unblocked)
+
+- **Residual issue identificato 2026-04-18 (non-blocking)**: dal logcat `System.out: Pull changes failed: Illegal input: Error while decoding com.lifo.shared.api.GenericDeltaResponse`. Il `SyncEngine` chiama `/api/v1/sync/changes` e non riesce a decodificare la risposta Protobuf. Non blocca flussi utente (offline-first + retry automatici). Appartiene al workstream W2 Sync Engine, non a Level 1. Da investigare in sessione dedicata comparando `shared/models/.../GenericDeltaResponse.kt` vs `calmify-server/.../SyncService.kt`.
 - **Phase 3.1 DONE (`1c4256c`)**: MediaUpload presigned URL pattern (GCS V4 signed URLs, client uploads direct to GCS). Server: `MediaService` + `MediaRoutes`. Client: `KtorMediaUploadRepository`. Flag `MEDIA_REST=true`. IAM: `roles/iam.serviceAccountTokenCreator` (self) + `roles/storage.objectAdmin` sul bucket — applicati.
 - **Phase 3.2 DONE (`88f8d0a`)**: SocialMessaging REST + WebSocket + broadcast hub.
   - **Server**: `MessagingService` (Firestore CRUD su `conversations/{id}/{messages,typing}`, ownership via `participantIds` su ogni op). `MessagingHub` (ConcurrentHashMap WS sessions per userId, fan-out sealed `MessagingEvent` con kotlinx polymorphism). `MessagingRoutes`: REST `/api/v1/messaging/*` + WS `/ws` con JWT in query param (browser WS handshake non supporta header Auth).
@@ -160,7 +166,17 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
   - **Rischi noti (MVP)**: (1) Pipeline su CoroutineScope locale — se istanza Cloud Run muore mid-pipeline, doc resta GENERATING. MVP accettabile; future fix watchdog sweep. (2) Polling cost — ~15-45 poll per creation (~30-90s), idle 30s, trascurabile.
   - **Fuori scope**: Pub/Sub queue, server-side VRM rendering, META v2 re-processing job.
   - Build verde, deploy pendente. Vedi `memory/project_phase4_avatar.md`.
-- **Prossimo**: Deploy server (Cloud Shell build + push), smoke test E2E (avatar creation + 4 nuovi endpoint Phase 5), poi iniziare Level 3 (iOS+Web targets — ora completamente sbloccato).
+- **Prossimo**:
+  1. (opzionale) Smoke test E2E con token Firebase reale: `TOKEN="..." bash scripts/smoke-test-e2e.sh` per validare la logica di business (non solo auth). Vedi `SMOKE_TEST_COWORK.md` per il playbook autonomo.
+  2. (opzionale) Fix Sync decoder drift (W2) — investigare perche' `GenericDeltaResponse` non decodifica.
+  3. **Iniziare Level 3 (iOS+Web targets)** — ora completamente sbloccato. Vedi `memory/kmp_action_blocks.md` per gli 8 blocchi concreti, `.claude/KMP_TIER1_READY.md` per i 12 moduli gia' pronti.
+
+- **Deploy workflow consolidato** (rule of thumb):
+  1. Local: `git add <files> && git commit -m "..."`
+  2. Local: `git push origin backend-architecture-refactor` ← **MAI skippare**
+  3. Cloud Shell: `cd ~/Calmify && git pull && gcloud builds submit --config=calmify-server/cloudbuild.yaml --project=calmify-388723`
+  4. Verify: `curl https://calmify-server-23546263069.europe-west1.run.app/health` → `healthy`
+  5. Verify new endpoint actually deployed: smoke test the specific change, NOT just health.
 
 ### File da leggere in ordine di priorita'
 

@@ -115,9 +115,11 @@ fi
 # ════════════════════════════════════════════════════════════════════════════
 section "2. Diary CRUD"
 test_endpoint GET "$API/diaries?page=0&size=5" "200" "List diaries"
-# Diary range uses epoch millis (start/end) — compute current year range
-YEAR_START=$(date -d "2026-01-01" +%s 2>/dev/null || date -j -f "%Y-%m-%d" "2026-01-01" +%s)000
-YEAR_END=$(date -d "2026-12-31" +%s 2>/dev/null || date -j -f "%Y-%m-%d" "2026-12-31" +%s)000
+# Diary range uses epoch millis (start/end). Literals are portable across
+# GNU date / BSD date / Git Bash Windows (which fails on `date -d "..."`).
+# Values cover 2026-01-01 → 2026-12-31.
+YEAR_START=1767225600000
+YEAR_END=1798761599000
 test_endpoint GET "$API/diaries/range?start=$YEAR_START&end=$YEAR_END" "200" "Diaries by range"
 
 # Create → update → delete
