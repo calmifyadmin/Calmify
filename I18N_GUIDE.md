@@ -1,22 +1,59 @@
 # I18N_GUIDE.md — Internationalisation in Calmify
 
+> Updated 2026-04-19 — default language switched IT→EN, 12 languages now supported,
+> typed `Strings` facade added. See `memory/i18n_strategy.md` for full strategy.
+
 ## Overview
 
-Calmify is a KMP project targeting Android (and eventually iOS / Web).
-All user-visible strings must live in `core/ui/src/commonMain/composeResources/values/strings.xml` (and its translations) so that:
+Calmify is a KMP project targeting Android (iOS + Web coming next as Level 3).
+All user-visible strings must live in `core/ui/src/commonMain/composeResources/values*/strings.xml` so that:
 
-- the app can be localised without touching Kotlin code
-- the `lintHardcodedStrings` Gradle task can detect regressions automatically
+- the app is localised without touching Kotlin code
+- the `lintHardcodedStrings` Gradle task detects regressions automatically
+- Detekt (configured 2026-04-19) enforces code-quality norms across i18n-touched modules
+- iOS + Web share the same translations transparently via Compose Multiplatform Resources
 
----
+## Supported Languages (2026-04-19 → 12 total)
 
-## String Resource Location
+| Tag | Language | Script | RTL | Status |
+|-----|----------|--------|-----|--------|
+| `values/` (default) | **English** | Latin | — | Active (since 2026-04-19) |
+| `values-it/` | Italian | Latin | — | Active |
+| `values-es/` | Spanish | Latin | — | Active |
+| `values-fr/` | French | Latin | — | Active |
+| `values-de/` | German | Latin | — | Active |
+| `values-pt/` | Portuguese | Latin | — | Active |
+| `values-ar/` | Arabic | Arabic | ✅ yes | Phase A'' (scheduled) |
+| `values-zh/` | Chinese (Simplified) | Han | — | Phase A'' (scheduled) |
+| `values-ja/` | Japanese | Kanji + Kana | — | Phase A'' (scheduled) |
+| `values-ko/` | Korean | Hangul | — | Phase A'' (scheduled) |
+| `values-hi/` | Hindi | Devanagari | — | Phase A'' (scheduled) |
+| `values-th/` | Thai | Thai | — | Phase A'' (scheduled) |
 
-| Path | Purpose |
-|------|---------|
-| `core/ui/src/commonMain/composeResources/values/strings.xml` | Default locale (currently Italian) |
-| `core/ui/src/commonMain/composeResources/values-en/strings.xml` | English translation |
-| `core/ui/src/commonMain/composeResources/values-XX/strings.xml` | Add new locales here |
+Supported locales are declared in [LocaleController.kt](core/ui/src/commonMain/kotlin/com/lifo/ui/i18n/LocaleController.kt) as the `SupportedLocale` enum.
+
+## Preferred Call Sites (since 2026-04-19)
+
+Prefer the **typed `Strings` facade** + composable helpers over raw `Res.string.*`:
+
+```kotlin
+import com.lifo.ui.i18n.Strings
+import com.lifo.ui.i18n.AppText
+
+// Instead of this:
+Text(stringResource(Res.string.save))
+
+// Write this:
+AppText(Strings.Action.save)
+
+// Parametric:
+AppText(Strings.Screen.Home.greeting, username)
+
+// IconButton with required a11y description:
+LocalizedIconButton(Strings.A11y.menu, Icons.Default.Menu, onClick = ::open)
+```
+
+See [Strings.kt](core/ui/src/commonMain/kotlin/com/lifo/ui/i18n/Strings.kt) for the facade and [Helpers.kt](core/ui/src/commonMain/kotlin/com/lifo/ui/i18n/Helpers.kt) for the composables.
 
 ---
 

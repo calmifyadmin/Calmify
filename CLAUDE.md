@@ -175,8 +175,9 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
   - **Sistema**: Compose Multiplatform Resources nativo (no moko-resources, no libres). Path: `core/ui/src/commonMain/composeResources/values*/strings.xml`.
   - **User decisions 2026-04-19**: default lang **EN** (was IT), **Detekt** custom rule (not grep only), **12 lingue** (6 existing + 6 new: AR, ZH, JA, KO, HI, TH). Sprint estende a ~5-6 giorni.
   - **Audit**: ~142 stringhe hardcoded sparse su 20+ moduli + 14-key drift IT↔EN (481 vs 495).
-  - **Fase A DONE**: `core/ui/.../i18n/` scaffold — Strings.kt typed facade, AppText/LocalizedIconButton/LocalizedTextButton helpers, LocaleController con 12 SupportedLocale (AR isRtl=true), Detekt 1.23.7 wired. Compile green.
-  - **Fasi residue**: A' (restructure IT→EN), A'' (6 new locales + Noto fonts), B (common actions ~40), C (per-module ~100 × 12 lang), D (RTL/CJK verify), E (docs+commit).
+  - **Fase A DONE 2026-04-19**: `core/ui/.../i18n/` scaffold — Strings.kt typed facade, AppText/LocalizedIconButton/LocalizedTextButton helpers, LocaleController con 12 SupportedLocale (AR isRtl=true), Detekt 1.23.7 wired. Compile green.
+  - **Fase A' DONE 2026-04-19**: default language switched IT→EN. `values/` now EN (default), new `values-it/` per Italian, 14-key drift fixed (nav_* + error_*). `values-en/` preserved redundantly for safety. Full app compile green. I18N_GUIDE.md updated.
+  - **Fasi residue**: A'' (6 new locales: AR/ZH/JA/KO/HI/TH + Noto fonts), B (common actions ~40 × 12 lang), C (per-module ~100 × 12 lang), D (RTL/CJK verify), E (docs+commit).
   - **Post-sprint**: iOS + Web ereditano automaticamente tutte le 12 lingue (Compose Resources e' KMP-native).
 
 - **Deploy workflow consolidato** (rule of thumb):
