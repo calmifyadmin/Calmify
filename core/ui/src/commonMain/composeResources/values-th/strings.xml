@@ -75,4 +75,32 @@
     <string name="screen_home_streak_tooltip_title">สตรีครายวันคืออะไร?</string>
     <string name="screen_home_diary_fallback_title">บันทึกของฉัน</string>
 
+    <!-- i18n Phase C.2 / Search module (2026-04-19) -->
+    <string name="screen_search_tab_all">ทั้งหมด</string>
+    <string name="screen_search_tab_threads">โพสต์</string>
+    <string name="screen_search_tab_users">ผู้ใช้</string>
+    <string name="screen_search_section_users">ผู้ใช้</string>
+    <string name="screen_search_section_threads">โพสต์</string>
+    <string name="screen_search_user_label">ผู้ใช้</string>
+    <string name="screen_search_followers_count">%1$s ผู้ติดตาม</string>
+    <string name="screen_search_mood_filter_all">ทุกอารมณ์</string>
+    <string name="screen_search_placeholder">ค้นหาโพสต์และผู้ใช้</string>
+    <string name="screen_search_empty_hint">พิมพ์อะไรในแถบด้านบน</string>
+    <string name="screen_search_no_results">ไม่พบผลลัพธ์</string>
+    <string name="screen_search_no_results_for">ไม่พบผลลัพธ์สำหรับ \"%1$s\"</string>
+    <string name="screen_search_loading">กำลังค้นหา…</string>
+    <string name="screen_search_error">ข้อผิดพลาดในการค้นหา</string>
+    <string name="a11y_verified_badge">ยืนยันแล้ว</string>
+
+    <!-- i18n Phase C.2 / Social Profile module (2026-04-19) -->
+    <string name="screen_social_profile_change_photo">เปลี่ยนภาพ</string>
+    <string name="screen_social_profile_tap_change_photo">แตะเพื่อเปลี่ยนภาพ</string>
+    <string name="screen_social_profile_section_identity">ตัวตน</string>
+    <string name="screen_social_profile_section_interests">ความสนใจ</string>
+    <string name="screen_social_profile_visits_30d">การเข้าชมใน 30 วันที่ผ่านมา</string>
+    <string name="a11y_social_profile_block_user">บล็อกผู้ใช้</string>
+    <string name="a11y_social_profile_cover_photo">ภาพปก</string>
+    <string name="a11y_social_profile_remove_interest">ลบความสนใจ</string>
+    <string name="a11y_social_profile_add_interest">เพิ่มความสนใจ</string>
+
 </resources>

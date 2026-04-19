@@ -81,6 +81,8 @@ import com.lifo.socialui.avatar.OverlappingAvatars
 import com.lifo.socialui.post.ThreadPostCard
 import com.lifo.socialui.avatar.UserAvatar
 import com.lifo.util.repository.SocialGraphRepository
+import com.lifo.ui.i18n.Strings
+import org.jetbrains.compose.resources.stringResource
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -123,13 +125,13 @@ fun SocialProfileScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Strings.A11y.back))
                     }
                 },
                 actions = {
                     if (!state.isOwnProfile && state.profile != null) {
                         IconButton(onClick = { onIntent(SocialProfileContract.Intent.BlockUser) }) {
-                            Icon(Icons.Outlined.Block, contentDescription = "Blocca utente")
+                            Icon(Icons.Outlined.Block, contentDescription = stringResource(Strings.Screen.SocialProfile.a11yBlockUser))
                         }
                     }
                 },
@@ -292,7 +294,7 @@ private fun ProfileHeader(
                         if (profile?.isVerified == true) {
                             Icon(
                                 imageVector = Icons.Filled.Verified,
-                                contentDescription = "Verificato",
+                                contentDescription = stringResource(Strings.SharedA11y.verifiedBadge),
                                 modifier = Modifier.size(20.dp),
                                 tint = colorScheme.primary,
                             )
@@ -408,7 +410,7 @@ private fun ProfileHeader(
             // Profile views
             if ((profile?.profileViews30Days ?: 0) > 0) {
                 Text(
-                    text = "${formatCount(profile?.profileViews30Days ?: 0)} visite negli ultimi 30 giorni",
+                    text = "${formatCount(profile?.profileViews30Days ?: 0)} ${stringResource(Strings.Screen.SocialProfile.visits30d)}",
                     style = MaterialTheme.typography.labelSmall,
                     color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 )
@@ -499,7 +501,7 @@ private fun CoverPhotoSection(
         if (!coverPhotoUrl.isNullOrBlank()) {
             AsyncImage(
                 model = coverPhotoUrl,
-                contentDescription = "Cover photo",
+                contentDescription = stringResource(Strings.Screen.SocialProfile.a11yCoverPhoto),
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )

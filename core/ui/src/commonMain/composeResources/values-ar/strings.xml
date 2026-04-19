@@ -83,4 +83,32 @@
     <string name="screen_home_streak_tooltip_title">ما هي السلسلة اليومية؟</string>
     <string name="screen_home_diary_fallback_title">يومياتي</string>
 
+    <!-- i18n Phase C.2 / Search module (2026-04-19) -->
+    <string name="screen_search_tab_all">الكل</string>
+    <string name="screen_search_tab_threads">المنشورات</string>
+    <string name="screen_search_tab_users">المستخدمون</string>
+    <string name="screen_search_section_users">المستخدمون</string>
+    <string name="screen_search_section_threads">المنشورات</string>
+    <string name="screen_search_user_label">مستخدم</string>
+    <string name="screen_search_followers_count">%1$s متابع</string>
+    <string name="screen_search_mood_filter_all">جميع الحالات المزاجية</string>
+    <string name="screen_search_placeholder">ابحث عن المنشورات والمستخدمين</string>
+    <string name="screen_search_empty_hint">اكتب شيئًا في الشريط أعلاه</string>
+    <string name="screen_search_no_results">لا توجد نتائج</string>
+    <string name="screen_search_no_results_for">لا توجد نتائج لـ \"%1$s\"</string>
+    <string name="screen_search_loading">جارٍ البحث…</string>
+    <string name="screen_search_error">خطأ في البحث</string>
+    <string name="a11y_verified_badge">موثّق</string>
+
+    <!-- i18n Phase C.2 / Social Profile module (2026-04-19) -->
+    <string name="screen_social_profile_change_photo">تغيير الصورة</string>
+    <string name="screen_social_profile_tap_change_photo">اضغط لتغيير الصورة</string>
+    <string name="screen_social_profile_section_identity">الهوية</string>
+    <string name="screen_social_profile_section_interests">الاهتمامات</string>
+    <string name="screen_social_profile_visits_30d">زيارة في آخر 30 يومًا</string>
+    <string name="a11y_social_profile_block_user">حظر المستخدم</string>
+    <string name="a11y_social_profile_cover_photo">صورة الغلاف</string>
+    <string name="a11y_social_profile_remove_interest">إزالة الاهتمام</string>
+    <string name="a11y_social_profile_add_interest">إضافة اهتمام</string>
+
 </resources>

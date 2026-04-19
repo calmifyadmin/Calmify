@@ -634,4 +634,32 @@
     <string name="screen_home_topics_tooltip_title">Qu\'est-ce que les thèmes récurrents ?</string>
     <string name="screen_home_streak_tooltip_title">Qu\'est-ce que la série quotidienne ?</string>
     <string name="screen_home_diary_fallback_title">Mon journal</string>
+
+    <!-- i18n Phase C.2 / Search module (2026-04-19) -->
+    <string name="screen_search_tab_all">Tout</string>
+    <string name="screen_search_tab_threads">Fils</string>
+    <string name="screen_search_tab_users">Utilisateurs</string>
+    <string name="screen_search_section_users">Utilisateurs</string>
+    <string name="screen_search_section_threads">Fils</string>
+    <string name="screen_search_user_label">Utilisateur</string>
+    <string name="screen_search_followers_count">%1$s abonnés</string>
+    <string name="screen_search_mood_filter_all">Toutes les humeurs</string>
+    <string name="screen_search_placeholder">Rechercher des fils et utilisateurs</string>
+    <string name="screen_search_empty_hint">Tapez quelque chose dans la barre ci-dessus</string>
+    <string name="screen_search_no_results">Aucun résultat</string>
+    <string name="screen_search_no_results_for">Aucun résultat pour \"%1$s\"</string>
+    <string name="screen_search_loading">Recherche en cours…</string>
+    <string name="screen_search_error">Erreur de recherche</string>
+    <string name="a11y_verified_badge">Vérifié</string>
+
+    <!-- i18n Phase C.2 / Social Profile module (2026-04-19) -->
+    <string name="screen_social_profile_change_photo">Changer la photo</string>
+    <string name="screen_social_profile_tap_change_photo">Touchez pour changer la photo</string>
+    <string name="screen_social_profile_section_identity">Identité</string>
+    <string name="screen_social_profile_section_interests">Centres d\'intérêt</string>
+    <string name="screen_social_profile_visits_30d">visites au cours des 30 derniers jours</string>
+    <string name="a11y_social_profile_block_user">Bloquer l\'utilisateur</string>
+    <string name="a11y_social_profile_cover_photo">Photo de couverture</string>
+    <string name="a11y_social_profile_remove_interest">Supprimer l\'intérêt</string>
+    <string name="a11y_social_profile_add_interest">Ajouter un intérêt</string>
 </resources>

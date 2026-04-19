@@ -15,8 +15,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lifo.util.model.RequestState
+import com.lifo.ui.i18n.Strings
 import com.lifo.util.repository.SocialGraphRepository
 import com.lifo.util.repository.SocialGraphRepository.SocialUser
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,7 +71,7 @@ fun FollowListScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Strings.A11y.back))
                     }
                 }
             )

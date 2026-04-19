@@ -75,4 +75,32 @@
     <string name="screen_home_streak_tooltip_title">毎日の連続記録とは？</string>
     <string name="screen_home_diary_fallback_title">マイジャーナル</string>
 
+    <!-- i18n Phase C.2 / Search module (2026-04-19) -->
+    <string name="screen_search_tab_all">すべて</string>
+    <string name="screen_search_tab_threads">投稿</string>
+    <string name="screen_search_tab_users">ユーザー</string>
+    <string name="screen_search_section_users">ユーザー</string>
+    <string name="screen_search_section_threads">投稿</string>
+    <string name="screen_search_user_label">ユーザー</string>
+    <string name="screen_search_followers_count">%1$s フォロワー</string>
+    <string name="screen_search_mood_filter_all">すべての気分</string>
+    <string name="screen_search_placeholder">投稿とユーザーを検索</string>
+    <string name="screen_search_empty_hint">上のバーに入力してください</string>
+    <string name="screen_search_no_results">結果がありません</string>
+    <string name="screen_search_no_results_for">\"%1$s\" の結果はありません</string>
+    <string name="screen_search_loading">検索中…</string>
+    <string name="screen_search_error">検索エラー</string>
+    <string name="a11y_verified_badge">認証済み</string>
+
+    <!-- i18n Phase C.2 / Social Profile module (2026-04-19) -->
+    <string name="screen_social_profile_change_photo">写真を変更</string>
+    <string name="screen_social_profile_tap_change_photo">タップして写真を変更</string>
+    <string name="screen_social_profile_section_identity">アイデンティティ</string>
+    <string name="screen_social_profile_section_interests">興味</string>
+    <string name="screen_social_profile_visits_30d">過去 30 日間の訪問</string>
+    <string name="a11y_social_profile_block_user">ユーザーをブロック</string>
+    <string name="a11y_social_profile_cover_photo">カバー写真</string>
+    <string name="a11y_social_profile_remove_interest">興味を削除</string>
+    <string name="a11y_social_profile_add_interest">興味を追加</string>
+
 </resources>

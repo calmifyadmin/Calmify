@@ -125,5 +125,41 @@ object Strings {
             val a11yClearSearch: StringResource get() = Res.string.a11y_home_clear_search
             val a11yRemoveHistory: StringResource get() = Res.string.a11y_home_remove_history
         }
+
+        /** Search feature — tabs, sections, placeholder, error/empty states. */
+        object Search {
+            val tabAll: StringResource get() = Res.string.screen_search_tab_all
+            val tabThreads: StringResource get() = Res.string.screen_search_tab_threads
+            val tabUsers: StringResource get() = Res.string.screen_search_tab_users
+            val sectionUsers: StringResource get() = Res.string.screen_search_section_users
+            val sectionThreads: StringResource get() = Res.string.screen_search_section_threads
+            val userLabel: StringResource get() = Res.string.screen_search_user_label
+            val followersCount: StringResource get() = Res.string.screen_search_followers_count
+            val moodFilterAll: StringResource get() = Res.string.screen_search_mood_filter_all
+            val placeholder: StringResource get() = Res.string.screen_search_placeholder
+            val emptyHint: StringResource get() = Res.string.screen_search_empty_hint
+            val noResults: StringResource get() = Res.string.screen_search_no_results
+            val noResultsFor: StringResource get() = Res.string.screen_search_no_results_for
+            val loading: StringResource get() = Res.string.screen_search_loading
+            val error: StringResource get() = Res.string.screen_search_error
+        }
+
+        /** Social Profile feature — edit + view profile screens. */
+        object SocialProfile {
+            val changePhoto: StringResource get() = Res.string.screen_social_profile_change_photo
+            val tapChangePhoto: StringResource get() = Res.string.screen_social_profile_tap_change_photo
+            val sectionIdentity: StringResource get() = Res.string.screen_social_profile_section_identity
+            val sectionInterests: StringResource get() = Res.string.screen_social_profile_section_interests
+            val visits30d: StringResource get() = Res.string.screen_social_profile_visits_30d
+            val a11yBlockUser: StringResource get() = Res.string.a11y_social_profile_block_user
+            val a11yCoverPhoto: StringResource get() = Res.string.a11y_social_profile_cover_photo
+            val a11yRemoveInterest: StringResource get() = Res.string.a11y_social_profile_remove_interest
+            val a11yAddInterest: StringResource get() = Res.string.a11y_social_profile_add_interest
+        }
+    }
+
+    // Shared a11y across multiple features
+    object SharedA11y {
+        val verifiedBadge: StringResource get() = Res.string.a11y_verified_badge
     }
 }

@@ -62,6 +62,7 @@ import com.lifo.util.formatRelativeTimeKmp
 import org.jetbrains.compose.resources.stringResource
 import com.lifo.ui.resources.Res
 import com.lifo.ui.resources.*
+import com.lifo.ui.i18n.Strings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -210,7 +211,7 @@ private fun FilterChipsRow(
             FilterChip(
                 selected = selectedFilter == SearchContract.SearchFilter.ALL,
                 onClick = { onFilterSelected(SearchContract.SearchFilter.ALL) },
-                label = { Text("Tutto") },
+                label = { Text(stringResource(Strings.Screen.Search.tabAll)) },
                 shape = chipShape,
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -231,7 +232,7 @@ private fun FilterChipsRow(
             FilterChip(
                 selected = selectedFilter == SearchContract.SearchFilter.THREADS,
                 onClick = { onFilterSelected(SearchContract.SearchFilter.THREADS) },
-                label = { Text("Thread") },
+                label = { Text(stringResource(Strings.Screen.Search.tabThreads)) },
                 shape = chipShape,
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -252,7 +253,7 @@ private fun FilterChipsRow(
             FilterChip(
                 selected = selectedFilter == SearchContract.SearchFilter.USERS,
                 onClick = { onFilterSelected(SearchContract.SearchFilter.USERS) },
-                label = { Text("Utenti") },
+                label = { Text(stringResource(Strings.Screen.Search.tabUsers)) },
                 shape = chipShape,
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -289,7 +290,7 @@ private fun SearchResults(
         if (showUsers) {
             item {
                 Text(
-                    text = "Utenti",
+                    text = stringResource(Strings.Screen.Search.sectionUsers),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary,
@@ -326,7 +327,7 @@ private fun SearchResults(
             }
             item {
                 Text(
-                    text = "Thread",
+                    text = stringResource(Strings.Screen.Search.sectionThreads),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary,
@@ -374,7 +375,7 @@ private fun UserResultItem(
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = user.displayName ?: "Utente",
+                    text = user.displayName ?: stringResource(Strings.Screen.Search.userLabel),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
@@ -385,7 +386,7 @@ private fun UserResultItem(
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
                         imageVector = Icons.Default.Verified,
-                        contentDescription = "Verificato",
+                        contentDescription = stringResource(Strings.SharedA11y.verifiedBadge),
                         modifier = Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.primary
                     )
@@ -407,7 +408,7 @@ private fun UserResultItem(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "${formatCount(user.followerCount)} follower",
+                text = stringResource(Strings.Screen.Search.followersCount, formatCount(user.followerCount)),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -553,7 +554,7 @@ private fun MoodFilterChips(
             FilterChip(
                 selected = selectedMood == null,
                 onClick = { onMoodSelected(null) },
-                label = { Text("Tutti i mood", style = MaterialTheme.typography.labelSmall) },
+                label = { Text(stringResource(Strings.Screen.Search.moodFilterAll), style = MaterialTheme.typography.labelSmall) },
                 shape = chipShape,
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
@@ -593,13 +594,13 @@ private fun InitialContent() {
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "Cerca thread e utenti",
+                text = stringResource(Strings.Screen.Search.placeholder),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Scrivi qualcosa nella barra di ricerca",
+                text = stringResource(Strings.Screen.Search.emptyHint),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
             )
@@ -622,13 +623,13 @@ private fun EmptyResultsContent(query: String) {
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "Nessun risultato",
+                text = stringResource(Strings.Screen.Search.noResults),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Nessun risultato per \"$query\"",
+                text = stringResource(Strings.Screen.Search.noResultsFor, query),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
             )
@@ -650,7 +651,7 @@ private fun LoadingContent() {
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "Ricerca in corso...",
+                text = stringResource(Strings.Screen.Search.loading),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -673,7 +674,7 @@ private fun ErrorContent(message: String) {
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "Errore nella ricerca",
+                text = stringResource(Strings.Screen.Search.error),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.error
             )

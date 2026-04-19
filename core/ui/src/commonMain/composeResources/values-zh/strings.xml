@@ -75,4 +75,32 @@
     <string name="screen_home_streak_tooltip_title">什么是每日连续记录？</string>
     <string name="screen_home_diary_fallback_title">我的日记</string>
 
+    <!-- i18n Phase C.2 / Search module (2026-04-19) -->
+    <string name="screen_search_tab_all">全部</string>
+    <string name="screen_search_tab_threads">帖子</string>
+    <string name="screen_search_tab_users">用户</string>
+    <string name="screen_search_section_users">用户</string>
+    <string name="screen_search_section_threads">帖子</string>
+    <string name="screen_search_user_label">用户</string>
+    <string name="screen_search_followers_count">%1$s 位关注者</string>
+    <string name="screen_search_mood_filter_all">所有心情</string>
+    <string name="screen_search_placeholder">搜索帖子和用户</string>
+    <string name="screen_search_empty_hint">在上方搜索栏中输入内容</string>
+    <string name="screen_search_no_results">没有结果</string>
+    <string name="screen_search_no_results_for">没有 \"%1$s\" 的结果</string>
+    <string name="screen_search_loading">搜索中…</string>
+    <string name="screen_search_error">搜索错误</string>
+    <string name="a11y_verified_badge">已认证</string>
+
+    <!-- i18n Phase C.2 / Social Profile module (2026-04-19) -->
+    <string name="screen_social_profile_change_photo">更换照片</string>
+    <string name="screen_social_profile_tap_change_photo">点击更换照片</string>
+    <string name="screen_social_profile_section_identity">身份</string>
+    <string name="screen_social_profile_section_interests">兴趣</string>
+    <string name="screen_social_profile_visits_30d">最近 30 天的访问</string>
+    <string name="a11y_social_profile_block_user">屏蔽用户</string>
+    <string name="a11y_social_profile_cover_photo">封面图片</string>
+    <string name="a11y_social_profile_remove_interest">移除兴趣</string>
+    <string name="a11y_social_profile_add_interest">添加兴趣</string>
+
 </resources>

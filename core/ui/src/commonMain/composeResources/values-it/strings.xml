@@ -696,4 +696,32 @@
     <string name="screen_home_topics_tooltip_title">Cosa sono i temi ricorrenti?</string>
     <string name="screen_home_streak_tooltip_title">Cos\'è la serie di giorni?</string>
     <string name="screen_home_diary_fallback_title">Il mio diario</string>
+
+    <!-- i18n Phase C.2 / Search module (2026-04-19) -->
+    <string name="screen_search_tab_all">Tutto</string>
+    <string name="screen_search_tab_threads">Thread</string>
+    <string name="screen_search_tab_users">Utenti</string>
+    <string name="screen_search_section_users">Utenti</string>
+    <string name="screen_search_section_threads">Thread</string>
+    <string name="screen_search_user_label">Utente</string>
+    <string name="screen_search_followers_count">%1$s follower</string>
+    <string name="screen_search_mood_filter_all">Tutti i mood</string>
+    <string name="screen_search_placeholder">Cerca thread e utenti</string>
+    <string name="screen_search_empty_hint">Scrivi qualcosa nella barra in alto</string>
+    <string name="screen_search_no_results">Nessun risultato</string>
+    <string name="screen_search_no_results_for">Nessun risultato per \"%1$s\"</string>
+    <string name="screen_search_loading">Ricerca in corso…</string>
+    <string name="screen_search_error">Errore nella ricerca</string>
+    <string name="a11y_verified_badge">Verificato</string>
+
+    <!-- i18n Phase C.2 / Social Profile module (2026-04-19) -->
+    <string name="screen_social_profile_change_photo">Cambia foto</string>
+    <string name="screen_social_profile_tap_change_photo">Tocca per cambiare foto</string>
+    <string name="screen_social_profile_section_identity">Identità</string>
+    <string name="screen_social_profile_section_interests">Interessi</string>
+    <string name="screen_social_profile_visits_30d">visite negli ultimi 30 giorni</string>
+    <string name="a11y_social_profile_block_user">Blocca utente</string>
+    <string name="a11y_social_profile_cover_photo">Foto di copertina</string>
+    <string name="a11y_social_profile_remove_interest">Rimuovi interesse</string>
+    <string name="a11y_social_profile_add_interest">Aggiungi interesse</string>
 </resources>

@@ -3,10 +3,10 @@
 > Questo file viene letto da Jarvis all'inizio di ogni sessione.
 > Aggiornato automaticamente dopo ogni operazione completata.
 
-## STATO ATTUALE 2026-04-19 (Fase A + A' + A'' + B + C.1 i18n DONE)
+## STATO ATTUALE 2026-04-19 (Fase A + A' + A'' + B + C.1 + C.2 i18n DONE)
 
 **Level 1 KMP REST CHIUSO + DEPLOYED**. Smoke test E2E 91/92 verdi.
-**Sprint i18n in corso**: Fase A/A'/A''/B DONE (scaffold + EN default + 12 locales + common facade). Fase C.1 DONE: home module migration (29 new keys × 12 lang + ~37 hardcoded migrati su 11 file home). Full app compile verde. Next: Fase C tail (~100 strings rimanenti: search + social-profile + composer + messaging + avatar-creator + insight/meditation + settings/habits). Sprint totale stimato ~5-6 gg.
+**Sprint i18n in corso**: Fase A/A'/A''/B DONE (scaffold + EN default + 12 locales + common facade). Fase C.1 DONE: home (29 keys × 12 lang + ~37 migrati). Fase C.2 DONE: search + social-profile (24 keys × 12 lang + ~22 migrati). Full app compile verde. Next: Fase C.3 (composer + messaging + thread-detail ~21 strings). Sprint totale stimato ~5-6 gg.
 Vedi `memory/i18n_strategy.md`, `memory/project_phase5_deploy_results.md`.
 
 ## EVENTO: Backend Audit (2026-04-10) — RISOLTO 2026-04-18

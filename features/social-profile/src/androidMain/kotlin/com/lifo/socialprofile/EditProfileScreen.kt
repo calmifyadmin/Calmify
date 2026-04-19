@@ -61,6 +61,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.lifo.socialui.avatar.UserAvatar
+import com.lifo.ui.i18n.Strings
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import java.io.ByteArrayOutputStream
 
@@ -142,7 +144,7 @@ fun EditProfileScreen(
                 title = { Text("Modifica profilo", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Strings.A11y.back))
                     }
                 },
                 actions = {
@@ -157,7 +159,7 @@ fun EditProfileScreen(
                             )
                         } else {
                             Text(
-                                text = "Salva",
+                                text = stringResource(Strings.Action.save),
                                 fontWeight = FontWeight.Bold,
                                 color = colorScheme.primary,
                             )
@@ -208,7 +210,7 @@ fun EditProfileScreen(
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     imageVector = Icons.Filled.CameraAlt,
-                                    contentDescription = "Cambia foto",
+                                    contentDescription = stringResource(Strings.Screen.SocialProfile.changePhoto),
                                     modifier = Modifier.size(16.dp),
                                     tint = colorScheme.onPrimary,
                                 )
@@ -216,7 +218,7 @@ fun EditProfileScreen(
                         }
                     }
                     Text(
-                        text = "Tocca per cambiare foto",
+                        text = stringResource(Strings.Screen.SocialProfile.tapChangePhoto),
                         style = MaterialTheme.typography.labelSmall,
                         color = colorScheme.onSurfaceVariant,
                     )
@@ -236,7 +238,7 @@ fun EditProfileScreen(
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     Text(
-                        text = "Identita'",
+                        text = stringResource(Strings.Screen.SocialProfile.sectionIdentity),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = colorScheme.onSurface,
@@ -304,7 +306,7 @@ fun EditProfileScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Text(
-                        text = "Interessi",
+                        text = stringResource(Strings.Screen.SocialProfile.sectionInterests),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = colorScheme.onSurface,
@@ -324,7 +326,7 @@ fun EditProfileScreen(
                                     trailingIcon = {
                                         Icon(
                                             Icons.Filled.Close,
-                                            contentDescription = "Rimuovi",
+                                            contentDescription = stringResource(Strings.Screen.SocialProfile.a11yRemoveInterest),
                                             modifier = Modifier.size(14.dp),
                                         )
                                     },
@@ -374,7 +376,7 @@ fun EditProfileScreen(
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     Icons.Filled.Add,
-                                    contentDescription = "Aggiungi",
+                                    contentDescription = stringResource(Strings.Screen.SocialProfile.a11yAddInterest),
                                     tint = colorScheme.onPrimaryContainer,
                                 )
                             }

@@ -75,4 +75,32 @@
     <string name="screen_home_streak_tooltip_title">일일 연속 기록이란?</string>
     <string name="screen_home_diary_fallback_title">내 일기</string>
 
+    <!-- i18n Phase C.2 / Search module (2026-04-19) -->
+    <string name="screen_search_tab_all">전체</string>
+    <string name="screen_search_tab_threads">게시물</string>
+    <string name="screen_search_tab_users">사용자</string>
+    <string name="screen_search_section_users">사용자</string>
+    <string name="screen_search_section_threads">게시물</string>
+    <string name="screen_search_user_label">사용자</string>
+    <string name="screen_search_followers_count">팔로워 %1$s 명</string>
+    <string name="screen_search_mood_filter_all">모든 무드</string>
+    <string name="screen_search_placeholder">게시물과 사용자 검색</string>
+    <string name="screen_search_empty_hint">위 검색창에 입력하세요</string>
+    <string name="screen_search_no_results">결과 없음</string>
+    <string name="screen_search_no_results_for">\"%1$s\" 검색 결과 없음</string>
+    <string name="screen_search_loading">검색 중…</string>
+    <string name="screen_search_error">검색 오류</string>
+    <string name="a11y_verified_badge">인증됨</string>
+
+    <!-- i18n Phase C.2 / Social Profile module (2026-04-19) -->
+    <string name="screen_social_profile_change_photo">사진 변경</string>
+    <string name="screen_social_profile_tap_change_photo">탭하여 사진 변경</string>
+    <string name="screen_social_profile_section_identity">정체성</string>
+    <string name="screen_social_profile_section_interests">관심사</string>
+    <string name="screen_social_profile_visits_30d">최근 30일 방문</string>
+    <string name="a11y_social_profile_block_user">사용자 차단</string>
+    <string name="a11y_social_profile_cover_photo">커버 사진</string>
+    <string name="a11y_social_profile_remove_interest">관심사 제거</string>
+    <string name="a11y_social_profile_add_interest">관심사 추가</string>
+
 </resources>

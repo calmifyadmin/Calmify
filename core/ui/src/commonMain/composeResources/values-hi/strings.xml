@@ -75,4 +75,32 @@
     <string name="screen_home_streak_tooltip_title">दैनिक श्रृंखला क्या है?</string>
     <string name="screen_home_diary_fallback_title">मेरी डायरी</string>
 
+    <!-- i18n Phase C.2 / Search module (2026-04-19) -->
+    <string name="screen_search_tab_all">सभी</string>
+    <string name="screen_search_tab_threads">पोस्ट</string>
+    <string name="screen_search_tab_users">उपयोगकर्ता</string>
+    <string name="screen_search_section_users">उपयोगकर्ता</string>
+    <string name="screen_search_section_threads">पोस्ट</string>
+    <string name="screen_search_user_label">उपयोगकर्ता</string>
+    <string name="screen_search_followers_count">%1$s फॉलोअर</string>
+    <string name="screen_search_mood_filter_all">सभी मूड</string>
+    <string name="screen_search_placeholder">पोस्ट और उपयोगकर्ता खोजें</string>
+    <string name="screen_search_empty_hint">ऊपर दिए बार में कुछ टाइप करें</string>
+    <string name="screen_search_no_results">कोई परिणाम नहीं</string>
+    <string name="screen_search_no_results_for">\"%1$s\" के लिए कोई परिणाम नहीं</string>
+    <string name="screen_search_loading">खोज जारी है…</string>
+    <string name="screen_search_error">खोज त्रुटि</string>
+    <string name="a11y_verified_badge">सत्यापित</string>
+
+    <!-- i18n Phase C.2 / Social Profile module (2026-04-19) -->
+    <string name="screen_social_profile_change_photo">फ़ोटो बदलें</string>
+    <string name="screen_social_profile_tap_change_photo">फ़ोटो बदलने के लिए टैप करें</string>
+    <string name="screen_social_profile_section_identity">पहचान</string>
+    <string name="screen_social_profile_section_interests">रुचियां</string>
+    <string name="screen_social_profile_visits_30d">पिछले 30 दिनों में विज़िट</string>
+    <string name="a11y_social_profile_block_user">उपयोगकर्ता ब्लॉक करें</string>
+    <string name="a11y_social_profile_cover_photo">कवर फ़ोटो</string>
+    <string name="a11y_social_profile_remove_interest">रुचि हटाएं</string>
+    <string name="a11y_social_profile_add_interest">रुचि जोड़ें</string>
+
 </resources>
