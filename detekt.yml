@@ -1,0 +1,95 @@
+# Detekt configuration — Calmify i18n sprint baseline.
+#
+# Conservative defaults: surface critical smells without being noisy.
+# Current target modules: core/ui (i18n scaffold). Expand to features/* after
+# migration sprint completes (phase E of memory/i18n_strategy.md).
+
+build:
+  maxIssues: 0      # fail build on any issue (tight from day one)
+  excludeCorrectable: false
+  weights: {}
+
+config:
+  validation: true
+  warningsAsErrors: false
+
+processors:
+  active: true
+  exclude: []
+
+console-reports:
+  active: true
+  exclude:
+    - 'ProjectStatisticsReport'
+    - 'ComplexityReport'
+    - 'NotificationReport'
+    - 'FindingsReport'
+    - 'FileBasedFindingsReport'
+
+output-reports:
+  active: true
+
+comments:
+  active: false     # enable later, too noisy for initial adoption
+
+complexity:
+  active: true
+  LongMethod:
+    active: true
+    threshold: 80   # generous — Compose screens can legitimately be long
+  LongParameterList:
+    active: true
+    functionThreshold: 8
+    constructorThreshold: 10
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 20
+
+empty-blocks:
+  active: true
+
+exceptions:
+  active: true
+  TooGenericExceptionCaught:
+    active: false   # we use catch(Exception) intentionally in Firestore repos
+  SwallowedException:
+    active: true
+
+naming:
+  active: true
+  ClassNaming:
+    active: true
+    classPattern: '[A-Z][a-zA-Z0-9]*'
+  FunctionNaming:
+    active: true
+    functionPattern: '[a-z][a-zA-Z0-9]*|@Composable\([^)]*\)\s+fun\s+[A-Z][a-zA-Z0-9]*'
+  FunctionMaxLength:
+    active: false  # Compose function names can legitimately be descriptive
+  MatchingDeclarationName:
+    active: false  # many multi-composable files in this project
+
+performance:
+  active: true
+
+potential-bugs:
+  active: true
+  UnsafeCast:
+    active: true
+  LateinitUsage:
+    active: false  # lateinit is idiomatic in Android ViewModels
+
+style:
+  active: true
+  MagicNumber:
+    active: false  # design tokens use magic numbers intentionally
+  MaxLineLength:
+    active: true
+    maxLineLength: 140
+  ReturnCount:
+    active: false  # Compose has many early returns
+  WildcardImport:
+    active: false  # we allow wildcard imports for Res.string.*
+  UnusedPrivateMember:
+    active: true
+  UnusedImports:
+    active: true

@@ -1,7 +1,13 @@
 # KMP Migration Status — Option C (Hybrid)
 
 > Tracker principale. Aggiornare SOLO dopo aver verificato che il codice compila.
-> Iniziato: 2026-04-08
+> Iniziato: 2026-04-08 | Ultimo update: 2026-04-19
+
+## STATUS 2026-04-19
+
+**Level 1 KMP REST**: ✅ **DEPLOYED** (2026-04-18) — 36/36 repos, server Cloud Run live, smoke E2E 91/92 verdi.
+**Sprint i18n**: 🚧 **IN PROGRESS — Fase A DONE 2026-04-19** (pre-Level 3, ~5-6 gg totali). Scaffold: Strings facade + Helpers + LocaleController (12 lang) + Detekt wired. Next: Fase A' (restructure IT→EN default). Vedi `memory/i18n_strategy.md`.
+**Level 3 (iOS + Web)**: 🔓 **UNBLOCKED** ma parte solo DOPO sprint i18n. Vedi `memory/kmp_action_blocks.md`.
 
 ## Strategia data layer: EVOLUTA da Option C → Server-Mediated
 

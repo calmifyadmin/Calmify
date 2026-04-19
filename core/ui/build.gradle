@@ -1,5 +1,6 @@
 plugins {
     id 'calmify.kmp.compose'
+    alias libs.plugins.io.gitlab.arturbosch.detekt
 }
 
 android {
@@ -9,6 +10,27 @@ android {
 compose.resources {
     publicResClass = true
     packageOfResClass = "com.lifo.ui.resources"
+}
+
+// Detekt — code quality gate. Config lives at repo-root `detekt.yml`.
+// Started here on i18n sprint (core/ui holds Strings facade + Helpers + LocaleController).
+// Expand to other modules in Fase E after migration stabilizes.
+detekt {
+    buildUponDefaultConfig = true
+    allRules = false
+    config.setFrom(rootProject.file("detekt.yml"))
+    ignoreFailures = true  // non-blocking during sprint; flip to false after Fase E
+    basePath = rootProject.projectDir.absolutePath
+}
+tasks.withType(io.gitlab.arturbosch.detekt.Detekt).configureEach {
+    jvmTarget = "17"
+    reports {
+        html.required = true
+        xml.required = false
+        txt.required = false
+        sarif.required = false
+        md.required = false
+    }
 }
 
 // Force kotlin-stdlib to match our Kotlin version across all source sets.

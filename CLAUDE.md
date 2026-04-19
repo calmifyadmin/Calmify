@@ -167,9 +167,17 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
   - **Fuori scope**: Pub/Sub queue, server-side VRM rendering, META v2 re-processing job.
   - Build verde, deploy pendente. Vedi `memory/project_phase4_avatar.md`.
 - **Prossimo**:
-  1. (opzionale) Smoke test E2E con token Firebase reale: `TOKEN="..." bash scripts/smoke-test-e2e.sh` per validare la logica di business (non solo auth). Vedi `SMOKE_TEST_COWORK.md` per il playbook autonomo.
+  1. **i18n Sprint** (2026-04-19 → next, ~2-3 giorni) — migrazione di ~142 stringhe hardcoded con design patterns ingegnerizzati (typed `Strings` facade + `AppText` helpers + CI lint). Vedi `memory/i18n_strategy.md` per il piano completo. **Precede Level 3** per evitare Rule-of-3 debt.
   2. (opzionale) Fix Sync decoder drift (W2) — investigare perche' `GenericDeltaResponse` non decodifica.
-  3. **Iniziare Level 3 (iOS+Web targets)** — ora completamente sbloccato. Vedi `memory/kmp_action_blocks.md` per gli 8 blocchi concreti, `.claude/KMP_TIER1_READY.md` per i 12 moduli gia' pronti.
+  3. **Level 3 (iOS+Web targets)** — dopo sprint i18n. Vedi `memory/kmp_action_blocks.md` per gli 8 blocchi concreti, `.claude/KMP_TIER1_READY.md` per i 12 moduli gia' pronti.
+
+- **i18n state (aggiornato 2026-04-19, Fase A DONE)**:
+  - **Sistema**: Compose Multiplatform Resources nativo (no moko-resources, no libres). Path: `core/ui/src/commonMain/composeResources/values*/strings.xml`.
+  - **User decisions 2026-04-19**: default lang **EN** (was IT), **Detekt** custom rule (not grep only), **12 lingue** (6 existing + 6 new: AR, ZH, JA, KO, HI, TH). Sprint estende a ~5-6 giorni.
+  - **Audit**: ~142 stringhe hardcoded sparse su 20+ moduli + 14-key drift IT↔EN (481 vs 495).
+  - **Fase A DONE**: `core/ui/.../i18n/` scaffold — Strings.kt typed facade, AppText/LocalizedIconButton/LocalizedTextButton helpers, LocaleController con 12 SupportedLocale (AR isRtl=true), Detekt 1.23.7 wired. Compile green.
+  - **Fasi residue**: A' (restructure IT→EN), A'' (6 new locales + Noto fonts), B (common actions ~40), C (per-module ~100 × 12 lang), D (RTL/CJK verify), E (docs+commit).
+  - **Post-sprint**: iOS + Web ereditano automaticamente tutte le 12 lingue (Compose Resources e' KMP-native).
 
 - **Deploy workflow consolidato** (rule of thumb):
   1. Local: `git add <files> && git commit -m "..."`

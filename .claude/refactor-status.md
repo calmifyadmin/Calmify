@@ -3,18 +3,23 @@
 > Questo file viene letto da Jarvis all'inizio di ogni sessione.
 > Aggiornato automaticamente dopo ogni operazione completata.
 
-## EVENTO CRITICO: Backend Audit (2026-04-10)
+## STATO ATTUALE 2026-04-19 (Fase A i18n DONE)
 
-Audit completo di 124 file del backend refactor ha rivelato **30+ bug critici**.
-Il backend richiede **RE-ENGINEERING COMPLETO** — non patching.
-Vedi `.claude/BACKEND_AUDIT.md` per catalogo completo.
-Standard: **NASA-level, zero tolerance** — vedi CLAUDE.md "QUALITY MANDATE".
+**Level 1 KMP REST CHIUSO + DEPLOYED**. Smoke test E2E 91/92 verdi.
+**Sprint i18n in corso**: Fase A (Strings facade + AppText helpers + LocaleController 12 lang + Detekt) DONE. Next: Fase A' (restructure IT→EN default). Sprint totale stimato ~5-6 gg con 12 lingue.
+Vedi `memory/i18n_strategy.md`, `memory/project_phase5_deploy_results.md`.
 
-Top issues: 24/26 collection names server ≠ client, 17 Protobuf nullable fields,
-blocking calls ovunque, GDPR broken, double Gemini API calls, IDOR.
+## EVENTO: Backend Audit (2026-04-10) — RISOLTO 2026-04-18
 
-**BackendConfig flags**: tutti `true` ma server non funziona. Riportare a `false`.
-**Firestore DB**: `calmify-native` (NON `(default)` che e' Datastore Mode).
+Audit completo di 124 file del backend refactor aveva rivelato **30+ bug critici**.
+Il backend e' stato **RE-ENGINEERATO** (commit `39499eb`) e tutti i bug sono stati fixati.
+Vedi `.claude/BACKEND_AUDIT.md` per catalogo storico, `memory/backend_refactor_tracker.md` per i commit.
+
+Top issues (RISOLTI): 24/26 collection names server ≠ client ✓, 17 Protobuf nullable fields ✓,
+blocking calls ovunque ✓, GDPR broken ✓ (verified 2026-04-19 full E2E), double Gemini API calls ✓, IDOR ✓.
+
+**BackendConfig flags**: tutti `true` operativi. Level 1 KMP REST 36/36 DEPLOYED.
+**Firestore DB**: `calmify-native`. 30+ composite indexes deployati (vedi `firestore.indexes.json`).
 
 ---
 

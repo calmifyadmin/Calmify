@@ -2,7 +2,12 @@
 
 > Stato di avanzamento verso il lancio su Play Store.
 > Riferimento dettagliato: `PRODUCTION_READY_PLAN.md`
-> Ultimo aggiornamento: 2026-03-19
+> Ultimo aggiornamento: 2026-04-19
+
+## Milestones macro (2026-04-19)
+- [x] **Level 1 KMP REST (2026-04-18)** — 36/36 repos migrate, server Cloud Run operational, smoke E2E 91/92 verdi
+- [~] **Sprint i18n pre-Level 3 (~5-6 gg, Fase A DONE 2026-04-19)** — EN default + 12 lingue (AR/ZH/JA/KO/HI/TH added) + Detekt + typed `Strings` facade. Vedi `memory/i18n_strategy.md`
+- [ ] **Level 3 iOS + Web** — targets KMP aggiuntivi (stimato ~25 gg dopo sprint i18n). Vedi `memory/kmp_action_blocks.md`
 
 ## Legenda
 - [ ] Da fare

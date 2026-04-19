@@ -1,10 +1,12 @@
 # Calmify — Stato Progetto e Guida per Nuove Sessioni
 
-> Ultimo aggiornamento: **2026-04-10**
+> Ultimo aggiornamento: **2026-04-19**
 > Per tracker dettagliato migrazione: vedi `.claude/KMP_MIGRATION_STATUS.md`
 > Per piani backend: vedi `.claude/BACKEND_*.md` (4 file)
 
-## TL;DR — Stato Attuale
+## TL;DR — Stato Attuale (2026-04-19)
+
+**Level 1 KMP REST CHIUSO AL 100% e DEPLOYED** (2026-04-18). Tutti i 12 BackendConfig flag `true`, 36 Ktor REST repos, smoke test E2E 91/92 verdi (0 bug server). Next: **Sprint i18n ~2-3gg** (142 stringhe hardcoded → typed `Strings` facade, vedi `memory/i18n_strategy.md`), poi Level 3 (iOS + Web targets).
 
 **Fase 1 KMP COMPLETATA (2026-04-09). 72.5% codice in commonMain. Backend: RE-ENGINEERED in commit `39499eb` (42 file, 30+ bug fixati). Pronto per deploy + E2E test. BackendConfig flags tutti `false` — abilitare uno alla volta dopo verifica.**
 

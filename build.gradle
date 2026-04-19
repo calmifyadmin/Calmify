@@ -14,6 +14,8 @@ plugins {
     // Server
     alias(libs.plugins.org.jetbrains.kotlin.jvm) apply false
     alias(libs.plugins.io.ktor.plugin) apply false
+    // Code quality (i18n sprint — see memory/i18n_strategy.md)
+    alias(libs.plugins.io.gitlab.arturbosch.detekt) apply false
 }
 
 // ---------------------------------------------------------------------------
