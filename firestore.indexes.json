@@ -25,9 +25,18 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "ownerId", "order": "ASCENDING" },
-        { "fieldPath": "dayKey", "order": "ASCENDING" }
+        { "fieldPath": "dayKey", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
       ],
       "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "diaries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ownerId", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "ASCENDING" }
+      ]
     },
     {
       "collectionGroup": "threads",
@@ -98,13 +107,92 @@
       ]
     },
     {
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAtMillis", "order": "DESCENDING" },
+        { "fieldPath": "__name__", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "isRead", "order": "ASCENDING" },
+        { "fieldPath": "createdAtMillis", "order": "DESCENDING" },
+        { "fieldPath": "__name__", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "conversations",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "participantIds", "arrayConfig": "CONTAINS" },
         { "fieldPath": "lastMessageAt", "order": "DESCENDING" }
       ]
-    }
+    },
+    {
+      "collectionGroup": "chat_sessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ownerId", "order": "ASCENDING" },
+        { "fieldPath": "lastMessageAt", "order": "DESCENDING" },
+        { "fieldPath": "__name__", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "chat_messages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "sessionId", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "ASCENDING" }
+      ]
+    },
+
+    { "collectionGroup": "gratitude_entries",    "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "timestampMillis", "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] },
+    { "collectionGroup": "gratitude_entries",    "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "dayKey",          "order": "ASCENDING"  } ] },
+
+    { "collectionGroup": "energy_checkins",      "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "timestampMillis", "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] },
+    { "collectionGroup": "energy_checkins",      "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "dayKey",          "order": "ASCENDING"  } ] },
+
+    { "collectionGroup": "sleep_logs",           "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "timestampMillis", "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] },
+    { "collectionGroup": "sleep_logs",           "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "dayKey",          "order": "ASCENDING"  } ] },
+
+    { "collectionGroup": "meditation_sessions",  "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "timestampMillis", "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] },
+    { "collectionGroup": "meditation_sessions",  "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "dayKey",          "order": "ASCENDING"  } ] },
+
+    { "collectionGroup": "habits",               "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "createdAtMillis", "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] },
+    { "collectionGroup": "habits",               "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "dayKey",          "order": "ASCENDING"  } ] },
+
+    { "collectionGroup": "movement_logs",        "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "timestampMillis", "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] },
+    { "collectionGroup": "movement_logs",        "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "dayKey",          "order": "ASCENDING"  } ] },
+
+    { "collectionGroup": "thought_reframes",     "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "timestampMillis", "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] },
+    { "collectionGroup": "thought_reframes",     "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "dayKey",          "order": "ASCENDING"  } ] },
+
+    { "collectionGroup": "wellbeing_snapshots",  "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "timestampMillis", "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] },
+    { "collectionGroup": "wellbeing_snapshots",  "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "dayKey",          "order": "ASCENDING"  } ] },
+
+    { "collectionGroup": "awe_entries",          "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "timestampMillis", "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] },
+    { "collectionGroup": "awe_entries",          "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "dayKey",          "order": "ASCENDING"  } ] },
+
+    { "collectionGroup": "connection_entries",   "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "timestampMillis", "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] },
+    { "collectionGroup": "connection_entries",   "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "dayKey",          "order": "ASCENDING"  } ] },
+
+    { "collectionGroup": "recurring_thoughts",   "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "lastSeenMillis",  "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] },
+    { "collectionGroup": "recurring_thoughts",   "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "dayKey",          "order": "ASCENDING"  } ] },
+
+    { "collectionGroup": "blocks",               "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "timestampMillis", "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] },
+    { "collectionGroup": "blocks",               "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "dayKey",          "order": "ASCENDING"  } ] },
+
+    { "collectionGroup": "values_discovery",     "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "createdAtMillis", "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] },
+    { "collectionGroup": "values_discovery",     "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "dayKey",          "order": "ASCENDING"  } ] },
+
+    { "collectionGroup": "diary_insights",       "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "generatedAtMillis","order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] },
+    { "collectionGroup": "psychological_profiles","queryScope": "COLLECTION","fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "year", "order": "DESCENDING" }, { "fieldPath": "weekNumber", "order": "DESCENDING" } ] },
+    { "collectionGroup": "psychological_profiles","queryScope": "COLLECTION","fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "computedAtMillis", "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] }
   ],
   "fieldOverrides": []
 }
