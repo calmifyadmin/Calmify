@@ -23,12 +23,14 @@ All user-visible strings must live in `core/ui/src/commonMain/composeResources/v
 | `values-fr/` | French | Latin | — | Active |
 | `values-de/` | German | Latin | — | Active |
 | `values-pt/` | Portuguese | Latin | — | Active |
-| `values-ar/` | Arabic | Arabic | ✅ yes | Phase A'' (scheduled) |
-| `values-zh/` | Chinese (Simplified) | Han | — | Phase A'' (scheduled) |
-| `values-ja/` | Japanese | Kanji + Kana | — | Phase A'' (scheduled) |
-| `values-ko/` | Korean | Hangul | — | Phase A'' (scheduled) |
-| `values-hi/` | Hindi | Devanagari | — | Phase A'' (scheduled) |
-| `values-th/` | Thai | Thai | — | Phase A'' (scheduled) |
+| `values-ar/` | Arabic | Arabic | ✅ yes | Baseline scaffold (2026-04-19) — rest falls back to EN |
+| `values-zh/` | Chinese (Simplified) | Han | — | Baseline scaffold (2026-04-19) — rest falls back to EN |
+| `values-ja/` | Japanese | Kanji + Kana | — | Baseline scaffold (2026-04-19) — rest falls back to EN |
+| `values-ko/` | Korean | Hangul | — | Baseline scaffold (2026-04-19) — rest falls back to EN |
+| `values-hi/` | Hindi | Devanagari | — | Baseline scaffold (2026-04-19) — rest falls back to EN |
+| `values-th/` | Thai | Thai | — | Baseline scaffold (2026-04-19) — rest falls back to EN |
+
+Font bundling (Noto Sans CJK / Arabic / Devanagari / Thai) is documented at [core/ui/src/commonMain/composeResources/font/README.md](core/ui/src/commonMain/composeResources/font/README.md) and scheduled for Phase D.
 
 Supported locales are declared in [LocaleController.kt](core/ui/src/commonMain/kotlin/com/lifo/ui/i18n/LocaleController.kt) as the `SupportedLocale` enum.
 

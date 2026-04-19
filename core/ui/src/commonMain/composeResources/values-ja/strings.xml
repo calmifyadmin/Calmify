@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Japanese (JA) — 日本語.
+
+  Scaffold 2026-04-19 (Fase A''). Baseline keys only; fallback to EN
+  at `values/strings.xml` for anything not yet translated.
+  Font: Noto Sans JP (bundled in Fase A'' — see font/README.md).
+-->
+<resources>
+
+    <string name="app_name">Calmify</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">ホーム</string>
+    <string name="nav_activity">アクティビティ</string>
+    <string name="nav_settings">設定</string>
+    <string name="nav_write">書く</string>
+    <string name="nav_profile">プロフィール</string>
+    <string name="nav_avatar">アバター</string>
+    <string name="nav_feed">フィード</string>
+    <string name="nav_journal">ジャーナル</string>
+    <string name="nav_ai_chat">AI チャット</string>
+    <string name="nav_community">コミュニティ</string>
+    <string name="nav_journey">旅</string>
+    <string name="nav_garden">庭</string>
+
+    <!-- Generic errors -->
+    <string name="error_loading">データを読み込めません</string>
+    <string name="error_connection">接続を確認してください</string>
+
+</resources>

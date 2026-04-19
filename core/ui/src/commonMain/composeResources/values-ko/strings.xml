@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Korean (KO) — 한국어.
+
+  Scaffold 2026-04-19 (Fase A''). Baseline keys only; fallback to EN
+  at `values/strings.xml` for anything not yet translated.
+  Font: Noto Sans KR (bundled in Fase A'' — see font/README.md).
+-->
+<resources>
+
+    <string name="app_name">Calmify</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">홈</string>
+    <string name="nav_activity">활동</string>
+    <string name="nav_settings">설정</string>
+    <string name="nav_write">작성</string>
+    <string name="nav_profile">프로필</string>
+    <string name="nav_avatar">아바타</string>
+    <string name="nav_feed">피드</string>
+    <string name="nav_journal">일기</string>
+    <string name="nav_ai_chat">AI 채팅</string>
+    <string name="nav_community">커뮤니티</string>
+    <string name="nav_journey">여정</string>
+    <string name="nav_garden">정원</string>
+
+    <!-- Generic errors -->
+    <string name="error_loading">데이터를 불러올 수 없음</string>
+    <string name="error_connection">연결을 확인하세요</string>
+
+</resources>

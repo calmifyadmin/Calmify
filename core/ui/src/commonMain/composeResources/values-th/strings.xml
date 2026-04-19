@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Thai (TH) — ภาษาไทย.
+
+  Scaffold 2026-04-19 (Fase A''). Baseline keys only; fallback to EN
+  at `values/strings.xml` for anything not yet translated.
+  Font: Noto Sans Thai (bundled in Fase A'' — see font/README.md).
+-->
+<resources>
+
+    <string name="app_name">Calmify</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">หน้าหลัก</string>
+    <string name="nav_activity">กิจกรรม</string>
+    <string name="nav_settings">ตั้งค่า</string>
+    <string name="nav_write">เขียน</string>
+    <string name="nav_profile">โปรไฟล์</string>
+    <string name="nav_avatar">อวตาร</string>
+    <string name="nav_feed">ฟีด</string>
+    <string name="nav_journal">บันทึก</string>
+    <string name="nav_ai_chat">AI แชท</string>
+    <string name="nav_community">ชุมชน</string>
+    <string name="nav_journey">การเดินทาง</string>
+    <string name="nav_garden">สวน</string>
+
+    <!-- Generic errors -->
+    <string name="error_loading">ไม่สามารถโหลดข้อมูลได้</string>
+    <string name="error_connection">ตรวจสอบการเชื่อมต่อ</string>
+
+</resources>

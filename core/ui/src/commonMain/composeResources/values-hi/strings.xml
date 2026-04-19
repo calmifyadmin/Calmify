@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Hindi (HI) — हिन्दी (Devanagari).
+
+  Scaffold 2026-04-19 (Fase A''). Baseline keys only; fallback to EN
+  at `values/strings.xml` for anything not yet translated.
+  Font: Noto Sans Devanagari (bundled in Fase A'' — see font/README.md).
+-->
+<resources>
+
+    <string name="app_name">Calmify</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">होम</string>
+    <string name="nav_activity">गतिविधि</string>
+    <string name="nav_settings">सेटिंग्स</string>
+    <string name="nav_write">लिखें</string>
+    <string name="nav_profile">प्रोफ़ाइल</string>
+    <string name="nav_avatar">अवतार</string>
+    <string name="nav_feed">फ़ीड</string>
+    <string name="nav_journal">डायरी</string>
+    <string name="nav_ai_chat">AI चैट</string>
+    <string name="nav_community">समुदाय</string>
+    <string name="nav_journey">यात्रा</string>
+    <string name="nav_garden">बगीचा</string>
+
+    <!-- Generic errors -->
+    <string name="error_loading">डेटा लोड नहीं हो सका</string>
+    <string name="error_connection">अपना कनेक्शन जांचें</string>
+
+</resources>

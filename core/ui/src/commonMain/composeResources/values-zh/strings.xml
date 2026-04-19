@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Chinese Simplified (ZH) — 中文 (简体).
+
+  Scaffold 2026-04-19 (Fase A''). Baseline keys only; fallback to EN
+  at `values/strings.xml` for anything not yet translated.
+  Font: Noto Sans SC (bundled in Fase A'' — see font/README.md).
+-->
+<resources>
+
+    <string name="app_name">Calmify</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">首页</string>
+    <string name="nav_activity">活动</string>
+    <string name="nav_settings">设置</string>
+    <string name="nav_write">写作</string>
+    <string name="nav_profile">个人资料</string>
+    <string name="nav_avatar">头像</string>
+    <string name="nav_feed">动态</string>
+    <string name="nav_journal">日记</string>
+    <string name="nav_ai_chat">AI 聊天</string>
+    <string name="nav_community">社区</string>
+    <string name="nav_journey">旅程</string>
+    <string name="nav_garden">花园</string>
+
+    <!-- Generic errors -->
+    <string name="error_loading">无法加载数据</string>
+    <string name="error_connection">检查您的连接</string>
+
+</resources>

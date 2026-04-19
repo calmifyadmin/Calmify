@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Arabic (AR) — الصوت العربية — RTL locale.
+
+  Scaffold 2026-04-19 (Fase A''). Contains only baseline keys (app name,
+  12 navigation labels, 2 generic errors). All other keys fall back to
+  the EN default at `values/strings.xml` until translated in Fase B-C.
+
+  Layout direction is flipped via LocalLayoutDirection (see LocaleController.kt).
+  Font: Noto Sans Arabic (bundled in Fase A'' — see font/README.md).
+-->
+<resources>
+
+    <!-- ============================================================ -->
+    <!-- App branding                                                  -->
+    <!-- ============================================================ -->
+    <string name="app_name">Calmify</string>
+
+    <!-- ============================================================ -->
+    <!-- Navigation (drawer + bottom bar)                              -->
+    <!-- ============================================================ -->
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_activity">النشاط</string>
+    <string name="nav_settings">الإعدادات</string>
+    <string name="nav_write">كتابة</string>
+    <string name="nav_profile">الملف الشخصي</string>
+    <string name="nav_avatar">الصورة الرمزية</string>
+    <string name="nav_feed">الخلاصة</string>
+    <string name="nav_journal">اليوميات</string>
+    <string name="nav_ai_chat">محادثة AI</string>
+    <string name="nav_community">المجتمع</string>
+    <string name="nav_journey">الرحلة</string>
+    <string name="nav_garden">الحديقة</string>
+
+    <!-- Generic error messages -->
+    <string name="error_loading">تعذر تحميل البيانات</string>
+    <string name="error_connection">تحقق من اتصالك</string>
+
+</resources>
