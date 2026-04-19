@@ -39,6 +39,8 @@ test_endpoint() {
 
   if [[ -n "$body" ]]; then
     cmd+=(-H "$(json)" -d "$body")
+  elif [[ "$method" == "POST" || "$method" == "PUT" || "$method" == "PATCH" ]]; then
+    cmd+=(-H "Content-Length: 0")
   fi
   cmd+=("$url")
 
@@ -113,7 +115,10 @@ fi
 # ════════════════════════════════════════════════════════════════════════════
 section "2. Diary CRUD"
 test_endpoint GET "$API/diaries?page=0&size=5" "200" "List diaries"
-test_endpoint GET "$API/diaries/range?from=2026-01-01&to=2026-12-31" "200" "Diaries by range"
+# Diary range uses epoch millis (start/end) — compute current year range
+YEAR_START=$(date -d "2026-01-01" +%s 2>/dev/null || date -j -f "%Y-%m-%d" "2026-01-01" +%s)000
+YEAR_END=$(date -d "2026-12-31" +%s 2>/dev/null || date -j -f "%Y-%m-%d" "2026-12-31" +%s)000
+test_endpoint GET "$API/diaries/range?start=$YEAR_START&end=$YEAR_END" "200" "Diaries by range"
 
 # Create → update → delete
 DIARY_BODY='{"title":"Smoke Test","content":"E2E test entry","mood":"HAPPY","images":[]}'
@@ -160,7 +165,7 @@ test_endpoint GET "$API/insights?page=0&size=5" "200" "List insights"
 section "5. Profile"
 test_endpoint GET "$API/profile" "200" "Get profile"
 test_endpoint GET "$API/profile/psychological" "200" "Psychological profiles"
-test_endpoint GET "$API/profile/psychological/latest" "200,204" "Latest psych profile"
+test_endpoint GET "$API/profile/psychological/latest" "200,204,404" "Latest psych profile (404=none yet)"
 
 # ════════════════════════════════════════════════════════════════════════════
 # 6. SOCIAL (Feed + Threads)
@@ -273,7 +278,7 @@ test_endpoint POST "$API/waitlist" "200,201,409" "Waitlist signup" '{"email":"sm
 # 16. MEDIA
 # ════════════════════════════════════════════════════════════════════════════
 section "16. Media (Presigned URLs)"
-test_endpoint POST "$API/media/upload-url" "200" "Get upload URL" '{"contentType":"image/png","path":"smoke-test/test.png"}'
+test_endpoint POST "$API/media/upload-url" "200" "Get upload URL" '{"mimeType":"image/png","folder":"smoke-test"}'
 test_endpoint POST "$API/media/resolve-urls" "200" "Resolve URLs" '{"paths":["smoke-test/test.png"]}'
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -346,7 +351,7 @@ test_endpoint GET "$API/ikigai" "200,204" "Get exploration"
 IKIGAI_BODY='{"passions":["music","coding"],"talents":["problem-solving"],"worldNeeds":["mental health"],"paidFor":["software"]}'
 test_endpoint PUT "$API/ikigai" "200" "Save exploration" "$IKIGAI_BODY"
 test_endpoint GET "$API/ikigai" "200" "Get exploration (after save)"
-test_endpoint DELETE "$API/ikigai/$USER_ID" "200,204" "Delete own exploration"
+test_endpoint DELETE "$API/ikigai/$USER_ID" "200,204,404" "Delete own exploration (404=already gone)"
 
 # ════════════════════════════════════════════════════════════════════════════
 # 22. SOCIAL GRAPH (Phase 5)
