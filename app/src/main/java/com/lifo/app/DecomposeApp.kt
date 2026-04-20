@@ -64,6 +64,7 @@ import com.lifo.settings.navigation.SettingsMainRouteContent
 import com.lifo.settings.navigation.SettingsPersonalInfoRouteContent
 import com.lifo.ui.components.DisplayAlertDialog
 import com.lifo.ui.components.navigation.NavigationDestination
+import com.lifo.ui.components.navigation.localizedLabel
 import com.lifo.util.model.RequestState
 import com.lifo.util.repository.MongoRepository
 import com.lifo.util.repository.SubscriptionRepository
@@ -1216,13 +1217,13 @@ private fun DecomposeBottomBar(
                     ) {
                         Icon(
                             imageVector = if (selected) destination.selectedIcon else destination.unselectedIcon,
-                            contentDescription = destination.label
+                            contentDescription = destination.localizedLabel()
                         )
                     }
                 },
                 label = {
                     Text(
-                        text = destination.label,
+                        text = destination.localizedLabel(),
                         style = MaterialTheme.typography.labelMedium,
                         maxLines = 1
                     )

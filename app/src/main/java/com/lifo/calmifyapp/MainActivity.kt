@@ -106,6 +106,18 @@ class MainActivity : AppCompatActivity() {
     @OptIn(ExperimentalAnimationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
 
+        // Compose Multiplatform Resources 1.7.x reads the locale via java.util.Locale.getDefault()
+        // (see components-resources-android ResourceEnvironment.android.kt). AppCompatDelegate
+        // .setApplicationLocales(...) updates the Activity Configuration but does not guarantee
+        // the JVM default Locale is in sync — so stringResource() can serve the previous locale
+        // even when the system's per-app locale is already updated. Force the sync here, before
+        // any Compose code runs, so the per-app language picker actually switches the UI.
+        resources.configuration.locales.takeUnless { it.isEmpty }?.get(0)?.let { configLocale ->
+            if (java.util.Locale.getDefault() != configLocale) {
+                java.util.Locale.setDefault(configLocale)
+            }
+        }
+
         // Must be called BEFORE super.onCreate so the system splash intercepts the window
         installSplashScreen().apply {
             setKeepOnScreenCondition { keepSplashScreen }
