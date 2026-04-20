@@ -6,7 +6,7 @@
 
 ## Milestones macro (2026-04-19)
 - [x] **Level 1 KMP REST (2026-04-18)** — 36/36 repos migrate, server Cloud Run operational, smoke E2E 91/92 verdi
-- [~] **Sprint i18n pre-Level 3 (~5-6 gg, Fase A→D DONE 2026-04-19)** — Cumulative: 140 keys × 12 lang + ~145 hardcoded migrati su 31 file Kotlin (27 feature + 4 core/social-ui). Tutti i moduli per-module migrati + tail residuals + cleanup: home, search, social-profile (+tail), follow-list, composer, messaging, thread-detail, avatar-creator, insight, meditation, snapshot, settings, chat, humanoid, core/social-ui quartet + Nav facade. Phase D cleanup: `values-en/` eliminato, MainActivity revert. Next: Fase E (final docs consolidation + sprint summary). Vedi `memory/i18n_strategy.md`
+- [x] **Sprint i18n pre-Level 3 COMPLETE (2026-04-19, Fase A→E)** — 140 keys × 12 lingue ≈ 1680 translation entries + ~145 hardcoded migrati su 31 file Kotlin (27 feature + 4 core/social-ui) in 11 commit atomic. `Strings` facade + `AppText` helpers + LocaleController (12 SupportedLocale, AR RTL) + Detekt wired. Default lang IT→EN, `values-en/` rimosso. I18N_GUIDE.md consolidato. Known deferrals: Noto fonts before Level 3, full translation 6 new locales (AR/ZH/JA/KO/HI/TH) on-demand, Detekt error mode dopo 1 mese. **Level 3 (iOS+Web) unblocked.** Vedi `memory/i18n_strategy.md` + `I18N_GUIDE.md`
 - [ ] **Level 3 iOS + Web** — targets KMP aggiuntivi (stimato ~25 gg dopo sprint i18n). Vedi `memory/kmp_action_blocks.md`
 
 ## Legenda

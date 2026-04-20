@@ -167,7 +167,7 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
   - **Fuori scope**: Pub/Sub queue, server-side VRM rendering, META v2 re-processing job.
   - Build verde, deploy pendente. Vedi `memory/project_phase4_avatar.md`.
 - **Prossimo**:
-  1. **i18n Sprint** (2026-04-19 → next, ~2-3 giorni) — migrazione di ~142 stringhe hardcoded con design patterns ingegnerizzati (typed `Strings` facade + `AppText` helpers + CI lint). Vedi `memory/i18n_strategy.md` per il piano completo. **Precede Level 3** per evitare Rule-of-3 debt.
+  1. **i18n Sprint COMPLETE** (2026-04-19) — 140 chiavi × 12 lingue, ~145 hardcoded migrati su 31 file, 11 commit atomic A→E. `Strings` facade + `AppText` helpers + LocaleController + Detekt. Rule-of-3 debt evitato prima di Level 3. Vedi `memory/i18n_strategy.md`.
   2. (opzionale) Fix Sync decoder drift (W2) — investigare perche' `GenericDeltaResponse` non decodifica.
   3. **Level 3 (iOS+Web targets)** — dopo sprint i18n. Vedi `memory/kmp_action_blocks.md` per gli 8 blocchi concreti, `.claude/KMP_TIER1_READY.md` per i 12 moduli gia' pronti.
 
@@ -186,7 +186,10 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
   - **Fase C.5 DONE 2026-04-19** (snapshot + settings + chat + humanoid + nav facade): 28 new keys × 12 lang (336 entries) + ~22 hardcoded migrati. SnapshotScreen wellness onboarding (12 strings), Settings dialog, ChatBubble voice + ChatScreen toast (refactored non-composable to accept pre-resolved String), Humanoid 4 buttons. `Strings.Nav` aggiunto (12 nav labels). Full compile verde.
   - **Fase C COMPLETE.** Cumulative C: 102 + 28 = 130 nuove keys × 12 lang + ~128 hardcoded migrati su 27 file Kotlin.
   - **Fase D DONE 2026-04-19** (tail residuals + cleanup + core/social-ui): ~10 new keys × 12 lang (~120 entries) + ~17 hardcoded migrati. SocialProfile tail (User fallback, " follower"/" seguiti" suffixes via append, Modifica profilo/Condividi/Seguito/Segui buttons — 7 keys), FollowList Follower/Seguiti tab labels (2 keys), core/social-ui quartet (CodeBlock copyCode a11y, EngagementBar reply/repost/share a11y, ThreadPostCard verified/options a11y, FullscreenImageViewer close+image a11y — 8 hardcoded using existing keys). **Cleanup**: `values-en/strings.xml` eliminato (redundante — `values/` e' default EN). **Revert MainActivity.kt**: `app/` module e' `com.android.application` (Android-only, no Compose Resources) — "Calmify"/"Error"/"Try Again" restano hardcoded in launcher con commento esplicativo. Strings.Screen.SocialProfile ora 16 keys, FollowList nuovo sub-object. Full compile verde.
-  - **Fase residua**: E (docs finali + commit finale + consolidation summary).
+  - **Fase E DONE 2026-04-19 (SPRINT CLOSE)**: I18N_GUIDE.md consolidato (default EN documented, 12-locale table finalised, `Strings`+`AppText` promoted, `values-en/` refs removed, Noto fonts flagged post-sprint, PR checklist extended con typed-facade + Detekt). i18n_strategy.md + sprint summary table (11 commits, phase-by-phase). Tutti i tracker allineati su "COMPLETE".
+  - **Sprint cumulative**: **140 keys × 12 lang ≈ 1680 entries + ~145 hardcoded migrated su 31 Kotlin files** (27 feature + 4 core/social-ui). 11 commit atomic (A→E).
+  - **Known deferrals (post-sprint, non-blocking)**: (1) Noto fonts bundle before Level 3 (iOS+Web) — MVP Android OK con system fonts. (2) Full translation 6 new locales (AR/ZH/JA/KO/HI/TH) on-demand per-market. (3) Detekt `ignoreFailures=false` dopo 1 mese di CI data pulita.
+  - **Level 3 unblocked**: iOS+Web ora ereditano automaticamente tutte le 12 lingue via Compose Multiplatform Resources.
   - **Post-sprint**: iOS + Web ereditano automaticamente tutte le 12 lingue (Compose Resources e' KMP-native).
 
 - **Deploy workflow consolidato** (rule of thumb):

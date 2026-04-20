@@ -1,7 +1,8 @@
 # I18N_GUIDE.md — Internationalisation in Calmify
 
-> Updated 2026-04-19 — default language switched IT→EN, 12 languages now supported,
-> typed `Strings` facade added. See `memory/i18n_strategy.md` for full strategy.
+> Updated 2026-04-19 — Sprint i18n COMPLETE (Fases A→E). Default EN, 12 languages,
+> typed `Strings` facade + `AppText` helpers. 140 keys migrated across 31 Kotlin
+> files in 5 phases. See `memory/i18n_strategy.md` for full strategy + execution log.
 
 ## Overview
 
@@ -30,7 +31,7 @@ All user-visible strings must live in `core/ui/src/commonMain/composeResources/v
 | `values-hi/` | Hindi | Devanagari | — | Baseline scaffold (2026-04-19) — rest falls back to EN |
 | `values-th/` | Thai | Thai | — | Baseline scaffold (2026-04-19) — rest falls back to EN |
 
-Font bundling (Noto Sans CJK / Arabic / Devanagari / Thai) is documented at [core/ui/src/commonMain/composeResources/font/README.md](core/ui/src/commonMain/composeResources/font/README.md) and scheduled for Phase D.
+Font bundling (Noto Sans CJK / Arabic / Devanagari / Thai) is documented at [core/ui/src/commonMain/composeResources/font/README.md](core/ui/src/commonMain/composeResources/font/README.md) — deferred post-sprint (non-blocking: system fonts render acceptably on Android for MVP). Bundle before Level 3 (iOS + Web).
 
 Supported locales are declared in [LocaleController.kt](core/ui/src/commonMain/kotlin/com/lifo/ui/i18n/LocaleController.kt) as the `SupportedLocale` enum.
 
@@ -61,46 +62,72 @@ See [Strings.kt](core/ui/src/commonMain/kotlin/com/lifo/ui/i18n/Strings.kt) for 
 
 ## How to Add a String
 
-### 1. Define it in strings.xml
+### 1. Define it in the default locale (EN)
 
 ```xml
-<!-- core/ui/src/commonMain/composeResources/values/strings.xml -->
-<string name="home_greeting_title">Ciao, %1$s!</string>
+<!-- core/ui/src/commonMain/composeResources/values/strings.xml (EN default since 2026-04-19) -->
+<string name="screen_home_greeting_title">Hello, %1$s!</string>
 ```
 
-Group strings by screen/feature using comment banners:
+Group strings by screen/feature using comment banners and the semantic naming
+convention from `memory/i18n_strategy.md` (scope-prefixed):
 
 ```xml
 <!-- ============================================================ -->
 <!-- Home Screen -->
 <!-- ============================================================ -->
-<string name="home_greeting_title">Ciao, %1$s!</string>
-<string name="home_no_entries">Ancora nessuna voce. Inizia a scrivere!</string>
+<string name="screen_home_greeting_title">Hello, %1$s!</string>
+<string name="screen_home_no_entries">No entries yet. Start writing!</string>
 ```
 
-### 2. Access it in Compose (commonMain)
+### 2. Add the key to the typed `Strings` facade
+
+Keep the facade in `core/ui/src/commonMain/kotlin/com/lifo/ui/i18n/Strings.kt`
+in sync so callers get compile-time safety:
 
 ```kotlin
-import org.jetbrains.compose.resources.stringResource
-import calmify.core.ui.generated.resources.Res
-import calmify.core.ui.generated.resources.home_greeting_title
-
-// Simple string
-Text(stringResource(Res.string.home_greeting_title))
-
-// Parametrised string
-Text(stringResource(Res.string.home_greeting_title, userName))
+object Strings {
+    object Screen {
+        object Home {
+            val greetingTitle get() = Res.string.screen_home_greeting_title
+            val noEntries get() = Res.string.screen_home_no_entries
+        }
+    }
+}
 ```
 
-The accessor is generated at build time from `composeResources/`. Always import the
-specific key (`Res.string.xxx`) — do not use the Android `R.string.xxx` API.
+### 3. Access it in Compose via `AppText`
 
-### 3. Add English translation
+```kotlin
+import com.lifo.ui.i18n.Strings
+import com.lifo.ui.i18n.AppText
+
+// Simple
+AppText(Strings.Screen.Home.noEntries)
+
+// Parametrised
+AppText(Strings.Screen.Home.greetingTitle, userName)
+```
+
+Raw `stringResource(Res.string.xxx)` still works, but prefer `AppText(Strings.X.y)`
+— shorter, compile-safe, IDE-discoverable, grep-friendly.
+
+### 4. Add translations for the other 11 locales
+
+Add the same key to each of the 11 non-default locales with the translated value:
 
 ```xml
-<!-- core/ui/src/commonMain/composeResources/values-en/strings.xml -->
-<string name="home_greeting_title">Hello, %1$s!</string>
+<!-- values-it/strings.xml -->
+<string name="screen_home_greeting_title">Ciao, %1$s!</string>
+
+<!-- values-es/strings.xml -->
+<string name="screen_home_greeting_title">¡Hola, %1$s!</string>
+
+<!-- ...and so on for fr/de/pt/ar/zh/ja/ko/hi/th -->
 ```
+
+Missing keys fall back to the default `values/` (EN) automatically via Compose
+Resources. Prefer translating all 12 at once to avoid "silent English" in 11 locales.
 
 ---
 
@@ -230,7 +257,9 @@ device locale, exactly like Android's `getString(R.string.xxx)`.
 
 ## Checklist Before Merging a PR
 
-- [ ] No new `Text("literal")` calls — use `stringResource(Res.string.xxx)`
-- [ ] New string keys added to `values/strings.xml` AND `values-en/strings.xml`
-- [ ] String names follow the `<screen>_<element>` convention
+- [ ] No new `Text("literal")` calls — use `AppText(Strings.X.y)` (preferred) or `stringResource(Res.string.xxx)`
+- [ ] New string keys added to `values/strings.xml` (EN default) AND all 11 other locale files
+- [ ] Typed `Strings` facade updated with the new key (compile-safe accessor)
+- [ ] String names follow the semantic `<scope>_<element>` convention (`screen_*`, `action_*`, `a11y_*`, `error_*`, `state_*`, `nav_*`)
 - [ ] `./gradlew lintHardcodedStrings` shows no new findings
+- [ ] Detekt passes (wired on `core/ui` since 2026-04-19)

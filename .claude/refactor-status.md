@@ -3,11 +3,12 @@
 > Questo file viene letto da Jarvis all'inizio di ogni sessione.
 > Aggiornato automaticamente dopo ogni operazione completata.
 
-## STATO ATTUALE 2026-04-19 (Fase A→D i18n DONE — tail + cleanup complete)
+## STATO ATTUALE 2026-04-19 (Sprint i18n A→E COMPLETE)
 
 **Level 1 KMP REST CHIUSO + DEPLOYED**. Smoke test E2E 91/92 verdi.
-**Sprint i18n in corso**: **Fase D COMPLETE** — Cumulative 140 keys × 12 lang + ~145 hardcoded migrati su 31 file Kotlin (27 feature + 4 core/social-ui). Phase D additions: SocialProfile tail (Modifica/Condividi/Seguito/Segui + User fallback + follower/seguiti suffixes), FollowList tabs, core/social-ui quartet (CodeBlock/EngagementBar/ThreadPostCard/FullscreenImageViewer a11y). Cleanup: `values-en/` eliminato (redundante con default EN), MainActivity revert (app/ e' `com.android.application` — no Compose Resources). Full app compile verde. Next: Fase E (final docs consolidation + sprint summary). Sprint totale stimato ~5-6 gg.
-Vedi `memory/i18n_strategy.md`, `memory/project_phase5_deploy_results.md`.
+**Sprint i18n COMPLETE** (2026-04-19): 140 keys × 12 lingue ≈ 1680 translation entries + ~145 hardcoded migrati su 31 file Kotlin (27 feature + 4 core/social-ui) in 11 commit atomic (A→E). `Strings` facade + `AppText` helpers + LocaleController (12 SupportedLocale, AR RTL) + Detekt wired. Default lang IT→EN, `values-en/` rimosso. Phase E: I18N_GUIDE.md consolidato (default EN, 12-locale table, typed-facade preferred call site, Noto fonts deferred post-sprint, PR checklist extended). Tutti i tracker allineati "COMPLETE". **Level 3 (iOS+Web) unblocked** — Compose MP Resources garantisce ereditarieta' automatica su tutte le piattaforme.
+Known deferrals (non-blocking): Noto fonts bundle before Level 3, full translation 6 new locales on-demand (AR/ZH/JA/KO/HI/TH), Detekt error mode dopo 1 mese.
+Vedi `memory/i18n_strategy.md`, `I18N_GUIDE.md`, `memory/project_phase5_deploy_results.md`.
 
 ## EVENTO: Backend Audit (2026-04-10) — RISOLTO 2026-04-18
 
