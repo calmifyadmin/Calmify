@@ -27,6 +27,7 @@
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:localeConfig="@xml/locales_config"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.CalmifyApp"
@@ -84,6 +85,21 @@
         <meta-data
             android:name="com.google.ar.core"
             android:value="optional" />
+
+        <!--
+            Per-app language support (AppCompat 1.6+ backport for API < 33).
+            Pairs with android:localeConfig="@xml/locales_config" above.
+            autoStoreLocales=true lets AppCompat persist the user's locale
+            selection on older Android versions automatically.
+        -->
+        <service
+            android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
+            android:enabled="false"
+            android:exported="false">
+            <meta-data
+                android:name="autoStoreLocales"
+                android:value="true" />
+        </service>
     </application>
 
 </manifest>
