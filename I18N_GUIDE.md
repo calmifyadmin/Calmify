@@ -1,7 +1,7 @@
 # I18N_GUIDE.md — Internationalisation in Calmify
 
 > Updated 2026-04-19 — Sprint i18n COMPLETE (Fases A→E). Default EN, 12 languages,
-> typed `Strings` facade + `AppText` helpers. 140 keys migrated across 31 Kotlin
+> typed `Strings` facade. 140 keys migrated across 31 Kotlin
 > files in 5 phases. See `memory/i18n_strategy.md` for full strategy + execution log.
 
 ## Overview
@@ -33,30 +33,34 @@ All user-visible strings must live in `core/ui/src/commonMain/composeResources/v
 
 Font bundling (Noto Sans CJK / Arabic / Devanagari / Thai) is documented at [core/ui/src/commonMain/composeResources/font/README.md](core/ui/src/commonMain/composeResources/font/README.md) — deferred post-sprint (non-blocking: system fonts render acceptably on Android for MVP). Bundle before Level 3 (iOS + Web).
 
-Supported locales are declared in [LocaleController.kt](core/ui/src/commonMain/kotlin/com/lifo/ui/i18n/LocaleController.kt) as the `SupportedLocale` enum.
+Supported locales are declared in [app/src/main/res/xml/locales_config.xml](app/src/main/res/xml/locales_config.xml) (the file Android's per-app-language API reads) and are switched at runtime via `AppCompatDelegate.setApplicationLocales(...)` from [SettingsEntryPoint.kt](features/settings/src/androidMain/kotlin/com/lifo/settings/navigation/SettingsEntryPoint.kt).
 
 ## Preferred Call Sites (since 2026-04-19)
 
-Prefer the **typed `Strings` facade** + composable helpers over raw `Res.string.*`:
+Prefer the **typed `Strings` facade** over raw `Res.string.*`:
 
 ```kotlin
 import com.lifo.ui.i18n.Strings
-import com.lifo.ui.i18n.AppText
+import org.jetbrains.compose.resources.stringResource
 
 // Instead of this:
-Text(stringResource(Res.string.save))
+Text(stringResource(Res.string.action_save))
 
 // Write this:
-AppText(Strings.Action.save)
+Text(stringResource(Strings.Action.save))
 
 // Parametric:
-AppText(Strings.Screen.Home.greeting, username)
+Text(stringResource(Strings.Screen.Home.greeting, username))
 
 // IconButton with required a11y description:
-LocalizedIconButton(Strings.A11y.menu, Icons.Default.Menu, onClick = ::open)
+IconButton(onClick = ::open) {
+    Icon(Icons.Default.Menu, contentDescription = stringResource(Strings.A11y.menu))
+}
 ```
 
-See [Strings.kt](core/ui/src/commonMain/kotlin/com/lifo/ui/i18n/Strings.kt) for the facade and [Helpers.kt](core/ui/src/commonMain/kotlin/com/lifo/ui/i18n/Helpers.kt) for the composables.
+See [Strings.kt](core/ui/src/commonMain/kotlin/com/lifo/ui/i18n/Strings.kt) for the facade.
+
+> Note: an earlier scaffold (`LocaleController.kt`, `Helpers.kt` with `AppText`/`LocalizedIconButton`/`LocalizedTextButton`) was removed in 2026-04-20 because runtime locale switching is handled directly by Android's per-app-language API + `AppCompatDelegate`, and the helpers had zero call sites across the 37 migrated files — callers use `stringResource(Strings.X.y)` directly. If you want thin composable wrappers, reintroduce them per-module on demand.
 
 ---
 
@@ -96,21 +100,23 @@ object Strings {
 }
 ```
 
-### 3. Access it in Compose via `AppText`
+### 3. Access it in Compose via the typed facade
 
 ```kotlin
 import com.lifo.ui.i18n.Strings
-import com.lifo.ui.i18n.AppText
+import org.jetbrains.compose.resources.stringResource
 
 // Simple
-AppText(Strings.Screen.Home.noEntries)
+Text(stringResource(Strings.Screen.Home.noEntries))
 
 // Parametrised
-AppText(Strings.Screen.Home.greetingTitle, userName)
+Text(stringResource(Strings.Screen.Home.greetingTitle, userName))
 ```
 
-Raw `stringResource(Res.string.xxx)` still works, but prefer `AppText(Strings.X.y)`
-— shorter, compile-safe, IDE-discoverable, grep-friendly.
+The typed facade gives you compile-safe access (typo on `Strings.X.y` is a compile
+error in all 12 locales), IDE autocomplete, and a single rename point. Raw
+`stringResource(Res.string.xxx)` still works for one-offs, but the facade is the
+canonical call site for any reused key.
 
 ### 4. Add translations for the other 11 locales
 
@@ -257,7 +263,7 @@ device locale, exactly like Android's `getString(R.string.xxx)`.
 
 ## Checklist Before Merging a PR
 
-- [ ] No new `Text("literal")` calls — use `AppText(Strings.X.y)` (preferred) or `stringResource(Res.string.xxx)`
+- [ ] No new `Text("literal")` calls — use `stringResource(Strings.X.y)` via the typed facade
 - [ ] New string keys added to `values/strings.xml` (EN default) AND all 11 other locale files
 - [ ] Typed `Strings` facade updated with the new key (compile-safe accessor)
 - [ ] String names follow the semantic `<scope>_<element>` convention (`screen_*`, `action_*`, `a11y_*`, `error_*`, `state_*`, `nav_*`)
