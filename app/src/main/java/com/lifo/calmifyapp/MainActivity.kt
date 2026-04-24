@@ -106,15 +106,27 @@ class MainActivity : AppCompatActivity() {
     @OptIn(ExperimentalAnimationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
 
-        // Compose Multiplatform Resources 1.7.x reads the locale via java.util.Locale.getDefault()
-        // (see components-resources-android ResourceEnvironment.android.kt). AppCompatDelegate
-        // .setApplicationLocales(...) updates the Activity Configuration but does not guarantee
-        // the JVM default Locale is in sync — so stringResource() can serve the previous locale
-        // even when the system's per-app locale is already updated. Force the sync here, before
-        // any Compose code runs, so the per-app language picker actually switches the UI.
+        // Compose Multiplatform 1.7.x resolves stringResource() via androidx.compose.ui.text
+        // .intl.Locale.current → AndroidLocaleDelegateAPI24, which reads
+        // android.os.LocaleList.getDefault() (process-wide) and CACHES the result by reference
+        // equality — surviving Activity recreations. java.util.Locale.getDefault() is read by
+        // components-resources-android ResourceEnvironment.android.kt::getSystemEnvironment().
+        // AppCompatDelegate.setApplicationLocales(...) updates the Activity's Configuration but
+        // touches NEITHER process-wide default. Without this sync, stringResource() keeps
+        // serving the previous locale even after the system's per-app locale has flipped.
+        // Sync both BEFORE any Compose code runs, so the per-app language picker actually
+        // switches the UI on the very first frame after recreation.
         resources.configuration.locales.takeUnless { it.isEmpty }?.get(0)?.let { configLocale ->
             if (java.util.Locale.getDefault() != configLocale) {
                 java.util.Locale.setDefault(configLocale)
+            }
+            // LocaleList.setDefault internally also calls Locale.setDefault on item 0, but the
+            // important effect here is replacing the LocaleList instance — Compose's
+            // AndroidLocaleDelegateAPI24 caches by reference equality, so a new instance forces
+            // it to recompute.
+            val current = android.os.LocaleList.getDefault()
+            if (current.isEmpty || current.get(0) != configLocale) {
+                android.os.LocaleList.setDefault(android.os.LocaleList(configLocale))
             }
         }
 

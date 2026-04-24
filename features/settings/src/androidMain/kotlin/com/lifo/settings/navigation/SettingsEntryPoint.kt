@@ -34,10 +34,23 @@ private fun getCurrentLanguageCode(): String {
 
 /**
  * Applies the selected locale immediately via AppCompatDelegate.
- * This is the modern approach: handles storage, resource update, and activity recreation
- * automatically on API 26+ (AppCompat backport) and API 33+ (system API).
+ *
+ * AppCompatDelegate handles storage + Activity Configuration override + recreation, but it does
+ * NOT update the process-wide defaults (`java.util.Locale.getDefault()` and
+ * `android.os.LocaleList.getDefault()`) that Compose Multiplatform reads through. We sync those
+ * here so the recreated Activity sees a consistent locale on its very first frame.
+ * The same sync is also done in MainActivity.onCreate as a safety net for cold-start.
  */
 private fun applyLanguage(code: String) {
+    if (code.isNotEmpty()) {
+        val javaLocale = java.util.Locale.forLanguageTag(code)
+        if (java.util.Locale.getDefault() != javaLocale) {
+            java.util.Locale.setDefault(javaLocale)
+        }
+        // Always replace the LocaleList instance — Compose UI Text's AndroidLocaleDelegateAPI24
+        // caches by reference equality (===), so a new instance is required to bust the cache.
+        android.os.LocaleList.setDefault(android.os.LocaleList(javaLocale))
+    }
     val localeList = if (code.isEmpty()) LocaleListCompat.getEmptyLocaleList()
     else LocaleListCompat.forLanguageTags(code)
     AppCompatDelegate.setApplicationLocales(localeList)
