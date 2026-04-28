@@ -32,6 +32,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.lifo.ui.i18n.Strings
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Threads-style bottom sheet with post options.
@@ -67,13 +69,13 @@ fun ThreadOptionsSheet(
             ) {
                 OptionRow(
                     icon = Icons.Outlined.BookmarkBorder,
-                    label = "Salva",
+                    label = stringResource(Strings.ThreadOptions.save),
                     onClick = { onSave(); onDismiss() }
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 OptionRow(
                     icon = Icons.Outlined.VisibilityOff,
-                    label = "Nascondi",
+                    label = stringResource(Strings.ThreadOptions.hide),
                     onClick = { onHide(); onDismiss() }
                 )
             }
@@ -89,20 +91,20 @@ fun ThreadOptionsSheet(
             ) {
                 OptionRow(
                     icon = Icons.AutoMirrored.Outlined.VolumeOff,
-                    label = "Silenzia",
+                    label = stringResource(Strings.ThreadOptions.mute),
                     onClick = { onMute(); onDismiss() }
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 OptionRow(
                     icon = Icons.Outlined.Block,
-                    label = "Blocca",
+                    label = stringResource(Strings.ThreadOptions.block),
                     tint = MaterialTheme.colorScheme.error,
                     onClick = { onBlock(); onDismiss() }
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 OptionRow(
                     icon = Icons.Outlined.Flag,
-                    label = "Segnala",
+                    label = stringResource(Strings.ThreadOptions.report),
                     tint = MaterialTheme.colorScheme.error,
                     onClick = { onReport(); onDismiss() }
                 )

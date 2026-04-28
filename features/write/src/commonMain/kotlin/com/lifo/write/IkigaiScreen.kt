@@ -37,6 +37,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.stringResource
+import com.lifo.ui.i18n.Strings
 import com.lifo.ui.resources.Res
 import com.lifo.ui.resources.*
 
@@ -124,7 +125,7 @@ fun IkigaiScreen(
                                         drawCircle(color = petalColors[i])
                                     }
                                     Text(
-                                        circle.displayName,
+                                        stringResource(circle.displayNameRes),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = colorScheme.onSurfaceVariant,
                                     )
@@ -164,7 +165,7 @@ fun IkigaiScreen(
                             )
                             Spacer(Modifier.width(4.dp))
                             Text(
-                                circle.displayName,
+                                stringResource(circle.displayNameRes),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                                 maxLines = 1,

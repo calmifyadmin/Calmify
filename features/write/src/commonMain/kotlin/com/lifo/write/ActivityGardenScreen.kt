@@ -23,20 +23,24 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.lifo.ui.i18n.Strings
 import kotlinx.coroutines.delay
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
-private enum class GardenCategory(val label: String, val icon: ImageVector) {
-    TUTTE("Tutte", Icons.Outlined.GridView),
-    SCRITTURA("Scrittura", Icons.Outlined.Edit),
-    MENTE("Mente", Icons.Outlined.Psychology),
-    CORPO("Corpo", Icons.AutoMirrored.Outlined.DirectionsRun),
-    SPIRITO("Spirito", Icons.Outlined.Spa),
-    ABITUDINI("Abitudini", Icons.Outlined.CheckCircle),
+private enum class GardenCategory(val labelRes: StringResource, val icon: ImageVector) {
+    TUTTE(Strings.Garden.categoryAll, Icons.Outlined.GridView),
+    SCRITTURA(Strings.Garden.categoryWriting, Icons.Outlined.Edit),
+    MENTE(Strings.Garden.categoryMind, Icons.Outlined.Psychology),
+    CORPO(Strings.Garden.categoryBody, Icons.AutoMirrored.Outlined.DirectionsRun),
+    SPIRITO(Strings.Garden.categorySpirit, Icons.Outlined.Spa),
+    ABITUDINI(Strings.Garden.categoryHabits, Icons.Outlined.CheckCircle),
 }
 
 private data class GardenActivity(
-    val name: String,
-    val description: String,
+    val id: String,
+    val nameRes: StringResource,
+    val descRes: StringResource,
     val icon: ImageVector,
     val accent: Color,
     val category: GardenCategory,
@@ -80,29 +84,29 @@ fun ActivityGardenScreen(
     val activities = remember {
         listOf(
             // Scrittura
-            GardenActivity("Diario", "Scrivi i tuoi pensieri", Icons.Outlined.Edit, Color(0xFF2E7D55), GardenCategory.SCRITTURA, onWriteClick),
-            GardenActivity("Brain Dump", "Svuota la mente", Icons.Outlined.Stream, Color(0xFF78909C), GardenCategory.SCRITTURA, onBrainDumpClick),
-            GardenActivity("Gratitudine", "3 cose belle", Icons.Outlined.Favorite, Color(0xFFE91E63), GardenCategory.SCRITTURA, onGratitudeClick),
+            GardenActivity("diary", Strings.Garden.Activity.diaryName, Strings.Garden.Activity.diaryDesc, Icons.Outlined.Edit, Color(0xFF2E7D55), GardenCategory.SCRITTURA, onWriteClick),
+            GardenActivity("brain_dump", Strings.Garden.Activity.brainDumpName, Strings.Garden.Activity.brainDumpDesc, Icons.Outlined.Stream, Color(0xFF78909C), GardenCategory.SCRITTURA, onBrainDumpClick),
+            GardenActivity("gratitude", Strings.Garden.Activity.gratitudeName, Strings.Garden.Activity.gratitudeDesc, Icons.Outlined.Favorite, Color(0xFFE91E63), GardenCategory.SCRITTURA, onGratitudeClick),
             // Mente
-            GardenActivity("Meditazione", "Respira e centra", Icons.Outlined.SelfImprovement, Color(0xFF7E57C2), GardenCategory.MENTE, onMeditationClick),
-            GardenActivity("Reframing", "Cambia prospettiva", Icons.Outlined.Psychology, Color(0xFF5C6BC0), GardenCategory.MENTE, onReframeClick),
-            GardenActivity("Blocchi", "Riconosci gli ostacoli", Icons.Outlined.Extension, Color(0xFFEF6C00), GardenCategory.MENTE, onBlockClick),
-            GardenActivity("Pensieri Ricorrenti", "Osserva i pattern", Icons.Outlined.BubbleChart, Color(0xFF00897B), GardenCategory.MENTE, onRecurringThoughtsClick),
+            GardenActivity("meditation", Strings.Garden.Activity.meditationName, Strings.Garden.Activity.meditationDesc, Icons.Outlined.SelfImprovement, Color(0xFF7E57C2), GardenCategory.MENTE, onMeditationClick),
+            GardenActivity("reframing", Strings.Garden.Activity.reframingName, Strings.Garden.Activity.reframingDesc, Icons.Outlined.Psychology, Color(0xFF5C6BC0), GardenCategory.MENTE, onReframeClick),
+            GardenActivity("blocks", Strings.Garden.Activity.blocksName, Strings.Garden.Activity.blocksDesc, Icons.Outlined.Extension, Color(0xFFEF6C00), GardenCategory.MENTE, onBlockClick),
+            GardenActivity("recurring_thoughts", Strings.Garden.Activity.recurringThoughtsName, Strings.Garden.Activity.recurringThoughtsDesc, Icons.Outlined.BubbleChart, Color(0xFF00897B), GardenCategory.MENTE, onRecurringThoughtsClick),
             // Corpo
-            GardenActivity("Energia", "Come stai oggi?", Icons.Outlined.BatteryChargingFull, Color(0xFFFF9800), GardenCategory.CORPO, onEnergyClick),
-            GardenActivity("Sonno", "Traccia il riposo", Icons.Outlined.Bedtime, Color(0xFF5C6BC0), GardenCategory.CORPO, onSleepClick),
-            GardenActivity("Movimento", "Registra attivita'", Icons.AutoMirrored.Outlined.DirectionsRun, Color(0xFFEF6C00), GardenCategory.CORPO, onMovementClick),
-            GardenActivity("Dashboard", "Panoramica corpo", Icons.Outlined.Terrain, Color(0xFF26A69A), GardenCategory.CORPO, onDashboardClick),
+            GardenActivity("energy", Strings.Garden.Activity.energyName, Strings.Garden.Activity.energyDesc, Icons.Outlined.BatteryChargingFull, Color(0xFFFF9800), GardenCategory.CORPO, onEnergyClick),
+            GardenActivity("sleep", Strings.Garden.Activity.sleepName, Strings.Garden.Activity.sleepDesc, Icons.Outlined.Bedtime, Color(0xFF5C6BC0), GardenCategory.CORPO, onSleepClick),
+            GardenActivity("movement", Strings.Garden.Activity.movementName, Strings.Garden.Activity.movementDesc, Icons.AutoMirrored.Outlined.DirectionsRun, Color(0xFFEF6C00), GardenCategory.CORPO, onMovementClick),
+            GardenActivity("dashboard", Strings.Garden.Activity.dashboardName, Strings.Garden.Activity.dashboardDesc, Icons.Outlined.Terrain, Color(0xFF26A69A), GardenCategory.CORPO, onDashboardClick),
             // Spirito
-            GardenActivity("Valori", "Scopri cosa conta", Icons.Outlined.Explore, Color(0xFF42A5F5), GardenCategory.SPIRITO, onValuesClick),
-            GardenActivity("Ikigai", "Trova il tuo scopo", Icons.Outlined.Interests, Color(0xFFAB47BC), GardenCategory.SPIRITO, onIkigaiClick),
-            GardenActivity("Awe", "Meraviglia quotidiana", Icons.Outlined.Park, Color(0xFF66BB6A), GardenCategory.SPIRITO, onAweClick),
-            GardenActivity("Silenzio", "Pratica il vuoto", Icons.Outlined.SelfImprovement, Color(0xFF78909C), GardenCategory.SPIRITO, onSilenceClick),
-            GardenActivity("Connessioni", "Relazioni che contano", Icons.Outlined.People, Color(0xFFE91E63), GardenCategory.SPIRITO, onConnectionClick),
-            GardenActivity("Ispirazione", "Raccogli spunti", Icons.Outlined.FormatQuote, Color(0xFFFFCA28), GardenCategory.SPIRITO, onInspirationClick),
+            GardenActivity("values", Strings.Garden.Activity.valuesName, Strings.Garden.Activity.valuesDesc, Icons.Outlined.Explore, Color(0xFF42A5F5), GardenCategory.SPIRITO, onValuesClick),
+            GardenActivity("ikigai", Strings.Garden.Activity.ikigaiName, Strings.Garden.Activity.ikigaiDesc, Icons.Outlined.Interests, Color(0xFFAB47BC), GardenCategory.SPIRITO, onIkigaiClick),
+            GardenActivity("awe", Strings.Garden.Activity.aweName, Strings.Garden.Activity.aweDesc, Icons.Outlined.Park, Color(0xFF66BB6A), GardenCategory.SPIRITO, onAweClick),
+            GardenActivity("silence", Strings.Garden.Activity.silenceName, Strings.Garden.Activity.silenceDesc, Icons.Outlined.SelfImprovement, Color(0xFF78909C), GardenCategory.SPIRITO, onSilenceClick),
+            GardenActivity("connections", Strings.Garden.Activity.connectionsName, Strings.Garden.Activity.connectionsDesc, Icons.Outlined.People, Color(0xFFE91E63), GardenCategory.SPIRITO, onConnectionClick),
+            GardenActivity("inspiration", Strings.Garden.Activity.inspirationName, Strings.Garden.Activity.inspirationDesc, Icons.Outlined.FormatQuote, Color(0xFFFFCA28), GardenCategory.SPIRITO, onInspirationClick),
             // Abitudini
-            GardenActivity("Abitudini", "Costruisci routine", Icons.Outlined.CheckCircle, Color(0xFF26A69A), GardenCategory.ABITUDINI, onHabitsClick),
-            GardenActivity("Ambiente", "Disegna il contesto", Icons.Outlined.Spa, Color(0xFF4CAF7D), GardenCategory.ABITUDINI, onEnvironmentClick),
+            GardenActivity("habits", Strings.Garden.Activity.habitsName, Strings.Garden.Activity.habitsDesc, Icons.Outlined.CheckCircle, Color(0xFF26A69A), GardenCategory.ABITUDINI, onHabitsClick),
+            GardenActivity("environment", Strings.Garden.Activity.environmentName, Strings.Garden.Activity.environmentDesc, Icons.Outlined.Spa, Color(0xFF4CAF7D), GardenCategory.ABITUDINI, onEnvironmentClick),
         )
     }
 
@@ -124,12 +128,12 @@ fun ActivityGardenScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onMenuClicked) {
-                        Icon(Icons.Default.Menu, contentDescription = "Menu")
+                        Icon(Icons.Default.Menu, contentDescription = stringResource(Strings.A11y.menu))
                     }
                 },
                 actions = {
                     IconButton(onClick = onNotificationsClick) {
-                        Icon(Icons.Outlined.Notifications, contentDescription = "Notifiche")
+                        Icon(Icons.Outlined.Notifications, contentDescription = stringResource(Strings.A11y.notifications))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -157,7 +161,7 @@ fun ActivityGardenScreen(
                             selected = cat == selectedCategory,
                             onClick = { selectedCategory = cat },
                             label = {
-                                Text(cat.label, style = MaterialTheme.typography.labelMedium)
+                                Text(stringResource(cat.labelRes), style = MaterialTheme.typography.labelMedium)
                             },
                             leadingIcon = if (cat == selectedCategory) {
                                 {
@@ -190,14 +194,14 @@ fun ActivityGardenScreen(
                     .forEach { cat ->
                         val catActivities = activities.filter { it.category == cat }
                         item(key = "header_${cat.name}") {
-                            GardenSectionHeader(cat.label, catActivities.size)
+                            GardenSectionHeader(cat.labelRes, catActivities.size)
                         }
-                        items(catActivities, key = { it.name }) { activity ->
+                        items(catActivities, key = { it.id }) { activity ->
                             GardenActivityCard(activity)
                         }
                     }
             } else {
-                items(filtered, key = { it.name }) { activity ->
+                items(filtered, key = { it.id }) { activity ->
                     GardenActivityCard(activity)
                 }
             }
@@ -206,7 +210,7 @@ fun ActivityGardenScreen(
 }
 
 @Composable
-private fun GardenSectionHeader(label: String, count: Int) {
+private fun GardenSectionHeader(labelRes: StringResource, count: Int) {
     val colorScheme = MaterialTheme.colorScheme
 
     var visible by remember { mutableStateOf(false) }
@@ -223,7 +227,7 @@ private fun GardenSectionHeader(label: String, count: Int) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = label,
+                text = stringResource(labelRes),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 color = colorScheme.onSurface,
@@ -290,13 +294,13 @@ private fun GardenActivityCard(activity: GardenActivity) {
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = activity.name,
+                        text = stringResource(activity.nameRes),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = colorScheme.onSurface,
                     )
                     Text(
-                        text = activity.description,
+                        text = stringResource(activity.descRes),
                         style = MaterialTheme.typography.bodySmall,
                         color = colorScheme.onSurfaceVariant,
                     )

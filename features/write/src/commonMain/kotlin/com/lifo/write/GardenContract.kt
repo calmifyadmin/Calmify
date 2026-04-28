@@ -1,22 +1,24 @@
 package com.lifo.write
 
+import com.lifo.ui.i18n.Strings
 import com.lifo.util.model.IkigaiExploration
 import com.lifo.util.mvi.MviContract
+import org.jetbrains.compose.resources.StringResource
 
 object GardenContract {
 
-    enum class Category(val label: String) {
-        SCRITTURA("Scrittura"),
-        MENTE("Mente"),
-        CORPO("Corpo"),
-        SPIRITO("Spirito"),
-        ABITUDINI("Abitudini"),
+    enum class Category(val labelRes: StringResource) {
+        SCRITTURA(Strings.Garden.categoryWriting),
+        MENTE(Strings.Garden.categoryMind),
+        CORPO(Strings.Garden.categoryBody),
+        SPIRITO(Strings.Garden.categorySpirit),
+        ABITUDINI(Strings.Garden.categoryHabits),
     }
 
-    enum class Difficulty(val label: String) {
-        FACILE("Facile"),
-        MEDIO("Medio"),
-        AVANZATO("Avanzato"),
+    enum class Difficulty(val labelRes: StringResource) {
+        FACILE(Strings.Garden.difficultyEasy),
+        MEDIO(Strings.Garden.difficultyMedium),
+        AVANZATO(Strings.Garden.difficultyAdvanced),
     }
 
     data class ActivityInfo(
@@ -30,11 +32,11 @@ object GardenContract {
         val category: Category,
     )
 
-    enum class IkigaiCircle(val displayName: String) {
-        PASSION("Passione"),
-        TALENT("Talento"),
-        MISSION("Missione"),
-        PROFESSION("Professione"),
+    enum class IkigaiCircle(val displayNameRes: StringResource) {
+        PASSION(Strings.Garden.ikigaiPassion),
+        TALENT(Strings.Garden.ikigaiTalent),
+        MISSION(Strings.Garden.ikigaiMission),
+        PROFESSION(Strings.Garden.ikigaiProfession),
     }
 
     data class State(

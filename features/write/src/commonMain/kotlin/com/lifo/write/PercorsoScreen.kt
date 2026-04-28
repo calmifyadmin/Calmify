@@ -28,6 +28,8 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
+import com.lifo.ui.i18n.Strings
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -112,7 +114,7 @@ fun PercorsoScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            CalmifyTopBar(title = "Il Mio Percorso", scrollBehavior = scrollBehavior)
+            CalmifyTopBar(title = stringResource(Strings.Screen.Percorso.title), scrollBehavior = scrollBehavior)
         }
     ) { padding ->
         LazyColumn(

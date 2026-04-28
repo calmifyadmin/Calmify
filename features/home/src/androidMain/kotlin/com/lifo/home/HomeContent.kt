@@ -80,7 +80,7 @@ internal fun HomeContent(
 
     // ── Coach marks ──────────────────────────────────────────────────────────
     val onboardingManager: OnboardingManager = koinInject()
-    val coachState = rememberCoachMarkState(ScreenTutorials.home)
+    val coachState = rememberCoachMarkState(ScreenTutorials.home())
     val lazyListState = rememberLazyListState()
 
     // Avvia il tour al primo caricamento

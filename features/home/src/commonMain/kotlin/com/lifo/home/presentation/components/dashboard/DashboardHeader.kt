@@ -76,7 +76,7 @@ internal fun DashboardHeader(
             val displayName = if (userName.isNotBlank()) userName.replaceFirstChar { it.uppercase() } else ""
 
             // --- Inline greeting with photo embedded in text ---
-            val scoreLabel = if (todayPulse != null) getScoreLabel(todayPulse.score) else null
+            val scoreLabel = if (todayPulse != null) stringResource(getScoreLabelRes(todayPulse.score)) else null
             val scoreLabelColor = if (todayPulse != null)
                 EmotionAwareColors.getWellbeingScoreColor(todayPulse.score)
             else colorScheme.primary
@@ -90,12 +90,19 @@ internal fun DashboardHeader(
 
             val highlightBg = scoreLabelColor.copy(alpha = 0.15f)
 
+            val greetingPrefix = stringResource(Strings.Hero.greetingPrefix)
+            val wellbeingIs = stringResource(Strings.Hero.wellbeingIs)
+            val morningQuestion = stringResource(Strings.Hero.morningQuestion)
+            val afternoonPause = stringResource(Strings.Hero.afternoonPause)
+            val afternoonQuestion = stringResource(Strings.Hero.afternoonQuestion)
+            val eveningQuestion = stringResource(Strings.Hero.eveningQuestion)
+
             val annotatedGreeting = buildAnnotatedString {
                 withStyle(SpanStyle(
                     color = colorScheme.onSurface,
                     fontWeight = FontWeight.Light
                 )) {
-                    append("Ciao, ")
+                    append(greetingPrefix)
                 }
                 if (displayName.isNotBlank()) {
                     withStyle(SpanStyle(
@@ -112,7 +119,7 @@ internal fun DashboardHeader(
                         color = colorScheme.onSurface,
                         fontWeight = FontWeight.Light
                     )) {
-                        append(" il tuo benessere e' ")
+                        append(" $wellbeingIs")
                     }
                     withStyle(SpanStyle(
                         color = scoreLabelColor,
@@ -123,10 +130,10 @@ internal fun DashboardHeader(
                     }
                 } else {
                     val contextMessage = when {
-                        hour < 10 -> " come stai stamattina?"
-                        hour < 14 -> " prenditi un momento per te."
-                        hour < 19 -> " com'e' andato il pomeriggio?"
-                        else -> " come ti senti stasera?"
+                        hour < 10 -> " $morningQuestion"
+                        hour < 14 -> " $afternoonPause"
+                        hour < 19 -> " $afternoonQuestion"
+                        else -> " $eveningQuestion"
                     }
                     withStyle(SpanStyle(
                         color = colorScheme.onSurface,
@@ -194,9 +201,9 @@ internal fun DashboardHeader(
                         TrendDirection.STABLE -> EmotionAwareColors.neutralLight
                     }
                     val trendText = when (todayPulse.trend) {
-                        TrendDirection.UP -> "Crescita: +${String.format("%.1f", todayPulse.trendDelta)}"
-                        TrendDirection.DOWN -> "Calo: ${String.format("%.1f", -todayPulse.trendDelta)}"
-                        TrendDirection.STABLE -> "Stabile"
+                        TrendDirection.UP -> stringResource(Strings.Hero.trendGrowth, String.format("%.1f", todayPulse.trendDelta))
+                        TrendDirection.DOWN -> stringResource(Strings.Hero.trendDecline, String.format("%.1f", -todayPulse.trendDelta))
+                        TrendDirection.STABLE -> stringResource(Strings.Hero.trendStable)
                     }
 
                     StatChip(
@@ -428,14 +435,14 @@ private fun StatChip(
     }
 }
 
-private fun getScoreLabel(score: Float): String {
+private fun getScoreLabelRes(score: Float): org.jetbrains.compose.resources.StringResource {
     return when {
-        score >= 8.5f -> "Eccellente"
-        score >= 7f -> "Ottimo"
-        score >= 5.5f -> "Buono"
-        score >= 4f -> "Nella media"
-        score >= 2.5f -> "Sotto la media"
-        else -> "Da migliorare"
+        score >= 8.5f -> Strings.Hero.scoreExcellent
+        score >= 7f -> Strings.Hero.scoreGreat
+        score >= 5.5f -> Strings.Hero.scoreGood
+        score >= 4f -> Strings.Hero.scoreAverage
+        score >= 2.5f -> Strings.Hero.scoreBelowAverage
+        else -> Strings.Hero.scoreToImprove
     }
 }
 

@@ -36,103 +36,92 @@ import com.lifo.ui.i18n.Strings
 // ── Question definitions ─────────────────────────────────────────────────────
 
 private data class QuestionDef(
-    val section: String,
-    val label: String,
-    val question: String,
-    val minLabel: String,
-    val maxLabel: String,
+    val section: org.jetbrains.compose.resources.StringResource,
+    val question: org.jetbrains.compose.resources.StringResource,
+    val minLabel: org.jetbrains.compose.resources.StringResource,
+    val maxLabel: org.jetbrains.compose.resources.StringResource,
     val getValue: (com.lifo.util.model.WellbeingMetrics) -> Int,
     val setValue: (SnapshotViewModel, Int) -> Unit
 )
 
 private val questions = listOf(
     QuestionDef(
-        section = "Domini di Vita",
-        label = "Soddisfazione di Vita",
-        question = "Quanto sei soddisfatto della tua vita in generale?",
-        minLabel = "Insoddisfatto",
-        maxLabel = "Molto soddisfatto",
+        section = Strings.Screen.Snapshot.sectionLife,
+        question = Strings.Screen.Snapshot.q1Text,
+        minLabel = Strings.Screen.Snapshot.q1Min,
+        maxLabel = Strings.Screen.Snapshot.q1Max,
         getValue = { it.lifeSatisfaction },
         setValue = { vm, v -> vm.setLifeSatisfaction(v) }
     ),
     QuestionDef(
-        section = "Domini di Vita",
-        label = "Lavoro / Studio",
-        question = "Quanto sei soddisfatto del tuo lavoro o studio?",
-        minLabel = "Insoddisfatto",
-        maxLabel = "Molto soddisfatto",
+        section = Strings.Screen.Snapshot.sectionLife,
+        question = Strings.Screen.Snapshot.q2Text,
+        minLabel = Strings.Screen.Snapshot.q2Min,
+        maxLabel = Strings.Screen.Snapshot.q2Max,
         getValue = { it.workSatisfaction },
         setValue = { vm, v -> vm.setWorkSatisfaction(v) }
     ),
     QuestionDef(
-        section = "Domini di Vita",
-        label = "Relazioni",
-        question = "Come valuti la qualita' delle tue relazioni?",
-        minLabel = "Scarsa",
-        maxLabel = "Eccellente",
+        section = Strings.Screen.Snapshot.sectionLife,
+        question = Strings.Screen.Snapshot.q3Text,
+        minLabel = Strings.Screen.Snapshot.q3Min,
+        maxLabel = Strings.Screen.Snapshot.q3Max,
         getValue = { it.relationshipsQuality },
         setValue = { vm, v -> vm.setRelationshipsQuality(v) }
     ),
     QuestionDef(
-        section = "Salute Psicologica",
-        label = "Mindfulness",
-        question = "Quanto sei presente e consapevole nel momento?",
-        minLabel = "Distratto",
-        maxLabel = "Molto presente",
+        section = Strings.Screen.Snapshot.sectionPsych,
+        question = Strings.Screen.Snapshot.q4Text,
+        minLabel = Strings.Screen.Snapshot.q4Min,
+        maxLabel = Strings.Screen.Snapshot.q4Max,
         getValue = { it.mindfulnessScore },
         setValue = { vm, v -> vm.setMindfulnessScore(v) }
     ),
     QuestionDef(
-        section = "Salute Psicologica",
-        label = "Senso di Scopo",
-        question = "Quanto senti di avere uno scopo o direzione nella vita?",
-        minLabel = "Confuso",
-        maxLabel = "Molto chiaro",
+        section = Strings.Screen.Snapshot.sectionPsych,
+        question = Strings.Screen.Snapshot.q5Text,
+        minLabel = Strings.Screen.Snapshot.q5Min,
+        maxLabel = Strings.Screen.Snapshot.q5Max,
         getValue = { it.purposeMeaning },
         setValue = { vm, v -> vm.setPurposeMeaning(v) }
     ),
     QuestionDef(
-        section = "Salute Psicologica",
-        label = "Gratitudine",
-        question = "Quanto ti senti grato per quello che hai?",
-        minLabel = "Poco",
-        maxLabel = "Molto",
+        section = Strings.Screen.Snapshot.sectionPsych,
+        question = Strings.Screen.Snapshot.q6Text,
+        minLabel = Strings.Screen.Snapshot.q6Min,
+        maxLabel = Strings.Screen.Snapshot.q6Max,
         getValue = { it.gratitude },
         setValue = { vm, v -> vm.setGratitude(v) }
     ),
     QuestionDef(
-        section = "Autodeterminazione",
-        label = "Autonomia",
-        question = "Quanto senti di avere il controllo sulle tue scelte e sulla tua vita?",
-        minLabel = "Poco controllo",
-        maxLabel = "Pieno controllo",
+        section = Strings.Screen.Snapshot.sectionSelf,
+        question = Strings.Screen.Snapshot.q7Text,
+        minLabel = Strings.Screen.Snapshot.q7Min,
+        maxLabel = Strings.Screen.Snapshot.q7Max,
         getValue = { it.autonomy },
         setValue = { vm, v -> vm.setAutonomy(v) }
     ),
     QuestionDef(
-        section = "Autodeterminazione",
-        label = "Competenza",
-        question = "Quanto ti senti capace e competente in quello che fai?",
-        minLabel = "Poco capace",
-        maxLabel = "Molto capace",
+        section = Strings.Screen.Snapshot.sectionSelf,
+        question = Strings.Screen.Snapshot.q8Text,
+        minLabel = Strings.Screen.Snapshot.q8Min,
+        maxLabel = Strings.Screen.Snapshot.q8Max,
         getValue = { it.competence },
         setValue = { vm, v -> vm.setCompetence(v) }
     ),
     QuestionDef(
-        section = "Autodeterminazione",
-        label = "Connessione",
-        question = "Quanto ti senti connesso e vicino alle persone importanti per te?",
-        minLabel = "Disconnesso",
-        maxLabel = "Molto connesso",
+        section = Strings.Screen.Snapshot.sectionSelf,
+        question = Strings.Screen.Snapshot.q9Text,
+        minLabel = Strings.Screen.Snapshot.q9Min,
+        maxLabel = Strings.Screen.Snapshot.q9Max,
         getValue = { it.relatedness },
         setValue = { vm, v -> vm.setRelatedness(v) }
     ),
     QuestionDef(
-        section = "Indicatori",
-        label = "Solitudine",
-        question = "Quanto ti senti solo o sola in questo periodo?",
-        minLabel = "Per niente",
-        maxLabel = "Molto solo/a",
+        section = Strings.Screen.Snapshot.sectionIndicators,
+        question = Strings.Screen.Snapshot.q10Text,
+        minLabel = Strings.Screen.Snapshot.q10Min,
+        maxLabel = Strings.Screen.Snapshot.q10Max,
         getValue = { it.loneliness },
         setValue = { vm, v -> vm.setLoneliness(v) }
     )
@@ -540,7 +529,7 @@ private fun QuestionPage(
             shape = MaterialTheme.shapes.small
         ) {
             Text(
-                text = questionDef.section,
+                text = stringResource(questionDef.section),
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
@@ -552,7 +541,7 @@ private fun QuestionPage(
 
         // Question text — big and clear
         Text(
-            text = questionDef.question,
+            text = stringResource(questionDef.question),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
@@ -587,12 +576,12 @@ private fun QuestionPage(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = questionDef.minLabel,
+                text = stringResource(questionDef.minLabel),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = questionDef.maxLabel,
+                text = stringResource(questionDef.maxLabel),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.End

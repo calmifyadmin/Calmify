@@ -1,8 +1,10 @@
 package com.lifo.write
 
+import com.lifo.ui.i18n.Strings
 import com.lifo.util.model.BodySensation
 import com.lifo.util.model.Mood
 import com.lifo.util.model.Trigger
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * Local text analyzer for Smart Capture.
@@ -162,24 +164,25 @@ object TextAnalyzer {
     }
 
     /**
-     * Returns a brief Italian label for the inferred mood.
+     * Returns the localized StringResource for the inferred mood.
+     * Caller resolves via `stringResource(...)` in a @Composable scope.
      */
-    fun moodLabel(mood: Mood): String = when (mood) {
-        Mood.Neutral -> "Neutrale"
-        Mood.Happy -> "Felice"
-        Mood.Angry -> "Arrabbiato"
-        Mood.Depressed -> "Depresso"
-        Mood.Disappointed -> "Deluso"
-        Mood.Romantic -> "Romantico"
-        Mood.Calm -> "Sereno"
-        Mood.Tense -> "Teso"
-        Mood.Lonely -> "Solo"
-        Mood.Mysterious -> "Confuso"
-        Mood.Shameful -> "In colpa"
-        Mood.Awful -> "Terribile"
-        Mood.Surprised -> "Sorpreso"
-        Mood.Bored -> "Annoiato"
-        Mood.Humorous -> "Divertito"
-        Mood.Suspicious -> "Sospettoso"
+    fun moodLabelRes(mood: Mood): StringResource = when (mood) {
+        Mood.Neutral -> Strings.Mood.neutral
+        Mood.Happy -> Strings.Mood.happy
+        Mood.Angry -> Strings.Mood.angry
+        Mood.Depressed -> Strings.Mood.depressed
+        Mood.Disappointed -> Strings.Mood.disappointed
+        Mood.Romantic -> Strings.Mood.romantic
+        Mood.Calm -> Strings.Mood.calm
+        Mood.Tense -> Strings.Mood.tense
+        Mood.Lonely -> Strings.Mood.lonely
+        Mood.Mysterious -> Strings.Mood.confused
+        Mood.Shameful -> Strings.Mood.guilty
+        Mood.Awful -> Strings.Mood.awful
+        Mood.Surprised -> Strings.Mood.surprised
+        Mood.Bored -> Strings.Mood.bored
+        Mood.Humorous -> Strings.Mood.amused
+        Mood.Suspicious -> Strings.Mood.suspicious
     }
 }

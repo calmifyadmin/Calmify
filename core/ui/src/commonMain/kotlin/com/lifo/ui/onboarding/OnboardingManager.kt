@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * val manager = koinInject<OnboardingManager>()
  * val shouldShow = manager.shouldShowTutorial(ScreenTutorials.KEY_HOME)
  *
- * val coachState = rememberCoachMarkState(ScreenTutorials.home)
+ * val coachState = rememberCoachMarkState(ScreenTutorials.home())
  * LaunchedEffect(shouldShow) {
  *     if (shouldShow) coachState.start()
  * }

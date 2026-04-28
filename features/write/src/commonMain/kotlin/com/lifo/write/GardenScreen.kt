@@ -50,7 +50,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.lifo.ui.components.CalmifyTopBar
+import com.lifo.ui.i18n.Strings
 import kotlinx.coroutines.delay
+import org.jetbrains.compose.resources.stringResource
 
 // ── Peaceful palette (same as IkigaiScreen) ──
 
@@ -408,7 +410,7 @@ private fun GardenIkigaiHeader(
                             drawCircle(color = gardenPetalColors[i])
                         }
                         Text(
-                            circle.displayName,
+                            stringResource(circle.displayNameRes),
                             style = MaterialTheme.typography.labelSmall,
                             color = colorScheme.onSurfaceVariant,
                         )
@@ -448,7 +450,7 @@ private fun GardenIkigaiHeader(
                         )
                         Spacer(Modifier.width(4.dp))
                         Text(
-                            circle.displayName,
+                            stringResource(circle.displayNameRes),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                             maxLines = 1,
@@ -473,7 +475,7 @@ private fun GardenIkigaiHeader(
                         modifier = Modifier.weight(1f),
                         placeholder = {
                             Text(
-                                "Aggiungi a ${selectedCircle.displayName}...",
+                                "Aggiungi a ${stringResource(selectedCircle.displayNameRes)}...",
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         },
@@ -756,7 +758,7 @@ private fun GardenSectionHeaderEnhanced(
                 tint = accent,
             )
             Text(
-                text = category.label,
+                text = stringResource(category.labelRes),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 color = colorScheme.onSurface,
@@ -975,7 +977,7 @@ private fun GardenExpandableCard(
                                     tint = colorScheme.onSurfaceVariant,
                                 )
                                 Text(
-                                    activity.difficulty.label,
+                                    stringResource(activity.difficulty.labelRes),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = colorScheme.onSurfaceVariant,
                                 )

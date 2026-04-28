@@ -1,7 +1,9 @@
 package com.lifo.composer
 
+import com.lifo.ui.i18n.Strings
 import com.lifo.util.mvi.MviContract
 import com.lifo.util.repository.ThreadRepository
+import org.jetbrains.compose.resources.StringResource
 
 data class ThreadDraft(val text: String = "", val mediaUris: List<String> = emptyList())
 
@@ -11,10 +13,10 @@ object ComposerContract {
 
     enum class ReplyPermission { Everyone, Followers, Mentioned }
 
-    enum class PostCategory(val label: String) {
-        SCOPERTA("Scoperta"),
-        SFIDA("Sfida"),
-        DOMANDA("Domanda"),
+    enum class PostCategory(val labelRes: StringResource) {
+        SCOPERTA(Strings.ComposerCategory.discovery),
+        SFIDA(Strings.ComposerCategory.challenge),
+        DOMANDA(Strings.ComposerCategory.question),
     }
 
     val MOOD_TAGS = listOf(

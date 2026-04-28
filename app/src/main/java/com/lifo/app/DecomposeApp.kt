@@ -65,10 +65,12 @@ import com.lifo.settings.navigation.SettingsPersonalInfoRouteContent
 import com.lifo.ui.components.DisplayAlertDialog
 import com.lifo.ui.components.navigation.NavigationDestination
 import com.lifo.ui.components.navigation.localizedLabel
+import com.lifo.ui.i18n.Strings
 import com.lifo.util.model.RequestState
 import com.lifo.util.repository.MongoRepository
 import com.lifo.util.repository.SubscriptionRepository
 import com.lifo.ui.components.ProBadge
+import org.jetbrains.compose.resources.stringResource
 import kotlinx.coroutines.flow.map
 import com.lifo.write.navigation.ActivityGardenRouteContent
 import com.lifo.write.navigation.GardenRouteContent
@@ -281,29 +283,35 @@ fun DecomposeApp(
         data class FabConfig(
             val label: String,
             val icon: androidx.compose.ui.graphics.vector.ImageVector,
+            val useLogo: Boolean = false,
             val onClick: () -> Unit
         )
-        val fabConfig: FabConfig? by remember {
+        val fabTalkToEveLabel = stringResource(Strings.Fab.talkToEve)
+        val fabNewPostLabel = stringResource(Strings.Fab.newPost)
+        val fabWriteLabel = stringResource(Strings.Fab.write)
+        val fabConfig: FabConfig? by remember(fabTalkToEveLabel, fabNewPostLabel, fabWriteLabel) {
             derivedStateOf {
                 when (childStack.active.configuration) {
                     is RootDestination.Home -> FabConfig(
-                        label = "Parla con Eve",
+                        label = fabTalkToEveLabel,
                         icon = Icons.AutoMirrored.Filled.Chat,
+                        useLogo = true,
                         onClick = { rootComponent.navigateToChat() }
                     )
                     is RootDestination.Feed -> FabConfig(
-                        label = "Nuovo post",
+                        label = fabNewPostLabel,
                         icon = Icons.Filled.Edit,
                         onClick = { rootComponent.navigateToComposer() }
                     )
                     is RootDestination.JournalHome -> FabConfig(
-                        label = "Scrivi",
+                        label = fabWriteLabel,
                         icon = Icons.Filled.Edit,
                         onClick = { rootComponent.navigateToWrite() }
                     )
                     is RootDestination.Profile -> FabConfig(
-                        label = "Parla con Eve",
+                        label = fabTalkToEveLabel,
                         icon = Icons.AutoMirrored.Filled.Chat,
+                        useLogo = true,
                         onClick = { rootComponent.navigateToChat() }
                     )
                     else -> null
@@ -991,7 +999,7 @@ fun DecomposeApp(
                     }
                 }
 
-                val useLogo = config.label == "Parla con Eve"
+                val useLogo = config.useLogo
 
                 ExtendedFloatingActionButton(
                     onClick = config.onClick,
@@ -1060,13 +1068,15 @@ fun DecomposeApp(
     }
 
     // Delete All User Data Dialog
+    val deleteDataTitle = stringResource(Strings.Drawer.deleteData)
+    val accountDeletedToast = stringResource(Strings.Dialog.accountDeleted)
     AnimatedVisibility(
         visible = deleteAllDialogOpened,
         enter = fadeIn() + scaleIn(),
         exit = fadeOut() + scaleOut()
     ) {
         DisplayAlertDialog(
-            title = "Delete All My Data",
+            title = deleteDataTitle,
             message = "This action cannot be undone. All your diaries and associated images will be permanently deleted.",
             dialogOpened = deleteAllDialogOpened,
             onDialogClosed = { deleteAllDialogOpened = false },
@@ -1085,7 +1095,7 @@ fun DecomposeApp(
                                     withContext(Dispatchers.Main) {
                                         Toast.makeText(
                                             context,
-                                            "Account eliminato. Tutti i dati sono stati cancellati.",
+                                            accountDeletedToast,
                                             Toast.LENGTH_SHORT
                                         ).show()
                                         // AuthStateListener will auto-navigate to Auth
@@ -1139,21 +1149,21 @@ private fun FeatureUnavailableScreen(onBack: () -> Unit) {
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
             )
             Text(
-                text = "Funzionalità non ancora disponibile",
+                text = stringResource(Strings.Dialog.featureUnavailableTitle),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 32.dp)
             )
             Text(
-                text = "Questa sezione sarà disponibile a breve.",
+                text = stringResource(Strings.Dialog.featureUnavailableBody),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 40.dp)
             )
             OutlinedButton(onClick = onBack) {
-                Text("Torna indietro")
+                Text(stringResource(Strings.Dialog.goBack))
             }
         }
     }
@@ -1338,7 +1348,7 @@ private fun DrawerContent(
                     contentDescription = null
                 )
             },
-            label = { Text("Storico") },
+            label = { Text(stringResource(Strings.Drawer.history)) },
             selected = false,
             onClick = onHistoryClicked,
             modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -1351,7 +1361,7 @@ private fun DrawerContent(
                     contentDescription = null
                 )
             },
-            label = { Text("Avatar") },
+            label = { Text(stringResource(Strings.Nav.avatar)) },
             selected = false,
             onClick = onAvatarClicked,
             modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -1364,7 +1374,7 @@ private fun DrawerContent(
                     contentDescription = null
                 )
             },
-            label = { Text("Crea Avatar") },
+            label = { Text(stringResource(Strings.Drawer.createAvatar)) },
             selected = false,
             onClick = onCreateAvatarClicked,
             modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -1381,7 +1391,7 @@ private fun DrawerContent(
             },
             label = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(if (isPro) "Gestisci abbonamento" else "Abbonamento")
+                    Text(stringResource(if (isPro) Strings.Drawer.manageSubscription else Strings.Drawer.subscription))
                     if (isPro) {
                         Spacer(modifier = Modifier.width(8.dp))
                         ProBadge()
@@ -1402,7 +1412,7 @@ private fun DrawerContent(
                     contentDescription = null
                 )
             },
-            label = { Text("Sign Out") },
+            label = { Text(stringResource(Strings.Drawer.signOut)) },
             selected = false,
             onClick = onSignOutClicked,
             modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -1415,7 +1425,7 @@ private fun DrawerContent(
                     contentDescription = null
                 )
             },
-            label = { Text("Delete All My Data") },
+            label = { Text(stringResource(Strings.Drawer.deleteData)) },
             selected = false,
             onClick = onDeleteAllClicked,
             modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)

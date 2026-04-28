@@ -624,7 +624,7 @@ private fun SmartCaptureCard(
                     )
                 }
                 Text(
-                    text = "Mood: ${TextAnalyzer.moodLabel(uiState.mood)} | " +
+                    text = "Mood: ${stringResource(TextAnalyzer.moodLabelRes(uiState.mood))} | " +
                             "Stress: ${uiState.stressLevel}/10 | " +
                             "Energia: ${uiState.energyLevel}/10",
                     style = MaterialTheme.typography.bodySmall,

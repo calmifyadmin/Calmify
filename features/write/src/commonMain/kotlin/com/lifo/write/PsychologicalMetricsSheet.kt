@@ -205,7 +205,7 @@ private fun MetricSlider(
     onValueChange: (Float) -> Unit,
     minLabel: String,
     maxLabel: String,
-    tooltip: Pair<String, String>? = null,
+    tooltip: Pair<org.jetbrains.compose.resources.StringResource, org.jetbrains.compose.resources.StringResource>? = null,
 ) {
     Column {
         Row(

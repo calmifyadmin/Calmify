@@ -181,8 +181,8 @@ fun ThreadDetailScreen(
                             placeholder = {
                                 Text(
                                     if (state.replyingToReply != null)
-                                        "Rispondi a ${state.replyingToReply.authorDisplayName ?: ""}..."
-                                    else "Scrivi una risposta...",
+                                        stringResource(Strings.Screen.ThreadDetail.replyTo, state.replyingToReply.authorDisplayName ?: "")
+                                    else stringResource(Strings.Screen.ThreadDetail.replyPlaceholder),
                                     style = MaterialTheme.typography.bodyMedium,
                                 )
                             },

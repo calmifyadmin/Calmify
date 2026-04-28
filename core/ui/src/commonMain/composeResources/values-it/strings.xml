@@ -829,4 +829,234 @@
     <string name="screen_follow_list_tab_followers">Follower</string>
     <string name="screen_follow_list_tab_following">Seguiti</string>
     <string name="a11y_image_generic">Immagine</string>
+
+    <!-- ============================================================ -->
+    <!-- i18n Phase J / Coach marks (post-sprint, screenshot-driven)   -->
+    <!-- ============================================================ -->
+    <string name="coach_home_step1_title">Bentornato, amico</string>
+    <string name="coach_home_step1_desc">Questa è la tua home. Ogni giorno trovi un saluto personalizzato e un riepilogo di come stai andando.</string>
+    <string name="coach_home_step2_title">Le tue attività rapide</string>
+    <string name="coach_home_step2_desc">Da qui puoi accedere con un tocco a diario, meditazione, check-in energia e molto altro. Scegli cosa ti serve oggi.</string>
+    <string name="coach_home_step3_title">Come stai oggi?</string>
+    <string name="coach_home_step3_desc">Il tuo umore del giorno è mostrato qui. Toccalo per aggiornarlo o per vedere come è cambiato nel tempo.</string>
+    <string name="coach_home_step4_title">Il tuo compagno AI</string>
+    <string name="coach_home_step4_desc">Il tuo avatar è sempre pronto ad ascoltarti. Toccalo per iniziare una conversazione vocale o testuale, in qualsiasi momento.</string>
+    <string name="coach_button_next">Avanti</string>
+    <string name="coach_button_got_it">Capito!</string>
+
+    <!-- ============================================================ -->
+    <!-- Phase J Tier 1 / Drawer -->
+    <!-- ============================================================ -->
+    <string name="drawer_history">Storico</string>
+    <string name="drawer_create_avatar">Crea Avatar</string>
+    <string name="drawer_subscription">Abbonamento</string>
+    <string name="drawer_manage_subscription">Gestisci abbonamento</string>
+    <string name="drawer_sign_out">Esci</string>
+    <string name="drawer_delete_data">Elimina tutti i miei dati</string>
+
+    <!-- Phase J Tier 1 / FAB -->
+    <string name="fab_talk_to_eve">Parla con Eve</string>
+    <string name="fab_new_post">Nuovo post</string>
+    <string name="fab_write">Scrivi</string>
+
+    <!-- Phase J Tier 1 / Hero greeting -->
+    <string name="hero_greeting_prefix">Ciao, </string>
+    <string name="hero_wellbeing_is">il tuo benessere è </string>
+    <string name="hero_morning_question">come stai stamattina?</string>
+    <string name="hero_afternoon_pause">prenditi un momento per te.</string>
+    <string name="hero_afternoon_question">com\'è andato il pomeriggio?</string>
+    <string name="hero_evening_question">come ti senti stasera?</string>
+    <string name="hero_trend_growth">Crescita: +%s</string>
+    <string name="hero_trend_decline">Calo: %s</string>
+    <string name="hero_trend_stable">Stabile</string>
+    <string name="hero_score_excellent">Eccellente</string>
+    <string name="hero_score_great">Ottimo</string>
+    <string name="hero_score_good">Buono</string>
+    <string name="hero_score_average">Nella media</string>
+    <string name="hero_score_below_average">Sotto la media</string>
+    <string name="hero_score_to_improve">Da migliorare</string>
+
+    <!-- Phase J Tier 1 / Mood labels -->
+    <string name="mood_neutral">Neutrale</string>
+    <string name="mood_happy">Felice</string>
+    <string name="mood_angry">Arrabbiato</string>
+    <string name="mood_depressed">Depresso</string>
+    <string name="mood_disappointed">Deluso</string>
+    <string name="mood_romantic">Romantico</string>
+    <string name="mood_calm">Sereno</string>
+    <string name="mood_tense">Teso</string>
+    <string name="mood_lonely">Solo</string>
+    <string name="mood_confused">Confuso</string>
+    <string name="mood_guilty">In colpa</string>
+    <string name="mood_awful">Terribile</string>
+    <string name="mood_surprised">Sorpreso</string>
+    <string name="mood_bored">Annoiato</string>
+    <string name="mood_amused">Divertito</string>
+    <string name="mood_suspicious">Sospettoso</string>
+    <string name="mood_grateful">Grato</string>
+    <string name="mood_motivated">Motivato</string>
+    <string name="mood_anxious">Ansioso</string>
+    <string name="mood_sad">Triste</string>
+
+    <!-- Phase J Tier 1 / Composer post category -->
+    <string name="composer_category_discovery">Scoperta</string>
+    <string name="composer_category_challenge">Sfida</string>
+    <string name="composer_category_question">Domanda</string>
+
+    <!-- Phase J Tier 1 / Garden category + difficulty + ikigai -->
+    <string name="garden_category_writing">Scrittura</string>
+    <string name="garden_category_mind">Mente</string>
+    <string name="garden_category_body">Corpo</string>
+    <string name="garden_category_spirit">Spirito</string>
+    <string name="garden_category_habits">Abitudini</string>
+    <string name="garden_difficulty_easy">Facile</string>
+    <string name="garden_difficulty_medium">Medio</string>
+    <string name="garden_difficulty_advanced">Avanzato</string>
+    <string name="garden_ikigai_passion">Passione</string>
+    <string name="garden_ikigai_talent">Talento</string>
+    <string name="garden_ikigai_mission">Missione</string>
+    <string name="garden_ikigai_profession">Professione</string>
+
+    <!-- Phase J Tier 1 / Percorso (Journey) screen title -->
+    <string name="screen_percorso_title">Il Mio Percorso</string>
+
+    <!-- Phase J Tier 1 / Thread Detail reply box -->
+    <string name="screen_thread_detail_reply_to">Rispondi a %s…</string>
+    <string name="screen_thread_detail_reply_placeholder">Scrivi una risposta…</string>
+
+    <!-- Phase J Tier 1 / Thread options sheet -->
+    <string name="thread_options_save">Salva</string>
+    <string name="thread_options_hide">Nascondi</string>
+    <string name="thread_options_mute">Silenzia</string>
+    <string name="thread_options_block">Blocca</string>
+    <string name="thread_options_report">Segnala</string>
+    <string name="thread_options_report_sent">Segnalazione inviata. Grazie.</string>
+
+    <!-- Phase J Tier 1 / Dialogs (account deleted, feature unavailable) -->
+    <string name="dialog_account_deleted">Account eliminato. Tutti i dati sono stati cancellati.</string>
+    <string name="dialog_feature_unavailable_title">Funzionalità non ancora disponibile</string>
+    <string name="dialog_feature_unavailable_body">Questa sezione sarà disponibile a breve.</string>
+    <string name="dialog_go_back">Torna indietro</string>
+
+    <!-- Phase J Tier 1 / Date / weekday -->
+    <string name="datetime_weekday_saturday">Sabato</string>
+    <string name="datetime_weekday_sunday">Domenica</string>
+    <string name="datetime_greeting_morning">Buongiorno</string>
+    <string name="datetime_greeting_afternoon">Buon pomeriggio</string>
+    <string name="datetime_greeting_evening">Buonasera</string>
+
+    <!-- Phase J Tier 1 / Journal prompts -->
+    <string name="journal_prompt_weekend_morning">Sabato/domenica senza fretta. Come ti senti stamattina?</string>
+    <string name="journal_prompt_afternoon_pause">Il pomeriggio è un buon momento per fermarsi. Cosa noti dentro di te?</string>
+    <string name="journal_prompt_evening_calm">La calma di ieri — riesci a ritrovarla anche stasera?</string>
+
+    <!-- Phase J Tier 1 / Connection -->
+    <string name="connection_quality_time_title">Tempo di qualità insieme</string>
+    <string name="connection_quality_time_label">Tempo di qualità</string>
+
+    <!-- ============================================================ -->
+    <!-- Phase J Tier 2 / Garden activities                            -->
+    <!-- ============================================================ -->
+    <string name="garden_category_all">Tutte</string>
+    <string name="a11y_notifications">Notifiche</string>
+    <string name="garden_activity_diary_name">Diario</string>
+    <string name="garden_activity_diary_desc">Scrivi i tuoi pensieri</string>
+    <string name="garden_activity_brain_dump_name">Brain Dump</string>
+    <string name="garden_activity_brain_dump_desc">Svuota la mente</string>
+    <string name="garden_activity_gratitude_name">Gratitudine</string>
+    <string name="garden_activity_gratitude_desc">3 cose belle</string>
+    <string name="garden_activity_meditation_name">Meditazione</string>
+    <string name="garden_activity_meditation_desc">Respira e centra</string>
+    <string name="garden_activity_reframing_name">Reframing</string>
+    <string name="garden_activity_reframing_desc">Cambia prospettiva</string>
+    <string name="garden_activity_blocks_name">Blocchi</string>
+    <string name="garden_activity_blocks_desc">Riconosci gli ostacoli</string>
+    <string name="garden_activity_recurring_thoughts_name">Pensieri Ricorrenti</string>
+    <string name="garden_activity_recurring_thoughts_desc">Osserva i pattern</string>
+    <string name="garden_activity_energy_name">Energia</string>
+    <string name="garden_activity_energy_desc">Come stai oggi?</string>
+    <string name="garden_activity_sleep_name">Sonno</string>
+    <string name="garden_activity_sleep_desc">Traccia il riposo</string>
+    <string name="garden_activity_movement_name">Movimento</string>
+    <string name="garden_activity_movement_desc">Registra attività</string>
+    <string name="garden_activity_dashboard_name">Dashboard</string>
+    <string name="garden_activity_dashboard_desc">Panoramica corpo</string>
+    <string name="garden_activity_values_name">Valori</string>
+    <string name="garden_activity_values_desc">Scopri cosa conta</string>
+    <string name="garden_activity_ikigai_name">Ikigai</string>
+    <string name="garden_activity_ikigai_desc">Trova il tuo scopo</string>
+    <string name="garden_activity_awe_name">Awe</string>
+    <string name="garden_activity_awe_desc">Meraviglia quotidiana</string>
+    <string name="garden_activity_silence_name">Silenzio</string>
+    <string name="garden_activity_silence_desc">Pratica il vuoto</string>
+    <string name="garden_activity_connections_name">Connessioni</string>
+    <string name="garden_activity_connections_desc">Relazioni che contano</string>
+    <string name="garden_activity_inspiration_name">Ispirazione</string>
+    <string name="garden_activity_inspiration_desc">Raccogli spunti</string>
+    <string name="garden_activity_habits_name">Abitudini</string>
+    <string name="garden_activity_habits_desc">Costruisci routine</string>
+    <string name="garden_activity_environment_name">Ambiente</string>
+    <string name="garden_activity_environment_desc">Disegna il contesto</string>
+
+    <!-- ============================================================ -->
+    <!-- Phase J Tier 2 / Snapshot questionnaire                       -->
+    <!-- ============================================================ -->
+    <string name="screen_snapshot_section_life">Domini di Vita</string>
+    <string name="screen_snapshot_section_psych">Salute Psicologica</string>
+    <string name="screen_snapshot_section_self">Autodeterminazione</string>
+    <string name="screen_snapshot_section_indicators">Indicatori</string>
+    <string name="screen_snapshot_q1_text">Quanto sei soddisfatto della tua vita in generale?</string>
+    <string name="screen_snapshot_q1_min">Insoddisfatto</string>
+    <string name="screen_snapshot_q1_max">Molto soddisfatto</string>
+    <string name="screen_snapshot_q2_text">Quanto sei soddisfatto del tuo lavoro o studio?</string>
+    <string name="screen_snapshot_q2_min">Insoddisfatto</string>
+    <string name="screen_snapshot_q2_max">Molto soddisfatto</string>
+    <string name="screen_snapshot_q3_text">Come valuti la qualità delle tue relazioni?</string>
+    <string name="screen_snapshot_q3_min">Scarsa</string>
+    <string name="screen_snapshot_q3_max">Eccellente</string>
+    <string name="screen_snapshot_q4_text">Quanto sei presente e consapevole nel momento?</string>
+    <string name="screen_snapshot_q4_min">Distratto</string>
+    <string name="screen_snapshot_q4_max">Molto presente</string>
+    <string name="screen_snapshot_q5_text">Quanto senti di avere uno scopo o direzione nella vita?</string>
+    <string name="screen_snapshot_q5_min">Confuso</string>
+    <string name="screen_snapshot_q5_max">Molto chiaro</string>
+    <string name="screen_snapshot_q6_text">Quanto ti senti grato per quello che hai?</string>
+    <string name="screen_snapshot_q6_min">Poco</string>
+    <string name="screen_snapshot_q6_max">Molto</string>
+    <string name="screen_snapshot_q7_text">Quanto senti di avere il controllo sulle tue scelte e sulla tua vita?</string>
+    <string name="screen_snapshot_q7_min">Poco controllo</string>
+    <string name="screen_snapshot_q7_max">Pieno controllo</string>
+    <string name="screen_snapshot_q8_text">Quanto ti senti capace e competente in quello che fai?</string>
+    <string name="screen_snapshot_q8_min">Poco capace</string>
+    <string name="screen_snapshot_q8_max">Molto capace</string>
+    <string name="screen_snapshot_q9_text">Quanto ti senti connesso e vicino alle persone importanti per te?</string>
+    <string name="screen_snapshot_q9_min">Disconnesso</string>
+    <string name="screen_snapshot_q9_max">Molto connesso</string>
+    <string name="screen_snapshot_q10_text">Quanto ti senti solo o sola in questo periodo?</string>
+    <string name="screen_snapshot_q10_min">Per niente</string>
+    <string name="screen_snapshot_q10_max">Molto solo/a</string>
+
+    <!-- ============================================================ -->
+    <!-- Phase J Tier 2 / Info tooltips                                -->
+    <!-- ============================================================ -->
+    <string name="tooltip_cognitive_patterns_title">Cosa sono i pattern cognitivi?</string>
+    <string name="tooltip_cognitive_patterns_body">I pattern cognitivi sono schemi ricorrenti nel tuo modo di pensare e interpretare le situazioni. Ad esempio, tendere sempre a catastrofizzare o a vedere le cose solo in bianco e nero. Riconoscerli non significa che sei \"rotto\" — è semplicemente il primo passo per scegliere risposte diverse.</string>
+    <string name="tooltip_sleep_mood_title">Correlazione sonno-umore</string>
+    <string name="tooltip_sleep_mood_body">Dormire bene e sentirsi bene sono strettamente legati: meno ore di sonno spesso si traducono in umore più basso il giorno dopo. Calmify incrocia le tue note di sonno e di umore nel tempo per mostrarti questa relazione specifica nella tua vita.</string>
+    <string name="tooltip_sdt_title">Self-Determination Theory (SDT)</string>
+    <string name="tooltip_sdt_body">È un modello psicologico che identifica tre bisogni fondamentali per il benessere: autonomia (sentire di scegliere liberamente), competenza (sentirsi capaci) e connessione (sentirsi vicini agli altri). Quando questi tre bisogni sono soddisfatti, la motivazione è autentica e duratura.</string>
+    <string name="tooltip_wellbeing_trend_title">Trend di benessere</string>
+    <string name="tooltip_wellbeing_trend_body">Il trend mostra come il tuo benessere complessivo è cambiato nel tempo, combinando umore, energia, sonno e qualità delle riflessioni. Non cercare la perfezione: anche un piccolo miglioramento costante nel tempo ha un impatto enorme.</string>
+    <string name="tooltip_emotional_intensity_title">Intensità emotiva</string>
+    <string name="tooltip_emotional_intensity_body">Misura quanto forte senti un\'emozione in questo momento, indipendentemente da quale sia. Un\'emozione intensa non è né buona né cattiva: indica solo quanto ti sta coinvolgendo. Notare l\'intensità ti aiuta a capire quali situazioni ti toccano di più.</string>
+    <string name="tooltip_stress_level_title">Livello di stress</string>
+    <string name="tooltip_stress_level_body">Lo stress è una risposta naturale del corpo a sfide percepite. Tenere traccia del tuo livello di stress nel tempo aiuta a identificare i momenti o i contesti che ti pesano di più, così puoi agire in modo mirato.</string>
+    <string name="tooltip_calm_anxiety_title">Calma vs. Ansia</string>
+    <string name="tooltip_calm_anxiety_body">Questa scala cattura il tuo stato di allerta interno in questo momento. L\'ansia non è un difetto: è il cervello che cerca di proteggerti. Annotarla regolarmente ti permette di vedere i trigger ricorrenti e, nel tempo, di rispondere con più consapevolezza.</string>
+    <string name="tooltip_guided_breathing_title">Respirazione guidata</string>
+    <string name="tooltip_guided_breathing_body">La respirazione lenta e consapevole attiva il sistema nervoso parasimpatico — quello che \"frena\" la risposta allo stress. Bastano pochi minuti per sentire una differenza reale nel tono muscolare e nella chiarezza mentale.</string>
+    <string name="tooltip_habit_stacking_title">Habit Stacking</string>
+    <string name="tooltip_habit_stacking_body">È una tecnica che collega una nuova abitudine a una già consolidata. Esempio: \"Dopo aver fatto colazione, scrivo tre cose per cui sono grato\". Usando un comportamento esistente come \"gancio\", è molto più facile costruire qualcosa di nuovo.</string>
+    <string name="tooltip_minimum_action_title">Minimum Action</string>
+    <string name="tooltip_minimum_action_body">Il punto di ingresso più piccolo possibile per un\'abitudine. Invece di \"fare 30 minuti di meditazione\", il minimum action è \"mettiti sul cuscino\". Abbassare la soglia iniziale rende quasi impossibile non iniziare — e spesso si finisce per fare molto di più.</string>
 </resources>

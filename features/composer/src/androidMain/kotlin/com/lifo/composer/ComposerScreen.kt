@@ -551,7 +551,7 @@ fun ComposerScreen(
                                         onClick = { onIntent(ComposerContract.Intent.SetCategory(cat)) },
                                         label = {
                                             Text(
-                                                text = cat.label,
+                                                text = stringResource(cat.labelRes),
                                                 style = MaterialTheme.typography.labelSmall,
                                             )
                                         },
@@ -595,7 +595,7 @@ fun ComposerScreen(
                                     onClick = { onIntent(ComposerContract.Intent.SetMoodTag(tag)) },
                                     label = {
                                         Text(
-                                            text = tag,
+                                            text = moodTagDisplay(tag),
                                             style = MaterialTheme.typography.labelSmall,
                                         )
                                     },
@@ -957,4 +957,21 @@ private fun ComposerContract.Visibility.labelKey(): org.jetbrains.compose.resour
     ComposerContract.Visibility.PUBLIC -> Strings.Screen.Composer.visibilityPublic
     ComposerContract.Visibility.FOLLOWERS_ONLY -> Strings.Screen.Composer.visibilityFollowers
     ComposerContract.Visibility.PRIVATE -> Strings.Screen.Composer.visibilityPrivate
+}
+
+/**
+ * Resolves the localized display label for a canonical Italian mood tag.
+ * Storage canonical (DB / network) stays IT — only the label shown to the user is translated.
+ */
+@androidx.compose.runtime.Composable
+private fun moodTagDisplay(canonical: String): String = when (canonical) {
+    "Felice" -> stringResource(Strings.Mood.happy)
+    "Sereno" -> stringResource(Strings.Mood.calm)
+    "Grato" -> stringResource(Strings.Mood.grateful)
+    "Motivato" -> stringResource(Strings.Mood.motivated)
+    "Ansioso" -> stringResource(Strings.Mood.anxious)
+    "Triste" -> stringResource(Strings.Mood.sad)
+    "Arrabbiato" -> stringResource(Strings.Mood.angry)
+    "Neutrale" -> stringResource(Strings.Mood.neutral)
+    else -> canonical
 }

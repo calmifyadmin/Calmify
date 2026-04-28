@@ -1,15 +1,17 @@
 package com.lifo.write
 
+import com.lifo.ui.i18n.Strings
 import com.lifo.util.model.IkigaiExploration
 import com.lifo.util.mvi.MviContract
+import org.jetbrains.compose.resources.StringResource
 
 object IkigaiContract {
 
-    enum class Circle(val displayName: String, val prompt: String) {
-        PASSION("Passione", "Cosa fai quando il tempo scompare?"),
-        TALENT("Talento", "In cosa sei naturalmente bravo? Cosa gli altri ti riconoscono?"),
-        MISSION("Missione", "Di cosa ha bisogno il mondo intorno a te?"),
-        PROFESSION("Professione", "Per cosa le persone ti pagherebbero?"),
+    enum class Circle(val displayNameRes: StringResource, val prompt: String) {
+        PASSION(Strings.Garden.ikigaiPassion, "Cosa fai quando il tempo scompare?"),
+        TALENT(Strings.Garden.ikigaiTalent, "In cosa sei naturalmente bravo? Cosa gli altri ti riconoscono?"),
+        MISSION(Strings.Garden.ikigaiMission, "Di cosa ha bisogno il mondo intorno a te?"),
+        PROFESSION(Strings.Garden.ikigaiProfession, "Per cosa le persone ti pagherebbero?"),
     }
 
     data class State(

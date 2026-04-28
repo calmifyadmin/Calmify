@@ -41,6 +41,8 @@ import com.lifo.home.domain.model.TrendDirection
 import com.lifo.home.domain.model.WellbeingAggregationResult
 import com.lifo.home.domain.model.WellbeingTrend
 import com.lifo.ui.components.CalmifyTopBar
+import com.lifo.ui.i18n.Strings
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import com.lifo.util.model.PsychologicalProfile
 import com.lifo.util.model.Trend
@@ -61,7 +63,7 @@ fun ProfileDashboard(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
-            CalmifyTopBar(title = "Il Mio Percorso")
+            CalmifyTopBar(title = stringResource(Strings.Screen.Percorso.title))
         }
     ) { paddingValues ->
         Box(
