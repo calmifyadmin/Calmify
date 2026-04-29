@@ -26,20 +26,6 @@ class CalculateStreaksUseCase {
         private const val DEFAULT_WEEKLY_GOAL = 5
 
         /**
-         * Map DayOfWeek to Italian display names
-         */
-        private fun dayOfWeekItalian(dayOfWeek: DayOfWeek): String = when (dayOfWeek) {
-            DayOfWeek.MONDAY -> "Lunedi'"
-            DayOfWeek.TUESDAY -> "Martedi'"
-            DayOfWeek.WEDNESDAY -> "Mercoledi'"
-            DayOfWeek.THURSDAY -> "Giovedi'"
-            DayOfWeek.FRIDAY -> "Venerdi'"
-            DayOfWeek.SATURDAY -> "Sabato"
-            DayOfWeek.SUNDAY -> "Domenica"
-            else -> dayOfWeek.name.lowercase().replaceFirstChar { it.titlecase() }
-        }
-
-        /**
          * Get the Monday of the week containing the given date.
          * kotlinx.datetime DayOfWeek: MONDAY=0 ordinal
          */
@@ -159,8 +145,11 @@ class CalculateStreaksUseCase {
             .groupingBy { it }
             .eachCount()
 
-        val mostProductiveDay = dayOfWeekCounts.maxByOrNull { it.value }?.key
-            ?.let { dayOfWeekItalian(it) }
+        // Most productive day: store the canonical DayOfWeek name (e.g. "MONDAY") so
+        // UI can resolve to a localized weekday label via stringResource at render time.
+        // Currently MonthlyStats.mostProductiveDay is unconsumed in UI; if added later,
+        // the consumer should map this canonical name to a localized day key.
+        val mostProductiveDay = dayOfWeekCounts.maxByOrNull { it.value }?.key?.name
 
         return MonthlyStats(
             entriesThisMonth = entriesThisMonth,

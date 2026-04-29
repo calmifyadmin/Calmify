@@ -1,8 +1,10 @@
 package com.lifo.home.domain.model
 
 import androidx.compose.runtime.Immutable
+import com.lifo.ui.i18n.Strings
 import com.lifo.util.model.SentimentLabel
 import kotlinx.datetime.Instant
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * Home UI Models - Data classes for the redesigned Home screen
@@ -157,13 +159,13 @@ enum class WellbeingScoreLabel(val label: String, val minScore: Float) {
 /**
  * Time period grouping for activity feed
  */
-enum class TimePeriod(val label: String) {
-    TODAY("Oggi"),
-    YESTERDAY("Ieri"),
-    THIS_WEEK("Questa settimana"),
-    LAST_WEEK("Settimana scorsa"),
-    THIS_MONTH("Questo mese"),
-    OLDER("Piu' vecchi")
+enum class TimePeriod(val labelRes: StringResource) {
+    TODAY(Strings.Screen.Home.periodToday),
+    YESTERDAY(Strings.Screen.Home.periodYesterday),
+    THIS_WEEK(Strings.Screen.Home.periodThisWeek),
+    LAST_WEEK(Strings.Screen.Home.periodLastWeek),
+    THIS_MONTH(Strings.Screen.Home.periodThisMonth),
+    OLDER(Strings.Screen.Home.periodOlder)
 }
 
 /**

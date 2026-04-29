@@ -924,6 +924,24 @@
     <string name="datetime_greeting_morning">Good morning</string>
     <string name="datetime_greeting_afternoon">Good afternoon</string>
     <string name="datetime_greeting_evening">Good evening</string>
+    <string name="datetime_greeting_night">Good night</string>
+    <string name="datetime_week_label">Week %1$d, %2$d</string>
+    <string name="trend_improving">Improving</string>
+    <string name="trend_stable">Stable</string>
+    <string name="trend_declining">Declining</string>
+    <string name="trend_insufficient_data">Insufficient data</string>
+    <string name="trend_msg_improving">The trend is improving compared to previous weeks.</string>
+    <string name="trend_msg_declining">The trend shows a decline — no need to panic, it\'s useful information.</string>
+    <string name="trend_msg_stable">Your path is consistent, and consistency has value.</string>
+    <string name="trend_msg_insufficient">Write more to get a complete picture.</string>
+    <string name="home_period_today">Today</string>
+    <string name="home_period_yesterday">Yesterday</string>
+    <string name="home_period_this_week">This week</string>
+    <string name="home_period_last_week">Last week</string>
+    <string name="home_period_this_month">This month</string>
+    <string name="home_period_older">Older</string>
+    <string name="home_entry_count_one">%1$d entry</string>
+    <string name="home_entry_count_many">%1$d entries</string>
 
     <!-- Phase J Tier 1 / Journal prompts -->
     <string name="journal_prompt_weekend_morning">Weekend morning, no rush. How do you feel today?</string>

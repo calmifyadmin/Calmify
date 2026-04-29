@@ -57,15 +57,15 @@ data class StressPeak(
 )
 
 /**
- * Trend enum for UI display
+ * Trend enum for UI display.
+ * Localized label resolved by UI layer via `Trend.localizedLabel()` composable extension
+ * (defined in `features/write` to keep `core/util` free of UI-layer dependencies).
  */
-enum class Trend(val displayName: String, val colorName: String) {
-    IMPROVING("Miglioramento", "primary"),
-    STABLE("Stabile", "onSurfaceVariant"),
-    DECLINING("In calo", "error"),
-    INSUFFICIENT_DATA("Dati insufficienti", "onSurfaceVariant"),
+enum class Trend(val colorName: String) {
+    IMPROVING("primary"),
+    STABLE("onSurfaceVariant"),
+    DECLINING("error"),
+    INSUFFICIENT_DATA("onSurfaceVariant"),
 }
 
 fun PsychologicalProfile.getWeekLabel(): String = "W$weekNumber"
-
-fun PsychologicalProfile.getWeekLabelFull(): String = "Settimana $weekNumber, $year"

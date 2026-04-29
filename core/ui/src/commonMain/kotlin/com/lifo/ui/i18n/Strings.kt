@@ -141,6 +141,15 @@ object Strings {
             val a11yDatePicker: StringResource get() = Res.string.a11y_home_date_picker
             val a11yClearSearch: StringResource get() = Res.string.a11y_home_clear_search
             val a11yRemoveHistory: StringResource get() = Res.string.a11y_home_remove_history
+            // Activity feed period grouping (Phase J Tier 3)
+            val periodToday: StringResource get() = Res.string.home_period_today
+            val periodYesterday: StringResource get() = Res.string.home_period_yesterday
+            val periodThisWeek: StringResource get() = Res.string.home_period_this_week
+            val periodLastWeek: StringResource get() = Res.string.home_period_last_week
+            val periodThisMonth: StringResource get() = Res.string.home_period_this_month
+            val periodOlder: StringResource get() = Res.string.home_period_older
+            val entryCountOne: StringResource get() = Res.string.home_entry_count_one
+            val entryCountMany: StringResource get() = Res.string.home_entry_count_many
         }
 
         /** Search feature — tabs, sections, placeholder, error/empty states. */
@@ -483,6 +492,8 @@ object Strings {
         val greetingMorning: StringResource get() = Res.string.datetime_greeting_morning
         val greetingAfternoon: StringResource get() = Res.string.datetime_greeting_afternoon
         val greetingEvening: StringResource get() = Res.string.datetime_greeting_evening
+        val greetingNight: StringResource get() = Res.string.datetime_greeting_night
+        val weekLabel: StringResource get() = Res.string.datetime_week_label
     }
 
     /** Time-of-day journal prompts. */
@@ -496,6 +507,18 @@ object Strings {
     object Connection {
         val qualityTimeTitle: StringResource get() = Res.string.connection_quality_time_title
         val qualityTimeLabel: StringResource get() = Res.string.connection_quality_time_label
+    }
+
+    /** PsychologicalProfile.Trend enum localized labels + descriptive sentences. */
+    object Trend {
+        val improving: StringResource get() = Res.string.trend_improving
+        val stable: StringResource get() = Res.string.trend_stable
+        val declining: StringResource get() = Res.string.trend_declining
+        val insufficientData: StringResource get() = Res.string.trend_insufficient_data
+        val msgImproving: StringResource get() = Res.string.trend_msg_improving
+        val msgDeclining: StringResource get() = Res.string.trend_msg_declining
+        val msgStable: StringResource get() = Res.string.trend_msg_stable
+        val msgInsufficient: StringResource get() = Res.string.trend_msg_insufficient
     }
 
     /** Info tooltip bottom-sheet content (10 wellness concept tooltips). */

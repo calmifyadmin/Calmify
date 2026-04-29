@@ -35,7 +35,17 @@ For each screenshot:
 | J.11 — Thread Detail composer placeholder | `ThreadDetailScreen.kt` | 2 (replyTo, replyPlaceholder) | **DONE Tier 1** |
 | J.12 — Thread options sheet | `ThreadOptionsSheet.kt` | 5 (Salva/Nascondi/Silenzia/Blocca/Segnala) + report sent toast | **DONE Tier 1** |
 
-**Cumulative Tier 1 + 2: ~189 keys × 6 langs (EN+IT+ES+FR+DE+PT) ≈ 1134 translations, 28 Kotlin files refactored, BUILD GREEN (assembleDebug).**
+**Cumulative Tier 1 + 2: ~189 keys × 6 langs (EN+IT+ES+FR+DE+PT) ≈ 1134 translations, 28 Kotlin files refactored, BUILD GREEN (assembleDebug). Commit `da065aa`.**
+
+**Tier 3.A + 3.B (2026-04-29) — DONE, BUILD GREEN**:
+- `DateFormatters.getTimeOfDayGreeting()` → `getTimeOfDayGreetingRes(): StringResource`. New keys `datetime_greeting_night` + `datetime_week_label` (parameterized). Caller `HeroGreetingCard.kt` updated.
+- `Trend` enum (PsychologicalProfile.kt) — dropped `displayName: String` (would create circular `core/util→core/ui` dep). Callers `PercorsoScreen.kt`/`ProfileDashboard.kt` use inline `when (trend)→Strings.Trend.X`. 4 trend label + 4 trend message keys added.
+- `getWeekLabelFull()` deleted. 2 callers use `stringResource(Strings.DateTime.weekLabel, num, year)`.
+- `TimePeriod` enum (HomeUiModels.kt) `label: String` → `labelRes: StringResource`. 6 period keys + 2 entry-count plural keys with `%1$d` format. FeedSectionHeader pluralizes via stringResource.
+- **Massive dead code purge** (CLAUDE.md rule 12) — `DateFormatters.kt` 250→35 LOC: deleted 15 unused IT-hardcoded utility funcs (formatFullDate/formatMediumDate/formatShortDate/formatTime/formatDayMonth/formatMonth/formatShortMonth/getRelativeTime/getTimePeriod/formatSectionHeader/getWeekRangeString/getWeekLabel/getDayLabel/getFullDayName/getMonthLabels). `CalculateStreaksUseCase.dayOfWeekItalian()` deleted (consumer field unused).
+- Cumulative Tier 3.A+3.B: **~28 keys × 6 langs ≈ 168 translations + 8 file Kotlin refactor**.
+
+**Total Phase J cumulative (Tier 1+2+3.A+3.B): ~217 keys × 6 langs ≈ 1302 translations + 36 Kotlin files refactored**.
 
 ## Tier 3 — DEFERRED (architectural refactor, sessione futura)
 

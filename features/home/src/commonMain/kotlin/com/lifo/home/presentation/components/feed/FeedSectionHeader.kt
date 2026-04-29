@@ -10,6 +10,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lifo.home.domain.model.TimePeriod
+import com.lifo.ui.i18n.Strings
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Feed Section Header - Sticky header for activity grouping
@@ -30,7 +32,7 @@ fun FeedSectionHeader(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = period.label.uppercase(),
+            text = stringResource(period.labelRes).uppercase(),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,
@@ -38,7 +40,11 @@ fun FeedSectionHeader(
         )
 
         Text(
-            text = "$itemCount ${if (itemCount == 1) "voce" else "voci"}",
+            text = stringResource(
+                if (itemCount == 1) Strings.Screen.Home.entryCountOne
+                else Strings.Screen.Home.entryCountMany,
+                itemCount
+            ),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

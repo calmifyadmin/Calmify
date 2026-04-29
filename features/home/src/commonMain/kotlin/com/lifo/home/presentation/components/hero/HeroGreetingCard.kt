@@ -27,6 +27,7 @@ import com.lifo.home.domain.model.TrendDirection
 import com.lifo.home.presentation.components.common.EmotionIndicator
 import com.lifo.home.util.DateFormatters
 import com.lifo.home.util.EmotionAwareColors
+import org.jetbrains.compose.resources.stringResource
 import com.lifo.util.formatDecimal
 import com.lifo.util.model.SentimentLabel
 import kotlinx.datetime.Clock
@@ -55,7 +56,7 @@ fun HeroGreetingCard(
     modifier: Modifier = Modifier,
     onPulseClick: () -> Unit = {}
 ) {
-    val greeting = DateFormatters.getTimeOfDayGreeting()
+    val greeting = stringResource(DateFormatters.getTimeOfDayGreetingRes())
     val timeIcon = getTimeIcon()
 
     // Entrance animation

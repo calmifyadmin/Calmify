@@ -45,7 +45,6 @@ import com.lifo.ui.components.tooltips.TooltipContent
 import com.lifo.util.formatDecimal
 import com.lifo.util.model.PsychologicalProfile
 import com.lifo.util.model.Trend
-import com.lifo.util.model.getWeekLabelFull
 import kotlinx.coroutines.launch
 
 /**
@@ -487,7 +486,12 @@ private fun HeroScoreCard(profile: PsychologicalProfile) {
                             tint = trendColor
                         )
                         Text(
-                            text = trend.displayName,
+                            text = stringResource(when (trend) {
+                                Trend.IMPROVING -> Strings.Trend.improving
+                                Trend.STABLE -> Strings.Trend.stable
+                                Trend.DECLINING -> Strings.Trend.declining
+                                Trend.INSUFFICIENT_DATA -> Strings.Trend.insufficientData
+                            }),
                             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
                             color = trendColor
                         )
@@ -1071,7 +1075,7 @@ private fun DataQualityFooter(profile: PsychologicalProfile) {
                     tint = colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = profile.getWeekLabelFull(),
+                    text = stringResource(Strings.DateTime.weekLabel, profile.weekNumber, profile.year),
                     style = MaterialTheme.typography.labelMedium,
                     color = colorScheme.onSurfaceVariant
                 )

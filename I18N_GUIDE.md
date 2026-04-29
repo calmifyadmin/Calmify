@@ -1,10 +1,10 @@
 # I18N_GUIDE.md — Internationalisation in Calmify
 
-> Updated 2026-04-29 — Sprint i18n COMPLETE (Fases A→E, 2026-04-19) + Phase J Tier 1+2
-> screenshot-driven closure (2026-04-28). Default EN, 12 languages, typed `Strings` facade with 17+ semantic groups.
-> Sprint A→E: 140 keys / 31 files. Phase J Tier 1+2: +189 keys / +28 files.
-> **Cumulative: ~329 keys × 6 Latin langs ≈ 1974 translations + 59 Kotlin files refactored.**
-> Tier 3 (DateFormatters / JournalHomeScreen prompts / wellness wizards) deferred — see `memory/project_i18n_phase_j.md`.
+> Updated 2026-04-29 — Sprint i18n COMPLETE (Fases A→E, 2026-04-19) + Phase J Tier 1+2 (2026-04-28) + Tier 3.A+3.B (2026-04-29).
+> Default EN, 12 languages, typed `Strings` facade with 18+ semantic groups (added `Trend` group in 3.A).
+> Sprint A→E: 140 keys / 31 files. Phase J Tier 1+2: +189 keys / +28 files. Tier 3.A+3.B: +28 keys / +8 files (incl. dead code purge: DateFormatters.kt reduced 250→35 LOC).
+> **Cumulative: ~357 keys × 6 Latin langs ≈ 2142 translations + 67 Kotlin files refactored.**
+> Tier 3.C-E (BlockType/BlockResolution enums, JournalHomeScreen prompts, buildWeeklyReflection paragraph, wellness wizard screens) deferred — see `memory/project_i18n_phase_j.md`.
 
 ## Overview
 

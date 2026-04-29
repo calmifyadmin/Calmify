@@ -882,6 +882,24 @@
     <string name="datetime_greeting_morning">Bom dia</string>
     <string name="datetime_greeting_afternoon">Boa tarde</string>
     <string name="datetime_greeting_evening">Boa noite</string>
+    <string name="datetime_greeting_night">Boa noite</string>
+    <string name="datetime_week_label">Semana %1$d, %2$d</string>
+    <string name="trend_improving">Melhorando</string>
+    <string name="trend_stable">Estável</string>
+    <string name="trend_declining">Em queda</string>
+    <string name="trend_insufficient_data">Dados insuficientes</string>
+    <string name="trend_msg_improving">A tendência está melhorando em relação às semanas anteriores.</string>
+    <string name="trend_msg_declining">A tendência mostra uma queda — sem pânico, é informação útil.</string>
+    <string name="trend_msg_stable">Seu caminho é constante, e a constância tem valor.</string>
+    <string name="trend_msg_insufficient">Escreva mais para ter um quadro completo.</string>
+    <string name="home_period_today">Hoje</string>
+    <string name="home_period_yesterday">Ontem</string>
+    <string name="home_period_this_week">Esta semana</string>
+    <string name="home_period_last_week">Semana passada</string>
+    <string name="home_period_this_month">Este mês</string>
+    <string name="home_period_older">Mais antigos</string>
+    <string name="home_entry_count_one">%1$d entrada</string>
+    <string name="home_entry_count_many">%1$d entradas</string>
 
     <!-- Phase J Tier 1 / Journal prompts -->
     <string name="journal_prompt_weekend_morning">Manhã de fim de semana, sem pressa. Como se sente hoje?</string>
