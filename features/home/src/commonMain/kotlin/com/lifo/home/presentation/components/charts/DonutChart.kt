@@ -17,6 +17,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.lifo.home.domain.model.MoodDistribution
+import com.lifo.ui.i18n.Strings
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Donut Chart - Material3 Expressive animated donut chart
@@ -288,17 +290,17 @@ fun DonutChartLegend(
     ) {
         LegendItem(
             color = MaterialTheme.colorScheme.tertiary,
-            label = "Positivo",
+            label = stringResource(Strings.Screen.Home.moodBreakdownPositive),
             percentage = distribution.positive
         )
         LegendItem(
             color = MaterialTheme.colorScheme.secondary,
-            label = "Neutro",
+            label = stringResource(Strings.Screen.Home.moodBreakdownNeutral),
             percentage = distribution.neutral
         )
         LegendItem(
             color = MaterialTheme.colorScheme.error,
-            label = "Negativo",
+            label = stringResource(Strings.Screen.Home.moodBreakdownNegative),
             percentage = distribution.negative
         )
     }

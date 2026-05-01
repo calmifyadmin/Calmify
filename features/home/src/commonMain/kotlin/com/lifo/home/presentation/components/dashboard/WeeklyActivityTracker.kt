@@ -18,7 +18,9 @@ import com.lifo.home.domain.model.DailyInsightData
 import com.lifo.home.domain.model.WeeklyGoal
 import com.lifo.home.presentation.components.common.animatedCounter
 import com.lifo.home.util.EmotionAwareColors
+import com.lifo.ui.i18n.Strings
 import kotlinx.datetime.*
+import org.jetbrains.compose.resources.stringResource
 
 
 @Composable
@@ -40,7 +42,15 @@ internal fun WeeklyActivityTracker(
         map
     }
 
-    val dayLabels = listOf("L", "M", "M", "G", "V", "S", "D")
+    val dayLabels = listOf(
+        stringResource(Strings.Screen.Home.dayInitialMonday),
+        stringResource(Strings.Screen.Home.dayInitialTuesday),
+        stringResource(Strings.Screen.Home.dayInitialWednesday),
+        stringResource(Strings.Screen.Home.dayInitialThursday),
+        stringResource(Strings.Screen.Home.dayInitialFriday),
+        stringResource(Strings.Screen.Home.dayInitialSaturday),
+        stringResource(Strings.Screen.Home.dayInitialSunday),
+    )
     val todayDow = today.dayOfWeek.value
 
     val activeDays = insightsByDay.count { it.value.diaryCount > 0 }
@@ -61,13 +71,13 @@ internal fun WeeklyActivityTracker(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Questa settimana",
+                    text = stringResource(Strings.Screen.Home.weekThis),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = colorScheme.onSurface
                 )
                 Text(
-                    text = "$activeDays/7 giorni",
+                    text = stringResource(Strings.Screen.Home.weekProgress, activeDays),
                     style = MaterialTheme.typography.labelMedium,
                     color = primary
                 )

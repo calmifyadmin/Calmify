@@ -213,11 +213,12 @@ fun ThreadPostCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     thread.moodTag?.let { mood ->
+                        val localizedMood = Strings.moodTagLocalizedRes(mood)?.let { stringResource(it) } ?: mood
                         SuggestionChip(
                             onClick = {},
                             label = {
                                 Text(
-                                    text = mood,
+                                    text = localizedMood,
                                     style = MaterialTheme.typography.labelSmall
                                 )
                             },

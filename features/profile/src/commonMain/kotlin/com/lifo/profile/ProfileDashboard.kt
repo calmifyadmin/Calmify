@@ -437,7 +437,7 @@ private fun MoodGradientBar(score: Float, modifier: Modifier = Modifier) {
 
 @Composable
 private fun WeeklyReflectionCard(profile: PsychologicalProfile, chartData: ChartData) {
-    val reflection = remember(profile) { buildWeeklyReflection(profile, chartData) }
+    val reflection = buildWeeklyReflection(profile, chartData)
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -467,7 +467,7 @@ private fun WeeklyReflectionCard(profile: PsychologicalProfile, chartData: Chart
                     }
                 }
                 Text(
-                    text = "La tua settimana",
+                    text = stringResource(Strings.Weekly.cardTitle),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -484,6 +484,7 @@ private fun WeeklyReflectionCard(profile: PsychologicalProfile, chartData: Chart
     }
 }
 
+@Composable
 private fun buildWeeklyReflection(profile: PsychologicalProfile, chartData: ChartData): String {
     val mood = profile.moodBaseline
     val stress = profile.stressBaseline
@@ -491,36 +492,32 @@ private fun buildWeeklyReflection(profile: PsychologicalProfile, chartData: Char
     val resilience = profile.resilienceIndex
     val diaryCount = profile.diaryCount
 
-    val sb = StringBuilder()
+    val moodPart = stringResource(
+        when {
+            mood >= 7f -> Strings.Weekly.moodPositive
+            mood >= 5f -> Strings.Weekly.moodBalanced
+            else -> Strings.Weekly.moodDifficult
+        },
+    )
+    val stressPart = stringResource(
+        when {
+            stress >= 7f -> Strings.Weekly.stressHigh
+            stress >= 4f -> Strings.Weekly.stressManaged
+            else -> Strings.Weekly.stressLow
+        },
+    )
+    val trendPart = stringResource(
+        when (trend) {
+            Trend.IMPROVING -> Strings.Trend.msgImproving
+            Trend.DECLINING -> Strings.Trend.msgDeclining
+            Trend.STABLE -> Strings.Trend.msgStable
+            Trend.INSUFFICIENT_DATA -> Strings.Trend.msgInsufficient
+        },
+    )
+    val resiliencePart = if (resilience >= 0.7f) stringResource(Strings.Weekly.resilienceStrong) else ""
+    val diaryPart = if (diaryCount >= 5) stringResource(Strings.Weekly.diaryCount, diaryCount) else ""
 
-    when {
-        mood >= 7f -> sb.append("Questa settimana hai mostrato un umore positivo e stabile. ")
-        mood >= 5f -> sb.append("Una settimana equilibrata, con alti e bassi. ")
-        else -> sb.append("Non e' stata una settimana facile — e va bene cosi'. ")
-    }
-
-    when {
-        stress >= 7f -> sb.append("Lo stress e' stato alto. Prenditi cura di te. ")
-        stress >= 4f -> sb.append("Lo stress c'e' stato ma l'hai gestito. ")
-        else -> sb.append("I livelli di stress sono rimasti bassi — ottimo segnale. ")
-    }
-
-    when (trend) {
-        Trend.IMPROVING -> sb.append("Il trend e' in miglioramento rispetto alle settimane precedenti.")
-        Trend.DECLINING -> sb.append("Il trend mostra un calo — niente panico, e' informazione utile.")
-        Trend.STABLE -> sb.append("Il tuo percorso e' costante, e la costanza ha valore.")
-        Trend.INSUFFICIENT_DATA -> sb.append("Scrivi di piu' per avere un quadro completo.")
-    }
-
-    if (resilience >= 0.7f) {
-        sb.append(" La tua resilienza e' solida — ti riprendi bene dopo le difficolta'.")
-    }
-
-    if (diaryCount >= 5) {
-        sb.append(" $diaryCount diari questa settimana: stai costruendo un'abitudine importante.")
-    }
-
-    return sb.toString()
+    return moodPart + stressPart + trendPart + resiliencePart + diaryPart
 }
 
 // ══════════════════════════════════════════════════════════════════════

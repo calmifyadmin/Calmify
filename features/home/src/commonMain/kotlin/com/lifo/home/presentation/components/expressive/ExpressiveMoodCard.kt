@@ -26,11 +26,14 @@ import androidx.compose.ui.unit.sp
 import com.lifo.home.domain.model.DominantMood
 import com.lifo.home.domain.model.MoodDistribution
 import com.lifo.home.domain.model.TimeRange
+import com.lifo.home.domain.model.labelRes
 import com.lifo.ui.components.tooltips.InfoTooltip
 import com.lifo.ui.components.tooltips.TooltipContent
+import com.lifo.ui.i18n.Strings
 import com.lifo.ui.theme.Sage
 import com.lifo.ui.theme.SageMedium
 import com.lifo.ui.theme.SageSoft
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,7 +68,7 @@ internal fun ExpressiveMoodCard(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        text = "Il tuo mood",
+                        text = stringResource(Strings.Screen.Home.moodCardTitle),
                         style = MaterialTheme.typography.titleSmall.copy(
                             fontWeight = FontWeight.SemiBold
                         )
@@ -82,7 +85,11 @@ internal fun ExpressiveMoodCard(
                             onClick = { onTimeRangeChange(range) },
                             label = {
                                 Text(
-                                    text = range.label,
+                                    text = stringResource(when (range) {
+                                        TimeRange.WEEK -> Strings.Screen.Home.periodFilter7
+                                        TimeRange.MONTH -> Strings.Screen.Home.periodFilter30
+                                        TimeRange.QUARTER -> Strings.Screen.Home.periodFilter90
+                                    }),
                                     style = MaterialTheme.typography.labelSmall
                                 )
                             },
@@ -105,7 +112,7 @@ internal fun ExpressiveMoodCard(
                     neutral = distribution.neutral,
                     negative = distribution.negative,
                     dominantPercentage = dominantPct,
-                    dominantLabel = dominantMood.displayLabel,
+                    dominantLabel = stringResource(dominantMood.labelRes),
                     totalEntries = distribution.totalEntries,
                     size = 180.dp
                 )
@@ -117,21 +124,21 @@ internal fun ExpressiveMoodCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 MoodPill(
-                    label = "Positivo",
+                    label = stringResource(Strings.Screen.Home.moodBreakdownPositive),
                     percentage = distribution.positive,
                     color = Sage,
                     icon = Icons.Rounded.SentimentVerySatisfied,
                     modifier = Modifier.weight(1f)
                 )
                 MoodPill(
-                    label = "Neutro",
+                    label = stringResource(Strings.Screen.Home.moodBreakdownNeutral),
                     percentage = distribution.neutral,
                     color = SageSoft,
                     icon = Icons.Rounded.SentimentNeutral,
                     modifier = Modifier.weight(1f)
                 )
                 MoodPill(
-                    label = "Negativo",
+                    label = stringResource(Strings.Screen.Home.moodBreakdownNegative),
                     percentage = distribution.negative,
                     color = SageMedium,
                     icon = Icons.Rounded.SentimentVeryDissatisfied,

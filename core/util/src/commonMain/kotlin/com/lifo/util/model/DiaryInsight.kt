@@ -47,14 +47,16 @@ data class DiaryInsight(
 }
 
 /**
- * Sentiment Label Categories
+ * Sentiment Label Categories. UI display via `Strings.Sentiment.X` (in `core/ui`)
+ * to avoid `core/util -> core/ui` upward dep — see Block.kt / PsychologicalProfile.Trend
+ * for the same pattern.
  */
-enum class SentimentLabel(val displayName: String) {
-    VERY_NEGATIVE("Molto Negativo"),
-    NEGATIVE("Negativo"),
-    NEUTRAL("Neutro"),
-    POSITIVE("Positivo"),
-    VERY_POSITIVE("Molto Positivo"),
+enum class SentimentLabel {
+    VERY_NEGATIVE,
+    NEGATIVE,
+    NEUTRAL,
+    POSITIVE,
+    VERY_POSITIVE,
 }
 
 /**

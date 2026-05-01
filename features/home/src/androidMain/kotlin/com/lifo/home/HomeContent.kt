@@ -46,6 +46,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.todayIn
 import org.koin.compose.koinInject
+import com.lifo.ui.i18n.Strings
 import org.jetbrains.compose.resources.stringResource
 import com.lifo.ui.resources.Res
 import com.lifo.ui.resources.*
@@ -234,7 +235,7 @@ internal fun HomeContent(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "Questa settimana",
+                                        text = stringResource(Strings.Screen.Home.weekThis),
                                         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
@@ -293,7 +294,7 @@ internal fun HomeContent(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = "Umore",
+                                            text = stringResource(Strings.Screen.Home.moodSectionTitle),
                                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
@@ -558,7 +559,7 @@ internal fun ExpressiveDailyActions(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Azioni quotidiane",
+                text = stringResource(Strings.Screen.Home.dailyActionsTitle),
                 style = MaterialTheme.typography.titleSmall.copy(
                     fontWeight = FontWeight.SemiBold
                 ),

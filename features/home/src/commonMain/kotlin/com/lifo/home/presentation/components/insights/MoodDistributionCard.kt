@@ -15,10 +15,13 @@ import androidx.compose.ui.unit.dp
 import com.lifo.home.domain.model.DominantMood
 import com.lifo.home.domain.model.MoodDistribution
 import com.lifo.home.domain.model.TimeRange
+import com.lifo.home.domain.model.labelRes
+import com.lifo.ui.i18n.Strings
 import com.lifo.home.presentation.components.charts.DonutChart
 import com.lifo.home.presentation.components.charts.DonutChartLegend
 import com.lifo.home.presentation.components.common.MiniEmotionIndicator
 import com.lifo.home.util.EmotionAwareColors
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Mood Distribution Card - Donut chart with emotional breakdown
@@ -148,7 +151,7 @@ private fun TimeRangeChip(
             onClick = { expanded = true },
             label = {
                 Text(
-                    text = currentRange.label,
+                    text = stringResource(currentRange.labelRes),
                     style = MaterialTheme.typography.labelMedium
                 )
             },
@@ -163,7 +166,7 @@ private fun TimeRangeChip(
                 DropdownMenuItem(
                     text = {
                         Text(
-                            text = range.label,
+                            text = stringResource(range.labelRes),
                             style = MaterialTheme.typography.bodyMedium
                         )
                     },
@@ -214,7 +217,7 @@ private fun DominantMoodIndicator(dominantMood: DominantMood) {
                     size = 20.dp
                 )
                 Text(
-                    text = dominantMood.label,
+                    text = stringResource(dominantMood.labelRes),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     color = EmotionAwareColors.getSentimentColor(dominantMood.sentiment)

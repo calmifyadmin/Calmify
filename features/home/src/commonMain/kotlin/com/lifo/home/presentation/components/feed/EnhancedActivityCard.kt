@@ -20,7 +20,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lifo.home.domain.model.ActivityType
 import com.lifo.home.domain.model.EnhancedActivityItem
+import com.lifo.home.domain.model.labelRes
 import com.lifo.home.util.EmotionAwareColors
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Enhanced Activity Card - Unified card for diary and chat entries
@@ -169,7 +171,7 @@ fun EnhancedActivityCard(
                     // Sentiment badge
                     item.sentimentIndicator?.let { sentiment ->
                         Text(
-                            text = sentiment.label.displayName,
+                            text = stringResource(sentiment.label.labelRes),
                             style = MaterialTheme.typography.labelSmall,
                             color = sentimentColor
                         )

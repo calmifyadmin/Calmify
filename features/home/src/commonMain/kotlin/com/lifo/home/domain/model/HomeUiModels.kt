@@ -48,13 +48,23 @@ data class QuickActionState(
 // ==================== INSIGHTS FEED MODELS ====================
 
 /**
- * Time range for aggregation filters
+ * Time range for aggregation filters. UI label resolved at render site via
+ * inline `when (range) -> Strings.Screen.Home.periodFilter*` to keep this
+ * enum free of UI dependencies (same pattern as Trend/BlockType).
  */
-enum class TimeRange(val days: Int, val label: String) {
-    WEEK(7, "7 giorni"),
-    MONTH(30, "30 giorni"),
-    QUARTER(90, "90 giorni")
+enum class TimeRange(val days: Int) {
+    WEEK(7),
+    MONTH(30),
+    QUARTER(90)
 }
+
+/** Localized label for a [TimeRange] — resolved at render site via stringResource. */
+val TimeRange.labelRes: StringResource
+    get() = when (this) {
+        TimeRange.WEEK -> Strings.Screen.Home.periodFilter7
+        TimeRange.MONTH -> Strings.Screen.Home.periodFilter30
+        TimeRange.QUARTER -> Strings.Screen.Home.periodFilter90
+    }
 
 /**
  * Mood distribution for donut chart
@@ -76,12 +86,22 @@ data class MoodDistribution(
 @Immutable
 data class DominantMood(
     val sentiment: SentimentLabel,
-    val label: String,
-    val percentage: Float
-) {
-    // Computed property for backward compatibility
-    val displayLabel: String get() = label
-}
+    val percentage: Float,
+)
+
+/** Localized label for the dominant mood (resolved at render site via stringResource). */
+val DominantMood.labelRes: StringResource
+    get() = sentiment.labelRes
+
+/** Localized label for a [SentimentLabel]. */
+val SentimentLabel.labelRes: StringResource
+    get() = when (this) {
+        SentimentLabel.VERY_NEGATIVE -> Strings.Sentiment.veryNegative
+        SentimentLabel.NEGATIVE -> Strings.Sentiment.negative
+        SentimentLabel.NEUTRAL -> Strings.Sentiment.neutral
+        SentimentLabel.POSITIVE -> Strings.Sentiment.positive
+        SentimentLabel.VERY_POSITIVE -> Strings.Sentiment.veryPositive
+    }
 
 /**
  * Pattern sentiment classification for CBT patterns

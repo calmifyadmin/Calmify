@@ -30,6 +30,8 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.lifo.ui.components.CalmifyTopBar
+import com.lifo.ui.i18n.Strings
+import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.stringResource
 import com.lifo.ui.resources.Res
 import com.lifo.ui.resources.*
@@ -146,7 +148,12 @@ fun FeedScreen(
                         onClick = { onIntent(FeedContract.Intent.SelectTab(tab)) },
                         text = {
                             Text(
-                                text = tab.label,
+                                text = stringResource(when (tab) {
+                                    FeedContract.FeedTab.ALL -> Strings.Feed.tabAll
+                                    FeedContract.FeedTab.SCOPERTE -> Strings.Feed.tabDiscoveries
+                                    FeedContract.FeedTab.SFIDE -> Strings.Feed.tabChallenges
+                                    FeedContract.FeedTab.DOMANDE -> Strings.Feed.tabQuestions
+                                }),
                                 fontWeight = if (state.selectedTab == tab) FontWeight.Bold else FontWeight.Normal,
                             )
                         },

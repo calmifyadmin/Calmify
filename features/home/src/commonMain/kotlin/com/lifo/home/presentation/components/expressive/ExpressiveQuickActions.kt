@@ -59,7 +59,7 @@ internal fun ExpressiveQuickActions(
         ) {
             PillActionButton(
                 icon = Icons.Default.Edit,
-                label = "Scrivi",
+                label = stringResource(Strings.Screen.Home.quickActionWrite),
                 onClick = onWrite,
                 containerColor = colorScheme.primaryContainer,
                 contentColor = colorScheme.onPrimaryContainer,

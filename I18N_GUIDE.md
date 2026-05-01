@@ -1,10 +1,30 @@
 # I18N_GUIDE.md — Internationalisation in Calmify
 
-> Updated 2026-04-29 — Sprint i18n COMPLETE (Fases A→E, 2026-04-19) + Phase J Tier 1+2 (2026-04-28) + Tier 3.A+3.B (2026-04-29).
-> Default EN, 12 languages, typed `Strings` facade with 18+ semantic groups (added `Trend` group in 3.A).
-> Sprint A→E: 140 keys / 31 files. Phase J Tier 1+2: +189 keys / +28 files. Tier 3.A+3.B: +28 keys / +8 files (incl. dead code purge: DateFormatters.kt reduced 250→35 LOC).
-> **Cumulative: ~357 keys × 6 Latin langs ≈ 2142 translations + 67 Kotlin files refactored.**
-> Tier 3.C-E (BlockType/BlockResolution enums, JournalHomeScreen prompts, buildWeeklyReflection paragraph, wellness wizard screens) deferred — see `memory/project_i18n_phase_j.md`.
+> Updated 2026-04-30 — Sprint i18n COMPLETE (Fases A→E, 2026-04-19) + Phase J Tier 1+2 (2026-04-28) + Tier 3.A+3.B (2026-04-29) + Tier 3.C+3.E+3.G (2026-04-30).
+> Default EN, 12 languages, typed `Strings` facade with 25+ semantic groups (latest additions: `Block`, `Weekly`, `Sentiment`, `SnapshotWizard`, `JournalFilter`, `Feed`).
+> Sprint A→E: 140 keys / 31 files. Phase J Tier 1+2: +189 keys / +28 files. Tier 3.A+3.B: +28 keys / +8 files (DateFormatters.kt 250→35 LOC). Tier 3.C+3.E: +71 keys / +4 files. Tier 3.G: +60 keys / +16 files.
+> **Cumulative: ~488 keys × 6 Latin langs ≈ 2928 translations + 87 Kotlin files refactored.**
+> Tier 3.D (wellness wizards + per-enum displayName fields ~80 strings/8 files) and Tier 3.F (Garden activity expanded card per-activity body+benefits ~78 keys) STILL deferred — see `memory/project_i18n_phase_j.md`.
+
+## Pattern: enums that need localized labels
+
+`core/util` is a leaf module that domain enums use; **enums in `core/util` cannot store `StringResource`** because that creates an upward dependency on `core/ui` (where `Strings` lives). Solution: drop the IT-hardcoded display field from the enum and let UI sites resolve at render time via a `@Composable` extension function with inline `when` mapping. This pattern was established in Tier 3.A (`Trend`) and applied in 3.C (`BlockType`); it should be applied to any future `core/util` enum needing localized labels (`BlockResolution.displayName` was a related case but unused, so deleted entirely per CLAUDE.md rule 12 dead-code).
+
+```kotlin
+// In features/.../X.kt (UI layer)
+@Composable
+private fun BlockType.label(): String = stringResource(
+    when (this) {
+        BlockType.FEAR_OF_FAILURE -> Strings.Block.typeFearOfFailure
+        BlockType.OVERLOAD -> Strings.Block.typeOverload
+        // ...
+    },
+)
+```
+
+## Pattern: non-Composable utility functions returning UI strings
+
+Tier 3.E established the cleaner refactor: convert the function to `@Composable`, callers drop the `remember { ... }` wrapper since the function now resolves at composable scope. The function itself uses `stringResource(when (cond) → Strings.X)` to pick the right resource. Examples: `getContextualPrompt`, `getMoodFollowUp`, `formatDiaryTimestamp`, `buildWeeklyReflection`. This avoids string-passing through composable layers.
 
 ## Overview
 

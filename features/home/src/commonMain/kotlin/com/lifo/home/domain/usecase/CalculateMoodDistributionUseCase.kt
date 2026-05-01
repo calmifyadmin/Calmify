@@ -94,13 +94,11 @@ class CalculateMoodDistributionUseCase {
         val maxEntry = distribution.detailedBreakdown.maxByOrNull { it.value }
             ?: return DominantMood(
                 sentiment = SentimentLabel.NEUTRAL,
-                label = SentimentLabel.NEUTRAL.displayName,
                 percentage = 0f
             )
 
         return DominantMood(
             sentiment = maxEntry.key,
-            label = maxEntry.key.displayName,
             percentage = maxEntry.value
         )
     }

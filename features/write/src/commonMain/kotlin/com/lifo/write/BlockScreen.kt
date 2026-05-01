@@ -26,11 +26,35 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lifo.ui.i18n.Strings
 import com.lifo.util.model.BlockResolution
 import com.lifo.util.model.BlockType
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import com.lifo.ui.resources.Res
 import com.lifo.ui.resources.*
+
+@Composable
+private fun BlockType.label(): String = stringResource(
+    when (this) {
+        BlockType.FEAR_OF_FAILURE -> Strings.Block.typeFearOfFailure
+        BlockType.OVERLOAD -> Strings.Block.typeOverload
+        BlockType.LIMITING_BELIEF -> Strings.Block.typeLimitingBelief
+        BlockType.CREATIVE_BLOCK -> Strings.Block.typeCreativeBlock
+        BlockType.UNKNOWN -> Strings.Block.typeUnknown
+    },
+)
+
+@Composable
+private fun BlockType.suggestion(): String = stringResource(
+    when (this) {
+        BlockType.FEAR_OF_FAILURE -> Strings.Block.suggestionFearOfFailure
+        BlockType.OVERLOAD -> Strings.Block.suggestionOverload
+        BlockType.LIMITING_BELIEF -> Strings.Block.suggestionLimitingBelief
+        BlockType.CREATIVE_BLOCK -> Strings.Block.suggestionCreativeBlock
+        BlockType.UNKNOWN -> Strings.Block.suggestionUnknown
+    },
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,13 +118,13 @@ private fun DescribeStep(state: BlockContract.State, onIntent: (BlockContract.In
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
-            "\uD83E\uDDE9 Descrivimi cosa sta succedendo",
+            stringResource(Strings.Block.describeTitle),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
         )
 
         Text(
-            "Non devi analizzare, solo raccontare. Scrivi liberamente quello che senti.",
+            stringResource(Strings.Block.describeBody),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -128,7 +152,7 @@ private fun DescribeStep(state: BlockContract.State, onIntent: (BlockContract.In
                 ) {
                     Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Text(
-                        "Hai ${state.activeBlocks.size} blocchi attivi. Ce la puoi fare!",
+                        stringResource(Strings.Block.activeHint, state.activeBlocks.size),
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
@@ -161,7 +185,7 @@ private fun DiagnosisStep(state: BlockContract.State, onIntent: (BlockContract.I
         val detectedType = state.detectedType ?: BlockType.UNKNOWN
 
         Text(
-            detectedType.displayName,
+            detectedType.label(),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
         )
@@ -176,13 +200,13 @@ private fun DiagnosisStep(state: BlockContract.State, onIntent: (BlockContract.I
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    "Eve dice:",
+                    stringResource(Strings.Block.eveSays),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    detectedType.suggestion,
+                    detectedType.suggestion(),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                 )
@@ -196,7 +220,7 @@ private fun DiagnosisStep(state: BlockContract.State, onIntent: (BlockContract.I
             FilterChip(
                 selected = selected,
                 onClick = { onIntent(BlockContract.Intent.SelectBlockType(type)) },
-                label = { Text(type.displayName) },
+                label = { Text(type.label()) },
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -238,13 +262,13 @@ private fun ActionStep(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
-            "\uD83D\uDCA1 Ecco cosa puoi fare ora",
+            stringResource(Strings.Block.actionStepTitle),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
         )
 
         Text(
-            "Scegli lo strumento che senti piu' adatto in questo momento:",
+            stringResource(Strings.Block.actionStepSubtitle),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -252,25 +276,25 @@ private fun ActionStep(
         // Suggested actions based on block type
         val suggestedActions = when (state.selectedType) {
             BlockType.OVERLOAD -> listOf(
-                ActionItem("Scarico mentale", Icons.Outlined.Psychology, "Scrivi tutto quello che hai in mente") { onIntent(BlockContract.Intent.NavigateToBrainDump) },
-                ActionItem("Meditazione", Icons.Default.SelfImprovement, "Calma la mente con un respiro guidato") { onIntent(BlockContract.Intent.NavigateToMeditation) },
+                ActionItem(Strings.Block.actionBrainDumpTitle, Icons.Outlined.Psychology, Strings.Block.actionOverloadBrainDumpSubtitle) { onIntent(BlockContract.Intent.NavigateToBrainDump) },
+                ActionItem(Strings.Block.actionMeditationTitle, Icons.Default.SelfImprovement, Strings.Block.actionOverloadMeditationSubtitle) { onIntent(BlockContract.Intent.NavigateToMeditation) },
             )
             BlockType.LIMITING_BELIEF -> listOf(
-                ActionItem("Riformula il pensiero", Icons.Outlined.Cloud, "Trasforma la credenza limitante") { onIntent(BlockContract.Intent.NavigateToReframing) },
-                ActionItem("Scarico mentale", Icons.Outlined.Psychology, "Scrivi liberamente") { onIntent(BlockContract.Intent.NavigateToBrainDump) },
+                ActionItem(Strings.Block.actionReframeThoughtTitle, Icons.Outlined.Cloud, Strings.Block.actionLimitingReframeSubtitle) { onIntent(BlockContract.Intent.NavigateToReframing) },
+                ActionItem(Strings.Block.actionBrainDumpTitle, Icons.Outlined.Psychology, Strings.Block.actionLimitingBrainDumpSubtitle) { onIntent(BlockContract.Intent.NavigateToBrainDump) },
             )
             BlockType.FEAR_OF_FAILURE -> listOf(
-                ActionItem("Riformula il pensiero", Icons.Outlined.Warning, "Ridimensiona la paura") { onIntent(BlockContract.Intent.NavigateToReframing) },
-                ActionItem("Meditazione", Icons.Default.SelfImprovement, "Respira e centra la mente") { onIntent(BlockContract.Intent.NavigateToMeditation) },
+                ActionItem(Strings.Block.actionReframeThoughtTitle, Icons.Outlined.Warning, Strings.Block.actionFearReframeSubtitle) { onIntent(BlockContract.Intent.NavigateToReframing) },
+                ActionItem(Strings.Block.actionMeditationTitle, Icons.Default.SelfImprovement, Strings.Block.actionFearMeditationSubtitle) { onIntent(BlockContract.Intent.NavigateToMeditation) },
             )
             BlockType.CREATIVE_BLOCK -> listOf(
-                ActionItem("Scarico mentale", Icons.Outlined.Palette, "Libera la mente") { onIntent(BlockContract.Intent.NavigateToBrainDump) },
-                ActionItem("Meditazione", Icons.Default.SelfImprovement, "Fai spazio a nuove idee") { onIntent(BlockContract.Intent.NavigateToMeditation) },
+                ActionItem(Strings.Block.actionBrainDumpTitle, Icons.Outlined.Palette, Strings.Block.actionCreativeBrainDumpSubtitle) { onIntent(BlockContract.Intent.NavigateToBrainDump) },
+                ActionItem(Strings.Block.actionMeditationTitle, Icons.Default.SelfImprovement, Strings.Block.actionCreativeMeditationSubtitle) { onIntent(BlockContract.Intent.NavigateToMeditation) },
             )
             BlockType.UNKNOWN -> listOf(
-                ActionItem("Scarico mentale", Icons.Outlined.Psychology, "Scrivi tutto senza giudicare") { onIntent(BlockContract.Intent.NavigateToBrainDump) },
-                ActionItem("Riformula", Icons.Outlined.Cloud, "Cambia prospettiva") { onIntent(BlockContract.Intent.NavigateToReframing) },
-                ActionItem("Meditazione", Icons.Default.SelfImprovement, "Respira e rilassati") { onIntent(BlockContract.Intent.NavigateToMeditation) },
+                ActionItem(Strings.Block.actionBrainDumpTitle, Icons.Outlined.Psychology, Strings.Block.actionUnknownBrainDumpSubtitle) { onIntent(BlockContract.Intent.NavigateToBrainDump) },
+                ActionItem(Strings.Block.actionReframeShortTitle, Icons.Outlined.Cloud, Strings.Block.actionUnknownReframeSubtitle) { onIntent(BlockContract.Intent.NavigateToReframing) },
+                ActionItem(Strings.Block.actionMeditationTitle, Icons.Default.SelfImprovement, Strings.Block.actionUnknownMeditationSubtitle) { onIntent(BlockContract.Intent.NavigateToMeditation) },
             )
         }
 
@@ -290,9 +314,9 @@ private fun ActionStep(
 }
 
 private data class ActionItem(
-    val title: String,
+    val title: StringResource,
     val icon: ImageVector,
-    val subtitle: String,
+    val subtitle: StringResource,
     val onClick: () -> Unit,
 )
 
@@ -318,8 +342,8 @@ private fun ActionCard(action: ActionItem) {
                 tint = MaterialTheme.colorScheme.primary,
             )
             Column(modifier = Modifier.weight(1f)) {
-                Text(action.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                Text(action.subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(action.title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(action.subtitle), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Icon(Icons.Default.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
         }
@@ -368,11 +392,11 @@ private fun HistoryStep(state: BlockContract.State, onIntent: (BlockContract.Int
                     Text("\uD83C\uDF1F", fontSize = 48.sp)
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        "Nessun blocco registrato",
+                        stringResource(Strings.Block.historyEmptyTitle),
                         style = MaterialTheme.typography.titleMedium,
                     )
                     Text(
-                        "Ottimo! Continua cosi'.",
+                        stringResource(Strings.Block.historyEmptySubtitle),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -414,7 +438,7 @@ private fun BlockHistoryCard(
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    block.type.displayName,
+                    block.type.label(),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f),
@@ -443,7 +467,7 @@ private fun BlockHistoryCard(
             } else if (block.resolutionNote.isNotBlank()) {
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "Come l'ho superato: ${block.resolutionNote}",
+                    stringResource(Strings.Block.resolutionNotePrefix, block.resolutionNote),
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Medium,
                 )

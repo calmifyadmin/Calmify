@@ -17,6 +17,8 @@ import androidx.compose.ui.unit.dp
 import com.lifo.home.domain.model.EnhancedActivityItem
 import com.lifo.home.domain.model.SwipeAction
 import com.lifo.home.domain.model.TimePeriod
+import com.lifo.ui.i18n.Strings
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Activity Feed - Unified stream of diary and chat entries
@@ -153,7 +155,7 @@ fun CompactActivityFeed(
 
                 TextButton(onClick = onSeeAll) {
                     Text(
-                        text = "Vedi tutto",
+                        text = stringResource(Strings.Screen.Home.communitySeeAll),
                         style = MaterialTheme.typography.labelMedium
                     )
                 }

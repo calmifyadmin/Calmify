@@ -17,6 +17,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifo.home.domain.model.TodayPulse
 import com.lifo.home.util.EmotionAwareColors
+import com.lifo.ui.i18n.Strings
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun ExpressiveReflection(
@@ -73,7 +75,7 @@ internal fun ExpressiveReflection(
                     }
                 }
                 Text(
-                    text = "La tua riflessione",
+                    text = stringResource(Strings.Screen.Home.reflectionCardTitle),
                     style = MaterialTheme.typography.titleSmall.copy(
                         fontWeight = FontWeight.SemiBold
                     ),

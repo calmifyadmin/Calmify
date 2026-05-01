@@ -27,6 +27,7 @@ import com.lifo.home.domain.model.TrendDirection
 import com.lifo.home.presentation.components.common.EmotionIndicator
 import com.lifo.home.util.DateFormatters
 import com.lifo.home.util.EmotionAwareColors
+import com.lifo.ui.i18n.Strings
 import org.jetbrains.compose.resources.stringResource
 import com.lifo.util.formatDecimal
 import com.lifo.util.model.SentimentLabel
@@ -99,7 +100,7 @@ fun HeroGreetingCard(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Come ti senti oggi?",
+                        text = stringResource(Strings.SnapshotWizard.howFeelToday),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

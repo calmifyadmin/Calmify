@@ -49,7 +49,15 @@ internal fun ExpressiveWeekStrip(
         map
     }
 
-    val dayLabels = listOf("L", "M", "M", "G", "V", "S", "D")
+    val dayLabels = listOf(
+        stringResource(Strings.Screen.Home.dayInitialMonday),
+        stringResource(Strings.Screen.Home.dayInitialTuesday),
+        stringResource(Strings.Screen.Home.dayInitialWednesday),
+        stringResource(Strings.Screen.Home.dayInitialThursday),
+        stringResource(Strings.Screen.Home.dayInitialFriday),
+        stringResource(Strings.Screen.Home.dayInitialSaturday),
+        stringResource(Strings.Screen.Home.dayInitialSunday),
+    )
     val todayDow = today.dayOfWeek.value
     val activeDays = insightsByDay.count { it.value.diaryCount > 0 }
 
@@ -94,7 +102,7 @@ internal fun ExpressiveWeekStrip(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
-                                text = "CRESCITA",
+                                text = stringResource(Strings.Screen.Home.weekGrowthLabel),
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.SemiBold,
                                     letterSpacing = 1.sp,
@@ -103,9 +111,7 @@ internal fun ExpressiveWeekStrip(
                             )
                             InfoTooltip(
                                 title = stringResource(Strings.Screen.Home.streakTooltipTitle),
-                                description = "Indica quanti giorni consecutivi hai scritto nel diario. " +
-                                    "Costruire una serie continua rinforza l'abitudine e ti aiuta a " +
-                                    "mantenere costanza nel tuo percorso di crescita."
+                                description = stringResource(Strings.Screen.Home.weekStreakTooltipBody),
                             )
                         }
                         Row(
@@ -121,7 +127,7 @@ internal fun ExpressiveWeekStrip(
                                 color = colorScheme.onSurface,
                             )
                             Text(
-                                text = if (streakDays == 1) "GIORNO" else "GIORNI",
+                                text = stringResource(if (streakDays == 1) Strings.Screen.Home.weekDaySingular else Strings.Screen.Home.weekDayPlural),
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.SemiBold,
                                     letterSpacing = 0.5.sp,
@@ -182,7 +188,7 @@ internal fun ExpressiveWeekStrip(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "${goal.currentEntries}/${goal.targetEntries} obiettivo",
+                            text = stringResource(Strings.Screen.Home.weekGoalProgress, goal.currentEntries, goal.targetEntries),
                             style = MaterialTheme.typography.labelSmall,
                             color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                         )

@@ -82,7 +82,7 @@ internal fun CommunityPreviewCard(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "${threads.size} discussioni recenti",
+                            text = stringResource(Strings.Screen.Home.communityCount, threads.size),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -99,7 +99,7 @@ internal fun CommunityPreviewCard(
                     )
                 ) {
                     Text(
-                        text = "Vedi tutto",
+                        text = stringResource(Strings.Screen.Home.communitySeeAll),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Medium
                     )

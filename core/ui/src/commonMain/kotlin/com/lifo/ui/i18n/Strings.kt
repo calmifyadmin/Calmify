@@ -150,6 +150,35 @@ object Strings {
             val periodOlder: StringResource get() = Res.string.home_period_older
             val entryCountOne: StringResource get() = Res.string.home_entry_count_one
             val entryCountMany: StringResource get() = Res.string.home_entry_count_many
+            // Tier 3.G — Home dashboard pass
+            val quickActionWrite: StringResource get() = Res.string.home_quick_action_write
+            val weekThis: StringResource get() = Res.string.home_week_this
+            val weekProgress: StringResource get() = Res.string.home_week_progress
+            val weekGrowthLabel: StringResource get() = Res.string.home_week_growth_label
+            val weekDaySingular: StringResource get() = Res.string.home_week_day_singular
+            val weekDayPlural: StringResource get() = Res.string.home_week_day_plural
+            val weekGoalProgress: StringResource get() = Res.string.home_week_goal_progress
+            val weekStreakTooltipBody: StringResource get() = Res.string.home_week_streak_tooltip_body
+            val dayInitialMonday: StringResource get() = Res.string.home_day_initial_monday
+            val dayInitialTuesday: StringResource get() = Res.string.home_day_initial_tuesday
+            val dayInitialWednesday: StringResource get() = Res.string.home_day_initial_wednesday
+            val dayInitialThursday: StringResource get() = Res.string.home_day_initial_thursday
+            val dayInitialFriday: StringResource get() = Res.string.home_day_initial_friday
+            val dayInitialSaturday: StringResource get() = Res.string.home_day_initial_saturday
+            val dayInitialSunday: StringResource get() = Res.string.home_day_initial_sunday
+            val dailyActionsTitle: StringResource get() = Res.string.home_daily_actions_title
+            val reflectionCardTitle: StringResource get() = Res.string.home_reflection_card_title
+            val moodSectionTitle: StringResource get() = Res.string.home_mood_section_title
+            val moodCardTitle: StringResource get() = Res.string.home_mood_card_title
+            val periodFilter7: StringResource get() = Res.string.home_period_filter_7
+            val periodFilter30: StringResource get() = Res.string.home_period_filter_30
+            val periodFilter90: StringResource get() = Res.string.home_period_filter_90
+            val moodBreakdownPositive: StringResource get() = Res.string.home_mood_breakdown_positive
+            val moodBreakdownNeutral: StringResource get() = Res.string.home_mood_breakdown_neutral
+            val moodBreakdownNegative: StringResource get() = Res.string.home_mood_breakdown_negative
+            val communityCount: StringResource get() = Res.string.home_community_count
+            val communitySeeAll: StringResource get() = Res.string.home_community_see_all
+            val moodDominantLabel: StringResource get() = Res.string.home_mood_dominant_label
         }
 
         /** Search feature — tabs, sections, placeholder, error/empty states. */
@@ -496,17 +525,178 @@ object Strings {
         val weekLabel: StringResource get() = Res.string.datetime_week_label
     }
 
-    /** Time-of-day journal prompts. */
+    /**
+     * Time-of-day + state-of-mind journal prompts shown in the JournalHome
+     * `DailyPromptCard`. Resolved at `@Composable` scope by `getContextualPromptResource`
+     * — the helper picks one StringResource based on diary history, mood, and clock.
+     */
     object JournalPrompt {
+        // Existing (Tier 1) — also reused by getContextualPrompt mapping.
         val weekendMorning: StringResource get() = Res.string.journal_prompt_weekend_morning
         val afternoonPause: StringResource get() = Res.string.journal_prompt_afternoon_pause
         val eveningCalm: StringResource get() = Res.string.journal_prompt_evening_calm
+
+        // Tier 3.E — contextual prompts.
+        val safeSpace: StringResource get() = Res.string.journal_prompt_safe_space
+        val todayMorning: StringResource get() = Res.string.journal_prompt_today_morning
+        val todayAfternoon: StringResource get() = Res.string.journal_prompt_today_afternoon
+        val todayEvening: StringResource get() = Res.string.journal_prompt_today_evening
+        val afterBreak: StringResource get() = Res.string.journal_prompt_after_break
+        val streakLong: StringResource get() = Res.string.journal_prompt_streak_long
+        val streakMedium: StringResource get() = Res.string.journal_prompt_streak_medium
+        val weekdayMorning: StringResource get() = Res.string.journal_prompt_weekday_morning
+        val midMorning: StringResource get() = Res.string.journal_prompt_mid_morning
+        val weekendAfternoon: StringResource get() = Res.string.journal_prompt_weekend_afternoon
+        val evening: StringResource get() = Res.string.journal_prompt_evening
+        val night: StringResource get() = Res.string.journal_prompt_night
+
+        // Mood follow-ups (when last diary's mood informs today's prompt).
+        val moodLow: StringResource get() = Res.string.journal_prompt_mood_low
+        val moodLonely: StringResource get() = Res.string.journal_prompt_mood_lonely
+        val moodTense: StringResource get() = Res.string.journal_prompt_mood_tense
+        val moodAngry: StringResource get() = Res.string.journal_prompt_mood_angry
+        val moodDisappointed: StringResource get() = Res.string.journal_prompt_mood_disappointed
+        val moodShameful: StringResource get() = Res.string.journal_prompt_mood_shameful
+        val moodHappyMorning: StringResource get() = Res.string.journal_prompt_mood_happy_morning
+
+        // Card chrome + timestamp formats.
+        val dailyPromptSubtitle: StringResource get() = Res.string.journal_dailyprompt_subtitle
+        val dailyPromptCardTitle: StringResource get() = Res.string.journal_dailyprompt_card_title
+        val dailyPromptCardCta: StringResource get() = Res.string.journal_dailyprompt_card_cta
+        val emptyStateTitle: StringResource get() = Res.string.journal_empty_state_title
+        val timestampToday: StringResource get() = Res.string.journal_timestamp_today
+        val timestampYesterday: StringResource get() = Res.string.journal_timestamp_yesterday
+    }
+
+    /**
+     * Weekly reflection card content (PercorsoScreen + ProfileDashboard).
+     * `buildWeeklyReflection` is `@Composable` and resolves these conditionally
+     * based on profile baselines + trend + resilience + diary count.
+     */
+    object Weekly {
+        val cardTitle: StringResource get() = Res.string.weekly_card_title
+        val journeyHeader: StringResource get() = Res.string.weekly_journey_header
+        val moodPositive: StringResource get() = Res.string.weekly_mood_positive
+        val moodBalanced: StringResource get() = Res.string.weekly_mood_balanced
+        val moodDifficult: StringResource get() = Res.string.weekly_mood_difficult
+        val stressHigh: StringResource get() = Res.string.weekly_stress_high
+        val stressManaged: StringResource get() = Res.string.weekly_stress_managed
+        val stressLow: StringResource get() = Res.string.weekly_stress_low
+        val resilienceStrong: StringResource get() = Res.string.weekly_resilience_strong
+        val diaryCount: StringResource get() = Res.string.weekly_diary_count
     }
 
     /** Connection feature labels. */
     object Connection {
         val qualityTimeTitle: StringResource get() = Res.string.connection_quality_time_title
         val qualityTimeLabel: StringResource get() = Res.string.connection_quality_time_label
+    }
+
+    /**
+     * SentimentLabel enum (in `core/util/.../model/DiaryInsight.kt`) localized labels.
+     * Same circular-dep pattern as Trend/BlockType — UI sites resolve via inline
+     * `when (label) -> Strings.Sentiment.X` to avoid `core/util -> core/ui` dep.
+     */
+    object Sentiment {
+        val veryNegative: StringResource get() = Res.string.sentiment_very_negative
+        val negative: StringResource get() = Res.string.sentiment_negative
+        val neutral: StringResource get() = Res.string.sentiment_neutral
+        val positive: StringResource get() = Res.string.sentiment_positive
+        val veryPositive: StringResource get() = Res.string.sentiment_very_positive
+    }
+
+    /**
+     * Maps a canonical IT mood tag (stored in Firestore for backward compat —
+     * see ComposerContract.MOOD_TAGS) to its localized [StringResource].
+     * Returns null if the tag is not a known canonical (caller can fallback).
+     */
+    fun moodTagLocalizedRes(canonical: String): StringResource? = when (canonical) {
+        "Felice" -> Res.string.mood_happy
+        "Sereno" -> Res.string.mood_calm
+        "Grato" -> Res.string.mood_grateful
+        "Motivato" -> Res.string.mood_motivated
+        "Pensieroso", "Confuso" -> Res.string.mood_confused
+        "Triste" -> Res.string.mood_sad
+        "Ansioso" -> Res.string.mood_anxious
+        "Stanco" -> Res.string.mood_neutral
+        else -> null
+    }
+
+    /** Snapshot wellness-onboarding wizard scroll header + CTAs. */
+    object SnapshotWizard {
+        val howFeel: StringResource get() = Res.string.snapshot_q_how_feel
+        val howFeelToday: StringResource get() = Res.string.snapshot_q_how_feel_today
+        val swipeToChoose: StringResource get() = Res.string.snapshot_swipe_to_choose
+    }
+
+    /** Journal home filter chips (Tier 3.G). */
+    object JournalFilter {
+        val all: StringResource get() = Res.string.journal_filter_all
+        val diary: StringResource get() = Res.string.journal_filter_diary
+        val gratitude: StringResource get() = Res.string.journal_filter_gratitude
+        val energy: StringResource get() = Res.string.journal_filter_energy
+        val sleep: StringResource get() = Res.string.journal_filter_sleep
+        val meditation: StringResource get() = Res.string.journal_filter_meditation
+        val habits: StringResource get() = Res.string.journal_filter_habits
+        val brainDump: StringResource get() = Res.string.journal_filter_brain_dump
+        val movement: StringResource get() = Res.string.journal_filter_movement
+    }
+
+    /** Feed top tabs (Tier 3.G). */
+    object Feed {
+        val tabAll: StringResource get() = Res.string.feed_tab_all
+        val tabDiscoveries: StringResource get() = Res.string.feed_tab_discoveries
+        val tabChallenges: StringResource get() = Res.string.feed_tab_challenges
+        val tabQuestions: StringResource get() = Res.string.feed_tab_questions
+    }
+
+    /**
+     * Block screen content. `BlockType` enum (in `core/util`) intentionally has
+     * NO localized field — UI sites resolve `Strings.Block.typeXxx`/`suggestionXxx`
+     * via inline `when (type) -> ...` to avoid `core/util -> core/ui` upward dep.
+     */
+    object Block {
+        // BlockType labels (used as chip + diagnosis title + history card title).
+        val typeFearOfFailure: StringResource get() = Res.string.block_type_fear_of_failure
+        val typeOverload: StringResource get() = Res.string.block_type_overload
+        val typeLimitingBelief: StringResource get() = Res.string.block_type_limiting_belief
+        val typeCreativeBlock: StringResource get() = Res.string.block_type_creative_block
+        val typeUnknown: StringResource get() = Res.string.block_type_unknown
+        // Eve coaching sentence per type (DiagnosisStep).
+        val suggestionFearOfFailure: StringResource get() = Res.string.block_suggestion_fear_of_failure
+        val suggestionOverload: StringResource get() = Res.string.block_suggestion_overload
+        val suggestionLimitingBelief: StringResource get() = Res.string.block_suggestion_limiting_belief
+        val suggestionCreativeBlock: StringResource get() = Res.string.block_suggestion_creative_block
+        val suggestionUnknown: StringResource get() = Res.string.block_suggestion_unknown
+        // DescribeStep chrome.
+        val describeTitle: StringResource get() = Res.string.block_describe_title
+        val describeBody: StringResource get() = Res.string.block_describe_body
+        val activeHint: StringResource get() = Res.string.block_active_hint
+        val eveSays: StringResource get() = Res.string.block_eve_says
+        // ActionStep chrome.
+        val actionStepTitle: StringResource get() = Res.string.block_action_step_title
+        val actionStepSubtitle: StringResource get() = Res.string.block_action_step_subtitle
+        // Reusable action card titles.
+        val actionBrainDumpTitle: StringResource get() = Res.string.block_action_brain_dump_title
+        val actionMeditationTitle: StringResource get() = Res.string.block_action_meditation_title
+        val actionReframeThoughtTitle: StringResource get() = Res.string.block_action_reframe_thought_title
+        val actionReframeShortTitle: StringResource get() = Res.string.block_action_reframe_short_title
+        // Per-type action subtitles (the hint under each ActionItem).
+        val actionOverloadBrainDumpSubtitle: StringResource get() = Res.string.block_action_overload_brain_dump_subtitle
+        val actionOverloadMeditationSubtitle: StringResource get() = Res.string.block_action_overload_meditation_subtitle
+        val actionLimitingReframeSubtitle: StringResource get() = Res.string.block_action_limiting_reframe_subtitle
+        val actionLimitingBrainDumpSubtitle: StringResource get() = Res.string.block_action_limiting_brain_dump_subtitle
+        val actionFearReframeSubtitle: StringResource get() = Res.string.block_action_fear_reframe_subtitle
+        val actionFearMeditationSubtitle: StringResource get() = Res.string.block_action_fear_meditation_subtitle
+        val actionCreativeBrainDumpSubtitle: StringResource get() = Res.string.block_action_creative_brain_dump_subtitle
+        val actionCreativeMeditationSubtitle: StringResource get() = Res.string.block_action_creative_meditation_subtitle
+        val actionUnknownBrainDumpSubtitle: StringResource get() = Res.string.block_action_unknown_brain_dump_subtitle
+        val actionUnknownReframeSubtitle: StringResource get() = Res.string.block_action_unknown_reframe_subtitle
+        val actionUnknownMeditationSubtitle: StringResource get() = Res.string.block_action_unknown_meditation_subtitle
+        // HistoryStep empty + resolution note.
+        val historyEmptyTitle: StringResource get() = Res.string.block_history_empty_title
+        val historyEmptySubtitle: StringResource get() = Res.string.block_history_empty_subtitle
+        val resolutionNotePrefix: StringResource get() = Res.string.block_resolution_note_prefix
     }
 
     /** PsychologicalProfile.Trend enum localized labels + descriptive sentences. */

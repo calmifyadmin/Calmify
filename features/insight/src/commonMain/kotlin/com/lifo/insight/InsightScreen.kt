@@ -260,7 +260,13 @@ private fun SentimentCard(sentiment: SentimentLabel, polarity: Float, magnitude:
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = sentiment.displayName,
+                        text = stringResource(when (sentiment) {
+                            SentimentLabel.VERY_NEGATIVE -> Strings.Sentiment.veryNegative
+                            SentimentLabel.NEGATIVE -> Strings.Sentiment.negative
+                            SentimentLabel.NEUTRAL -> Strings.Sentiment.neutral
+                            SentimentLabel.POSITIVE -> Strings.Sentiment.positive
+                            SentimentLabel.VERY_POSITIVE -> Strings.Sentiment.veryPositive
+                        }),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )

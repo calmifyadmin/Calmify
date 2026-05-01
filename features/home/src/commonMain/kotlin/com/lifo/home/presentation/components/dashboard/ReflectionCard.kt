@@ -14,6 +14,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lifo.home.domain.model.TodayPulse
 import com.lifo.home.util.EmotionAwareColors
+import com.lifo.ui.i18n.Strings
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun ReflectionCard(
@@ -49,7 +51,7 @@ internal fun ReflectionCard(
                     tint = colorScheme.primary
                 )
                 Text(
-                    text = "La tua riflessione",
+                    text = stringResource(Strings.Screen.Home.reflectionCardTitle),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = colorScheme.onSurface

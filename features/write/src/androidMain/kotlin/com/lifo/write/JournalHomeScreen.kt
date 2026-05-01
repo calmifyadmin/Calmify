@@ -50,6 +50,8 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Calendar
+import com.lifo.ui.i18n.Strings
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import com.lifo.ui.resources.Res
 import com.lifo.ui.resources.*
@@ -194,7 +196,7 @@ fun JournalHomeScreen(
 
 private data class ActivityPill(
     val icon: ImageVector,
-    val label: String,
+    val label: StringResource,
     val color: Color,
     val onClick: () -> Unit,
 )
@@ -219,14 +221,14 @@ private fun ActivityPillsRow(
         onMeditationClick, onMovementClick, onAllActivitiesClick
     ) {
         listOf(
-            ActivityPill(Icons.Outlined.Edit, "Diario", Color(0xFF42A5F5), onWriteClick),
-            ActivityPill(Icons.Outlined.Favorite, "Gratitudine", Color(0xFFE91E63), onGratitudeClick),
-            ActivityPill(Icons.Outlined.BatteryChargingFull, "Energia", Color(0xFFFF9800), onEnergyClick),
-            ActivityPill(Icons.Outlined.Bedtime, "Sonno", Color(0xFF5C6BC0), onSleepClick),
-            ActivityPill(Icons.Outlined.SelfImprovement, "Meditazione", Color(0xFF7E57C2), onMeditationClick),
-            ActivityPill(Icons.Outlined.CheckCircle, "Abitudini", Color(0xFF26A69A), onHabitsClick),
-            ActivityPill(Icons.Outlined.CloudDownload, "Brain Dump", Color(0xFF78909C), onBrainDumpClick),
-            ActivityPill(Icons.AutoMirrored.Outlined.DirectionsRun, "Movimento", Color(0xFFEF6C00), onMovementClick),
+            ActivityPill(Icons.Outlined.Edit, Strings.JournalFilter.diary, Color(0xFF42A5F5), onWriteClick),
+            ActivityPill(Icons.Outlined.Favorite, Strings.JournalFilter.gratitude, Color(0xFFE91E63), onGratitudeClick),
+            ActivityPill(Icons.Outlined.BatteryChargingFull, Strings.JournalFilter.energy, Color(0xFFFF9800), onEnergyClick),
+            ActivityPill(Icons.Outlined.Bedtime, Strings.JournalFilter.sleep, Color(0xFF5C6BC0), onSleepClick),
+            ActivityPill(Icons.Outlined.SelfImprovement, Strings.JournalFilter.meditation, Color(0xFF7E57C2), onMeditationClick),
+            ActivityPill(Icons.Outlined.CheckCircle, Strings.JournalFilter.habits, Color(0xFF26A69A), onHabitsClick),
+            ActivityPill(Icons.Outlined.CloudDownload, Strings.JournalFilter.brainDump, Color(0xFF78909C), onBrainDumpClick),
+            ActivityPill(Icons.AutoMirrored.Outlined.DirectionsRun, Strings.JournalFilter.movement, Color(0xFFEF6C00), onMovementClick),
         )
     }
 
@@ -249,7 +251,7 @@ private fun ActivityPillsRow(
                 Icon(Icons.Outlined.GridView, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "Tutte",
+                    stringResource(Strings.JournalFilter.all),
                     style = MaterialTheme.typography.labelMedium.copy(
                         fontWeight = FontWeight.SemiBold
                     ),
@@ -273,7 +275,7 @@ private fun ActivityPillsRow(
                 Icon(pill.icon, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    pill.label,
+                    stringResource(pill.label),
                     style = MaterialTheme.typography.labelMedium.copy(
                         fontWeight = FontWeight.SemiBold
                     ),
@@ -293,7 +295,7 @@ private fun DailyPromptCard(
     modifier: Modifier = Modifier
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val prompt = remember(diaries) { getContextualPrompt(diaries) }
+    val prompt = getContextualPrompt(diaries)
 
     Surface(
         modifier = modifier
@@ -318,7 +320,7 @@ private fun DailyPromptCard(
                     tint = colorScheme.onPrimaryContainer
                 )
                 Text(
-                    "Spunto del giorno",
+                    stringResource(Strings.JournalPrompt.dailyPromptCardTitle),
                     style = MaterialTheme.typography.titleSmall.copy(
                         fontWeight = FontWeight.SemiBold
                     ),
@@ -331,7 +333,7 @@ private fun DailyPromptCard(
                 color = colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
             )
             Text(
-                "Tocca per iniziare a scrivere",
+                stringResource(Strings.JournalPrompt.dailyPromptCardCta),
                 style = MaterialTheme.typography.labelSmall,
                 color = colorScheme.onPrimaryContainer.copy(alpha = 0.5f)
             )
@@ -642,14 +644,14 @@ private fun EmptyJournalState() {
                 }
             }
             Text(
-                "Il tuo diario e' vuoto",
+                stringResource(Strings.JournalPrompt.emptyStateTitle),
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.SemiBold
                 ),
                 color = colorScheme.onSurface
             )
             Text(
-                "Inizia a scrivere le tue riflessioni",
+                stringResource(Strings.JournalPrompt.dailyPromptSubtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
@@ -661,28 +663,39 @@ private fun EmptyJournalState() {
 // Helper functions
 // ======================================================================
 
+/**
+ * Picks a contextual prompt for the DailyPromptCard based on diary history,
+ * last mood, time of day, and day-of-week. Resolves StringResource at the
+ * @Composable scope so locale changes propagate without process restart.
+ */
+@Composable
 private fun getContextualPrompt(diaries: List<Diary>): String {
     val now = Calendar.getInstance()
     val hour = now.get(Calendar.HOUR_OF_DAY)
     val dayOfWeek = now.get(Calendar.DAY_OF_WEEK)
     val today = LocalDate.now()
-    val lastDiary = diaries.firstOrNull() ?: return "Questo e' il tuo spazio sicuro. Come stai, davvero?"
+    val lastDiary = diaries.firstOrNull()
+        ?: return stringResource(Strings.JournalPrompt.safeSpace)
 
     val lastDate = Instant.ofEpochMilli(lastDiary.dateMillis).atZone(ZoneId.systemDefault()).toLocalDate()
     val daysSinceLast = java.time.temporal.ChronoUnit.DAYS.between(lastDate, today).toInt()
     val lastMood = try { Mood.valueOf(lastDiary.mood) } catch (_: Exception) { Mood.Neutral }
 
-    if (daysSinceLast == 0) return when (hour) {
-        in 5..12 -> "Hai gia' scritto oggi. Come si e' evoluta la giornata?"
-        in 13..18 -> "Un secondo pensiero per oggi? A volte le cose cambiano nel pomeriggio."
-        else -> "Prima di dormire: cosa porti con te di questa giornata?"
+    if (daysSinceLast == 0) {
+        return stringResource(
+            when (hour) {
+                in 5..12 -> Strings.JournalPrompt.todayMorning
+                in 13..18 -> Strings.JournalPrompt.todayAfternoon
+                else -> Strings.JournalPrompt.todayEvening
+            },
+        )
     }
 
-    if (daysSinceLast > 3) return "Bentornato. Non importa quanto tempo e' passato -- sei qui adesso."
+    if (daysSinceLast > 3) return stringResource(Strings.JournalPrompt.afterBreak)
 
     val streak = calculateStreak(diaries)
-    if (streak >= 7) return "$streak giorni consecutivi. Stai costruendo qualcosa di importante."
-    if (streak >= 3) return "$streak giorni di fila -- la costanza fa la differenza. Come va oggi?"
+    if (streak >= 7) return stringResource(Strings.JournalPrompt.streakLong, streak)
+    if (streak >= 3) return stringResource(Strings.JournalPrompt.streakMedium, streak)
 
     if (daysSinceLast <= 2) {
         val moodFollowUp = getMoodFollowUp(lastMood, hour)
@@ -690,27 +703,33 @@ private fun getContextualPrompt(diaries: List<Diary>): String {
     }
 
     val isWeekend = dayOfWeek == Calendar.SATURDAY || dayOfWeek == Calendar.SUNDAY
-    return when {
-        hour in 5..9 && isWeekend -> "Sabato/domenica senza fretta. Come ti senti stamattina?"
-        hour in 5..9 -> "Una nuova giornata. Con che intenzione vuoi viverla?"
-        hour in 10..13 -> "Meta' mattina. Qualcosa ha catturato la tua attenzione?"
-        hour in 14..17 && isWeekend -> "Come stai spendendo questo tempo libero?"
-        hour in 14..17 -> "Il pomeriggio e' un buon momento per fermarsi. Cosa noti dentro di te?"
-        hour in 18..21 -> "La giornata si chiude. Qual e' stato il momento piu' vero?"
-        else -> "Prima di lasciar andare questa giornata -- cosa vuoi ricordare?"
-    }
+    return stringResource(
+        when {
+            hour in 5..9 && isWeekend -> Strings.JournalPrompt.weekendMorning
+            hour in 5..9 -> Strings.JournalPrompt.weekdayMorning
+            hour in 10..13 -> Strings.JournalPrompt.midMorning
+            hour in 14..17 && isWeekend -> Strings.JournalPrompt.weekendAfternoon
+            hour in 14..17 -> Strings.JournalPrompt.afternoonPause
+            hour in 18..21 -> Strings.JournalPrompt.evening
+            else -> Strings.JournalPrompt.night
+        },
+    )
 }
 
-private fun getMoodFollowUp(lastMood: Mood, hour: Int): String? = when (lastMood) {
-    Mood.Depressed, Mood.Awful -> "L'ultima volta non era facile. Come stai oggi?"
-    Mood.Lonely -> "Ti sentivi solo/a. Qualcosa e' cambiato?"
-    Mood.Tense -> "C'era tensione nell'aria. Si e' sciolta un po'?"
-    Mood.Angry -> "La rabbia di ieri -- e' ancora li' o si e' trasformata?"
-    Mood.Disappointed -> "Ieri c'era delusione. Oggi riesci a vederla diversamente?"
-    Mood.Shameful -> "Hai scritto qualcosa di difficile. Come va ora?"
-    Mood.Happy, Mood.Romantic -> if (hour < 14) "Ieri eri di buon umore. Riesci a portare quell'energia anche oggi?" else null
-    Mood.Calm -> if (hour >= 18) "La calma di ieri -- riesci a ritrovarla anche stasera?" else null
-    else -> null
+@Composable
+private fun getMoodFollowUp(lastMood: Mood, hour: Int): String? {
+    val res: StringResource? = when (lastMood) {
+        Mood.Depressed, Mood.Awful -> Strings.JournalPrompt.moodLow
+        Mood.Lonely -> Strings.JournalPrompt.moodLonely
+        Mood.Tense -> Strings.JournalPrompt.moodTense
+        Mood.Angry -> Strings.JournalPrompt.moodAngry
+        Mood.Disappointed -> Strings.JournalPrompt.moodDisappointed
+        Mood.Shameful -> Strings.JournalPrompt.moodShameful
+        Mood.Happy, Mood.Romantic -> if (hour < 14) Strings.JournalPrompt.moodHappyMorning else null
+        Mood.Calm -> if (hour >= 18) Strings.JournalPrompt.eveningCalm else null
+        else -> null
+    }
+    return res?.let { stringResource(it) }
 }
 
 private fun calculateStreak(diaries: List<Diary>): Int {
@@ -726,13 +745,17 @@ private fun calculateStreak(diaries: List<Diary>): Int {
     return streak
 }
 
+@Composable
 private fun formatDiaryTimestamp(timestampMillis: Long): String {
     val instant = Instant.ofEpochMilli(timestampMillis)
     val zonedDateTime = instant.atZone(ZoneId.systemDefault())
     val now = java.time.ZonedDateTime.now()
+    val time = zonedDateTime.format(DateTimeFormatter.ofPattern("H:mm"))
     return when {
-        zonedDateTime.toLocalDate() == now.toLocalDate() -> "Oggi, ${zonedDateTime.format(DateTimeFormatter.ofPattern("H:mm"))}"
-        zonedDateTime.toLocalDate() == now.minusDays(1).toLocalDate() -> "Ieri, ${zonedDateTime.format(DateTimeFormatter.ofPattern("H:mm"))}"
+        zonedDateTime.toLocalDate() == now.toLocalDate() ->
+            stringResource(Strings.JournalPrompt.timestampToday, time)
+        zonedDateTime.toLocalDate() == now.minusDays(1).toLocalDate() ->
+            stringResource(Strings.JournalPrompt.timestampYesterday, time)
         else -> zonedDateTime.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
     }
 }

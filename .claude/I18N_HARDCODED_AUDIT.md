@@ -47,21 +47,88 @@ For each screenshot:
 
 **Total Phase J cumulative (Tier 1+2+3.A+3.B): ~217 keys × 6 langs ≈ 1302 translations + 36 Kotlin files refactored**.
 
-## Tier 3 — DEFERRED (architectural refactor, sessione futura)
+**Tier 3.C + 3.E (2026-04-30) — DONE, BUILD GREEN**:
 
-These all share the same anti-pattern: **non-`@Composable` utility functions** returning user-facing Italian strings. Localization requires moving call sites to `@Composable` scope OR refactoring to take pre-resolved Strings. Risk of breaking flows is higher; needs dedicated session.
+- **Tier 3.C — BlockType + BlockScreen** (commit pending). `BlockType` enum (`core/util/.../model/Block.kt`) had `displayName: String` + `suggestion: String` IT — would create circular `core/util→core/ui` dep. Pattern: drop both fields, UI sites resolve via inline `@Composable` extensions `BlockType.label()` / `BlockType.suggestion()` returning `stringResource(when (this)→Strings.Block.X)`. `BlockResolution.displayName` was unused in UI (only `.name` for canonical lookup) — field deleted entirely (CLAUDE.md rule 12). `BlockScreen.kt` migrated: DescribeStep title/body/active hint, DiagnosisStep "Eve dice:", ActionStep title/subtitle + 13 ActionItems (4 reusable titles + 11 per-type subtitles via `Strings.Block.action*`), HistoryStep empty title/subtitle, BlockHistoryCard resolution note prefix. `ActionItem` data class fields `title: String`/`subtitle: String` → `StringResource`. ~36 keys × 6 langs ≈ 216 translations.
+- **Tier 3.E — JournalHomeScreen + buildWeeklyReflection** (commit pending). `getContextualPrompt(diaries): String` → `@Composable` returning resolved String via `stringResource(when (cond)→Strings.JournalPrompt.X)`. `getMoodFollowUp(mood, hour): String?` → `@Composable` (returns null for moods with no follow-up). `formatDiaryTimestamp(millis): String` → `@Composable` (uses `Strings.JournalPrompt.timestampToday`/`timestampYesterday` parameterized format). `buildWeeklyReflection(profile)`/`buildWeeklyReflection(profile, chartData)` → `@Composable` returning concatenated parts via `Strings.Weekly.X` + `Strings.Trend.msgX`. Both PercorsoScreen + ProfileDashboard callers updated; `remember(profile) { buildWeeklyReflection(profile) }` → direct call (composable scope). "La tua settimana" / "Il tuo percorso" headers + "Inizia a scrivere le tue riflessioni" subtitle migrated. ~35 keys × 6 langs ≈ 210 translations.
+- **Cumulative Tier 3.C+3.E: ~71 keys × 6 langs ≈ 426 translations + 4 Kotlin files refactored** (Block.kt, BlockScreen.kt, JournalHomeScreen.kt, PercorsoScreen.kt + ProfileDashboard.kt parallel buildWeeklyReflection).
+- **`Strings.Block` group** added to facade (37 keys: 5 type labels + 5 suggestions + 4 reusable action titles + 11 per-type subtitles + 5 chrome + 2 history empty + 1 resolution note + 4 misc).
+- **`Strings.JournalPrompt` group** extended (3 existing → 22 total: +13 contextual + +7 mood + +3 chrome).
+- **`Strings.Weekly` group** added (10 keys: cardTitle + journeyHeader + 3 mood + 3 stress + resilience + diaryCount).
+- **Build verified**: `./gradlew :app:assembleDebug` BUILD SUCCESSFUL after both tiers.
+
+**Total Phase J cumulative (Tier 1+2+3.A+3.B+3.C+3.E): ~288 keys × 6 langs ≈ 1728 translations + 40 Kotlin files refactored**.
+
+**Tier 3.G (2026-04-30) — DONE, BUILD GREEN** (Home/Feed/Mood/Journal pass driven by user device screenshots + grep audit):
+
+Coverage:
+- **`SentimentLabel` enum** in `core/util/.../model/DiaryInsight.kt` — dropped `displayName: String` IT field. Same circular-dep pattern as `Trend`/`BlockType`. UI sites (`InsightScreen.kt`) resolve via inline `when (sentiment)→Strings.Sentiment.X`. New `Strings.Sentiment` group (5 keys: veryNegative/negative/neutral/positive/veryPositive).
+- **`TimeRange` enum** in `features/home/.../HomeUiModels.kt` — dropped `label: String` IT field. New `TimeRange.labelRes: StringResource` extension property. 3 callers updated (ExpressiveMoodCard inline, MoodInsightCard, MoodDistributionCard chip + dropdown).
+- **`DominantMood` data class** — dropped `label: String` field (was always derived from `sentiment.displayName`). New `DominantMood.labelRes` extension. 3 consumer sites migrated (ExpressiveMoodCard, MoodInsightCard donut + bottom dominant indicator, MoodDistributionCard).
+- **`FeedContract.FeedTab` enum** — dropped `label: String` field. `FeedScreen.kt` resolves via inline `when (tab)→Strings.Feed.X`. 4 keys (tabAll/tabDiscoveries/tabChallenges/tabQuestions).
+- **`Strings.moodTagLocalizedRes(canonical)` static helper** in Strings facade — single point that maps canonical IT mood tags (stored as-is in Firestore for backward compat per CLAUDE.md) to localized `StringResource?`. Used by `ThreadPostCard.kt` to render mood chips on feed posts in user's language.
+- **Hero greeting**: `HeroGreetingCard.kt` "Come ti senti oggi?" → `Strings.SnapshotWizard.howFeelToday`.
+- **Quick action**: `ExpressiveQuickActions.kt` "Scrivi" pill → `Strings.Screen.Home.quickActionWrite`.
+- **Week strip**: `ExpressiveWeekStrip.kt` "CRESCITA" + "GIORNI"/"GIORNO" + "obiettivo" + day initials L M M G V S D + InfoTooltip body migrated. Same for `WeeklyActivityTracker.kt` (parallel implementation). `HomeContent.kt` "Questa settimana" header.
+- **Mood card**: `HomeContent.kt` "Umore" section header. `ExpressiveMoodCard.kt` "Il tuo mood" + 7/30/90 giorni filter chips (now resolved via `range.labelRes`). 3 mood pills (Positivo/Neutro/Negativo) localized in 4 places: ExpressiveMoodCard, MoodInsightCard, MoodDistributionCard legend, DonutChartLegend.
+- **Daily actions**: `HomeContent.kt` "Azioni quotidiane" section header.
+- **Reflection card**: `ExpressiveReflection.kt` + `ReflectionCard.kt` "La tua riflessione" title (both render paths).
+- **Community preview**: `CommunityPreviewCard.kt` "X discussioni recenti" param + "Vedi tutto" button. Same "Vedi tutto" in `ActivityFeed.kt`.
+- **Snapshot wizard / WriteContent**: "Come ti senti?" + "Scorri per scegliere il tuo mood" + "Avanti" button — now `Strings.SnapshotWizard.howFeel`/`swipeToChoose` + `Strings.Coach.buttonNext`.
+- **Journal filter chips**: `JournalHomeScreen.kt::ActivityPill` data class field `label: String` → `StringResource`. 9 chip labels migrated (Tutte/Diario/Gratitudine/Energia/Sonno/Meditazione/Abitudini/Brain Dump/Movimento). New `Strings.JournalFilter` group.
+- **Welcome card**: `JournalHomeScreen.kt` "Spunto del giorno" + "Tocca per iniziare a scrivere" + "Il tuo diario è vuoto" — already migrated mid-session before screenshots arrived.
+- **Feed tabs**: `FeedScreen.kt` rendered via `Strings.Feed.X`. 4 tabs (Tutti/Scoperte/Sfide/Domande).
+- **Mood chip on posts**: `ThreadPostCard.kt` resolves `thread.moodTag` (canonical IT) via `Strings.moodTagLocalizedRes(mood)`. Storage stays canonical IT.
+
+Volume: **~60 keys × 6 langs ≈ 360 translations + ~16 Kotlin files refactored**.
+
+Files touched:
+- core/util/.../DiaryInsight.kt (SentimentLabel enum drop)
+- core/ui/.../i18n/Strings.kt (Sentiment + SnapshotWizard + JournalFilter + Feed groups + moodTagLocalizedRes helper + Home extension)
+- core/ui/.../composeResources/values{,-it,-es,-fr,-de,-pt}/strings.xml (~60 keys × 6 langs)
+- core/social-ui/.../ThreadPostCard.kt
+- features/home/.../HomeUiModels.kt (TimeRange + DominantMood + labelRes extensions)
+- features/home/.../CalculateMoodDistributionUseCase.kt
+- features/home/.../HomeContent.kt
+- features/home/.../components/expressive/ExpressiveQuickActions.kt
+- features/home/.../components/expressive/ExpressiveWeekStrip.kt
+- features/home/.../components/expressive/ExpressiveMoodCard.kt
+- features/home/.../components/expressive/ExpressiveReflection.kt
+- features/home/.../components/dashboard/WeeklyActivityTracker.kt
+- features/home/.../components/dashboard/MoodInsightCard.kt
+- features/home/.../components/dashboard/CommunityPreviewCard.kt
+- features/home/.../components/dashboard/ReflectionCard.kt
+- features/home/.../components/insights/MoodDistributionCard.kt
+- features/home/.../components/charts/DonutChart.kt
+- features/home/.../components/feed/EnhancedActivityCard.kt
+- features/home/.../components/feed/ActivityFeed.kt
+- features/home/.../components/hero/HeroGreetingCard.kt
+- features/feed/.../FeedContract.kt + FeedScreen.kt
+- features/write/.../JournalHomeScreen.kt (welcome card 3 strings + 9 ActivityPill chips)
+- features/write/.../androidMain/.../WriteContent.kt (Snapshot scroll wizard CTA)
+- features/insight/.../InsightScreen.kt (SentimentLabel inline mapping)
+
+**Cumulative Phase J after Tier 3.G: ~348 keys × 6 langs ≈ 2088 translations + 56 Kotlin files refactored**.
+
+## Tier 3.D — DEFERRED (wellness wizard screens, sessione futura)
+
+The remaining wellness wizard screens share the same screen-level migration pattern as Tier 2.A but spread across ~8 files. Volume non trivial (~80 strings) and per-screen ripetitivo, batch migration warranted.
 
 | Target | Strings approx | Refactor type |
 |---|---|---|
-| `DateFormatters.kt::getTimeOfDayGreeting/formatSectionHeader/getWeekLabel/getDayLabel/getFullDayName` | ~25 weekday + greeting + period labels | Move to caller `@Composable` site |
-| `JournalHomeScreen.kt::getDailyPrompt + getMoodFollowUp` | 13+ time-of-day adaptive prompts (when-driven) | Largest — caller resolves StringResource via `@Composable` selection |
-| `CalculateStreaksUseCase.kt::dayOfWeekItalian` | 7 weekday names (cosmetic; consumer field unused in UI) | Could be safely deleted (dead path) |
 | Wellness wizard screens: `BrainDumpScreen`, `GratitudeScreen`, `EnergyCheckInScreen`, `MovementScreen`, `SleepLogScreen`, `ConnectionScreen`, `InspirationScreen`, `ReframeScreen` | ~80 strings (titles, sections, "Salva"/"Aggiorna" CTAs, body copy) | Same pattern as Tier 2.A but spread across ~8 files |
-| `BlockScreen.kt` action items + body | ~20 strings | Per-screen migration |
+| `ConnectionType` / `EnergyType` / `MovementType` / `SleepDisturbance` / `Trigger` / `Sensation` / `gratitudeCategory` / `ReframeCategory` enums | per-enum displayName fields | Same circular-dep pattern as Trend/BlockType — drop displayName, callers resolve via inline `when (type)→Strings.X` |
 | `HabitListScreen.kt` save labels | ~5 strings | Per-screen migration |
-| `MainActivity.kt` "Calmify"/"Error"/"Try Again" | 3 strings | Notes: app/ launcher is `com.android.application` Android-only; possibly via `app/src/main/res/values/strings.xml` since `compose.components.resources` 1.7.1 dep was added in Tier 1 |
-| `ScreenTutorials.kt` Percorso/Chat/Write tours | Already deleted as dead code in J.1 — re-add only if tours re-introduced |
-| Screenshot 22-25 audit | TBD — image limit hit at #21, four pending | Read in next session before declaring full-app translation complete |
+| `MainActivity.kt` "Calmify"/"Error"/"Try Again" | 3 strings | app/ launcher is `com.android.application` Android-only; possibly via `app/src/main/res/values/strings.xml` since `compose.components.resources` 1.7.1 dep was added in Tier 1 |
+
+## Tier 3.F — DEFERRED (Garden activity expanded card, sessione futura)
+
+Discovered via screenshots 23-25 (post-Tier 2.A). Garden activities have collapsed view (name + desc, migrated in Tier 2.A) AND expanded view with long body + 3 benefit bullets + chrome that were not catalogued. Scope: `data class GardenActivity` likely needs `longDescriptionRes: StringResource` + `benefitsRes: List<StringResource>`. ~78 new keys × 6 langs ≈ 468 translations across 19 activities.
+
+## Tier 3.G — DEFERRED (residual misc, sessione futura)
+
+Single-file straggler items still pending audit/migration after Tier 3.D + 3.F closure:
+- `ScreenTutorials.kt` Percorso/Chat/Write tours — Already deleted as dead code in J.1; re-add only if tours re-introduced
 
 ## Status 2026-04-28 (this session, before Tier 3)
 
@@ -93,7 +160,10 @@ These all share the same anti-pattern: **non-`@Composable` utility functions** r
 - [x] Screenshot 19/25 — Trend di benessere info sheet (title + body both IT)
 - [x] Screenshot 20/25 — DUPLICATE of #19 (same Trend sheet)
 - [x] Screenshot 21/25 — Recurring themes info sheet (title EN, body IT)
-- [ ] Screenshot 22/25 ... 25/25
+- [x] Screenshot 22/25 — Notifications screen (FULLY ENGLISH ✓ — no findings)
+- [x] Screenshot 23/25 — Garden Activity expanded card: Diario (NEW debt: long body + Benefici header + 3 bullets + Inizia Attivita' CTA)
+- [x] Screenshot 24/25 — Garden Activity expanded card: Brain Dump (same pattern, per-activity content)
+- [x] Screenshot 25/25 — Garden Activity expanded card: Gratitudine (same pattern, confirms ~19 activities × ~4 strings ≈ 76 new keys)
 
 ---
 
@@ -565,4 +635,73 @@ Same registry: `InfoTooltip.kt`.
 
 ---
 
-(continuing...)
+### 22 — `Screenshot_20260428_161612_Calmify.jpg` (Notifications screen)
+
+**Context**: Notifications top-level screen with filter chips and empty state.
+
+#### English ✓ (fully migrated)
+- `Notifications` (top bar)
+- `All` / `Follows` / `Replies` / `Mentions` (filter chips)
+- `No notifications yet` (empty state title)
+- `You'll see activity from your community here` (empty state subtitle)
+
+**No hardcoded Italian visible**. This screen was fully migrated in sprint Phase C/D. Skip.
+
+---
+
+### 23 — `Screenshot_20260428_161708_Calmify.jpg` (Garden Activity expanded card — Diario)
+
+**Context**: User taps an activity card in Garden, it expands to show a long description + benefits list + duration/difficulty + Start CTA. **Tier 2.A only migrated `name + desc` (collapsed card)**. Expanded view exposes more hardcoded IT.
+
+#### Italian (hardcoded — to fix)
+- Title `Diario` ✓ (already migrated as `gardenActivityDiaryName` in Tier 2.A)
+- Subtitle `Scrivi i tuoi pensieri` ✓ (already migrated as `gardenActivityDiaryDesc`)
+- **Long body** (NEW): `Scrivere i tuoi pensieri ti aiuta a elaborare emozioni e trovare chiarezza. Il diario e' il cuore del tuo percorso di crescita.`
+- **Section header** `Benefici` (NEW — shared chrome)
+- **3 benefit bullets** (NEW per-activity):
+  - `Riduce ansia`
+  - `Migliora autoconsapevolezza`
+  - `Traccia la crescita personale`
+- **Time meta** `~5 min` (`~%d min` likely shared format — verify for migration)
+- **Difficulty** `Facile` ✓ (already migrated via `Strings.Garden.Difficulty.X`)
+- **CTA** `Inizia Attivita'` (NEW — shared chrome)
+
+#### Categorization
+- `data class GardenActivity` likely has additional fields beyond `name/description`: `longDescription: String`, `benefits: List<String>`, `durationMinutes: Int`, `difficulty: Difficulty`. Need grep on `ActivityGardenScreen.kt` for the expanded card render.
+- Per-activity content: 19 activities × (1 long body + 3 benefits) = **76 strings**. Plus `Benefici` header + `Inizia Attivita'` CTA = 2 shared keys. **Total: ~78 new keys** (Tier 3.F).
+
+---
+
+### 24 — `Screenshot_20260428_161720_Calmify.jpg` (Garden Activity expanded card — Brain Dump)
+
+**Context**: Same expanded-card pattern as #23, different activity.
+
+#### Italian (hardcoded — to fix)
+- Title `Brain Dump` ✓ migrated
+- Subtitle `Svuota la mente` ✓ migrated
+- Long body (NEW): `Libera la mente da tutto cio' che la occupa, senza giudizio e senza struttura.`
+- `Benefici` header (NEW shared)
+- Bullets (NEW): `Riduce carico mentale`, `Migliora focus`, `Facilita il sonno`
+- `~3 min`, `Facile`
+- `Inizia Attivita'` CTA (NEW shared)
+
+Confirms per-activity expanded body pattern.
+
+---
+
+### 25 — `Screenshot_20260428_161732_Calmify.jpg` (Garden Activity expanded card — Gratitudine)
+
+**Context**: Same expanded-card pattern, third activity sample.
+
+#### Italian (hardcoded — to fix)
+- Title `Gratitudine` ✓ migrated
+- Subtitle `3 cose belle` ✓ migrated
+- Long body (NEW): `Riconoscere il bello quotidiano allena il cervello alla positivita'.`
+- `Benefici` header (NEW shared)
+- Bullets (NEW): `Aumenta felicita'`, `Riduce stress`, `Migliora relazioni`
+- `~3 min`, `Facile`
+- `Inizia Attivita'` CTA (NEW shared)
+
+**Conclusion (3 sample activities)**: pattern holds — every Garden activity has long body + 3 benefit bullets. **Tier 3.F (new tier — not previously catalogued)** to follow Tier 3.C/D/E. Volume: ~78 keys × 6 langs ≈ 468 translations.
+
+---

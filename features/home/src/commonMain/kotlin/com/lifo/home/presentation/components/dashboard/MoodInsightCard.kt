@@ -27,12 +27,15 @@ import androidx.compose.material.icons.rounded.SentimentVeryDissatisfied
 import com.lifo.home.domain.model.DominantMood
 import com.lifo.home.domain.model.MoodDistribution
 import com.lifo.home.domain.model.TimeRange
+import com.lifo.home.domain.model.labelRes
 
+import com.lifo.ui.i18n.Strings
 import com.lifo.ui.theme.CalmifyRadius
 import com.lifo.ui.theme.CalmifySpacing
 import com.lifo.ui.theme.Sage
 import com.lifo.ui.theme.SageSoft
 import com.lifo.ui.theme.SageMedium
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,7 +83,7 @@ internal fun MoodInsightCard(
                             onClick = { onTimeRangeChange(range) },
                             label = {
                                 Text(
-                                    text = range.label,
+                                    text = stringResource(range.labelRes),
                                     style = MaterialTheme.typography.labelSmall
                                 )
                             },
@@ -108,7 +111,7 @@ internal fun MoodInsightCard(
                         neutral = distribution.neutral,
                         negative = distribution.negative,
                         dominantPercentage = dominantPct,
-                        dominantLabel = dominantMood.displayLabel,
+                        dominantLabel = stringResource(dominantMood.labelRes),
                         totalEntries = totalEntries,
                         goalEntries = goalEntries,
                         size = 160.dp,
@@ -122,19 +125,19 @@ internal fun MoodInsightCard(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     MoodMetricChip(
-                        label = "Positivo",
+                        label = stringResource(Strings.Screen.Home.moodBreakdownPositive),
                         percentage = distribution.positive,
                         accentColor = Sage,
                         icon = Icons.Rounded.SentimentVerySatisfied
                     )
                     MoodMetricChip(
-                        label = "Neutro",
+                        label = stringResource(Strings.Screen.Home.moodBreakdownNeutral),
                         percentage = distribution.neutral,
                         accentColor = SageSoft,
                         icon = Icons.Rounded.SentimentNeutral
                     )
                     MoodMetricChip(
-                        label = "Negativo",
+                        label = stringResource(Strings.Screen.Home.moodBreakdownNegative),
                         percentage = distribution.negative,
                         accentColor = SageMedium,
                         icon = Icons.Rounded.SentimentVeryDissatisfied
@@ -153,7 +156,7 @@ internal fun MoodInsightCard(
                     color = colorScheme.primary
                 ) {}
                 Text(
-                    text = "${dominantMood.displayLabel} — dominante",
+                    text = stringResource(Strings.Screen.Home.moodDominantLabel, stringResource(dominantMood.labelRes)),
                     style = MaterialTheme.typography.bodySmall,
                 )
             }

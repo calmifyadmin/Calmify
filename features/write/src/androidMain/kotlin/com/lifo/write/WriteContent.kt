@@ -51,6 +51,7 @@ import com.lifo.write.wizard.EnergyLevelStep
 import com.lifo.write.wizard.StressLevelStep
 import com.lifo.write.wizard.TriggerSelectionStep
 import com.lifo.write.wizard.WizardColors
+import com.lifo.ui.i18n.Strings
 import org.jetbrains.compose.resources.stringResource
 import com.lifo.ui.resources.Res
 import com.lifo.ui.resources.*
@@ -257,14 +258,14 @@ private fun MoodSelectionStep(pagerState: PagerState) {
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = "Come ti senti?",
+            text = stringResource(Strings.SnapshotWizard.howFeel),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "Scorri per scegliere il tuo mood",
+            text = stringResource(Strings.SnapshotWizard.swipeToChoose),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -569,7 +570,7 @@ private fun StepNavigationBar(
             // Next button (hidden on last step — save button is inline)
             if (currentStep < TOTAL_STEPS - 1) {
                 FilledTonalButton(onClick = onNext) {
-                    Text("Avanti")
+                    Text(stringResource(Strings.Coach.buttonNext))
                     Spacer(Modifier.width(4.dp))
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowForward,

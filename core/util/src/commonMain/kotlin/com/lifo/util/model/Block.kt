@@ -18,38 +18,32 @@ data class Block(
     val resolvedAtMillis: Long? = null,
 )
 
+/**
+ * Block taxonomy. Display labels + Eve coaching sentence resolved at UI layer
+ * via `Strings.Block.X` (see `core/ui/.../i18n/Strings.kt`). Storing localizable
+ * strings here would create an upward `core/util -> core/ui` dependency.
+ */
 @Serializable
-enum class BlockType(val displayName: String, val suggestion: String) {
-    FEAR_OF_FAILURE(
-        "Paura del fallimento",
-        "Qual e' la cosa piu' piccola che puoi fare ORA, anche imperfettamente?",
-    ),
-    OVERLOAD(
-        "Sovraccarico mentale",
-        "Hai troppo in testa. Facciamo un brain dump: scrivi TUTTO quello che ti gira in mente.",
-    ),
-    LIMITING_BELIEF(
-        "Credenza limitante",
-        "Quella e' una storia, non un fatto. Riformuliamo questo pensiero insieme.",
-    ),
-    CREATIVE_BLOCK(
-        "Blocco creativo",
-        "Quando la mente si arena, muovi il corpo. 20 minuti di camminata e poi ne riparliamo.",
-    ),
-    UNKNOWN(
-        "Blocco generico",
-        "Descrivimi cosa sta succedendo. Non devi analizzare, solo raccontare.",
-    ),
+enum class BlockType {
+    FEAR_OF_FAILURE,
+    OVERLOAD,
+    LIMITING_BELIEF,
+    CREATIVE_BLOCK,
+    UNKNOWN,
 }
 
+/**
+ * Resolution method tag. Stored canonical (`.name`); display is unused in UI today
+ * (kept as enum for serialization compatibility with `Block.resolution`).
+ */
 @Serializable
-enum class BlockResolution(val displayName: String) {
-    BRAIN_DUMP("Brain Dump"),
-    REFRAMING("Riformulazione"),
-    MOVEMENT("Movimento"),
-    MEDITATION("Meditazione"),
-    JOURNALING("Scrittura libera"),
-    TALKED_TO_SOMEONE("Ne ho parlato"),
-    RESOLVED_ITSELF("Si e' risolto"),
-    OTHER("Altro"),
+enum class BlockResolution {
+    BRAIN_DUMP,
+    REFRAMING,
+    MOVEMENT,
+    MEDITATION,
+    JOURNALING,
+    TALKED_TO_SOMEONE,
+    RESOLVED_ITSELF,
+    OTHER,
 }

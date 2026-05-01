@@ -6,11 +6,15 @@ import com.lifo.util.repository.ThreadRepository
 
 object FeedContract {
 
-    enum class FeedTab(val label: String) {
-        ALL("Tutti"),
-        SCOPERTE("Scoperte"),
-        SFIDE("Sfide"),
-        DOMANDE("Domande"),
+    /**
+     * Feed top tabs. UI label resolved at render site via inline
+     * `when (tab) -> Strings.Feed.X` to keep this contract model UI-free.
+     */
+    enum class FeedTab {
+        ALL,
+        SCOPERTE,
+        SFIDE,
+        DOMANDE,
     }
 
     sealed interface Intent : MviContract.Intent {
