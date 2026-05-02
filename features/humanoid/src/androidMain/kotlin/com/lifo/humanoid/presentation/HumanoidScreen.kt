@@ -54,7 +54,7 @@ fun HumanoidScreen(
                     IconButton(onClick = navigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Indietro"
+                            contentDescription = stringResource(Strings.Action.back)
                         )
                     }
                 }

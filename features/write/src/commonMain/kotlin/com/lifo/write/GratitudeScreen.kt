@@ -28,8 +28,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifo.ui.components.graphics.ParticleConfig
 import com.lifo.ui.components.graphics.ParticleSystem
+import com.lifo.ui.i18n.Strings
 import com.lifo.util.model.GratitudeCategory
 import kotlinx.coroutines.delay
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -82,7 +84,7 @@ internal fun GratitudeScreen(
                     },
                     navigationIcon = {
                         IconButton(onClick = onBackPressed) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Strings.Action.back))
                         }
                     },
                     actions = {

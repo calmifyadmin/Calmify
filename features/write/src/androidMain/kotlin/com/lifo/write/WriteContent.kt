@@ -137,8 +137,8 @@ internal fun WriteContent(
                     viewModel = viewModel,
                 )
                 STEP_EMOTION -> MetricStepWrapper(
-                    title = "Intensita' emotiva",
-                    description = "Quanto e' intensa l'emozione che provi?",
+                    title = stringResource(Strings.WriteWizard.intensityTitle),
+                    description = stringResource(Strings.WriteWizard.intensitySubtitle),
                 ) {
                     EmotionIntensityStep(
                         value = uiState.emotionIntensity,
@@ -147,8 +147,8 @@ internal fun WriteContent(
                     )
                 }
                 STEP_STRESS -> MetricStepWrapper(
-                    title = "Livello di stress",
-                    description = "Quanto ti senti stressato/a?",
+                    title = stringResource(Strings.WriteWizard.stressTitle),
+                    description = stringResource(Strings.WriteWizard.stressSubtitle),
                 ) {
                     StressLevelStep(
                         value = uiState.stressLevel,
@@ -157,8 +157,8 @@ internal fun WriteContent(
                     )
                 }
                 STEP_ENERGY -> MetricStepWrapper(
-                    title = "Livello di energia",
-                    description = "Quanta energia hai?",
+                    title = stringResource(Strings.WriteWizard.energyTitle),
+                    description = stringResource(Strings.WriteWizard.energySubtitle),
                 ) {
                     EnergyLevelStep(
                         value = uiState.energyLevel,
@@ -167,8 +167,8 @@ internal fun WriteContent(
                     )
                 }
                 STEP_CALM -> MetricStepWrapper(
-                    title = "Calma / Ansia",
-                    description = "Quanto ti senti calmo/a o ansioso/a?",
+                    title = stringResource(Strings.WriteWizard.calmTitle),
+                    description = stringResource(Strings.WriteWizard.calmSubtitle),
                 ) {
                     CalmAnxietyStep(
                         value = uiState.calmAnxietyLevel,
@@ -177,8 +177,8 @@ internal fun WriteContent(
                     )
                 }
                 STEP_TRIGGER -> MetricStepWrapper(
-                    title = "Trigger principale",
-                    description = "Cosa ha influenzato il tuo stato d'animo?",
+                    title = stringResource(Strings.WriteWizard.triggerTitle),
+                    description = stringResource(Strings.WriteWizard.triggerSubtitle),
                 ) {
                     TriggerSelectionStep(
                         selectedTrigger = uiState.primaryTrigger,
@@ -187,8 +187,8 @@ internal fun WriteContent(
                     )
                 }
                 STEP_BODY -> MetricStepWrapper(
-                    title = "Sensazione corporea",
-                    description = "Cosa senti nel corpo?",
+                    title = stringResource(Strings.WriteWizard.sensationTitle),
+                    description = stringResource(Strings.WriteWizard.sensationSubtitle),
                 ) {
                     BodySensationStep(
                         selectedSensation = uiState.dominantBodySensation,
@@ -309,14 +309,14 @@ private fun TitleInputStep(
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = "Dai un titolo",
+            text = stringResource(Strings.WriteWizard.titleHeading),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "Un titolo breve per il tuo diario",
+            text = stringResource(Strings.WriteWizard.titleSubtitle),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -354,14 +354,14 @@ private fun DescriptionInputStep(
     ) {
         Spacer(Modifier.height(32.dp))
         Text(
-            text = "Racconta",
+            text = stringResource(Strings.WriteWizard.descriptionHeading),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "Scrivi come ti senti, cosa e' successo",
+            text = stringResource(Strings.WriteWizard.descriptionSubtitle),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -450,14 +450,14 @@ private fun SaveStep(
     ) {
         Spacer(Modifier.height(32.dp))
         Text(
-            text = "Quasi fatto!",
+            text = stringResource(Strings.WriteWizard.almostDoneTitle),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "Aggiungi foto e salva il tuo diario",
+            text = stringResource(Strings.WriteWizard.almostDoneSubtitle),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -516,7 +516,7 @@ private fun SaveStep(
                 Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = "Salva diario",
+                    text = stringResource(Strings.WriteWizard.saveDiary),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -554,7 +554,7 @@ private fun StepNavigationBar(
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(Modifier.width(4.dp))
-                    Text("Indietro")
+                    Text(stringResource(Strings.Action.back))
                 }
             } else {
                 Spacer(Modifier.width(1.dp))
@@ -618,7 +618,7 @@ private fun SmartCaptureCard(
                         tint = MaterialTheme.colorScheme.primary,
                     )
                     Text(
-                        text = "Smart Capture",
+                        text = stringResource(Strings.WriteWizard.smartCapture),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary,
@@ -636,7 +636,7 @@ private fun SmartCaptureCard(
                     contentPadding = PaddingValues(0.dp),
                 ) {
                     Text(
-                        text = "Rianalizza",
+                        text = stringResource(Strings.WriteWizard.smartCaptureReanalyze),
                         style = MaterialTheme.typography.labelSmall,
                     )
                 }

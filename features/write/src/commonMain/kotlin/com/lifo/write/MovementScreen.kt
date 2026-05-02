@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import com.lifo.util.model.MovementType
 import com.lifo.util.model.PostMovementFeeling
 import kotlinx.coroutines.delay
+import com.lifo.ui.i18n.Strings
 import org.jetbrains.compose.resources.stringResource
 import com.lifo.ui.resources.Res
 import com.lifo.ui.resources.*
@@ -59,7 +60,7 @@ fun MovementScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Strings.Action.back))
                     }
                 },
                 actions = {

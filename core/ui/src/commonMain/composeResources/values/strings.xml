@@ -1072,6 +1072,52 @@
     <string name="feed_tab_challenges">Challenges</string>
     <string name="feed_tab_questions">Questions</string>
 
+    <!-- Phase J Tier 3.H / Diary creation wizard (WriteContent.kt 10-step pager) -->
+    <string name="write_step_title_heading">Give it a title</string>
+    <string name="write_step_title_subtitle">A short title for your journal</string>
+    <string name="write_step_description_heading">Tell it</string>
+    <string name="write_step_description_subtitle">Write how you feel, what happened</string>
+    <string name="write_step_intensity_title">Emotional intensity</string>
+    <string name="write_step_intensity_subtitle">How intense is the emotion you feel?</string>
+    <string name="write_step_stress_title">Stress level</string>
+    <string name="write_step_stress_subtitle">How stressed do you feel?</string>
+    <string name="write_step_energy_title">Energy level</string>
+    <string name="write_step_energy_subtitle">How much energy do you have?</string>
+    <string name="write_step_calm_title">Calm / Anxiety</string>
+    <string name="write_step_calm_subtitle">How calm or anxious do you feel?</string>
+    <string name="write_step_trigger_title">Main trigger</string>
+    <string name="write_step_trigger_subtitle">What influenced your mood?</string>
+    <string name="write_step_sensation_title">Body sensation</string>
+    <string name="write_step_sensation_subtitle">What do you feel in your body?</string>
+    <string name="write_step_almost_done_title">Almost done!</string>
+    <string name="write_step_almost_done_subtitle">Add photos and save your journal</string>
+    <string name="write_save_diary">Save journal</string>
+    <string name="write_smart_capture">Smart Capture</string>
+    <string name="write_smart_capture_reanalyze">Re-analyze</string>
+    <string name="write_smart_capture_mood_label">Mood: %1$s | %2$s</string>
+    <string name="write_wizard_complete">Complete</string>
+
+    <!-- Phase J Tier 3.I / Percorso Journey interior (PercorsoScreen.kt) -->
+    <string name="percorso_weekly_progress">Weekly Progress</string>
+    <string name="percorso_journey_map">Journey Map</string>
+    <string name="percorso_pillar_mind">Mind</string>
+    <string name="percorso_pillar_body">Body</string>
+    <string name="percorso_pillar_spirit">Spirit</string>
+    <string name="percorso_pillar_habits">Habits</string>
+    <string name="percorso_stat_sessions_one">%1$d session</string>
+    <string name="percorso_stat_sessions_many">%1$d sessions</string>
+    <string name="percorso_stat_facts_one">%1$d done</string>
+    <string name="percorso_stat_facts_many">%1$d done</string>
+    <string name="percorso_stat_acts_one">%1$d act</string>
+    <string name="percorso_stat_acts_many">%1$d acts</string>
+    <string name="percorso_stat_habits_one">%1$d habit</string>
+    <string name="percorso_stat_habits_many">%1$d habits</string>
+    <string name="percorso_stat_progress_fraction">%1$d/%2$d</string>
+    <string name="percorso_stat_to_discover">To discover</string>
+    <string name="percorso_stat_confirmed">Confirmed</string>
+    <string name="percorso_stat_today">Today</string>
+    <string name="percorso_stat_total">Total</string>
+
     <!-- Phase J Tier 1 / Connection -->
     <string name="connection_quality_time_title">Quality time together</string>
     <string name="connection_quality_time_label">Quality time</string>

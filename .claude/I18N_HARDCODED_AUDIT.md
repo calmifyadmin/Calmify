@@ -110,6 +110,120 @@ Files touched:
 
 **Cumulative Phase J after Tier 3.G: ~348 keys × 6 langs ≈ 2088 translations + 56 Kotlin files refactored**.
 
+## Post-3.G screenshots (2026-05-02) — NEW DEBT discovered
+
+User shared 4 device screenshots after Tier 3.G commit `00d11b7`. Reveals two large unaddressed surfaces (each warrants its own tier):
+
+### Screenshot A — Snapshot wizard step 1/10
+Fully EN ✓ (Tier 3.G coverage works). No new debt.
+
+### Screenshot B — Diary creation wizard step 2/10 (title input)
+- `Dai un titolo` — IT (`WriteContent.kt:312`)
+- `Un titolo breve per il tuo diario` — IT (`WriteContent.kt:319`)
+- `Indietro` — IT (`WriteContent.kt:557`)
+
+### Screenshot C — Diary creation wizard step 3/10 (description)
+- `Racconta` — IT (`WriteContent.kt:357`)
+- `Scrivi come ti senti, cosa e' successo` — IT (`WriteContent.kt:364`)
+- `Indietro` — IT (same shared button)
+
+### Screenshot D — Journey/Percorso dashboard
+- `Progresso Settimanale` — IT (`PercorsoScreen.kt:149`)
+- `Mappa del Percorso` — IT (`PercorsoScreen.kt:209`)
+- 4 pillar map labels: `Abitudini` / `Spirito` / `Mente` / `Corpo` (likely a `Pillar` enum with IT displayName, or hardcoded in the map renderer)
+- Section headers: `Mente`, `Corpo`, `Spirito`, `Abitudini` (same pillar labels reused as section headers)
+- Per-pillar stats labels: `Meditazione` / `0 sessioni`, `Reframing` / `0 fatti`, `Gratitudine` / `0/7`, `Energia`, `Sonno`, `Movimento`, `Valori`, `Connessioni`, `Ikigai`, `Awe`, `Silenzio`, `Ispirazione`, `Ambiente`
+- Suffix patterns: `0 sessioni`, `0 fatti`, `0 atti`, `1 abitudini` — count + IT noun (parameterized)
+
+## Tier 3.H + 3.I — DONE 2026-05-02 (BUILD GREEN)
+
+**Tier 3.H (diary creation wizard)**: `WriteContent.kt` 10 steps fully migrated. Per-step heading + subtitle (title/description/6 metric steps via MetricStepWrapper/almost-done) + Indietro button + Salva diario CTA + Smart Capture + Rianalizza. New `Strings.WriteWizard` group (22 keys). Reused `Strings.Action.back` and `Strings.Coach.buttonNext` for wizard chrome (no duplication). Plus `Strings.WriteWizard.complete` for final step "Completa" / "Complete" wizard CTA.
+
+**"Indietro" sweep**: 10 wellness/diary files migrated to `Strings.Action.back`:
+- features/write/.../DashboardScreen.kt
+- features/write/.../ConnectionScreen.kt
+- features/write/.../BrainDumpScreen.kt
+- features/write/.../SleepLogScreen.kt
+- features/write/.../MovementScreen.kt
+- features/write/.../GratitudeScreen.kt
+- features/write/.../EnergyCheckInScreen.kt
+- features/write/.../WriteContent.kt (wizard back)
+- features/write/.../wizard/WizardComponents.kt (back + next + complete buttons)
+- features/write/.../androidMain/.../DiaryDetailScreen.kt
+- features/humanoid/.../HumanoidScreen.kt
+
+**Tier 3.I (Percorso/Journey interior)**: `PercorsoScreen.kt` + `PercorsoContract.kt` + `PercorsoViewModel.kt`. Full migration:
+- "Progresso Settimanale" (top weekly card) → `Strings.Percorso.weeklyProgress`
+- "Mappa del Percorso" (interactive node graph header) → `Strings.Percorso.journeyMap`
+- 4 pillar map labels (Mente/Corpo/Spirito/Abitudini) — graphNodes literal labels migrated, `pillarMind/pillarBody/pillarSpirit/pillarHabits` keys + `remember` re-keyed to include pillar Strings
+- 4 per-pillar section headers → `SectionSummary.titleRes: StringResource`
+- Stats with locale-aware plurals: `statSessionsOne/Many` (Meditazione count), `statFactsOne/Many` (Reframing count), `statActsOne/Many` (Connessioni), `statHabitsOne/Many` (Totali habits) — ViewModel chooses singular/plural based on `count == 1`
+- Stats with non-plural values (`X/7` fractions, `8.0h` hours, `Confermati`/`Da scoprire` discrete states): `valueOverride: String?` field in `SectionItem` carries pre-formatted string; UI prefers `valueOverride` over `valueRes` when present
+- `PercorsoToolAction.label: String` → `labelRes: StringResource`. All 16 tool actions across 4 sections refactored to reuse `Strings.Garden.Activity.*` keys from Tier 2.A (no duplication)
+- Activity name reuse — all 16 unique tool labels in Percorso (Meditazione/Reframing/Blocchi/RecurringThoughts/Energia/Sonno/Movimento/Dashboard/Valori/Ikigai/Awe/Silenzio/Connessioni/Ispirazione/Abitudini/Ambiente) come from `Strings.Garden.Activity.*` populated in Tier 2.A
+
+New `Strings.Percorso` group (19 keys). Files refactored: PercorsoContract.kt + PercorsoViewModel.kt + PercorsoScreen.kt.
+
+**Cumulative Phase J after Tier 3.H+3.I: ~398 keys × 6 langs ≈ 2388 translations + 67 Kotlin files refactored**.
+
+Build: `./gradlew :app:assembleDebug` BUILD SUCCESSFUL.
+
+## Tier 3.H — DEFERRED (diary creation wizard, NEW from screenshots B+C)
+
+`WriteContent.kt` 10-step diary wizard. Per-step heading + subtitle hardcoded IT. Grep audit on the file:
+
+| Step | Title | Subtitle |
+|---|---|---|
+| Mood (1/10) | (already EN ✓ Tier 3.G) | (already EN ✓) |
+| Title (2/10) | `Dai un titolo` | `Un titolo breve per il tuo diario` |
+| Description (3/10) | `Racconta` | `Scrivi come ti senti, cosa e' successo` |
+| EmotionIntensity (4/10) | `Intensita' emotiva` | `Quanto e' intensa l'emozione che provi?` |
+| Stress (5/10) | `Livello di stress` | `Quanto ti senti stressato/a?` |
+| Energy (6/10) | `Livello di energia` | `Quanta energia hai?` |
+| CalmAnxiety (7/10) | `Calma / Ansia` | `Quanto ti senti calmo/a o ansioso/a?` |
+| Trigger (8/10) | `Trigger principale` | `Cosa ha influenzato il tuo stato d'animo?` |
+| Sensation (9/10) | `Sensazione corporea` | `Cosa senti nel corpo?` |
+| Photos+Save (10/10) | `Quasi fatto!` | `Aggiungi foto e salva il tuo diario` |
+
+Plus chrome:
+- `Indietro` (back button — line 557, also hardcoded as contentDescription in 12+ other files)
+- `Salva diario` (line 519)
+- `Smart Capture` (line 621)
+- `Rianalizza` (line 639)
+- `Mood: %s | %s` template (line 628 — already partially EN)
+
+**Volume estimate: ~25 keys × 6 langs ≈ 150 translations + 1 file (WriteContent.kt) refactor.**
+
+**Bonus shared-key opportunity**: `Indietro` contentDescription appears in 12 wellness wizard files (BrainDump/EnergyCheckIn/Connection/SleepLog/Movement/Gratitude/Reframe/Inspiration/Awe/Dashboard/Humanoid/DiaryDetail) — should use existing `Strings.Action.back` or `Strings.A11y.back` (verify which one). Single sweep-fix across all wizard files.
+
+## Tier 3.I — DEFERRED (Percorso/Journey screen, NEW from screenshot D + reinforces audit screenshot 15)
+
+`PercorsoScreen.kt`. The screen title was migrated in J.7 ("Il Mio Percorso" → `Strings.Screen.Percorso.title`) and `buildWeeklyReflection` in 3.E, but interior content NOT covered:
+
+**Top card — Weekly Progress**:
+- `Progresso Settimanale` (line 149)
+
+**Map section**:
+- `Mappa del Percorso` (line 209)
+- 4 pillar map labels (Abitudini / Spirito / Mente / Corpo) — investigate: enum or list literal?
+
+**Per-pillar sections** (4 sections × ~3-5 entries each):
+- Section header per pillar: Mente / Corpo / Spirito / Abitudini
+- Per-activity stats labels:
+  - Mente: Meditazione (`0 sessioni`), Reframing (`0 fatti`), Gratitudine (`0/7`), Blocchi, Pensieri
+  - Corpo: Energia (`0.0`), Sonno (`8.0h`), Movimento (`0/7`), Dashboard
+  - Spirito: Valori (`Da scoprire`), Connessioni (`0 atti`), Ikigai, Awe, Silenzio, Ispirazione
+  - Abitudini: Oggi (`0/1`), Totali (`1 abitudini`), Ambiente
+- Suffix nouns are pluralized IT — need `pluralStringResource` or parameterized format:
+  - `%d sessioni` / `%d sessione`
+  - `%d fatti` / `%d fatto`
+  - `%d atti` / `%d atto`
+  - `%d abitudini` / `%d abitudine`
+
+**Volume estimate: ~30 keys × 6 langs ≈ 180 translations + 1 file (PercorsoScreen.kt) refactor.**
+
+Activity name labels (Meditazione, Reframing, Energia, Sonno, ...) are mostly already in `Strings.Garden.Activity.*` (Tier 2.A migrated 19 activities × name+desc) — **reuse existing keys**, don't duplicate.
+
 ## Tier 3.D — DEFERRED (wellness wizard screens, sessione futura)
 
 The remaining wellness wizard screens share the same screen-level migration pattern as Tier 2.A but spread across ~8 files. Volume non trivial (~80 strings) and per-screen ripetitivo, batch migration warranted.

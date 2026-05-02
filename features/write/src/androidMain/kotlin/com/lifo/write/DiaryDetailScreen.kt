@@ -79,7 +79,9 @@ import com.google.firebase.storage.FirebaseStorage
 import com.lifo.ui.components.DisplayAlertDialog
 import com.lifo.ui.emotion.MiniMoodShape
 import com.lifo.ui.emotion.MoodShapeIndicator
+import com.lifo.ui.i18n.Strings
 import com.lifo.ui.providers.MoodUiProvider
+import org.jetbrains.compose.resources.stringResource
 import com.lifo.util.model.BodySensation
 import com.lifo.util.model.Diary
 import com.lifo.util.model.Mood
@@ -617,7 +619,7 @@ private fun CollapsingHeroOverlay(
             IconButton(onClick = onBackPressed) {
                 Icon(
                     imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Indietro",
+                    contentDescription = stringResource(Strings.Action.back),
                     tint               = MaterialTheme.colorScheme.onSurface,
                 )
             }

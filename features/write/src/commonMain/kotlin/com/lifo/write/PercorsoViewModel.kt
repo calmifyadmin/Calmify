@@ -1,6 +1,8 @@
 package com.lifo.write
 
+import com.lifo.ui.i18n.Strings
 import com.lifo.util.auth.AuthProvider
+import com.lifo.util.formatDecimal
 import com.lifo.util.mvi.MviViewModel
 import com.lifo.util.model.RequestState
 import com.lifo.util.repository.*
@@ -75,9 +77,24 @@ class PercorsoViewModel(
             val weekGratitudes = safeList { gratitudeRepository.getEntriesInRange(weekStartMillis, nowMillis).first { it !is RequestState.Loading } }
 
             val menteItems = listOf(
-                PercorsoContract.SectionItem("Meditazione", "${weekMeditations.size} sessioni", minOf(weekMeditations.size / 7f, 1f)),
-                PercorsoContract.SectionItem("Reframing", "${reframes.size} fatti", minOf(reframes.size / 10f, 1f)),
-                PercorsoContract.SectionItem("Gratitudine", "${weekGratitudes.size}/7", minOf(weekGratitudes.size / 7f, 1f)),
+                PercorsoContract.SectionItem(
+                    Strings.Garden.Activity.meditationName,
+                    if (weekMeditations.size == 1) Strings.Percorso.statSessionsOne else Strings.Percorso.statSessionsMany,
+                    valueArg = weekMeditations.size,
+                    progress = minOf(weekMeditations.size / 7f, 1f),
+                ),
+                PercorsoContract.SectionItem(
+                    Strings.Garden.Activity.reframingName,
+                    if (reframes.size == 1) Strings.Percorso.statFactsOne else Strings.Percorso.statFactsMany,
+                    valueArg = reframes.size,
+                    progress = minOf(reframes.size / 10f, 1f),
+                ),
+                PercorsoContract.SectionItem(
+                    Strings.Garden.Activity.gratitudeName,
+                    Strings.Percorso.statProgressFraction,
+                    valueOverride = "${weekGratitudes.size}/7",
+                    progress = minOf(weekGratitudes.size / 7f, 1f),
+                ),
             )
 
             // CORPO
@@ -88,9 +105,24 @@ class PercorsoViewModel(
             val weekMovement = movementRepository.getLogsInRange(userId, weekStartDayKey, todayKey).firstOrNull() ?: emptyList()
 
             val corpoItems = listOf(
-                PercorsoContract.SectionItem("Energia", "%.1f".format(avgEnergy), minOf(avgEnergy.toFloat() / 10f, 1f)),
-                PercorsoContract.SectionItem("Sonno", "%.1fh".format(avgSleep), minOf(avgSleep.toFloat() / 8f, 1f)),
-                PercorsoContract.SectionItem("Movimento", "${weekMovement.size}/7", minOf(weekMovement.size / 7f, 1f)),
+                PercorsoContract.SectionItem(
+                    Strings.Garden.Activity.energyName,
+                    Strings.Percorso.statProgressFraction,
+                    valueOverride = formatDecimal(1, avgEnergy.toFloat()),
+                    progress = minOf(avgEnergy.toFloat() / 10f, 1f),
+                ),
+                PercorsoContract.SectionItem(
+                    Strings.Garden.Activity.sleepName,
+                    Strings.Percorso.statProgressFraction,
+                    valueOverride = "${formatDecimal(1, avgSleep.toFloat())}h",
+                    progress = minOf(avgSleep.toFloat() / 8f, 1f),
+                ),
+                PercorsoContract.SectionItem(
+                    Strings.Garden.Activity.movementName,
+                    Strings.Percorso.statProgressFraction,
+                    valueOverride = "${weekMovement.size}/7",
+                    progress = minOf(weekMovement.size / 7f, 1f),
+                ),
             )
 
             // SPIRITO
@@ -103,11 +135,16 @@ class PercorsoViewModel(
 
             val spiritoItems = listOf(
                 PercorsoContract.SectionItem(
-                    "Valori",
-                    if (values != null && values.confirmedValues.isNotEmpty()) "Confermati" else "Da scoprire",
-                    if (values != null && values.confirmedValues.isNotEmpty()) 1f else 0f,
+                    Strings.Garden.Activity.valuesName,
+                    if (values != null && values.confirmedValues.isNotEmpty()) Strings.Percorso.statConfirmed else Strings.Percorso.statToDiscover,
+                    progress = if (values != null && values.confirmedValues.isNotEmpty()) 1f else 0f,
                 ),
-                PercorsoContract.SectionItem("Connessioni", "${weekConnections.size} atti", minOf(weekConnections.size / 5f, 1f)),
+                PercorsoContract.SectionItem(
+                    Strings.Garden.Activity.connectionsName,
+                    if (weekConnections.size == 1) Strings.Percorso.statActsOne else Strings.Percorso.statActsMany,
+                    valueArg = weekConnections.size,
+                    progress = minOf(weekConnections.size / 5f, 1f),
+                ),
             )
 
             // ABITUDINI
@@ -116,8 +153,18 @@ class PercorsoViewModel(
             val habitProgress = if (habits.isNotEmpty()) todayCompletions.size.toFloat() / habits.size else 0f
 
             val abitudiniItems = listOf(
-                PercorsoContract.SectionItem("Oggi", "${todayCompletions.size}/${habits.size}", habitProgress),
-                PercorsoContract.SectionItem("Totali", "${habits.size} abitudini", minOf(habits.size / 5f, 1f)),
+                PercorsoContract.SectionItem(
+                    Strings.Percorso.statToday,
+                    Strings.Percorso.statProgressFraction,
+                    valueOverride = "${todayCompletions.size}/${habits.size}",
+                    progress = habitProgress,
+                ),
+                PercorsoContract.SectionItem(
+                    Strings.Percorso.statTotal,
+                    if (habits.size == 1) Strings.Percorso.statHabitsOne else Strings.Percorso.statHabitsMany,
+                    valueArg = habits.size,
+                    progress = minOf(habits.size / 5f, 1f),
+                ),
             )
 
             // Overall
@@ -126,10 +173,10 @@ class PercorsoViewModel(
 
             updateState {
                 copy(
-                    mente = PercorsoContract.SectionSummary("Mente", menteItems),
-                    corpo = PercorsoContract.SectionSummary("Corpo", corpoItems),
-                    spirito = PercorsoContract.SectionSummary("Spirito", spiritoItems),
-                    abitudini = PercorsoContract.SectionSummary("Abitudini", abitudiniItems),
+                    mente = PercorsoContract.SectionSummary(Strings.Percorso.pillarMind, menteItems),
+                    corpo = PercorsoContract.SectionSummary(Strings.Percorso.pillarBody, corpoItems),
+                    spirito = PercorsoContract.SectionSummary(Strings.Percorso.pillarSpirit, spiritoItems),
+                    abitudini = PercorsoContract.SectionSummary(Strings.Percorso.pillarHabits, abitudiniItems),
                     overallProgress = overall,
                 )
             }

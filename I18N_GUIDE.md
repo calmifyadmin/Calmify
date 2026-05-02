@@ -1,9 +1,9 @@
 # I18N_GUIDE.md — Internationalisation in Calmify
 
-> Updated 2026-04-30 — Sprint i18n COMPLETE (Fases A→E, 2026-04-19) + Phase J Tier 1+2 (2026-04-28) + Tier 3.A+3.B (2026-04-29) + Tier 3.C+3.E+3.G (2026-04-30).
-> Default EN, 12 languages, typed `Strings` facade with 25+ semantic groups (latest additions: `Block`, `Weekly`, `Sentiment`, `SnapshotWizard`, `JournalFilter`, `Feed`).
-> Sprint A→E: 140 keys / 31 files. Phase J Tier 1+2: +189 keys / +28 files. Tier 3.A+3.B: +28 keys / +8 files (DateFormatters.kt 250→35 LOC). Tier 3.C+3.E: +71 keys / +4 files. Tier 3.G: +60 keys / +16 files.
-> **Cumulative: ~488 keys × 6 Latin langs ≈ 2928 translations + 87 Kotlin files refactored.**
+> Updated 2026-05-02 — Sprint i18n COMPLETE (Fases A→E, 2026-04-19) + Phase J Tier 1+2 (2026-04-28) + Tier 3.A+3.B (2026-04-29) + Tier 3.C+3.E+3.G (2026-04-30) + Tier 3.H+3.I (2026-05-02).
+> Default EN, 12 languages, typed `Strings` facade with 27+ semantic groups (latest additions: `WriteWizard`, `Percorso`).
+> Sprint A→E: 140 keys / 31 files. Phase J Tier 1+2: +189 keys / +28 files. Tier 3.A+3.B: +28 keys / +8 files. Tier 3.C+3.E: +71 keys / +4 files. Tier 3.G: +60 keys / +16 files. Tier 3.H+3.I: +50 keys / +15 files (incl. PercorsoContract refactor with `valueOverride` field for non-plural stat values + 11-file `Indietro` sweep reusing `Strings.Action.back`).
+> **Cumulative: ~538 keys × 6 Latin langs ≈ 3228 translations + 102 Kotlin files refactored.**
 > Tier 3.D (wellness wizards + per-enum displayName fields ~80 strings/8 files) and Tier 3.F (Garden activity expanded card per-activity body+benefits ~78 keys) STILL deferred — see `memory/project_i18n_phase_j.md`.
 
 ## Pattern: enums that need localized labels

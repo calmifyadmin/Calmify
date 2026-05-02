@@ -48,6 +48,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lifo.ui.i18n.Strings
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Indicatore di progresso animato con pallini
@@ -238,11 +240,11 @@ fun WizardNavigationButtons(
             onClick = onBack,
             enabled = !isFirstStep
         ) {
-            Text(if (isFirstStep) "" else "Indietro")
+            Text(if (isFirstStep) "" else stringResource(Strings.Action.back))
         }
 
         FilledTonalButton(onClick = onNext) {
-            Text(if (isLastStep) "Completa" else "Avanti")
+            Text(stringResource(if (isLastStep) Strings.WriteWizard.complete else Strings.Coach.buttonNext))
             if (!isLastStep) {
                 Spacer(modifier = Modifier.width(4.dp))
                 Icon(

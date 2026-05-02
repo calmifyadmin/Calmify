@@ -651,6 +651,63 @@ object Strings {
     }
 
     /**
+     * Diary creation 10-step wizard (`WriteContent.kt`). Per-step heading +
+     * subtitle + CTA buttons. Step 1 (mood) lives in [SnapshotWizard].
+     */
+    object WriteWizard {
+        val titleHeading: StringResource get() = Res.string.write_step_title_heading
+        val titleSubtitle: StringResource get() = Res.string.write_step_title_subtitle
+        val descriptionHeading: StringResource get() = Res.string.write_step_description_heading
+        val descriptionSubtitle: StringResource get() = Res.string.write_step_description_subtitle
+        val intensityTitle: StringResource get() = Res.string.write_step_intensity_title
+        val intensitySubtitle: StringResource get() = Res.string.write_step_intensity_subtitle
+        val stressTitle: StringResource get() = Res.string.write_step_stress_title
+        val stressSubtitle: StringResource get() = Res.string.write_step_stress_subtitle
+        val energyTitle: StringResource get() = Res.string.write_step_energy_title
+        val energySubtitle: StringResource get() = Res.string.write_step_energy_subtitle
+        val calmTitle: StringResource get() = Res.string.write_step_calm_title
+        val calmSubtitle: StringResource get() = Res.string.write_step_calm_subtitle
+        val triggerTitle: StringResource get() = Res.string.write_step_trigger_title
+        val triggerSubtitle: StringResource get() = Res.string.write_step_trigger_subtitle
+        val sensationTitle: StringResource get() = Res.string.write_step_sensation_title
+        val sensationSubtitle: StringResource get() = Res.string.write_step_sensation_subtitle
+        val almostDoneTitle: StringResource get() = Res.string.write_step_almost_done_title
+        val almostDoneSubtitle: StringResource get() = Res.string.write_step_almost_done_subtitle
+        val saveDiary: StringResource get() = Res.string.write_save_diary
+        val smartCapture: StringResource get() = Res.string.write_smart_capture
+        val smartCaptureReanalyze: StringResource get() = Res.string.write_smart_capture_reanalyze
+        val smartCaptureMoodLabel: StringResource get() = Res.string.write_smart_capture_mood_label
+        val complete: StringResource get() = Res.string.write_wizard_complete
+    }
+
+    /**
+     * Percorso/Journey interior (`PercorsoScreen.kt`). Top weekly card,
+     * map section, 4 pillars, per-pillar stats with plural suffixes.
+     * Activity name labels reuse `Strings.Garden.Activity.*` from Tier 2.A.
+     */
+    object Percorso {
+        val weeklyProgress: StringResource get() = Res.string.percorso_weekly_progress
+        val journeyMap: StringResource get() = Res.string.percorso_journey_map
+        val pillarMind: StringResource get() = Res.string.percorso_pillar_mind
+        val pillarBody: StringResource get() = Res.string.percorso_pillar_body
+        val pillarSpirit: StringResource get() = Res.string.percorso_pillar_spirit
+        val pillarHabits: StringResource get() = Res.string.percorso_pillar_habits
+        val statSessionsOne: StringResource get() = Res.string.percorso_stat_sessions_one
+        val statSessionsMany: StringResource get() = Res.string.percorso_stat_sessions_many
+        val statFactsOne: StringResource get() = Res.string.percorso_stat_facts_one
+        val statFactsMany: StringResource get() = Res.string.percorso_stat_facts_many
+        val statActsOne: StringResource get() = Res.string.percorso_stat_acts_one
+        val statActsMany: StringResource get() = Res.string.percorso_stat_acts_many
+        val statHabitsOne: StringResource get() = Res.string.percorso_stat_habits_one
+        val statHabitsMany: StringResource get() = Res.string.percorso_stat_habits_many
+        val statProgressFraction: StringResource get() = Res.string.percorso_stat_progress_fraction
+        val statToDiscover: StringResource get() = Res.string.percorso_stat_to_discover
+        val statConfirmed: StringResource get() = Res.string.percorso_stat_confirmed
+        val statToday: StringResource get() = Res.string.percorso_stat_today
+        val statTotal: StringResource get() = Res.string.percorso_stat_total
+    }
+
+    /**
      * Block screen content. `BlockType` enum (in `core/util`) intentionally has
      * NO localized field — UI sites resolve `Strings.Block.typeXxx`/`suggestionXxx`
      * via inline `when (type) -> ...` to avoid `core/util -> core/ui` upward dep.

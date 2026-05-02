@@ -16,6 +16,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import com.lifo.ui.i18n.Strings
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 import com.lifo.ui.resources.Res
@@ -73,7 +74,7 @@ internal fun BrainDumpScreen(
                     IconButton(onClick = onBackPressed) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Indietro"
+                            contentDescription = stringResource(Strings.Action.back)
                         )
                     }
                 },

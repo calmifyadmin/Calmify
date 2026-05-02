@@ -146,7 +146,7 @@ fun PercorsoScreen(
                             )
                             Spacer(Modifier.height(12.dp))
                             Text(
-                                "Progresso Settimanale",
+                                stringResource(Strings.Percorso.weeklyProgress),
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.SemiBold
                                 ),
@@ -171,12 +171,16 @@ fun PercorsoScreen(
                 val error = MaterialTheme.colorScheme.error
                 val primary = MaterialTheme.colorScheme.primary
 
-                val graphNodes = remember(menteProgress, corpoProgress, spiritoProgress, abitudiniProgress, tertiary, secondary, error, primary) {
+                val pillarMind = stringResource(Strings.Percorso.pillarMind)
+                val pillarBody = stringResource(Strings.Percorso.pillarBody)
+                val pillarSpirit = stringResource(Strings.Percorso.pillarSpirit)
+                val pillarHabits = stringResource(Strings.Percorso.pillarHabits)
+                val graphNodes = remember(menteProgress, corpoProgress, spiritoProgress, abitudiniProgress, tertiary, secondary, error, primary, pillarMind, pillarBody, pillarSpirit, pillarHabits) {
                     listOf(
-                        GraphNode(id = "mente",     label = "Mente",     color = tertiary,  size = nodeSize(menteProgress),     group = "mind"),
-                        GraphNode(id = "corpo",     label = "Corpo",     color = secondary, size = nodeSize(corpoProgress),     group = "body"),
-                        GraphNode(id = "spirito",   label = "Spirito",   color = error,     size = nodeSize(spiritoProgress),   group = "spirit"),
-                        GraphNode(id = "abitudini", label = "Abitudini", color = primary,   size = nodeSize(abitudiniProgress), group = "habits"),
+                        GraphNode(id = "mente",     label = pillarMind,   color = tertiary,  size = nodeSize(menteProgress),     group = "mind"),
+                        GraphNode(id = "corpo",     label = pillarBody,   color = secondary, size = nodeSize(corpoProgress),     group = "body"),
+                        GraphNode(id = "spirito",   label = pillarSpirit, color = error,     size = nodeSize(spiritoProgress),   group = "spirit"),
+                        GraphNode(id = "abitudini", label = pillarHabits, color = primary,   size = nodeSize(abitudiniProgress), group = "habits"),
                     )
                 }
                 val graphEdges = remember {
@@ -206,7 +210,7 @@ fun PercorsoScreen(
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
                         Text(
-                            "Mappa del Percorso",
+                            stringResource(Strings.Percorso.journeyMap),
                             style = MaterialTheme.typography.titleSmall.copy(
                                 fontWeight = FontWeight.SemiBold
                             ),
@@ -240,10 +244,10 @@ fun PercorsoScreen(
                     color = MaterialTheme.colorScheme.primary,
                     highlighted = selectedNodeId == "mente",
                     tools = listOf(
-                        PercorsoToolAction("Meditazione", Icons.Outlined.SelfImprovement, onMeditationClick),
-                        PercorsoToolAction("Reframing", Icons.Outlined.Psychology, onReframeClick),
-                        PercorsoToolAction("Blocchi", Icons.Outlined.Extension, onBlockClick),
-                        PercorsoToolAction("Pensieri", Icons.Outlined.BubbleChart, onRecurringThoughtsClick),
+                        PercorsoToolAction(Strings.Garden.Activity.meditationName, Icons.Outlined.SelfImprovement, onMeditationClick),
+                        PercorsoToolAction(Strings.Garden.Activity.reframingName, Icons.Outlined.Psychology, onReframeClick),
+                        PercorsoToolAction(Strings.Garden.Activity.blocksName, Icons.Outlined.Extension, onBlockClick),
+                        PercorsoToolAction(Strings.Garden.Activity.recurringThoughtsName, Icons.Outlined.BubbleChart, onRecurringThoughtsClick),
                     ),
                 )
             }
@@ -254,10 +258,10 @@ fun PercorsoScreen(
                     color = MaterialTheme.colorScheme.tertiary,
                     highlighted = selectedNodeId == "corpo",
                     tools = listOf(
-                        PercorsoToolAction("Energia", Icons.Outlined.BatteryChargingFull, onEnergyCheckInClick),
-                        PercorsoToolAction("Sonno", Icons.Outlined.Bedtime, onSleepLogClick),
-                        PercorsoToolAction("Movimento", Icons.AutoMirrored.Outlined.DirectionsRun, onMovementClick),
-                        PercorsoToolAction("Dashboard", Icons.Outlined.Terrain, onDashboardClick),
+                        PercorsoToolAction(Strings.Garden.Activity.energyName, Icons.Outlined.BatteryChargingFull, onEnergyCheckInClick),
+                        PercorsoToolAction(Strings.Garden.Activity.sleepName, Icons.Outlined.Bedtime, onSleepLogClick),
+                        PercorsoToolAction(Strings.Garden.Activity.movementName, Icons.AutoMirrored.Outlined.DirectionsRun, onMovementClick),
+                        PercorsoToolAction(Strings.Garden.Activity.dashboardName, Icons.Outlined.Terrain, onDashboardClick),
                     ),
                 )
             }
@@ -268,12 +272,12 @@ fun PercorsoScreen(
                     color = MaterialTheme.colorScheme.secondary,
                     highlighted = selectedNodeId == "spirito",
                     tools = listOf(
-                        PercorsoToolAction("Valori", Icons.Outlined.Explore, onValuesClick),
-                        PercorsoToolAction("Ikigai", Icons.Outlined.Interests, onIkigaiClick),
-                        PercorsoToolAction("Awe", Icons.Outlined.Park, onAweClick),
-                        PercorsoToolAction("Silenzio", Icons.Outlined.SelfImprovement, onSilenceClick),
-                        PercorsoToolAction("Connessioni", Icons.Outlined.People, onConnectionClick),
-                        PercorsoToolAction("Ispirazione", Icons.Outlined.FormatQuote, onInspirationClick),
+                        PercorsoToolAction(Strings.Garden.Activity.valuesName, Icons.Outlined.Explore, onValuesClick),
+                        PercorsoToolAction(Strings.Garden.Activity.ikigaiName, Icons.Outlined.Interests, onIkigaiClick),
+                        PercorsoToolAction(Strings.Garden.Activity.aweName, Icons.Outlined.Park, onAweClick),
+                        PercorsoToolAction(Strings.Garden.Activity.silenceName, Icons.Outlined.SelfImprovement, onSilenceClick),
+                        PercorsoToolAction(Strings.Garden.Activity.connectionsName, Icons.Outlined.People, onConnectionClick),
+                        PercorsoToolAction(Strings.Garden.Activity.inspirationName, Icons.Outlined.FormatQuote, onInspirationClick),
                     ),
                 )
             }
@@ -284,8 +288,8 @@ fun PercorsoScreen(
                     color = MaterialTheme.colorScheme.error,
                     highlighted = selectedNodeId == "abitudini",
                     tools = listOf(
-                        PercorsoToolAction("Abitudini", Icons.Outlined.CheckCircle, onHabitsClick),
-                        PercorsoToolAction("Ambiente", Icons.Outlined.Spa, onEnvironmentClick),
+                        PercorsoToolAction(Strings.Garden.Activity.habitsName, Icons.Outlined.CheckCircle, onHabitsClick),
+                        PercorsoToolAction(Strings.Garden.Activity.environmentName, Icons.Outlined.Spa, onEnvironmentClick),
                     ),
                 )
             }
@@ -1110,7 +1114,7 @@ private fun DataQualityFooter(profile: PsychologicalProfile) {
 // ══════════════════════════════════════════════════════════════════════
 
 private data class PercorsoToolAction(
-    val label: String,
+    val labelRes: org.jetbrains.compose.resources.StringResource,
     val icon: ImageVector,
     val onClick: () -> Unit,
 )
@@ -1145,7 +1149,7 @@ private fun SectionCard(
                 }
                 Spacer(Modifier.width(12.dp))
                 Text(
-                    section.title,
+                    stringResource(section.titleRes),
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.SemiBold
                     ),
@@ -1160,13 +1164,13 @@ private fun SectionCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        item.label,
+                        stringResource(item.labelRes),
                         style = MaterialTheme.typography.bodyMedium,
                         color = colorScheme.onSurface,
                         modifier = Modifier.weight(1f),
                     )
                     Text(
-                        item.value,
+                        item.valueOverride ?: stringResource(item.valueRes, item.valueArg),
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Medium
                         ),
@@ -1199,7 +1203,7 @@ private fun SectionCard(
                             Icon(tool.icon, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
                             Text(
-                                tool.label,
+                                stringResource(tool.labelRes),
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.SemiBold
                                 ),

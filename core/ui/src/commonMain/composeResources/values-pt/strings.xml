@@ -1030,6 +1030,52 @@
     <string name="feed_tab_challenges">Desafios</string>
     <string name="feed_tab_questions">Perguntas</string>
 
+    <!-- Phase J Tier 3.H / Diary creation wizard -->
+    <string name="write_step_title_heading">Dê um título</string>
+    <string name="write_step_title_subtitle">Um título curto para seu diário</string>
+    <string name="write_step_description_heading">Conte</string>
+    <string name="write_step_description_subtitle">Escreva como se sente, o que aconteceu</string>
+    <string name="write_step_intensity_title">Intensidade emocional</string>
+    <string name="write_step_intensity_subtitle">Quão intensa é a emoção que você sente?</string>
+    <string name="write_step_stress_title">Nível de estresse</string>
+    <string name="write_step_stress_subtitle">Quão estressado/a você se sente?</string>
+    <string name="write_step_energy_title">Nível de energia</string>
+    <string name="write_step_energy_subtitle">Quanta energia você tem?</string>
+    <string name="write_step_calm_title">Calma / Ansiedade</string>
+    <string name="write_step_calm_subtitle">Quão calmo/a ou ansioso/a você se sente?</string>
+    <string name="write_step_trigger_title">Gatilho principal</string>
+    <string name="write_step_trigger_subtitle">O que influenciou seu humor?</string>
+    <string name="write_step_sensation_title">Sensação corporal</string>
+    <string name="write_step_sensation_subtitle">O que você sente no corpo?</string>
+    <string name="write_step_almost_done_title">Quase pronto!</string>
+    <string name="write_step_almost_done_subtitle">Adicione fotos e salve seu diário</string>
+    <string name="write_save_diary">Salvar diário</string>
+    <string name="write_smart_capture">Smart Capture</string>
+    <string name="write_smart_capture_reanalyze">Reanalisar</string>
+    <string name="write_smart_capture_mood_label">Humor: %1$s | %2$s</string>
+    <string name="write_wizard_complete">Concluir</string>
+
+    <!-- Phase J Tier 3.I / Percorso Journey interior -->
+    <string name="percorso_weekly_progress">Progresso Semanal</string>
+    <string name="percorso_journey_map">Mapa do Caminho</string>
+    <string name="percorso_pillar_mind">Mente</string>
+    <string name="percorso_pillar_body">Corpo</string>
+    <string name="percorso_pillar_spirit">Espírito</string>
+    <string name="percorso_pillar_habits">Hábitos</string>
+    <string name="percorso_stat_sessions_one">%1$d sessão</string>
+    <string name="percorso_stat_sessions_many">%1$d sessões</string>
+    <string name="percorso_stat_facts_one">%1$d feito</string>
+    <string name="percorso_stat_facts_many">%1$d feitos</string>
+    <string name="percorso_stat_acts_one">%1$d ato</string>
+    <string name="percorso_stat_acts_many">%1$d atos</string>
+    <string name="percorso_stat_habits_one">%1$d hábito</string>
+    <string name="percorso_stat_habits_many">%1$d hábitos</string>
+    <string name="percorso_stat_progress_fraction">%1$d/%2$d</string>
+    <string name="percorso_stat_to_discover">A descobrir</string>
+    <string name="percorso_stat_confirmed">Confirmados</string>
+    <string name="percorso_stat_today">Hoje</string>
+    <string name="percorso_stat_total">Totais</string>
+
     <!-- Phase J Tier 1 / Connection -->
     <string name="connection_quality_time_title">Tempo de qualidade juntos</string>
     <string name="connection_quality_time_label">Tempo de qualidade</string>
