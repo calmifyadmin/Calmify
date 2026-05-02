@@ -891,6 +891,248 @@ object Strings {
     }
 
     /**
+     * Meditation feature (Phase 1 redesign). 5-phase wizard:
+     * Welcome → Screening → Configure → Session → Overview.
+     *
+     * Sub-objects:
+     * - [Welcome], [Screening], [Configure], [Session], [Stop], [Overview] — per-screen chrome
+     * - [Technique] — 6 evidence-based breathing techniques (name + short + summary + mechanism + 3 coach lines)
+     * - [Goal], [Experience], [Audio] — Configure choices
+     * - [Risk] — 8 medical screening flags (label + sub)
+     * - [Cue] — pacer overlay words (Breathe in/Hold/Breathe out/Arrive/Release/Breathe)
+     * - [SettleCoach], [IntegrateCoach] — sub-phase coach line rotation (3 each)
+     * - [Time] — duration formatting
+     *
+     * Domain enum mappers (resolve enum → StringResource at UI layer to keep
+     * `core/util` free of resource dependencies):
+     * - [techniqueName], [techniqueShort], [techniqueSummary], [techniqueMechanism], [techniqueCoach]
+     * - [goalLabel], [experienceLabel], [audioLabel]
+     * - [riskLabel], [riskSub]
+     */
+    object Meditation {
+
+        // ── Welcome (13) ────────────────────────────────────────────────
+        object Welcome {
+            val topbar: StringResource get() = Res.string.meditation_welcome_topbar
+            val pill: StringResource get() = Res.string.meditation_welcome_pill
+            val title: StringResource get() = Res.string.meditation_welcome_title
+            val lede: StringResource get() = Res.string.meditation_welcome_lede
+            val cardTitle: StringResource get() = Res.string.meditation_welcome_card_title
+            val b1Title: StringResource get() = Res.string.meditation_welcome_b1_title
+            val b1Sub: StringResource get() = Res.string.meditation_welcome_b1_sub
+            val b2Title: StringResource get() = Res.string.meditation_welcome_b2_title
+            val b2Sub: StringResource get() = Res.string.meditation_welcome_b2_sub
+            val b3Title: StringResource get() = Res.string.meditation_welcome_b3_title
+            val b3Sub: StringResource get() = Res.string.meditation_welcome_b3_sub
+            val fineprint: StringResource get() = Res.string.meditation_welcome_fineprint
+            val cta: StringResource get() = Res.string.meditation_welcome_cta
+        }
+
+        // ── Screening (10) ──────────────────────────────────────────────
+        object Screening {
+            val topbar: StringResource get() = Res.string.meditation_screening_topbar
+            val title: StringResource get() = Res.string.meditation_screening_title
+            val lede: StringResource get() = Res.string.meditation_screening_lede
+            val bannerLead: StringResource get() = Res.string.meditation_screening_banner_lead
+            val bannerBody: StringResource get() = Res.string.meditation_screening_banner_body
+            val noneApply: StringResource get() = Res.string.meditation_screening_none_apply
+            val noneApplySub: StringResource get() = Res.string.meditation_screening_none_apply_sub
+            val warnLead: StringResource get() = Res.string.meditation_screening_warn_lead
+            val warnBody: StringResource get() = Res.string.meditation_screening_warn_body
+            val fineprint: StringResource get() = Res.string.meditation_screening_fineprint
+            val continueBtn: StringResource get() = Res.string.meditation_screening_continue
+        }
+
+        // ── Configure (~28) ─────────────────────────────────────────────
+        object Configure {
+            val topbar: StringResource get() = Res.string.meditation_configure_topbar
+            val title: StringResource get() = Res.string.meditation_configure_title
+            val lockpill: StringResource get() = Res.string.meditation_configure_lockpill
+            val cardDuration: StringResource get() = Res.string.meditation_configure_card_duration
+            val cardDurationSub: StringResource get() = Res.string.meditation_configure_card_duration_sub
+            val durationMinSuffix: StringResource get() = Res.string.meditation_duration_min_suffix
+            val cardGoal: StringResource get() = Res.string.meditation_configure_card_goal
+            val cardGoalSub: StringResource get() = Res.string.meditation_configure_card_goal_sub
+            val cardExperience: StringResource get() = Res.string.meditation_configure_card_experience
+            val firstTimeBanner: StringResource get() = Res.string.meditation_configure_first_time_banner
+            val cardAudio: StringResource get() = Res.string.meditation_configure_card_audio
+            val cardTechnique: StringResource get() = Res.string.meditation_configure_card_technique
+            val techSubOverridable: StringResource get() = Res.string.meditation_configure_tech_sub_overridable
+            val techSubRestricted: StringResource get() = Res.string.meditation_configure_tech_sub_restricted
+            val techSubFirstTime: StringResource get() = Res.string.meditation_configure_tech_sub_first_time
+            val techAutoPill: StringResource get() = Res.string.meditation_configure_tech_auto_pill
+            val tech478Cap: StringResource get() = Res.string.meditation_configure_tech_478_cap
+            val fineprint: StringResource get() = Res.string.meditation_configure_fineprint
+            val redoScreeningLink: StringResource get() = Res.string.meditation_configure_redo_screening_link
+            val cta: StringResource get() = Res.string.meditation_configure_cta
+        }
+
+        // ── Goal labels (5) ─────────────────────────────────────────────
+        object Goal {
+            val stress: StringResource get() = Res.string.meditation_goal_stress
+            val focus: StringResource get() = Res.string.meditation_goal_focus
+            val sleep: StringResource get() = Res.string.meditation_goal_sleep
+            val anxiety: StringResource get() = Res.string.meditation_goal_anxiety
+            val grounding: StringResource get() = Res.string.meditation_goal_grounding
+        }
+
+        // ── Experience labels (3) ───────────────────────────────────────
+        object Experience {
+            val first: StringResource get() = Res.string.meditation_exp_first
+            val occasional: StringResource get() = Res.string.meditation_exp_occasional
+            val regular: StringResource get() = Res.string.meditation_exp_regular
+        }
+
+        // ── Audio labels (3) ────────────────────────────────────────────
+        object Audio {
+            val voice: StringResource get() = Res.string.meditation_audio_voice
+            val chimes: StringResource get() = Res.string.meditation_audio_chimes
+            val silent: StringResource get() = Res.string.meditation_audio_silent
+        }
+
+        // ── Risk flags (8 × 2 = 16) ─────────────────────────────────────
+        object Risk {
+            val pregnancy: StringResource get() = Res.string.meditation_risk_pregnancy
+            val pregnancySub: StringResource get() = Res.string.meditation_risk_pregnancy_sub
+            val cardio: StringResource get() = Res.string.meditation_risk_cardio
+            val cardioSub: StringResource get() = Res.string.meditation_risk_cardio_sub
+            val respiratory: StringResource get() = Res.string.meditation_risk_respiratory
+            val epilepsy: StringResource get() = Res.string.meditation_risk_epilepsy
+            val panic: StringResource get() = Res.string.meditation_risk_panic
+            val recentSurgery: StringResource get() = Res.string.meditation_risk_recent_surgery
+            val eye: StringResource get() = Res.string.meditation_risk_eye
+            val driving: StringResource get() = Res.string.meditation_risk_driving
+        }
+
+        // ── Techniques (6 × 6 fields = 36) ──────────────────────────────
+        object Technique {
+            // Coherent
+            val coherentName: StringResource get() = Res.string.meditation_tech_coherent_name
+            val coherentShort: StringResource get() = Res.string.meditation_tech_coherent_short
+            val coherentSummary: StringResource get() = Res.string.meditation_tech_coherent_summary
+            val coherentMechanism: StringResource get() = Res.string.meditation_tech_coherent_mechanism
+            val coherentCoach1: StringResource get() = Res.string.meditation_tech_coherent_coach1
+            val coherentCoach2: StringResource get() = Res.string.meditation_tech_coherent_coach2
+            val coherentCoach3: StringResource get() = Res.string.meditation_tech_coherent_coach3
+            // Extended exhale
+            val exhaleName: StringResource get() = Res.string.meditation_tech_exhale_name
+            val exhaleShort: StringResource get() = Res.string.meditation_tech_exhale_short
+            val exhaleSummary: StringResource get() = Res.string.meditation_tech_exhale_summary
+            val exhaleMechanism: StringResource get() = Res.string.meditation_tech_exhale_mechanism
+            val exhaleCoach1: StringResource get() = Res.string.meditation_tech_exhale_coach1
+            val exhaleCoach2: StringResource get() = Res.string.meditation_tech_exhale_coach2
+            val exhaleCoach3: StringResource get() = Res.string.meditation_tech_exhale_coach3
+            // Box
+            val boxName: StringResource get() = Res.string.meditation_tech_box_name
+            val boxShort: StringResource get() = Res.string.meditation_tech_box_short
+            val boxSummary: StringResource get() = Res.string.meditation_tech_box_summary
+            val boxMechanism: StringResource get() = Res.string.meditation_tech_box_mechanism
+            val boxCoach1: StringResource get() = Res.string.meditation_tech_box_coach1
+            val boxCoach2: StringResource get() = Res.string.meditation_tech_box_coach2
+            val boxCoach3: StringResource get() = Res.string.meditation_tech_box_coach3
+            // 4-7-8
+            val w478Name: StringResource get() = Res.string.meditation_tech_478_name
+            val w478Short: StringResource get() = Res.string.meditation_tech_478_short
+            val w478Summary: StringResource get() = Res.string.meditation_tech_478_summary
+            val w478Mechanism: StringResource get() = Res.string.meditation_tech_478_mechanism
+            val w478Coach1: StringResource get() = Res.string.meditation_tech_478_coach1
+            val w478Coach2: StringResource get() = Res.string.meditation_tech_478_coach2
+            val w478Coach3: StringResource get() = Res.string.meditation_tech_478_coach3
+            // Belly
+            val bellyName: StringResource get() = Res.string.meditation_tech_belly_name
+            val bellyShort: StringResource get() = Res.string.meditation_tech_belly_short
+            val bellySummary: StringResource get() = Res.string.meditation_tech_belly_summary
+            val bellyMechanism: StringResource get() = Res.string.meditation_tech_belly_mechanism
+            val bellyCoach1: StringResource get() = Res.string.meditation_tech_belly_coach1
+            val bellyCoach2: StringResource get() = Res.string.meditation_tech_belly_coach2
+            val bellyCoach3: StringResource get() = Res.string.meditation_tech_belly_coach3
+            // Body scan
+            val scanName: StringResource get() = Res.string.meditation_tech_scan_name
+            val scanShort: StringResource get() = Res.string.meditation_tech_scan_short
+            val scanSummary: StringResource get() = Res.string.meditation_tech_scan_summary
+            val scanMechanism: StringResource get() = Res.string.meditation_tech_scan_mechanism
+            val scanCoach1: StringResource get() = Res.string.meditation_tech_scan_coach1
+            val scanCoach2: StringResource get() = Res.string.meditation_tech_scan_coach2
+            val scanCoach3: StringResource get() = Res.string.meditation_tech_scan_coach3
+        }
+
+        // ── Session phase labels + cues (15) ────────────────────────────
+        object Session {
+            val phaseSettling: StringResource get() = Res.string.meditation_session_phase_settling
+            val phasePractice: StringResource get() = Res.string.meditation_session_phase_practice
+            val phaseIntegration: StringResource get() = Res.string.meditation_session_phase_integration
+            val paused: StringResource get() = Res.string.meditation_session_paused
+            val stopButton: StringResource get() = Res.string.meditation_session_stop_button
+            val a11yPause: StringResource get() = Res.string.meditation_a11y_pause
+            val a11yResume: StringResource get() = Res.string.meditation_a11y_resume
+            val a11yStop: StringResource get() = Res.string.meditation_a11y_stop_session
+            val audioVoice: StringResource get() = Res.string.meditation_session_audio_voice
+            val audioChimes: StringResource get() = Res.string.meditation_session_audio_chimes
+            val metaTemplate: StringResource get() = Res.string.meditation_session_meta_template
+        }
+
+        object Cue {
+            val breatheIn: StringResource get() = Res.string.meditation_cue_breathe_in
+            val hold: StringResource get() = Res.string.meditation_cue_hold
+            val breatheOut: StringResource get() = Res.string.meditation_cue_breathe_out
+            val arrive: StringResource get() = Res.string.meditation_cue_arrive
+            val release: StringResource get() = Res.string.meditation_cue_release
+            val breathe: StringResource get() = Res.string.meditation_cue_breathe
+        }
+
+        object SettleCoach {
+            val line1: StringResource get() = Res.string.meditation_settle_coach1
+            val line2: StringResource get() = Res.string.meditation_settle_coach2
+            val line3: StringResource get() = Res.string.meditation_settle_coach3
+        }
+
+        object IntegrateCoach {
+            val line1: StringResource get() = Res.string.meditation_integrate_coach1
+            val line2: StringResource get() = Res.string.meditation_integrate_coach2
+            val line3: StringResource get() = Res.string.meditation_integrate_coach3
+        }
+
+        // ── Stop modal (4) ──────────────────────────────────────────────
+        object Stop {
+            val title: StringResource get() = Res.string.meditation_stop_title
+            val body: StringResource get() = Res.string.meditation_stop_body
+            val keep: StringResource get() = Res.string.meditation_stop_keep
+            val end: StringResource get() = Res.string.meditation_stop_end
+        }
+
+        // ── Overview (~18) ──────────────────────────────────────────────
+        object Overview {
+            val topbar: StringResource get() = Res.string.meditation_overview_topbar
+            val pill: StringResource get() = Res.string.meditation_overview_pill
+            val titleDone: StringResource get() = Res.string.meditation_overview_title_done
+            val titleStopped: StringResource get() = Res.string.meditation_overview_title_stopped
+            val ledeWithCycles: StringResource get() = Res.string.meditation_overview_lede_with_cycles
+            val ledeNoCycles: StringResource get() = Res.string.meditation_overview_lede_no_cycles
+            val cardNoticeTitle: StringResource get() = Res.string.meditation_overview_card_notice_title
+            val noticeB1: StringResource get() = Res.string.meditation_overview_notice_b1
+            val noticeB2: StringResource get() = Res.string.meditation_overview_notice_b2
+            val noticeB3: StringResource get() = Res.string.meditation_overview_notice_b3
+            val cardPracticeTitle: StringResource get() = Res.string.meditation_overview_card_practice_title
+            val cardPracticeBody: StringResource get() = Res.string.meditation_overview_card_practice_body
+            val cardDailyTitle: StringResource get() = Res.string.meditation_overview_card_daily_title
+            val dailyB1Title: StringResource get() = Res.string.meditation_overview_daily_b1_title
+            val dailyB1Sub: StringResource get() = Res.string.meditation_overview_daily_b1_sub
+            val dailyB2Title: StringResource get() = Res.string.meditation_overview_daily_b2_title
+            val dailyB2SubTemplate: StringResource get() = Res.string.meditation_overview_daily_b2_sub_template
+            val banner: StringResource get() = Res.string.meditation_overview_banner
+            val btnDifferent: StringResource get() = Res.string.meditation_overview_btn_different
+            val btnRedo: StringResource get() = Res.string.meditation_overview_btn_redo
+        }
+
+        // ── Time formatting (3) ─────────────────────────────────────────
+        object Time {
+            val minutesOnly: StringResource get() = Res.string.meditation_time_minutes_only
+            val minSec: StringResource get() = Res.string.meditation_time_min_sec
+            val secondsOnly: StringResource get() = Res.string.meditation_time_seconds_only
+        }
+    }
+
+    /**
      * Percorso/Journey interior (`PercorsoScreen.kt`). Top weekly card,
      * map section, 4 pillars, per-pillar stats with plural suffixes.
      * Activity name labels reuse `Strings.Garden.Activity.*` from Tier 2.A.

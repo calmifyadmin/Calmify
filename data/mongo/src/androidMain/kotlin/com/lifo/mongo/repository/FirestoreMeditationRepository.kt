@@ -26,6 +26,8 @@ class FirestoreMeditationRepository(
             "durationSeconds" to session.durationSeconds,
             "completedSeconds" to session.completedSeconds,
             "postNote" to session.postNote,
+            "stopped" to session.stopped,
+            "cyclesCompleted" to session.cyclesCompleted,
         )
         collection.document(session.id).set(data).await()
     }
@@ -48,10 +50,12 @@ class FirestoreMeditationRepository(
                                 ownerId = doc.getString("ownerId") ?: "",
                                 timestampMillis = doc.getLong("timestampMillis") ?: 0L,
                                 type = try { MeditationType.valueOf(doc.getString("type") ?: "TIMER") } catch (_: Exception) { MeditationType.TIMER },
-                                breathingPattern = doc.getString("breathingPattern")?.let { try { BreathingPattern.valueOf(it) } catch (_: Exception) { null } },
+                                breathingPattern = doc.getString("breathingPattern")?.let { BreathingPattern.fromCanonicalName(it) },
                                 durationSeconds = (doc.getLong("durationSeconds") ?: 300).toInt(),
                                 completedSeconds = (doc.getLong("completedSeconds") ?: 0).toInt(),
                                 postNote = doc.getString("postNote") ?: "",
+                                stopped = doc.getBoolean("stopped") ?: false,
+                                cyclesCompleted = doc.getLong("cyclesCompleted")?.toInt(),
                             )
                         } catch (_: Exception) { null }
                     } ?: emptyList()

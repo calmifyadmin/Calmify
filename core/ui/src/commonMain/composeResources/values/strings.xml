@@ -1423,4 +1423,192 @@
     <string name="tooltip_minimum_action_title">Minimum Action</string>
     <string name="tooltip_minimum_action_body">The smallest possible entry point for a habit. Instead of \"meditating for 30 minutes\", the minimum action is \"sit on the cushion\". Lowering the initial threshold makes it almost impossible not to start — and you often end up doing much more.</string>
 
+    <!-- ================================================================== -->
+    <!-- Meditation Redesign — Phase 1                                      -->
+    <!-- Design source: C:\Design\Calmify\Meditation\Calmify Meditation.html -->
+    <!-- ~145 keys: Welcome / Screening / Configure / Session / Overview    -->
+    <!-- + 6 techniques × 6 fields + 8 risk flags + goals/exp/audio + cues  -->
+    <!-- ================================================================== -->
+
+    <!-- Welcome (13) -->
+    <string name="meditation_welcome_topbar">Breathe</string>
+    <string name="meditation_welcome_pill">Guided breath</string>
+    <string name="meditation_welcome_title">A few minutes.\nA softer body.</string>
+    <string name="meditation_welcome_lede">Pick how long you have, what you need, and we\'ll choose a breath technique to match. Always second person, always your pace.</string>
+    <string name="meditation_welcome_card_title">What you can expect</string>
+    <string name="meditation_welcome_b1_title">A short safety check first</string>
+    <string name="meditation_welcome_b1_sub">So we offer only what\'s right for your body today.</string>
+    <string name="meditation_welcome_b2_title">A guided breath, paced visually</string>
+    <string name="meditation_welcome_b2_sub">Calming circle, gentle counts, your nose-led breath.</string>
+    <string name="meditation_welcome_b3_title">A short reflection at the end</string>
+    <string name="meditation_welcome_b3_sub">What you may notice, and what builds with practice.</string>
+    <string name="meditation_welcome_fineprint">This is a wellness tool, not medical treatment. If you feel dizzy, lightheaded, tingling, nauseous, or short of breath at any point, stop and breathe naturally.</string>
+    <string name="meditation_welcome_cta">Begin</string>
+
+    <!-- Screening chrome (10) + 8 risk × 2 fields = 26 -->
+    <string name="meditation_screening_topbar">Safety check</string>
+    <string name="meditation_screening_title">Before we begin.</string>
+    <string name="meditation_screening_lede">Tick anything that applies. We\'ll keep you on a gentle track if any do — natural-breath only, no pacing or holds.</string>
+    <string name="meditation_screening_banner_lead">Stop anytime</string>
+    <string name="meditation_screening_banner_body">if you feel dizzy, lightheaded, tingling, nauseous, or short of breath. The Stop button is always reachable.</string>
+    <string name="meditation_screening_none_apply">None of these apply to me right now.</string>
+    <string name="meditation_screening_none_apply_sub">You can re-screen any time before a session.</string>
+    <string name="meditation_screening_warn_lead">Gentle track only.</string>
+    <string name="meditation_screening_warn_body">Based on what you ticked, we\'ll guide you through natural-breath observation today — no pacing override, no holds. Talk to a clinician about pacing techniques in person.</string>
+    <string name="meditation_screening_fineprint">Calmify is a wellness tool, not a medical service. This screening helps us avoid breathing techniques that could be unsafe in certain conditions, but it isn\'t a substitute for advice from your clinician.</string>
+    <string name="meditation_screening_continue">Continue</string>
+
+    <string name="meditation_risk_pregnancy">Pregnancy</string>
+    <string name="meditation_risk_pregnancy_sub">especially first trimester</string>
+    <string name="meditation_risk_cardio">Cardiovascular concerns</string>
+    <string name="meditation_risk_cardio_sub">uncontrolled hypertension, recent cardiac event, arrhythmia, heart failure</string>
+    <string name="meditation_risk_respiratory">Severe asthma, COPD, or active respiratory infection</string>
+    <string name="meditation_risk_epilepsy">Epilepsy or seizure history</string>
+    <string name="meditation_risk_panic">Panic disorder with hyperventilation episodes</string>
+    <string name="meditation_risk_recent_surgery">Recent abdominal, chest, or eye surgery</string>
+    <string name="meditation_risk_eye">Glaucoma or retinal detachment history</string>
+    <string name="meditation_risk_driving">Currently driving, operating machinery, or in/near water</string>
+
+    <!-- Configure (~28) -->
+    <string name="meditation_configure_topbar">Set up your session</string>
+    <string name="meditation_configure_title">How long, what for.</string>
+    <string name="meditation_configure_lockpill">Gentle track</string>
+    <string name="meditation_configure_card_duration">Duration</string>
+    <string name="meditation_configure_card_duration_sub">Pick a length you can give without watching the clock.</string>
+    <string name="meditation_duration_min_suffix">min</string>
+    <string name="meditation_configure_card_goal">What you\'re here for</string>
+    <string name="meditation_configure_card_goal_sub">We\'ll match a technique to your goal — you can change it below.</string>
+    <string name="meditation_goal_stress">Stress relief</string>
+    <string name="meditation_goal_focus">Focus</string>
+    <string name="meditation_goal_sleep">Sleep</string>
+    <string name="meditation_goal_anxiety">Anxiety</string>
+    <string name="meditation_goal_grounding">Grounding</string>
+    <string name="meditation_configure_card_experience">How familiar with breathwork are you?</string>
+    <string name="meditation_exp_first">First time</string>
+    <string name="meditation_exp_occasional">Occasional</string>
+    <string name="meditation_exp_regular">Regular</string>
+    <string name="meditation_configure_first_time_banner">Welcome. We\'ll start you on coherent breathing — equal, gentle breaths, easiest on the body.</string>
+    <string name="meditation_configure_card_audio">Audio</string>
+    <string name="meditation_audio_voice">Voice guidance</string>
+    <string name="meditation_audio_chimes">Chimes only</string>
+    <string name="meditation_audio_silent">Silent</string>
+    <string name="meditation_configure_card_technique">Technique</string>
+    <string name="meditation_configure_tech_sub_overridable">We picked this for you. Tap to swap if you prefer another.</string>
+    <string name="meditation_configure_tech_sub_restricted">Locked to the gentle track today.</string>
+    <string name="meditation_configure_tech_sub_first_time">First-timers stay on coherent breathing.</string>
+    <string name="meditation_configure_tech_auto_pill">Auto</string>
+    <string name="meditation_configure_tech_478_cap">4 cycles max</string>
+    <string name="meditation_configure_fineprint">Wellness tool, not medical care. Stop and breathe naturally if anything feels off.</string>
+    <string name="meditation_configure_redo_screening_link">Re-do safety check</string>
+    <string name="meditation_configure_cta">Begin breathing</string>
+
+    <!-- Techniques: 6 × 6 fields = 36 -->
+    <string name="meditation_tech_coherent_name">Coherent breathing</string>
+    <string name="meditation_tech_coherent_short">5.5 in · 5.5 out</string>
+    <string name="meditation_tech_coherent_summary">Equal, gentle breaths around 5.5 per minute — nervous-system reset.</string>
+    <string name="meditation_tech_coherent_mechanism">At about 5.5 breaths a minute, heart rate variability rises and the vagus nerve signals safety, easing the body out of stress mode.</string>
+    <string name="meditation_tech_coherent_coach1">Through the nose. Belly soft, shoulders quiet.</string>
+    <string name="meditation_tech_coherent_coach2">Let the breath find a smooth, even rhythm.</string>
+    <string name="meditation_tech_coherent_coach3">If your body wants more air, take more air.</string>
+
+    <string name="meditation_tech_exhale_name">Extended exhale</string>
+    <string name="meditation_tech_exhale_short">4 in · 6 out</string>
+    <string name="meditation_tech_exhale_summary">Longer exhales than inhales — the most reliable way to downshift.</string>
+    <string name="meditation_tech_exhale_mechanism">A longer exhale activates the parasympathetic (\"rest and digest\") branch of your nervous system, slowing heart rate and softening tension.</string>
+    <string name="meditation_tech_exhale_coach1">Inhale through the nose. Exhale slowly through the nose or softly through pursed lips.</string>
+    <string name="meditation_tech_exhale_coach2">Let the exhale be unhurried — never forced.</string>
+    <string name="meditation_tech_exhale_coach3">Belly rises on inhale; releases on exhale.</string>
+
+    <string name="meditation_tech_box_name">Box breathing</string>
+    <string name="meditation_tech_box_short">4 · 4 · 4 · 4</string>
+    <string name="meditation_tech_box_summary">Four-count square — steady, focused, used by clinicians and pilots.</string>
+    <string name="meditation_tech_box_mechanism">Equal, contained intervals create a metronome the mind can follow, narrowing attention and calming reactivity.</string>
+    <string name="meditation_tech_box_coach1">Holds are gentle pauses, not breath-holding contests.</string>
+    <string name="meditation_tech_box_coach2">If a hold feels too long, shorten it — the rhythm is yours.</string>
+    <string name="meditation_tech_box_coach3">Through the nose, soft and even.</string>
+
+    <string name="meditation_tech_478_name">4-7-8 breath</string>
+    <string name="meditation_tech_478_short">4 in · 7 hold · 8 out</string>
+    <string name="meditation_tech_478_summary">Dr. Weil\'s pattern. Strong parasympathetic effect — capped at 4 cycles.</string>
+    <string name="meditation_tech_478_mechanism">A long hold and longer exhale amplify the vagal response. Even a few cycles can noticeably slow your pulse.</string>
+    <string name="meditation_tech_478_coach1">Inhale silently through the nose.</string>
+    <string name="meditation_tech_478_coach2">Exhale slowly through the mouth, lips slightly pursed.</string>
+    <string name="meditation_tech_478_coach3">Four cycles is plenty. If you feel lightheaded, return to natural breath.</string>
+
+    <string name="meditation_tech_belly_name">Belly breathing</string>
+    <string name="meditation_tech_belly_short">Diaphragmatic, no count</string>
+    <string name="meditation_tech_belly_summary">Soft, deep breath into the belly. No pacing — just steady awareness.</string>
+    <string name="meditation_tech_belly_mechanism">Engaging the diaphragm instead of the chest deepens oxygen exchange and signals safety to the body.</string>
+    <string name="meditation_tech_belly_coach1">One hand on your belly, one on your chest.</string>
+    <string name="meditation_tech_belly_coach2">On the inhale, only the belly hand should rise.</string>
+    <string name="meditation_tech_belly_coach3">No counting. Let the rhythm be yours.</string>
+
+    <string name="meditation_tech_scan_name">Body scan</string>
+    <string name="meditation_tech_scan_short">Natural breath, no count</string>
+    <string name="meditation_tech_scan_summary">Sweep attention through the body. Breath stays exactly as it is.</string>
+    <string name="meditation_tech_scan_mechanism">Naming sensation without changing it interrupts rumination and grounds you in the present moment.</string>
+    <string name="meditation_tech_scan_coach1">Notice your feet. Your legs. Your hips.</string>
+    <string name="meditation_tech_scan_coach2">Belly. Chest. Shoulders. Jaw.</string>
+    <string name="meditation_tech_scan_coach3">Don\'t change anything. Just notice.</string>
+
+    <!-- Session phase labels + cues + coach (15) -->
+    <string name="meditation_session_phase_settling">Settling</string>
+    <string name="meditation_session_phase_practice">Practice</string>
+    <string name="meditation_session_phase_integration">Integration</string>
+    <string name="meditation_cue_breathe_in">Breathe in</string>
+    <string name="meditation_cue_hold">Hold</string>
+    <string name="meditation_cue_breathe_out">Breathe out</string>
+    <string name="meditation_cue_arrive">Arrive</string>
+    <string name="meditation_cue_release">Release</string>
+    <string name="meditation_cue_breathe">Breathe</string>
+    <string name="meditation_settle_coach1">Find a comfortable seat. Relax your shoulders, soften your jaw.</string>
+    <string name="meditation_settle_coach2">Let your eyes rest, or close them. Notice your natural breath, without changing it.</string>
+    <string name="meditation_settle_coach3">No pacing yet. Just arriving, here.</string>
+    <string name="meditation_integrate_coach1">Let the pacing go. Breathe how your body wants to.</string>
+    <string name="meditation_integrate_coach2">Notice what\'s shifted — a softer chest, a slower thought, anything at all.</string>
+    <string name="meditation_integrate_coach3">When you\'re ready, slowly open your eyes. Return to the room.</string>
+
+    <!-- Session controls + meta (8) -->
+    <string name="meditation_session_paused">Paused</string>
+    <string name="meditation_session_stop_button">Stop</string>
+    <string name="meditation_a11y_pause">Pause</string>
+    <string name="meditation_a11y_resume">Resume</string>
+    <string name="meditation_a11y_stop_session">Stop session</string>
+    <string name="meditation_session_audio_voice">voice</string>
+    <string name="meditation_session_audio_chimes">chimes</string>
+    <string name="meditation_session_meta_template">%1$s · %2$s</string>
+
+    <!-- Stop modal (4) -->
+    <string name="meditation_stop_title">End the session?</string>
+    <string name="meditation_stop_body">You can stop any time. We\'ll show a short reflection on what you completed so far.</string>
+    <string name="meditation_stop_keep">Keep breathing</string>
+    <string name="meditation_stop_end">End session</string>
+
+    <!-- Overview (~18) -->
+    <string name="meditation_overview_topbar">Reflection</string>
+    <string name="meditation_overview_pill">Session complete</string>
+    <string name="meditation_overview_title_done">Done.\nWell done.</string>
+    <string name="meditation_overview_title_stopped">You stopped early.\nThat counts too.</string>
+    <string name="meditation_overview_lede_with_cycles">%1$s · %2$s · %3$d cycles</string>
+    <string name="meditation_overview_lede_no_cycles">%1$s · %2$s</string>
+    <string name="meditation_overview_card_notice_title">What you may notice now</string>
+    <string name="meditation_overview_notice_b1">A slower pulse, or a softer chest and shoulders.</string>
+    <string name="meditation_overview_notice_b2">A small gap between thought and reaction.</string>
+    <string name="meditation_overview_notice_b3">A clearer signal when your body is ready to rest.</string>
+    <string name="meditation_overview_card_practice_title">With regular practice (4–8 weeks)</string>
+    <string name="meditation_overview_card_practice_body">People who practice daily often report calmer baseline mood, steadier sleep, and a lower stress response in everyday situations. Frequency matters more than duration — a few minutes daily beats a long session weekly.</string>
+    <string name="meditation_overview_card_daily_title">Try it in daily life</string>
+    <string name="meditation_overview_daily_b1_title">Pair it with a habit you already have.</string>
+    <string name="meditation_overview_daily_b1_sub">Three breaths after you sit down at your desk, or before you check your phone.</string>
+    <string name="meditation_overview_daily_b2_title">Use it when stress hits.</string>
+    <string name="meditation_overview_daily_b2_sub_template">Two minutes of %1$s before a hard conversation can change how it lands.</string>
+    <string name="meditation_overview_banner">This is a wellness tool, not medical treatment. Persistent anxiety, panic, sleep issues, or breathing difficulty warrant a conversation with a clinician.</string>
+    <string name="meditation_overview_btn_different">Different session</string>
+    <string name="meditation_overview_btn_redo">Redo</string>
+
+    <!-- Time formatting (3) -->
+    <string name="meditation_time_minutes_only">%1$d min</string>
+    <string name="meditation_time_min_sec">%1$d min %2$ds</string>
+    <string name="meditation_time_seconds_only">%1$ds</string>
+
 </resources>

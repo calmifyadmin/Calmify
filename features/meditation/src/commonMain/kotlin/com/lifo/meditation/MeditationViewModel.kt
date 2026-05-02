@@ -1,10 +1,10 @@
 package com.lifo.meditation
 
-import com.lifo.util.model.BreathingPattern
-import com.lifo.util.model.MeditationType
-import com.lifo.util.model.MeditationSession
-import com.lifo.util.mvi.MviViewModel
 import com.lifo.util.auth.AuthProvider
+import com.lifo.util.currentTimeMillis
+import com.lifo.util.model.MeditationSession
+import com.lifo.util.model.MeditationType
+import com.lifo.util.mvi.MviViewModel
 import com.lifo.util.repository.MeditationRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -12,6 +12,20 @@ import kotlinx.coroutines.launch
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
+/**
+ * ViewModel for the redesigned 5-phase meditation flow.
+ *
+ * State machine: WELCOME → SCREENING → CONFIGURE → SESSION → OVERVIEW.
+ * Within SESSION: settling (15%) → practice (70%) → integration (15%).
+ *
+ * The session timer runs as a coroutine ticking 1Hz. It is pause-aware
+ * (cancelled on PauseSession, restarted on ResumeSession) and auto-fires
+ * [MeditationContract.Intent.SessionAutoComplete] when elapsed reaches
+ * [MeditationContract.SessionRuntime.totalActiveSeconds].
+ *
+ * Phase 1 keeps the timer simple (1Hz integer ticks). Phase 2 will add
+ * the per-segment chime/voice scheduling on sub-phase boundaries.
+ */
 class MeditationViewModel(
     private val repository: MeditationRepository,
     private val authProvider: AuthProvider,
@@ -20,6 +34,8 @@ class MeditationViewModel(
 ) {
 
     private var timerJob: Job? = null
+    /** Tracks which sub-phase we last announced via PlayBell — prevents duplicate chimes. */
+    private var lastAnnouncedSubPhase: MeditationContract.SubPhase? = null
 
     init {
         onIntent(MeditationContract.Intent.LoadStats)
@@ -27,38 +43,93 @@ class MeditationViewModel(
 
     override fun handleIntent(intent: MeditationContract.Intent) {
         when (intent) {
-            is MeditationContract.Intent.SelectType -> updateState { copy(selectedType = intent.type) }
-            is MeditationContract.Intent.SelectBreathingPattern -> updateState { copy(selectedPattern = intent.pattern) }
-            is MeditationContract.Intent.SelectDuration -> updateState { copy(selectedDurationSeconds = intent.seconds) }
+            // ── Phase navigation ─────────────────────────────────────
+            MeditationContract.Intent.NavigateToScreening ->
+                updateState { copy(phase = MeditationContract.SessionPhase.SCREENING) }
 
-            is MeditationContract.Intent.StartSession -> startSession()
-            is MeditationContract.Intent.PauseSession -> pauseSession()
-            is MeditationContract.Intent.ResumeSession -> resumeSession()
-            is MeditationContract.Intent.StopSession -> stopSession()
+            MeditationContract.Intent.NavigateToConfigure ->
+                updateState { copy(phase = MeditationContract.SessionPhase.CONFIGURE) }
 
-            is MeditationContract.Intent.SetPostNote -> updateState { copy(postNote = intent.note) }
-            is MeditationContract.Intent.SaveSession -> saveSession()
-            is MeditationContract.Intent.DiscardSession -> {
-                updateState { MeditationContract.State() }
-                onIntent(MeditationContract.Intent.LoadStats)
+            MeditationContract.Intent.NavigateBackFromScreening ->
+                updateState { copy(phase = MeditationContract.SessionPhase.WELCOME) }
+
+            MeditationContract.Intent.NavigateBackFromConfigure ->
+                updateState { copy(phase = MeditationContract.SessionPhase.SCREENING) }
+
+            MeditationContract.Intent.NavigateRedoFromOverview -> startSession()
+
+            MeditationContract.Intent.NavigateDifferentFromOverview ->
+                updateState {
+                    copy(
+                        phase = MeditationContract.SessionPhase.CONFIGURE,
+                        session = null,
+                    )
+                }
+
+            // ── Screening ────────────────────────────────────────────
+            is MeditationContract.Intent.ToggleRiskFlag -> updateState {
+                val newRisks = if (intent.flag in risks) risks - intent.flag else risks + intent.flag
+                // If user toggled into restricted state, drop any pacing-technique override
+                val newConfig = if (newRisks.isNotEmpty() && config.techniqueOverride?.isGentle == false) {
+                    config.copy(techniqueOverride = null)
+                } else config
+                copy(risks = newRisks, config = newConfig)
             }
 
-            is MeditationContract.Intent.LoadStats -> loadStats()
-            is MeditationContract.Intent.RetryLoadStats -> {
+            MeditationContract.Intent.ClearAllRisks -> updateState { copy(risks = emptySet()) }
+
+            // ── Configure ────────────────────────────────────────────
+            is MeditationContract.Intent.SetDuration -> updateState { copy(config = config.copy(duration = intent.minutes)) }
+
+            is MeditationContract.Intent.SetGoal -> updateState {
+                // Setting a new goal clears any previous override (so auto-resolution kicks in)
+                copy(config = config.copy(goal = intent.goal, techniqueOverride = null))
+            }
+
+            is MeditationContract.Intent.SetExperience -> updateState {
+                // Same for experience
+                copy(config = config.copy(experience = intent.exp, techniqueOverride = null))
+            }
+
+            is MeditationContract.Intent.SetAudio -> updateState { copy(config = config.copy(audio = intent.audio)) }
+
+            is MeditationContract.Intent.SetTechniqueOverride -> updateState {
+                copy(config = config.copy(techniqueOverride = intent.pattern))
+            }
+
+            // ── Session lifecycle ────────────────────────────────────
+            MeditationContract.Intent.StartSession -> startSession()
+            MeditationContract.Intent.PauseSession -> pauseSession()
+            MeditationContract.Intent.ResumeSession -> resumeSession()
+            MeditationContract.Intent.RequestStopSession -> updateState { copy(showStopDialog = true) }
+            MeditationContract.Intent.DismissStopDialog -> updateState { copy(showStopDialog = false) }
+            MeditationContract.Intent.ConfirmStopSession -> confirmStopSession()
+            MeditationContract.Intent.SessionAutoComplete -> autoCompleteSession()
+
+            // ── Stats ────────────────────────────────────────────────
+            MeditationContract.Intent.LoadStats -> loadStats()
+            MeditationContract.Intent.RetryLoadStats -> {
                 updateState { copy(errorMessage = null) }
                 loadStats()
             }
         }
     }
 
+    // ── Session control ─────────────────────────────────────────────────
+
     private fun startSession() {
+        val s = state.value
+        val technique = s.effectiveTechnique
+        val durationSec = s.config.duration * 60
+        lastAnnouncedSubPhase = null
         updateState {
             copy(
-                phase = MeditationContract.SessionPhase.ACTIVE,
-                elapsedSeconds = 0,
-                isPaused = false,
-                breathingPhase = MeditationContract.BreathingPhase.INHALE,
-                breathingPhaseProgress = 0f,
+                phase = MeditationContract.SessionPhase.SESSION,
+                session = MeditationContract.SessionRuntime(
+                    technique = technique,
+                    durationSeconds = durationSec,
+                ),
+                showStopDialog = false,
             )
         }
         sendEffect(MeditationContract.Effect.PlayBell)
@@ -67,25 +138,65 @@ class MeditationViewModel(
 
     private fun pauseSession() {
         timerJob?.cancel()
-        updateState { copy(isPaused = true) }
+        updateState { copy(session = session?.copy(isPaused = true)) }
     }
 
     private fun resumeSession() {
-        updateState { copy(isPaused = false) }
+        updateState { copy(session = session?.copy(isPaused = false)) }
         startTimer()
     }
 
-    private fun stopSession() {
+    private fun confirmStopSession() {
         timerJob?.cancel()
-        val s = state.value
-        if (s.elapsedSeconds >= 30) {
-            sendEffect(MeditationContract.Effect.PlayBell)
-            updateState { copy(phase = MeditationContract.SessionPhase.COMPLETED) }
-        } else {
-            updateState { MeditationContract.State() }
-            onIntent(MeditationContract.Intent.LoadStats)
+        val current = state.value.session ?: return
+        val finalRuntime = current.copy(stopped = true)
+        finalize(finalRuntime)
+    }
+
+    private fun autoCompleteSession() {
+        timerJob?.cancel()
+        val current = state.value.session ?: return
+        finalize(current.copy(stopped = false))
+    }
+
+    private fun finalize(runtime: MeditationContract.SessionRuntime) {
+        sendEffect(MeditationContract.Effect.PlayBell)
+        sendEffect(MeditationContract.Effect.SessionCompleted)
+        updateState {
+            copy(
+                phase = MeditationContract.SessionPhase.OVERVIEW,
+                session = runtime,
+                showStopDialog = false,
+            )
+        }
+        // Persist the session record (best-effort; failure does not block the Overview screen)
+        persistSession(runtime)
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    private fun persistSession(runtime: MeditationContract.SessionRuntime) {
+        val userId = authProvider.currentUserId ?: return
+        scope.launch {
+            val session = MeditationSession(
+                id = Uuid.random().toString(),
+                ownerId = userId,
+                timestampMillis = currentTimeMillis(),
+                // Always BREATHING for the new flow — every session is technique-backed
+                // (TIMER / BODY_SCAN are legacy enum values kept for backward-compat reads).
+                type = MeditationType.BREATHING,
+                breathingPattern = runtime.technique,
+                durationSeconds = runtime.durationSeconds,
+                completedSeconds = runtime.elapsedSeconds,
+                stopped = runtime.stopped,
+                cyclesCompleted = if (runtime.technique.hasPattern) runtime.cyclesCompleted else null,
+            )
+            repository.saveSession(session)
+                .onSuccess { sendEffect(MeditationContract.Effect.SessionSaved) }
+                .onFailure { sendEffect(MeditationContract.Effect.Error(it.message ?: "")) }
         }
     }
+
+    // ── Timer ───────────────────────────────────────────────────────────
 
     private fun startTimer() {
         timerJob?.cancel()
@@ -93,97 +204,36 @@ class MeditationViewModel(
             while (true) {
                 delay(1000L)
                 val s = state.value
-                val newElapsed = s.elapsedSeconds + 1
+                val current = s.session ?: break
+                if (current.isPaused) continue
 
-                if (newElapsed >= s.selectedDurationSeconds) {
-                    updateState { copy(elapsedSeconds = newElapsed, phase = MeditationContract.SessionPhase.COMPLETED) }
+                val newElapsed = current.elapsedSeconds + 1
+                val newCycles = if (current.technique.hasPattern && newElapsed > current.settleSeconds) {
+                    val practiceElapsed = (newElapsed - current.settleSeconds)
+                        .coerceAtMost(current.practiceCapSeconds)
+                    (practiceElapsed / current.technique.totalCycleSeconds).toInt()
+                } else current.cyclesCompleted
+
+                val updated = current.copy(elapsedSeconds = newElapsed, cyclesCompleted = newCycles)
+                updateState { copy(session = updated) }
+
+                // Sub-phase change → bell
+                val newSubPhase = updated.subPhase
+                if (newSubPhase != lastAnnouncedSubPhase) {
+                    lastAnnouncedSubPhase = newSubPhase
                     sendEffect(MeditationContract.Effect.PlayBell)
-                    sendEffect(MeditationContract.Effect.SessionCompleted)
+                }
+
+                // Auto-complete
+                if (newElapsed >= updated.totalActiveSeconds) {
+                    onIntent(MeditationContract.Intent.SessionAutoComplete)
                     break
                 }
-
-                val (breathPhase, breathProgress) = if (s.selectedType == MeditationType.BREATHING) {
-                    calculateBreathingPhase(newElapsed, s.selectedPattern)
-                } else {
-                    s.breathingPhase to 0f
-                }
-
-                updateState {
-                    copy(
-                        elapsedSeconds = newElapsed,
-                        breathingPhase = breathPhase,
-                        breathingPhaseProgress = breathProgress,
-                    )
-                }
             }
         }
     }
 
-    private fun calculateBreathingPhase(
-        elapsedSeconds: Int,
-        pattern: BreathingPattern,
-    ): Pair<MeditationContract.BreathingPhase, Float> {
-        val cyclePosition = elapsedSeconds % pattern.totalCycleSeconds
-        var accumulated = 0
-
-        // Inhale
-        accumulated += pattern.inhaleSeconds
-        if (cyclePosition < accumulated) {
-            val phaseElapsed = cyclePosition - (accumulated - pattern.inhaleSeconds)
-            return MeditationContract.BreathingPhase.INHALE to (phaseElapsed.toFloat() / pattern.inhaleSeconds)
-        }
-
-        // Hold In
-        if (pattern.holdInSeconds > 0) {
-            accumulated += pattern.holdInSeconds
-            if (cyclePosition < accumulated) {
-                val phaseElapsed = cyclePosition - (accumulated - pattern.holdInSeconds)
-                return MeditationContract.BreathingPhase.HOLD_IN to (phaseElapsed.toFloat() / pattern.holdInSeconds)
-            }
-        }
-
-        // Exhale
-        accumulated += pattern.exhaleSeconds
-        if (cyclePosition < accumulated) {
-            val phaseElapsed = cyclePosition - (accumulated - pattern.exhaleSeconds)
-            return MeditationContract.BreathingPhase.EXHALE to (phaseElapsed.toFloat() / pattern.exhaleSeconds)
-        }
-
-        // Hold Out
-        if (pattern.holdOutSeconds > 0) {
-            val phaseElapsed = cyclePosition - accumulated
-            return MeditationContract.BreathingPhase.HOLD_OUT to (phaseElapsed.toFloat() / pattern.holdOutSeconds)
-        }
-
-        return MeditationContract.BreathingPhase.INHALE to 0f
-    }
-
-    private fun saveSession() {
-        val s = state.value
-        val userId = authProvider.currentUserId ?: return
-        scope.launch {
-            updateState { copy(isLoading = true) }
-            @OptIn(ExperimentalUuidApi::class)
-            val session = MeditationSession(
-                id = Uuid.random().toString(),
-                ownerId = userId,
-                timestampMillis = com.lifo.util.currentTimeMillis(),
-                type = s.selectedType,
-                breathingPattern = if (s.selectedType == MeditationType.BREATHING) s.selectedPattern else null,
-                durationSeconds = s.selectedDurationSeconds,
-                completedSeconds = s.elapsedSeconds,
-                postNote = s.postNote,
-            )
-            repository.saveSession(session)
-                .onSuccess {
-                    sendEffect(MeditationContract.Effect.SessionSaved)
-                    updateState { MeditationContract.State() }
-                    onIntent(MeditationContract.Intent.LoadStats)
-                }
-                .onFailure { sendEffect(MeditationContract.Effect.Error(it.message ?: "Errore nel salvataggio")) }
-            updateState { copy(isLoading = false) }
-        }
-    }
+    // ── Stats ───────────────────────────────────────────────────────────
 
     private fun loadStats() {
         val userId = authProvider.currentUserId ?: return
@@ -192,8 +242,9 @@ class MeditationViewModel(
                 val totalMin = repository.getTotalMinutes(userId)
                 val count = repository.getSessionCount(userId)
                 updateState { copy(totalMinutes = totalMin, sessionCount = count, errorMessage = null) }
-            } catch (e: Exception) {
-                updateState { copy(errorMessage = "Impossibile caricare i dati. Verifica la connessione.") }
+            } catch (_: Exception) {
+                // Stats are best-effort — surface a non-blocking error
+                updateState { copy(errorMessage = "stats_load_failed") }
             }
         }
         scope.launch {
@@ -201,8 +252,8 @@ class MeditationViewModel(
                 repository.getRecentSessions(userId).collect { sessions ->
                     updateState { copy(recentSessions = sessions) }
                 }
-            } catch (e: Exception) {
-                updateState { copy(errorMessage = "Impossibile caricare i dati. Verifica la connessione.") }
+            } catch (_: Exception) {
+                updateState { copy(errorMessage = "stats_load_failed") }
             }
         }
     }

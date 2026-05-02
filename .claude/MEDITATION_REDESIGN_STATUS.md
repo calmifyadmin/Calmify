@@ -12,170 +12,166 @@
 
 | Phase | Status | Started | Completed | Commit | Notes |
 |---|---|---|---|---|---|
-| 1 — Foundation | NOT STARTED | — | — | — | Domain + Strings + 4 new screens + state-machine wiring |
+| 1 — Foundation | **DONE** | 2026-05-02 | 2026-05-02 | _pending_ | Domain + 161 keys × 6 langs + Strings facade + Contract/VM + 5 screens. **Build green** (`./gradlew :app:assembleDebug`). |
 | 2 — Polish | NOT STARTED | — | — | — | Session pacer + Stop modal + Overview + keyboard |
 | 3 — Production | NOT STARTED | — | — | — | TTS + chime sync + a11y + screenshot regression |
 
 ---
 
-## Phase 1 — Foundation (active)
+## Phase 1 — Foundation (DONE 2026-05-02)
 
 Target: ~6h dedicated session. Single (or 2-3 atomic) commit + push.
 
-### 1.1 Domain refactor — `core/util/.../MeditationSession.kt`
+### 1.1 Domain refactor — `core/util/.../MeditationSession.kt` ✅
 
-- [ ] `BreathingPattern` enum: drop `displayName: String` field
-- [ ] `BreathingPattern` enum: expand from 3 → 6 entries:
-  - [ ] `COHERENT` (5.5/0/5.5/0)
-  - [ ] `EXTENDED_EXHALE` (4/0/6/0)
-  - [ ] `BOX_BREATHING` (4/4/4/4)  *kept, unchanged*
-  - [ ] `RELAXATION_478` (4/7/8/0, cap=4, requiresExperience)  *kept, add metadata*
-  - [ ] `BELLY_NATURAL` (0/0/0/0, isGentle)  *replaces DIAPHRAGMATIC*
-  - [ ] `BODY_SCAN_NATURAL` (0/0/0/0, isGentle)
-- [ ] Add fields: `cycleCap: Int?`, `requiresExperience: Boolean`, `isGentle: Boolean`
-- [ ] Add computed: `hasPattern: Boolean`
-- [ ] `MeditationType` enum: drop `displayName`
-- [ ] **Backward-compat mapper** in FirestoreMeditationRepository: `DIAPHRAGMATIC` → `BELLY_NATURAL` on read
+- [x] `BreathingPattern` enum: drop `displayName: String` field
+- [x] `BreathingPattern` enum: expand from 3 → 6 entries:
+  - [x] `COHERENT` (5.5/0/5.5/0)
+  - [x] `EXTENDED_EXHALE` (4/0/6/0)
+  - [x] `BOX_BREATHING` (4/4/4/4)  *kept, unchanged*
+  - [x] `RELAXATION_478` (4/7/8/0, cap=4, requiresExperience)  *kept, add metadata*
+  - [x] `BELLY_NATURAL` (0/0/0/0, isGentle)  *replaces DIAPHRAGMATIC*
+  - [x] `BODY_SCAN_NATURAL` (0/0/0/0, isGentle)
+- [x] Add fields: `cycleCap: Int?`, `requiresExperience: Boolean`, `isGentle: Boolean`
+- [x] Add computed: `hasPattern: Boolean`
+- [x] `MeditationType` enum: drop `displayName`
+- [x] **Backward-compat mapper** in `FirestoreMeditationRepository`: `BreathingPattern.fromCanonicalName()` companion accepts both `DIAPHRAGMATIC` (legacy) and `BELLY_NATURAL` (current). Also persists new `stopped` + `cyclesCompleted` fields.
 
-### 1.2 New domain types
+### 1.2 New domain types ✅
 
-- [ ] `MeditationGoal` enum (5 entries: STRESS/ANXIETY/SLEEP/FOCUS/GROUNDING) in `core/util/.../model/`
-- [ ] `MeditationExperience` enum (3 entries: FIRST/OCCASIONAL/REGULAR)
-- [ ] `MeditationAudio` enum (3 entries: VOICE/CHIMES/SILENT)
-- [ ] `MeditationRiskFlag` enum (8 entries with `id: String` + `hasSubText: Boolean`)
-- [ ] All 4 enums: `@Serializable`, no displayName fields
+- [x] `MeditationGoal` enum (5 entries: STRESS/ANXIETY/SLEEP/FOCUS/GROUNDING) in `core/util/.../model/`
+- [x] `MeditationExperience` enum (3 entries: FIRST/OCCASIONAL/REGULAR)
+- [x] `MeditationAudio` enum (3 entries: VOICE/CHIMES/SILENT)
+- [x] `MeditationRiskFlag` enum (8 entries with `id: String` + `hasSubText: Boolean`)
+- [x] All 4 enums: `@Serializable`, no displayName fields
 
-### 1.3 Strings XML — 6 Latin langs
+### 1.3 Strings XML — 6 Latin langs ✅
 
-- [ ] `values/strings.xml` (EN default) — ~145 keys added
-- [ ] `values-it/strings.xml` — same keys, IT translation
-- [ ] `values-es/strings.xml` — same keys, ES translation
-- [ ] `values-fr/strings.xml` — same keys, FR translation
-- [ ] `values-de/strings.xml` — same keys, DE translation
-- [ ] `values-pt/strings.xml` — same keys, PT translation
-- [ ] Verify same key count per lang (script: `grep -c '<string ' values{,-it,-es,-fr,-de,-pt}/strings.xml`)
+- [x] `values/strings.xml` (EN default) — 161 keys added
+- [x] `values-it/strings.xml` — 161 keys, IT translation
+- [x] `values-es/strings.xml` — 161 keys, ES translation
+- [x] `values-fr/strings.xml` — 161 keys, FR translation
+- [x] `values-de/strings.xml` — 161 keys, DE translation
+- [x] `values-pt/strings.xml` — 161 keys, PT translation
+- [x] All 6 langs share key count = **966 translations total**
 
-Section breakdown (~145 keys total):
-- [ ] Welcome (13)
-- [ ] Screening (9 chrome + 8 risks × 2 = 25)
-- [ ] Configure (~25)
-- [ ] Techniques (6 × 6 fields = 36)
-- [ ] Session (~18)
-- [ ] Stop modal (4)
-- [ ] Overview (~18)
-- [ ] Time formatting (3)
+Section breakdown (161 keys total — final):
+- [x] Welcome (13)
+- [x] Screening chrome (10) + risks × 2 (16) = 26
+- [x] Configure (28)
+- [x] Techniques (6 × 6 fields = 36)
+- [x] Session (15)
+- [x] Stop modal (4)
+- [x] Overview (18)
+- [x] Time formatting (3)
+- [x] Mood / Goal / Experience / Audio facades
 
-### 1.4 Strings facade — `Strings.kt`
+### 1.4 Strings facade — `Strings.kt` ✅
 
-- [ ] Add `Strings.Meditation` group with sub-objects:
-  - [ ] `Welcome` — 13 entries
-  - [ ] `Screening` — 9 entries
-  - [ ] `Configure` — ~25 entries
-  - [ ] `Technique` — 6 sub-objects (one per technique) × 6 fields each = 36 entries
-  - [ ] `Session` — ~18 entries
-  - [ ] `Stop` — 4 entries
-  - [ ] `Overview` — ~18 entries
-  - [ ] `Goal` — 5 entries
-  - [ ] `Experience` — 3 entries
-  - [ ] `Audio` — 3 entries
-  - [ ] `Risk` — 8 sub-objects (label + sub) = 16 entries
-  - [ ] `Cue` — 6 entries (BreatheIn/Hold/BreatheOut/Arrive/Release/Breathe)
-  - [ ] `Coach` — 6 entries (3 settle + 3 integrate)
-  - [ ] `Time` — 3 entries
-- [ ] Helper: `BreathingPattern.nameRes()` `.shortRes()` `.summaryRes()` `.mechanismRes()` `.coachRes(idx)` extension functions in `core/ui` (since `core/util` enum has no StringResource)
-- [ ] Helper: `MeditationGoal.labelRes()`, `MeditationExperience.labelRes()`, `MeditationAudio.labelRes()`, `MeditationRiskFlag.labelRes()` + `subRes()`
+- [x] Added `Strings.Meditation` group with 13 sub-objects:
+  - [x] `Welcome` (13) / `Screening` (10) / `Configure` (28) / `Technique` (6×6=36)
+  - [x] `Session` (15) / `Stop` (4) / `Overview` (18)
+  - [x] `Goal` (5) / `Experience` (3) / `Audio` (3) / `Risk` (8 × label+sub = 16)
+  - [x] `Cue` (6) / `SettleCoach` (3) + `IntegrateCoach` (3) / `Time` (3)
+- [x] Helper file `core/ui/.../i18n/MeditationStrings.kt` (~155 LOC):
+  - [x] `BreathingPattern.nameRes() / shortRes() / summaryRes() / mechanismRes() / coachRes(idx)`
+  - [x] `MeditationGoal.labelRes()`
+  - [x] `MeditationExperience.labelRes()`
+  - [x] `MeditationAudio.labelRes()`
+  - [x] `MeditationRiskFlag.labelRes() / subRes()`
 
-### 1.5 Contract refactor — `MeditationContract.kt`
+### 1.5 Contract refactor — `MeditationContract.kt` ✅
 
-- [ ] `SessionPhase` enum: 3 entries → 5 entries (WELCOME/SCREENING/CONFIGURE/SESSION/OVERVIEW)
-- [ ] Add `SubPhase` enum (SETTLING/PRACTICE/INTEGRATION)
-- [ ] Add `SessionConfig` data class (duration/goal/experience/audio/techniqueOverride)
-- [ ] Add `SessionRuntime` data class (technique/durationSeconds/elapsed/isPaused/cycles/stopped + computed sub-phase/settle/integrate/practice)
-- [ ] State: replace fields with `phase / risks / config / session: SessionRuntime? / showStopDialog`
-- [ ] Computed: `restricted: Boolean` (risks not empty), `effectiveTechnique: BreathingPattern` (resolver function)
-- [ ] Drop `BreathingPhase` enum (replaced by per-segment in SessionRuntime)
-- [ ] Add intents: `NavigateToScreening / ToggleRiskFlag / ClearAllRisks / SetDuration / SetGoal / SetExperience / SetAudio / SetTechniqueOverride / RequestStopSession / ConfirmStopSession / DismissStopDialog / NavigateBackFrom* / NavigateRedoFromOverview / NavigateDifferentFromOverview`
-- [ ] Drop unused intents: old `SelectType` etc.
+- [x] `SessionPhase` enum: 3 entries → 5 entries (WELCOME/SCREENING/CONFIGURE/SESSION/OVERVIEW)
+- [x] Added `SubPhase` enum (SETTLING/PRACTICE/INTEGRATION)
+- [x] Added `SessionConfig` data class (duration/goal/experience/audio/techniqueOverride)
+- [x] Added `SessionRuntime` data class (technique/durationSeconds/elapsed/isPaused/cycles/stopped + computed sub-phase/settle/integrate/practice/practiceCap/totalActiveSeconds/remainingSeconds)
+- [x] State: replaced fields with `phase / risks / config / session: SessionRuntime? / showStopDialog`
+- [x] Computed: `restricted: Boolean` (risks not empty), `effectiveTechnique: BreathingPattern` via `resolveTechnique()` private function
+- [x] Dropped `BreathingPhase` enum (replaced by per-segment in SessionRuntime)
+- [x] Added intents: `NavigateToScreening / ToggleRiskFlag / ClearAllRisks / SetDuration / SetGoal / SetExperience / SetAudio / SetTechniqueOverride / RequestStopSession / ConfirmStopSession / DismissStopDialog / NavigateBackFromScreening / NavigateBackFromConfigure / NavigateRedoFromOverview / NavigateDifferentFromOverview / SessionAutoComplete / LoadStats / RetryLoadStats`
+- [x] Dropped unused intents (old `SelectType` etc.)
 
-### 1.6 ViewModel refactor — `MeditationViewModel.kt`
+### 1.6 ViewModel refactor — `MeditationViewModel.kt` ✅
 
-- [ ] Wire all new intents to state mutations
-- [ ] `resolveTechnique()` private function with restricted/first-time/goal logic
-- [ ] Coroutine-driven elapsed timer in SESSION phase (1Hz tick)
-- [ ] Pause-aware: `isPaused` halts ticker
-- [ ] Auto-complete on `elapsed >= settle + practiceCap + integrate`
-- [ ] On complete: persist `MeditationSession` record (existing repository), emit `SessionCompleted` effect, transition to OVERVIEW with last `SessionRuntime`
-- [ ] On confirm-stop: `stopped = true` + persist + transition to OVERVIEW
-- [ ] Stats loading unchanged
-- [ ] Bell scheduling deferred to Phase 2 (existing logic OK for now)
+- [x] All new intents wired to state mutations
+- [x] `resolveTechnique()` private function in contract with restricted/first-time/goal logic
+- [x] Coroutine-driven elapsed timer in SESSION phase (1Hz tick)
+- [x] Pause-aware: `isPaused` halts ticker
+- [x] Auto-complete on `elapsed >= totalActiveSeconds` (settle + practiceCap + integrate)
+- [x] On complete: persist `MeditationSession` (with `stopped` + `cyclesCompleted`), emit `SessionCompleted` effect, transition to OVERVIEW
+- [x] On confirm-stop: `stopped = true` + persist + transition to OVERVIEW
+- [x] `lastAnnouncedSubPhase` tracking for chime deduplication on sub-phase boundaries
+- [x] Stats loading unchanged
+- [x] Bell scheduling deferred to Phase 2 (existing logic OK for now)
 
-### 1.7 New screen composables
+### 1.7 New screen composables ✅
 
-- [ ] `features/meditation/src/commonMain/kotlin/com/lifo/meditation/screens/MeditationWelcomeScreen.kt`
-  - [ ] Top bar with leaf logo + "Breathe" title (Strings.Meditation.Welcome.topbar)
-  - [ ] "Guided breath" pill
-  - [ ] Display title (multiline)
-  - [ ] Lede paragraph
-  - [ ] Decorative animated pacer preview (smaller, looping)
-  - [ ] "What you can expect" card with 3 bullets (icons: health_and_safety, spa, auto_awesome)
-  - [ ] Fineprint disclaimer
-  - [ ] "Begin" CTA → triggers `NavigateToScreening`
-- [ ] `screens/MeditationScreeningScreen.kt`
-  - [ ] Top bar with back button + "Safety check" title
-  - [ ] Display title + lede
-  - [ ] "Stop anytime" info banner (M3 SuggestionBox or custom)
-  - [ ] Card with 8 risk flag checkboxes (M3 ListItem with Checkbox)
-  - [ ] "None apply" reset row (clears all)
-  - [ ] Conditional warn banner when any flag ticked ("Gentle track only")
-  - [ ] Medical disclaimer fineprint
-  - [ ] Bottom bar: Back + Continue
-  - [ ] Continue triggers `NavigateToConfigure`
-- [ ] `screens/MeditationConfigureScreen.kt`
-  - [ ] Top bar with back button + "Set up your session" title
-  - [ ] Display title + conditional "Gentle track" lockpill
-  - [ ] **Duration card**: 5-button grid (3/5/10/15/20 + "min" label)
-  - [ ] **Goal card**: 5-button grid with icons (self_improvement, visibility, bedtime, spa, public)
-  - [ ] **Experience card**: 3-button grid + first-time conditional banner
-  - [ ] **Audio card**: 3-button grid with icons (record_voice_over, notifications_active, volume_off)
-  - [ ] **Technique card**: 2-column grid showing 6 techniques (or 2 in restricted mode), with auto-pill on top + selected technique summary box at bottom + 4-cycle-max pill on RELAXATION_478
-  - [ ] Fineprint with "Re-do safety check" link
-  - [ ] Bottom bar: Back + "Begin breathing" CTA
-- [ ] `screens/MeditationOverviewScreen.kt`
-  - [ ] Top bar with leaf logo + "Reflection" title
-  - [ ] "Session complete" pill
-  - [ ] Conditional title (success vs stopped)
-  - [ ] Lede with technique name + duration + cycles (parameterized)
-  - [ ] **Mechanism card**: technique name + mechanism explainer
-  - [ ] **"What you may notice now" card**: 3 bullets (favorite, psychology, bedtime icons)
-  - [ ] **"With regular practice" card**: title + body
-  - [ ] **"Try it in daily life" card**: 2 bullets (alarm, warning icons), second bullet sub uses `daily_b2_sub_template` with technique name
-  - [ ] Medical disclaimer banner
-  - [ ] Bottom bar: "Different session" + "Redo"
+- [x] `screens/MeditationWelcomeScreen.kt` (~330 LOC)
+  - [x] Top bar with leaf logo + "Breathe" title (`Strings.Meditation.Welcome.topbar`)
+  - [x] "Guided breath" pill
+  - [x] Display title (multiline) + lede paragraph
+  - [x] `AmbientBreathPreview` decorative looping pacer (halo + outer ring + inner circle, marked `hideFromAccessibility()`)
+  - [x] "What you can expect" card with 3 bullets (icons: health_and_safety, spa, auto_awesome)
+  - [x] Fineprint disclaimer
+  - [x] Full-width "Begin" CTA → triggers `NavigateToScreening`
+- [x] `screens/MeditationScreeningScreen.kt` (~370 LOC)
+  - [x] Top bar with back button + "Safety check" title
+  - [x] Display title + lede
+  - [x] "Stop anytime" info banner (custom `InfoBanner`)
+  - [x] Card with 8 risk flag rows (custom check rows)
+  - [x] "None apply" reset row (clears all)
+  - [x] Conditional WARN banner when any flag ticked ("Gentle track only")
+  - [x] Medical disclaimer fineprint
+  - [x] Bottom bar: Back + Continue → triggers `NavigateToConfigure`
+- [x] `screens/MeditationConfigureScreen.kt` (~600 LOC)
+  - [x] Top bar with back button + "Set up your session" title
+  - [x] Display title + conditional "Gentle track" lockpill
+  - [x] **Duration card**: 5-button grid (3/5/10/15/20)
+  - [x] **Goal card**: 5 tiles with icons (self_improvement, visibility, bedtime, spa, public)
+  - [x] **Experience card**: 3 tiles + first-time conditional banner
+  - [x] **Audio card**: 3 tiles with icons (record_voice_over, notifications_active, AutoMirrored.Outlined.volume_off)
+  - [x] **Technique card**: 2-col grid showing 6 (or 2 in restricted mode) techniques + auto-pill + summary box + 4-cycle-max pill on RELAXATION_478
+  - [x] Fineprint with "Re-do safety check" link (AnnotatedString + TextDecoration.Underline)
+  - [x] Bottom bar: Back + "Begin breathing" CTA
+- [x] `screens/MeditationOverviewScreen.kt` (~370 LOC)
+  - [x] Top bar with leaf logo + "Reflection" title
+  - [x] "Session complete" pill
+  - [x] Conditional title (titleDone vs titleStopped)
+  - [x] Lede with technique + duration + optional cycles (parameterized)
+  - [x] **Mechanism card** (technique mechanism explainer)
+  - [x] **"What you may notice now" card**: 3 bullets (favorite, psychology, bedtime icons)
+  - [x] **"With regular practice" card**: title + body
+  - [x] **"Try it in daily life" card**: 2 bullets (alarm, warning icons), second bullet uses technique-aware template
+  - [x] Medical disclaimer banner
+  - [x] Bottom bar: "Different session" + "Redo"
 
-### 1.8 Phase dispatcher — `MeditationScreen.kt`
+### 1.8 Phase dispatcher — `MeditationScreen.kt` + Session screen ✅
 
-- [ ] Reduce to thin dispatcher: `when (state.phase) -> ...Screen(...)`
-- [ ] Existing SETUP/ACTIVE/COMPLETED logic moved into `MeditationSessionScreen.kt` (kept as-is for Phase 1, polished in Phase 2)
-- [ ] Wire all new intents
+- [x] Reduced to thin dispatcher: `AnimatedContent { when (state.phase) -> ...Screen(...) }`
+- [x] SESSION phase uses pure fade transition (breath visual is protagonist), other phases use horizontal slide+fade
+- [x] All intents wired through `onIntent` callback
+- [x] `MeditationSessionScreen.kt` rewritten (~370 LOC) — Phase 1 baseline: phase label + remaining timer + LinearProgress + AmbientPacer + cue overlay + coach line (AnimatedContent fade) + Stop OutlinedButton + Pause/Resume IconButton + AlertDialog stop confirmation (Phase 2: ModalBottomSheet)
+- [x] `MeditationEntryPoint.kt`: removed hardcoded "Sessione salvata!" Toast (silent in Phase 1; Phase 3 will surface inline message in Overview)
 
-### 1.9 Build verification
+### 1.9 Build verification ✅
 
-- [ ] `./gradlew :app:assembleDebug` GREEN
-- [ ] `./gradlew :features:meditation:compileDebugKotlinAndroid` GREEN
-- [ ] No regressions in other features (smoke compile of `:features:home`, `:features:write`)
-- [ ] Grep audit: no hardcoded IT strings in `features/meditation/`
+- [x] `./gradlew :app:assembleDebug` GREEN (29s after fix iteration)
+- [x] `./gradlew :features:meditation:compileDebugKotlinAndroid` GREEN (5s clean)
+- [x] No regressions in other features
+- [x] Grep audit: no hardcoded IT/EN strings in `features/meditation/src/commonMain/` (only KDoc comments)
+- [x] Deprecation warnings cleaned: `Icons.Outlined.VolumeOff` → `Icons.AutoMirrored.Outlined.VolumeOff`; `invisibleToUser()` → `hideFromAccessibility()` (×2)
 
-### 1.10 Tracker updates (BEFORE commit)
+### 1.10 Tracker updates (BEFORE commit) — IN PROGRESS
 
-- [ ] Update this file (mark Phase 1 sections as DONE)
-- [ ] Update `memory/meditation_redesign.md` if any decision changed
-- [ ] Update `memory/MEMORY.md` index entry to point to redesign tracker
+- [x] Update this file (mark Phase 1 sections as DONE)
+- [ ] Update `memory/meditation_redesign.md` (mark Phase 1 done)
+- [ ] Update `memory/MEMORY.md` index entry to mention Phase 1 done
 - [ ] Update `CLAUDE.md` "Active workstream" section
-- [ ] Update `.claude/MEDITATION_REDESIGN_PLAN.md` with any deviations
 
 ### 1.11 Commit + push
 
-- [ ] Single commit: `refactor(meditation): Phase 1 — domain + 5-phase wizard + screens (Welcome/Screening/Configure/Overview)`
+- [ ] Single commit: `refactor(meditation): Phase 1 — domain + 5-phase wizard + 5 screens + 161 i18n keys × 6 langs`
 - [ ] Co-authored-by Claude footer
 - [ ] `git push origin backend-architecture-refactor`
 

@@ -1434,4 +1434,177 @@
     <string name="tooltip_habit_stacking_body">È una tecnica che collega una nuova abitudine a una già consolidata. Esempio: \"Dopo aver fatto colazione, scrivo tre cose per cui sono grato\". Usando un comportamento esistente come \"gancio\", è molto più facile costruire qualcosa di nuovo.</string>
     <string name="tooltip_minimum_action_title">Minimum Action</string>
     <string name="tooltip_minimum_action_body">Il punto di ingresso più piccolo possibile per un\'abitudine. Invece di \"fare 30 minuti di meditazione\", il minimum action è \"mettiti sul cuscino\". Abbassare la soglia iniziale rende quasi impossibile non iniziare — e spesso si finisce per fare molto di più.</string>
+
+    <!-- Meditation Redesign — Phase 1 (IT) -->
+    <string name="meditation_welcome_topbar">Respira</string>
+    <string name="meditation_welcome_pill">Respiro guidato</string>
+    <string name="meditation_welcome_title">Pochi minuti.\nUn corpo più morbido.</string>
+    <string name="meditation_welcome_lede">Scegli quanto tempo hai e di cosa hai bisogno: noi sceglieremo la tecnica di respirazione adatta. Sempre in seconda persona, sempre al tuo ritmo.</string>
+    <string name="meditation_welcome_card_title">Cosa aspettarti</string>
+    <string name="meditation_welcome_b1_title">Prima un breve check di sicurezza</string>
+    <string name="meditation_welcome_b1_sub">Per offrirti solo ciò che è giusto per il tuo corpo oggi.</string>
+    <string name="meditation_welcome_b2_title">Un respiro guidato, scandito visivamente</string>
+    <string name="meditation_welcome_b2_sub">Cerchio calmante, conteggi gentili, il tuo respiro guidato dal naso.</string>
+    <string name="meditation_welcome_b3_title">Una breve riflessione alla fine</string>
+    <string name="meditation_welcome_b3_sub">Cosa potresti notare, e cosa si costruisce con la pratica.</string>
+    <string name="meditation_welcome_fineprint">Questo è uno strumento di benessere, non un trattamento medico. Se in qualsiasi momento ti senti vertigini, capogiri, formicolii, nausea o difficoltà a respirare, fermati e respira naturalmente.</string>
+    <string name="meditation_welcome_cta">Inizia</string>
+
+    <string name="meditation_screening_topbar">Check di sicurezza</string>
+    <string name="meditation_screening_title">Prima di iniziare.</string>
+    <string name="meditation_screening_lede">Spunta tutto ciò che ti riguarda. Se qualcosa si applica, ti terremo sul percorso gentile — solo respiro naturale, niente tempi né trattenute.</string>
+    <string name="meditation_screening_banner_lead">Fermati in qualsiasi momento</string>
+    <string name="meditation_screening_banner_body">se senti vertigini, capogiri, formicolii, nausea o difficoltà a respirare. Il pulsante Stop è sempre raggiungibile.</string>
+    <string name="meditation_screening_none_apply">Niente di tutto questo si applica a me ora.</string>
+    <string name="meditation_screening_none_apply_sub">Puoi rifare lo screening in qualsiasi momento prima di una sessione.</string>
+    <string name="meditation_screening_warn_lead">Solo percorso gentile.</string>
+    <string name="meditation_screening_warn_body">In base a ciò che hai spuntato, ti guideremo oggi attraverso l\'osservazione del respiro naturale — nessun override del ritmo, nessuna trattenuta. Parla di tecniche di pacing in persona con un medico.</string>
+    <string name="meditation_screening_fineprint">Calmify è uno strumento di benessere, non un servizio medico. Questo screening ci aiuta a evitare tecniche di respirazione che potrebbero non essere sicure in certe condizioni, ma non sostituisce il consiglio del tuo medico.</string>
+    <string name="meditation_screening_continue">Continua</string>
+
+    <string name="meditation_risk_pregnancy">Gravidanza</string>
+    <string name="meditation_risk_pregnancy_sub">soprattutto primo trimestre</string>
+    <string name="meditation_risk_cardio">Problemi cardiovascolari</string>
+    <string name="meditation_risk_cardio_sub">ipertensione non controllata, recente evento cardiaco, aritmia, scompenso cardiaco</string>
+    <string name="meditation_risk_respiratory">Asma severa, BPCO o infezione respiratoria attiva</string>
+    <string name="meditation_risk_epilepsy">Epilessia o storia di convulsioni</string>
+    <string name="meditation_risk_panic">Disturbo da panico con episodi di iperventilazione</string>
+    <string name="meditation_risk_recent_surgery">Recente intervento chirurgico addominale, toracico od oculare</string>
+    <string name="meditation_risk_eye">Glaucoma o storia di distacco di retina</string>
+    <string name="meditation_risk_driving">Stai guidando, usando macchinari o sei in/vicino all\'acqua</string>
+
+    <string name="meditation_configure_topbar">Imposta la sessione</string>
+    <string name="meditation_configure_title">Quanto a lungo, per cosa.</string>
+    <string name="meditation_configure_lockpill">Percorso gentile</string>
+    <string name="meditation_configure_card_duration">Durata</string>
+    <string name="meditation_configure_card_duration_sub">Scegli una lunghezza che puoi dare senza guardare l\'orologio.</string>
+    <string name="meditation_duration_min_suffix">min</string>
+    <string name="meditation_configure_card_goal">Per cosa sei qui</string>
+    <string name="meditation_configure_card_goal_sub">Abbineremo una tecnica al tuo obiettivo — puoi cambiarla qui sotto.</string>
+    <string name="meditation_goal_stress">Sollievo dallo stress</string>
+    <string name="meditation_goal_focus">Concentrazione</string>
+    <string name="meditation_goal_sleep">Sonno</string>
+    <string name="meditation_goal_anxiety">Ansia</string>
+    <string name="meditation_goal_grounding">Radicamento</string>
+    <string name="meditation_configure_card_experience">Quanto conosci il breathwork?</string>
+    <string name="meditation_exp_first">Prima volta</string>
+    <string name="meditation_exp_occasional">Occasionalmente</string>
+    <string name="meditation_exp_regular">Regolarmente</string>
+    <string name="meditation_configure_first_time_banner">Benvenuto. Inizieremo con la respirazione coerente — respiri uguali e gentili, i più facili per il corpo.</string>
+    <string name="meditation_configure_card_audio">Audio</string>
+    <string name="meditation_audio_voice">Guida vocale</string>
+    <string name="meditation_audio_chimes">Solo campanelli</string>
+    <string name="meditation_audio_silent">Silenzioso</string>
+    <string name="meditation_configure_card_technique">Tecnica</string>
+    <string name="meditation_configure_tech_sub_overridable">Abbiamo scelto questa per te. Tocca per cambiare se preferisci un\'altra.</string>
+    <string name="meditation_configure_tech_sub_restricted">Bloccata sul percorso gentile oggi.</string>
+    <string name="meditation_configure_tech_sub_first_time">Le prime volte si resta sulla respirazione coerente.</string>
+    <string name="meditation_configure_tech_auto_pill">Auto</string>
+    <string name="meditation_configure_tech_478_cap">Massimo 4 cicli</string>
+    <string name="meditation_configure_fineprint">Strumento di benessere, non cura medica. Fermati e respira naturalmente se qualcosa non va.</string>
+    <string name="meditation_configure_redo_screening_link">Rifai il check di sicurezza</string>
+    <string name="meditation_configure_cta">Inizia a respirare</string>
+
+    <string name="meditation_tech_coherent_name">Respirazione coerente</string>
+    <string name="meditation_tech_coherent_short">5,5 in · 5,5 out</string>
+    <string name="meditation_tech_coherent_summary">Respiri uguali e gentili a circa 5,5 al minuto — un reset per il sistema nervoso.</string>
+    <string name="meditation_tech_coherent_mechanism">A circa 5,5 respiri al minuto, la variabilità della frequenza cardiaca aumenta e il nervo vago segnala sicurezza, alleggerendo il corpo dallo stress.</string>
+    <string name="meditation_tech_coherent_coach1">Attraverso il naso. Pancia morbida, spalle calme.</string>
+    <string name="meditation_tech_coherent_coach2">Lascia che il respiro trovi un ritmo morbido e regolare.</string>
+    <string name="meditation_tech_coherent_coach3">Se il tuo corpo vuole più aria, prendine di più.</string>
+
+    <string name="meditation_tech_exhale_name">Espirazione estesa</string>
+    <string name="meditation_tech_exhale_short">4 in · 6 out</string>
+    <string name="meditation_tech_exhale_summary">Espirazioni più lunghe delle inspirazioni — il modo più affidabile per rilassarsi.</string>
+    <string name="meditation_tech_exhale_mechanism">Un\'espirazione più lunga attiva il ramo parasimpatico (\"riposo e digestione\") del sistema nervoso, rallentando il battito e ammorbidendo la tensione.</string>
+    <string name="meditation_tech_exhale_coach1">Inspira dal naso. Espira lentamente dal naso o delicatamente a labbra socchiuse.</string>
+    <string name="meditation_tech_exhale_coach2">Lascia che l\'espirazione sia senza fretta — mai forzata.</string>
+    <string name="meditation_tech_exhale_coach3">La pancia sale all\'inspirazione; si rilascia all\'espirazione.</string>
+
+    <string name="meditation_tech_box_name">Respirazione quadrata</string>
+    <string name="meditation_tech_box_short">4 · 4 · 4 · 4</string>
+    <string name="meditation_tech_box_summary">Conteggio quadrato di quattro tempi — costante, focalizzato, usato da clinici e piloti.</string>
+    <string name="meditation_tech_box_mechanism">Intervalli uguali e contenuti creano un metronomo che la mente può seguire, restringendo l\'attenzione e calmando la reattività.</string>
+    <string name="meditation_tech_box_coach1">Le trattenute sono pause gentili, non gare di apnea.</string>
+    <string name="meditation_tech_box_coach2">Se una trattenuta sembra troppo lunga, accorciala — il ritmo è il tuo.</string>
+    <string name="meditation_tech_box_coach3">Attraverso il naso, morbido e regolare.</string>
+
+    <string name="meditation_tech_478_name">Respiro 4-7-8</string>
+    <string name="meditation_tech_478_short">4 in · 7 trattieni · 8 out</string>
+    <string name="meditation_tech_478_summary">Schema del Dr. Weil. Forte effetto parasimpatico — limitato a 4 cicli.</string>
+    <string name="meditation_tech_478_mechanism">Una trattenuta lunga e un\'espirazione ancora più lunga amplificano la risposta vagale. Anche pochi cicli possono rallentare visibilmente il polso.</string>
+    <string name="meditation_tech_478_coach1">Inspira silenziosamente dal naso.</string>
+    <string name="meditation_tech_478_coach2">Espira lentamente dalla bocca, labbra leggermente socchiuse.</string>
+    <string name="meditation_tech_478_coach3">Quattro cicli sono sufficienti. Se senti capogiri, torna al respiro naturale.</string>
+
+    <string name="meditation_tech_belly_name">Respirazione diaframmatica</string>
+    <string name="meditation_tech_belly_short">Diaframmatica, senza conteggio</string>
+    <string name="meditation_tech_belly_summary">Respiro morbido e profondo nella pancia. Niente ritmo — solo consapevolezza costante.</string>
+    <string name="meditation_tech_belly_mechanism">Coinvolgere il diaframma invece del torace approfondisce lo scambio di ossigeno e segnala sicurezza al corpo.</string>
+    <string name="meditation_tech_belly_coach1">Una mano sulla pancia, una sul petto.</string>
+    <string name="meditation_tech_belly_coach2">Nell\'inspirazione, solo la mano sulla pancia dovrebbe alzarsi.</string>
+    <string name="meditation_tech_belly_coach3">Niente conteggio. Lascia che il ritmo sia il tuo.</string>
+
+    <string name="meditation_tech_scan_name">Scansione corporea</string>
+    <string name="meditation_tech_scan_short">Respiro naturale, senza conteggio</string>
+    <string name="meditation_tech_scan_summary">Sposta l\'attenzione attraverso il corpo. Il respiro resta esattamente com\'è.</string>
+    <string name="meditation_tech_scan_mechanism">Nominare le sensazioni senza cambiarle interrompe la ruminazione e ti radica nel momento presente.</string>
+    <string name="meditation_tech_scan_coach1">Nota i tuoi piedi. Le tue gambe. I tuoi fianchi.</string>
+    <string name="meditation_tech_scan_coach2">Pancia. Petto. Spalle. Mascella.</string>
+    <string name="meditation_tech_scan_coach3">Non cambiare nulla. Solo nota.</string>
+
+    <string name="meditation_session_phase_settling">Sistemazione</string>
+    <string name="meditation_session_phase_practice">Pratica</string>
+    <string name="meditation_session_phase_integration">Integrazione</string>
+    <string name="meditation_cue_breathe_in">Inspira</string>
+    <string name="meditation_cue_hold">Trattieni</string>
+    <string name="meditation_cue_breathe_out">Espira</string>
+    <string name="meditation_cue_arrive">Arriva</string>
+    <string name="meditation_cue_release">Rilascia</string>
+    <string name="meditation_cue_breathe">Respira</string>
+    <string name="meditation_settle_coach1">Trova una posizione comoda. Rilassa le spalle, ammorbidisci la mascella.</string>
+    <string name="meditation_settle_coach2">Lascia riposare gli occhi, o chiudili. Nota il tuo respiro naturale, senza cambiarlo.</string>
+    <string name="meditation_settle_coach3">Niente ritmo per ora. Solo arrivare, qui.</string>
+    <string name="meditation_integrate_coach1">Lascia andare il ritmo. Respira come il tuo corpo desidera.</string>
+    <string name="meditation_integrate_coach2">Nota cosa è cambiato — un petto più morbido, un pensiero più lento, qualsiasi cosa.</string>
+    <string name="meditation_integrate_coach3">Quando sei pronto, apri lentamente gli occhi. Torna nella stanza.</string>
+
+    <string name="meditation_session_paused">In pausa</string>
+    <string name="meditation_session_stop_button">Stop</string>
+    <string name="meditation_a11y_pause">Pausa</string>
+    <string name="meditation_a11y_resume">Riprendi</string>
+    <string name="meditation_a11y_stop_session">Termina sessione</string>
+    <string name="meditation_session_audio_voice">voce</string>
+    <string name="meditation_session_audio_chimes">campanelli</string>
+    <string name="meditation_session_meta_template">%1$s · %2$s</string>
+
+    <string name="meditation_stop_title">Terminare la sessione?</string>
+    <string name="meditation_stop_body">Puoi fermarti in qualsiasi momento. Ti mostreremo una breve riflessione su quanto hai completato finora.</string>
+    <string name="meditation_stop_keep">Continua a respirare</string>
+    <string name="meditation_stop_end">Termina sessione</string>
+
+    <string name="meditation_overview_topbar">Riflessione</string>
+    <string name="meditation_overview_pill">Sessione completata</string>
+    <string name="meditation_overview_title_done">Fatto.\nBen fatto.</string>
+    <string name="meditation_overview_title_stopped">Ti sei fermato in anticipo.\nConta anche questo.</string>
+    <string name="meditation_overview_lede_with_cycles">%1$s · %2$s · %3$d cicli</string>
+    <string name="meditation_overview_lede_no_cycles">%1$s · %2$s</string>
+    <string name="meditation_overview_card_notice_title">Cosa potresti notare ora</string>
+    <string name="meditation_overview_notice_b1">Un battito più lento, o un petto e spalle più morbidi.</string>
+    <string name="meditation_overview_notice_b2">Un piccolo spazio tra pensiero e reazione.</string>
+    <string name="meditation_overview_notice_b3">Un segnale più chiaro quando il tuo corpo è pronto a riposare.</string>
+    <string name="meditation_overview_card_practice_title">Con la pratica regolare (4–8 settimane)</string>
+    <string name="meditation_overview_card_practice_body">Chi pratica quotidianamente spesso riporta un umore di base più calmo, un sonno più stabile e una risposta allo stress più bassa nelle situazioni quotidiane. La frequenza conta più della durata — pochi minuti al giorno battono una sessione lunga settimanale.</string>
+    <string name="meditation_overview_card_daily_title">Provala nella vita quotidiana</string>
+    <string name="meditation_overview_daily_b1_title">Abbinala a un\'abitudine che hai già.</string>
+    <string name="meditation_overview_daily_b1_sub">Tre respiri dopo esserti seduto alla scrivania, o prima di guardare il telefono.</string>
+    <string name="meditation_overview_daily_b2_title">Usala quando lo stress arriva.</string>
+    <string name="meditation_overview_daily_b2_sub_template">Due minuti di %1$s prima di una conversazione difficile possono cambiare come va a finire.</string>
+    <string name="meditation_overview_banner">Questo è uno strumento di benessere, non un trattamento medico. Ansia persistente, panico, problemi di sonno o difficoltà respiratorie meritano una conversazione con un medico.</string>
+    <string name="meditation_overview_btn_different">Sessione diversa</string>
+    <string name="meditation_overview_btn_redo">Rifai</string>
+
+    <string name="meditation_time_minutes_only">%1$d min</string>
+    <string name="meditation_time_min_sec">%1$d min %2$ds</string>
+    <string name="meditation_time_seconds_only">%1$ds</string>
 </resources>

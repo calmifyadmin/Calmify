@@ -112,8 +112,8 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
 **Scope**: 5-phase wizard (Welcome → Screening → Configure → Session → Overview), 6 evidence-based breathing techniques (Coherent / Extended exhale / Box / 4-7-8 / Belly / Body scan), 8 medical risk flags screening, goal-based recommendation, animated breathing pacer (halo + 2 rings + circle, smoothstep easing), coach text rotation, stop confirmation modal, stats overview.
 
 **Phased delivery** (3 sessions):
-- **Phase 1** (active): Domain refactor + Strings facade (~150 keys × 6 langs ≈ 900 traduzioni) + 4 new screens (Welcome / Screening / Configure / Overview skeleton) + state-machine wiring. Existing Session screen rewired to new state.
-- **Phase 2**: Animated pacer 1:1 with design + Stop modal BottomSheet + coach line rotation + keyboard shortcuts + Overview enhanced + 4-cycle cap for 4-7-8.
+- **Phase 1 DONE 2026-05-02**: Domain refactor (BreathingPattern 3→6 + Goal/Experience/Audio/RiskFlag enums) + 161 keys × 6 langs (966 traduzioni) + `Strings.Meditation` facade + `MeditationStrings.kt` extensions + 5-phase state machine + 5 new screens (~1670 LOC: Welcome/Screening/Configure/Overview + new Session baseline) + thin dispatcher. Firestore backward-compat via `BreathingPattern.fromCanonicalName()`. Build green (`./gradlew :app:assembleDebug`).
+- **Phase 2** (next): Animated pacer 1:1 with design (per-segment scale + smoothstep) + Stop modal BottomSheet + coach line rotation (12s practice / sub-phase-progressive settle+integrate) + keyboard shortcuts (ESC/SPACE) + Overview enhanced + 4-cycle cap UI for 4-7-8.
 - **Phase 3**: TTS voice guidance + chime sync + reduced-motion verification + TalkBack pass + cross-locale screenshot regression.
 
 **Tracker files (READ FIRST before any meditation work)**:
