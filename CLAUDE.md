@@ -105,6 +105,24 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
 
 **Ad ogni nuova sessione, LEGGERE SUBITO questo file prima di fare qualsiasi cosa.**
 
+### Active Workstream — Meditation Feature Redesign (started 2026-05-02)
+
+**Major feature redesign in progress.** Full rebuild of meditation flow to match Claude Design source `C:\Design\Calmify\Meditation\Calmify Meditation.html` + `calmify.css`. User explicit quality mandate: "Non mi importa se ci metto tanto, [...] Fatta bene 1:1 come minimo se non addirittura 1:1.5". NASA-grade rigor, full a11y, all 12 langs, no hardcoded strings.
+
+**Scope**: 5-phase wizard (Welcome → Screening → Configure → Session → Overview), 6 evidence-based breathing techniques (Coherent / Extended exhale / Box / 4-7-8 / Belly / Body scan), 8 medical risk flags screening, goal-based recommendation, animated breathing pacer (halo + 2 rings + circle, smoothstep easing), coach text rotation, stop confirmation modal, stats overview.
+
+**Phased delivery** (3 sessions):
+- **Phase 1** (active): Domain refactor + Strings facade (~150 keys × 6 langs ≈ 900 traduzioni) + 4 new screens (Welcome / Screening / Configure / Overview skeleton) + state-machine wiring. Existing Session screen rewired to new state.
+- **Phase 2**: Animated pacer 1:1 with design + Stop modal BottomSheet + coach line rotation + keyboard shortcuts + Overview enhanced + 4-cycle cap for 4-7-8.
+- **Phase 3**: TTS voice guidance + chime sync + reduced-motion verification + TalkBack pass + cross-locale screenshot regression.
+
+**Tracker files (READ FIRST before any meditation work)**:
+- `memory/meditation_redesign.md` — long-term context, why, design source, decisions
+- `.claude/MEDITATION_REDESIGN_PLAN.md` — strategic plan, full key catalog, contract refactor
+- `.claude/MEDITATION_REDESIGN_STATUS.md` — live checklist with checkbox per task
+
+**Quality gates per commit**: build green + zero hardcoded strings + all 6 Latin XMLs in sync + trackers updated BEFORE commit.
+
 ### Stato Attuale (aggiornato 2026-04-18)
 
 - **Branch attivo**: `backend-architecture-refactor` (base: master @ `08ef101`), HEAD = `2c8ea0b`
