@@ -47,12 +47,12 @@ fun MovementScreen(
                 title = {
                     Column {
                         Text(
-                            "Come sta il tuo corpo?",
+                            stringResource(Strings.Wellness.movementTitle),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            "Registra il tuo movimento",
+                            stringResource(Strings.Wellness.movementSubtitle),
                             style = MaterialTheme.typography.bodySmall,
                             color = colorScheme.onSurfaceVariant
                         )
@@ -71,7 +71,7 @@ fun MovementScreen(
                         if (state.isSaving) {
                             CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
                         } else {
-                            Icon(Icons.Default.Check, contentDescription = "Salva", tint = colorScheme.primary)
+                            Icon(Icons.Default.Check, contentDescription = stringResource(Strings.Wellness.movementSaveCd), tint = colorScheme.primary)
                         }
                     }
                 }
@@ -209,14 +209,14 @@ private fun WeeklySummaryCard(weeklyCount: Int) {
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Ottimo!",
+                        stringResource(Strings.Wellness.movementStreakGreat),
                         style = MaterialTheme.typography.titleSmall.copy(
                             fontWeight = FontWeight.SemiBold
                         ),
                         color = colorScheme.onPrimaryContainer
                     )
                     Text(
-                        "Continua cosi'",
+                        stringResource(Strings.Wellness.movementStreakKeep),
                         style = MaterialTheme.typography.bodySmall,
                         color = colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                     )
@@ -247,7 +247,7 @@ private fun MovementTypeSelectorCard(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                "Cosa hai fatto oggi?",
+                stringResource(Strings.Wellness.movementSectionWhat),
                 style = MaterialTheme.typography.titleSmall.copy(
                     fontWeight = FontWeight.SemiBold
                 ),
@@ -317,7 +317,7 @@ private fun DurationCard(
                     tint = colorScheme.primary
                 )
                 Text(
-                    "Per quanto tempo?",
+                    stringResource(Strings.Wellness.movementSectionDuration),
                     style = MaterialTheme.typography.titleSmall.copy(
                         fontWeight = FontWeight.SemiBold
                     ),
@@ -392,7 +392,7 @@ private fun FeelingCard(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
-                "Come ti senti dopo?",
+                stringResource(Strings.Wellness.movementSectionAfter),
                 style = MaterialTheme.typography.titleSmall.copy(
                     fontWeight = FontWeight.SemiBold
                 ),
@@ -474,7 +474,7 @@ private fun NoteCard(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                "Qualcosa da aggiungere?",
+                stringResource(Strings.Wellness.movementSectionNotes),
                 style = MaterialTheme.typography.titleSmall.copy(
                     fontWeight = FontWeight.SemiBold
                 ),

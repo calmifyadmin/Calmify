@@ -681,6 +681,216 @@ object Strings {
     }
 
     /**
+     * Wellness wizard chrome (Tier 3.D) — top app bar titles + section headers
+     * + save/dialog CTAs + per-screen specific labels for 8 wellness screens
+     * (BrainDump / Gratitude / EnergyCheckIn / Movement / SleepLog / Inspiration /
+     * Reframe / Connection). Reuses `Strings.Action.{save,cancel,confirm,...}`
+     * for shared verbs.
+     */
+    object Wellness {
+        // BrainDump
+        val brainDumpTitle: StringResource get() = Res.string.braindump_title
+        val brainDumpSubtitle: StringResource get() = Res.string.braindump_subtitle
+        val brainDumpSaveCd: StringResource get() = Res.string.braindump_a11y_save
+        val brainDumpPlaceholderHint: StringResource get() = Res.string.braindump_placeholder_hint
+        // Gratitude
+        val gratitudeSubtitleUpdate: StringResource get() = Res.string.gratitude_subtitle_update
+        val gratitudeSubtitleToday: StringResource get() = Res.string.gratitude_subtitle_today
+        val gratitudeLabelFirst: StringResource get() = Res.string.gratitude_label_first
+        val gratitudeLabelSecond: StringResource get() = Res.string.gratitude_label_second
+        val gratitudeLabelThird: StringResource get() = Res.string.gratitude_label_third
+        val gratitudeSaveUpdate: StringResource get() = Res.string.gratitude_save_update
+        val gratitudeSaveCreate: StringResource get() = Res.string.gratitude_save_create
+        val gratitudeJournalQuestion: StringResource get() = Res.string.gratitude_journal_question
+        // EnergyCheckIn
+        val energyTitle: StringResource get() = Res.string.energy_title
+        val energySubtitleUpdate: StringResource get() = Res.string.energy_subtitle_update
+        val energySubtitleCreate: StringResource get() = Res.string.energy_subtitle_create
+        val energySectionPerceived: StringResource get() = Res.string.energy_section_perceived
+        val energySectionSleepHours: StringResource get() = Res.string.energy_section_sleep_hours
+        val energySaveUpdate: StringResource get() = Res.string.energy_save_update
+        val energySaveCreate: StringResource get() = Res.string.energy_save_create
+        val energySectionWater: StringResource get() = Res.string.energy_section_water
+        val energyMinusCd: StringResource get() = Res.string.energy_a11y_minus
+        val energyPlusCd: StringResource get() = Res.string.energy_a11y_plus
+        val energySectionMovement: StringResource get() = Res.string.energy_section_movement
+        val energySectionMovementType: StringResource get() = Res.string.energy_section_movement_type
+        val energySectionMeals: StringResource get() = Res.string.energy_section_meals
+        val energyMealsYes: StringResource get() = Res.string.energy_meals_yes
+        val energyMealsNo: StringResource get() = Res.string.energy_meals_no
+        val energyWaterNone: StringResource get() = Res.string.energy_water_none
+        val energyWaterLow: StringResource get() = Res.string.energy_water_low
+        val energyWaterGood: StringResource get() = Res.string.energy_water_good
+        val energyWaterExcellent: StringResource get() = Res.string.energy_water_excellent
+        // Movement
+        val movementTitle: StringResource get() = Res.string.movement_title
+        val movementSubtitle: StringResource get() = Res.string.movement_subtitle
+        val movementSaveCd: StringResource get() = Res.string.movement_a11y_save
+        val movementSectionWhat: StringResource get() = Res.string.movement_section_what
+        val movementSectionDuration: StringResource get() = Res.string.movement_section_duration
+        val movementSectionAfter: StringResource get() = Res.string.movement_section_after
+        val movementSectionNotes: StringResource get() = Res.string.movement_section_notes
+        val movementStreakGreat: StringResource get() = Res.string.movement_streak_great
+        val movementStreakKeep: StringResource get() = Res.string.movement_streak_keep
+        // SleepLog
+        val sleepTitle: StringResource get() = Res.string.sleep_title
+        val sleepSubtitleUpdate: StringResource get() = Res.string.sleep_subtitle_update
+        val sleepSubtitleCreate: StringResource get() = Res.string.sleep_subtitle_create
+        val sleepSaveCd: StringResource get() = Res.string.sleep_a11y_save
+        val sleepQuestionBedtime: StringResource get() = Res.string.sleep_question_bedtime
+        val sleepSaveUpdate: StringResource get() = Res.string.sleep_save_update
+        val sleepSaveCreate: StringResource get() = Res.string.sleep_save_create
+        val sleepTapEdit: StringResource get() = Res.string.sleep_tap_edit
+        val sleepDialogConfirm: StringResource get() = Res.string.sleep_dialog_confirm
+        val sleepDialogCancel: StringResource get() = Res.string.sleep_dialog_cancel
+        val sleepQualityQuestion: StringResource get() = Res.string.sleep_quality_question
+        val sleepDisturbanceQuestion: StringResource get() = Res.string.sleep_disturbance_question
+        val sleepNoDisturbance: StringResource get() = Res.string.sleep_no_disturbance
+        val sleepScreensQuestion: StringResource get() = Res.string.sleep_screens_question
+        val sleepScreensSubtitle: StringResource get() = Res.string.sleep_screens_subtitle
+        val sleepQuality1: StringResource get() = Res.string.sleep_quality_1
+        val sleepQuality2: StringResource get() = Res.string.sleep_quality_2
+        val sleepQuality3: StringResource get() = Res.string.sleep_quality_3
+        val sleepQuality4: StringResource get() = Res.string.sleep_quality_4
+        val sleepQuality5: StringResource get() = Res.string.sleep_quality_5
+        // Inspiration
+        val inspirationTitle: StringResource get() = Res.string.inspiration_screen_title
+        val inspirationQuestion: StringResource get() = Res.string.inspiration_screen_question
+        val inspirationSave: StringResource get() = Res.string.inspiration_save_btn
+        val inspirationPracticeHint: StringResource get() = Res.string.inspiration_practice_hint
+        // Reframe
+        val reframeStep1Title: StringResource get() = Res.string.reframe_step_1_title
+        val reframeStep2Title: StringResource get() = Res.string.reframe_step_2_title
+        val reframeStep3Title: StringResource get() = Res.string.reframe_step_3_title
+        val reframeStep1Subtitle: StringResource get() = Res.string.reframe_step_1_subtitle
+        val reframeStep2Subtitle: StringResource get() = Res.string.reframe_step_2_subtitle
+        val reframeStep3Subtitle: StringResource get() = Res.string.reframe_step_3_subtitle
+        val reframeStepIndicator: StringResource get() = Res.string.reframe_step_indicator
+        val reframePlaceholderThought: StringResource get() = Res.string.reframe_placeholder_thought
+        val reframeEvidenceFor: StringResource get() = Res.string.reframe_evidence_for
+        val reframeException: StringResource get() = Res.string.reframe_exception
+        val reframeFriendQuestion: StringResource get() = Res.string.reframe_friend_question
+        val reframeYearQuestion: StringResource get() = Res.string.reframe_year_question
+        val reframeRewritePrompt: StringResource get() = Res.string.reframe_rewrite_prompt
+        val reframePlaceholderRewrite: StringResource get() = Res.string.reframe_placeholder_rewrite
+        val reframePlaceholderGeneric: StringResource get() = Res.string.reframe_placeholder_generic
+        // Connection
+        val connectionTitle: StringResource get() = Res.string.connection_title
+        val connectionSubtitle: StringResource get() = Res.string.connection_subtitle
+        val connectionQuestionType: StringResource get() = Res.string.connection_question_type
+        val connectionWhoService: StringResource get() = Res.string.connection_who_service
+        val connectionWhoQualityTime: StringResource get() = Res.string.connection_who_quality_time
+        val connectionWhoGratitude: StringResource get() = Res.string.connection_who_gratitude
+        val connectionToldThem: StringResource get() = Res.string.connection_q_told_them
+        val connectionUnsolicited: StringResource get() = Res.string.connection_q_unsolicited
+        val connectionQualityTimeTogetherQ: StringResource get() = Res.string.connection_q_quality_time_together
+        val connectionGratefulFor: StringResource get() = Res.string.connection_q_grateful_for
+        val connectionWhatDidYouDo: StringResource get() = Res.string.connection_q_what_did_you_do
+        val connectionHowSpentTime: StringResource get() = Res.string.connection_q_how_spent_time
+        val connectionToldThemYes: StringResource get() = Res.string.connection_told_them_yes
+        val connectionRecent: StringResource get() = Res.string.connection_recent
+        val connectionExpressed: StringResource get() = Res.string.connection_expressed
+        val connectionDeleteCd: StringResource get() = Res.string.connection_a11y_delete
+        val connectionRemoveCd: StringResource get() = Res.string.connection_a11y_remove
+        val connectionAddCd: StringResource get() = Res.string.connection_a11y_add
+        val connectionLabelGratitude: StringResource get() = Res.string.connection_label_gratitude
+        val connectionLabelService: StringResource get() = Res.string.connection_label_service
+        val connectionLabelQualityTime: StringResource get() = Res.string.connection_label_quality_time
+        val connectionMonthlyReflection: StringResource get() = Res.string.connection_monthly_reflection
+        val connectionRelationsNourish: StringResource get() = Res.string.connection_relations_nourish
+        val connectionRelationsDrain: StringResource get() = Res.string.connection_relations_drain
+        val connectionSave: StringResource get() = Res.string.connection_save
+        val connectionClose: StringResource get() = Res.string.connection_close
+    }
+
+    /**
+     * Garden activity expanded card (Tier 3.F) — long body description + 3 benefit
+     * bullets per activity (19 activities × 4 strings = 76 keys + 2 chrome).
+     * Activity name+desc come from `Strings.Garden.Activity.*`.
+     */
+    object GardenCard {
+        val benefitsHeader: StringResource get() = Res.string.garden_card_benefits_header
+        val startActivity: StringResource get() = Res.string.garden_card_start_activity
+        // Per-activity (19 × 4): long body + 3 benefit bullets
+        val diaryLong: StringResource get() = Res.string.garden_card_diary_long
+        val diaryB1: StringResource get() = Res.string.garden_card_diary_b1
+        val diaryB2: StringResource get() = Res.string.garden_card_diary_b2
+        val diaryB3: StringResource get() = Res.string.garden_card_diary_b3
+        val brainDumpLong: StringResource get() = Res.string.garden_card_brain_dump_long
+        val brainDumpB1: StringResource get() = Res.string.garden_card_brain_dump_b1
+        val brainDumpB2: StringResource get() = Res.string.garden_card_brain_dump_b2
+        val brainDumpB3: StringResource get() = Res.string.garden_card_brain_dump_b3
+        val gratitudeLong: StringResource get() = Res.string.garden_card_gratitude_long
+        val gratitudeB1: StringResource get() = Res.string.garden_card_gratitude_b1
+        val gratitudeB2: StringResource get() = Res.string.garden_card_gratitude_b2
+        val gratitudeB3: StringResource get() = Res.string.garden_card_gratitude_b3
+        val meditationLong: StringResource get() = Res.string.garden_card_meditation_long
+        val meditationB1: StringResource get() = Res.string.garden_card_meditation_b1
+        val meditationB2: StringResource get() = Res.string.garden_card_meditation_b2
+        val meditationB3: StringResource get() = Res.string.garden_card_meditation_b3
+        val reframingLong: StringResource get() = Res.string.garden_card_reframing_long
+        val reframingB1: StringResource get() = Res.string.garden_card_reframing_b1
+        val reframingB2: StringResource get() = Res.string.garden_card_reframing_b2
+        val reframingB3: StringResource get() = Res.string.garden_card_reframing_b3
+        val blocksLong: StringResource get() = Res.string.garden_card_blocks_long
+        val blocksB1: StringResource get() = Res.string.garden_card_blocks_b1
+        val blocksB2: StringResource get() = Res.string.garden_card_blocks_b2
+        val blocksB3: StringResource get() = Res.string.garden_card_blocks_b3
+        val recurringThoughtsLong: StringResource get() = Res.string.garden_card_recurring_thoughts_long
+        val recurringThoughtsB1: StringResource get() = Res.string.garden_card_recurring_thoughts_b1
+        val recurringThoughtsB2: StringResource get() = Res.string.garden_card_recurring_thoughts_b2
+        val recurringThoughtsB3: StringResource get() = Res.string.garden_card_recurring_thoughts_b3
+        val energyLong: StringResource get() = Res.string.garden_card_energy_long
+        val energyB1: StringResource get() = Res.string.garden_card_energy_b1
+        val energyB2: StringResource get() = Res.string.garden_card_energy_b2
+        val energyB3: StringResource get() = Res.string.garden_card_energy_b3
+        val sleepLong: StringResource get() = Res.string.garden_card_sleep_long
+        val sleepB1: StringResource get() = Res.string.garden_card_sleep_b1
+        val sleepB2: StringResource get() = Res.string.garden_card_sleep_b2
+        val sleepB3: StringResource get() = Res.string.garden_card_sleep_b3
+        val movementLong: StringResource get() = Res.string.garden_card_movement_long
+        val movementB1: StringResource get() = Res.string.garden_card_movement_b1
+        val movementB2: StringResource get() = Res.string.garden_card_movement_b2
+        val movementB3: StringResource get() = Res.string.garden_card_movement_b3
+        val dashboardLong: StringResource get() = Res.string.garden_card_dashboard_long
+        val dashboardB1: StringResource get() = Res.string.garden_card_dashboard_b1
+        val dashboardB2: StringResource get() = Res.string.garden_card_dashboard_b2
+        val dashboardB3: StringResource get() = Res.string.garden_card_dashboard_b3
+        val valuesLong: StringResource get() = Res.string.garden_card_values_long
+        val valuesB1: StringResource get() = Res.string.garden_card_values_b1
+        val valuesB2: StringResource get() = Res.string.garden_card_values_b2
+        val valuesB3: StringResource get() = Res.string.garden_card_values_b3
+        val ikigaiLong: StringResource get() = Res.string.garden_card_ikigai_long
+        val ikigaiB1: StringResource get() = Res.string.garden_card_ikigai_b1
+        val ikigaiB2: StringResource get() = Res.string.garden_card_ikigai_b2
+        val ikigaiB3: StringResource get() = Res.string.garden_card_ikigai_b3
+        val aweLong: StringResource get() = Res.string.garden_card_awe_long
+        val aweB1: StringResource get() = Res.string.garden_card_awe_b1
+        val aweB2: StringResource get() = Res.string.garden_card_awe_b2
+        val aweB3: StringResource get() = Res.string.garden_card_awe_b3
+        val silenceLong: StringResource get() = Res.string.garden_card_silence_long
+        val silenceB1: StringResource get() = Res.string.garden_card_silence_b1
+        val silenceB2: StringResource get() = Res.string.garden_card_silence_b2
+        val silenceB3: StringResource get() = Res.string.garden_card_silence_b3
+        val connectionsLong: StringResource get() = Res.string.garden_card_connections_long
+        val connectionsB1: StringResource get() = Res.string.garden_card_connections_b1
+        val connectionsB2: StringResource get() = Res.string.garden_card_connections_b2
+        val connectionsB3: StringResource get() = Res.string.garden_card_connections_b3
+        val inspirationLong: StringResource get() = Res.string.garden_card_inspiration_long
+        val inspirationB1: StringResource get() = Res.string.garden_card_inspiration_b1
+        val inspirationB2: StringResource get() = Res.string.garden_card_inspiration_b2
+        val inspirationB3: StringResource get() = Res.string.garden_card_inspiration_b3
+        val habitsLong: StringResource get() = Res.string.garden_card_habits_long
+        val habitsB1: StringResource get() = Res.string.garden_card_habits_b1
+        val habitsB2: StringResource get() = Res.string.garden_card_habits_b2
+        val habitsB3: StringResource get() = Res.string.garden_card_habits_b3
+        val environmentLong: StringResource get() = Res.string.garden_card_environment_long
+        val environmentB1: StringResource get() = Res.string.garden_card_environment_b1
+        val environmentB2: StringResource get() = Res.string.garden_card_environment_b2
+        val environmentB3: StringResource get() = Res.string.garden_card_environment_b3
+    }
+
+    /**
      * Percorso/Journey interior (`PercorsoScreen.kt`). Top weekly card,
      * map section, 4 pillars, per-pillar stats with plural suffixes.
      * Activity name labels reuse `Strings.Garden.Activity.*` from Tier 2.A.

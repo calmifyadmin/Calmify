@@ -76,7 +76,7 @@ internal fun GratitudeScreen(
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                text = if (state.savedToday) "Aggiorna le tue cose belle" else "Di cosa sei grato oggi?",
+                                text = stringResource(if (state.savedToday) Strings.Wellness.gratitudeSubtitleUpdate else Strings.Wellness.gratitudeSubtitleToday),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -97,7 +97,7 @@ internal fun GratitudeScreen(
                             } else {
                                 Icon(
                                     Icons.Default.Check,
-                                    contentDescription = "Salva",
+                                    contentDescription = stringResource(Strings.Action.save),
                                     tint = if (canSave) MaterialTheme.colorScheme.primary
                                     else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                                 )
@@ -128,7 +128,11 @@ internal fun GratitudeScreen(
             ) {
                 val items = listOf(state.item1, state.item2, state.item3)
                 val categories = listOf(state.category1, state.category2, state.category3)
-                val labels = listOf("Prima cosa bella", "Seconda cosa bella", "Terza cosa bella")
+                val labels = listOf(
+                    stringResource(Strings.Wellness.gratitudeLabelFirst),
+                    stringResource(Strings.Wellness.gratitudeLabelSecond),
+                    stringResource(Strings.Wellness.gratitudeLabelThird),
+                )
                 val numbering = listOf("1.", "2.", "3.")
 
                 items.forEachIndexed { index, itemText ->
@@ -162,7 +166,7 @@ internal fun GratitudeScreen(
                     contentPadding = PaddingValues(vertical = 16.dp)
                 ) {
                     Text(
-                        text = if (state.savedToday) "Aggiorna" else "Salva le tue cose belle",
+                        text = stringResource(if (state.savedToday) Strings.Wellness.gratitudeSaveUpdate else Strings.Wellness.gratitudeSaveCreate),
                         style = MaterialTheme.typography.labelLarge
                     )
                 }
@@ -243,7 +247,7 @@ private fun GratitudeItemCard(
                     Box(modifier = Modifier.defaultMinSize(minHeight = 48.dp)) {
                         if (text.isEmpty()) {
                             Text(
-                                text = "Cosa ti ha reso grato oggi?",
+                                text = stringResource(Strings.Wellness.gratitudeJournalQuestion),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                             )

@@ -52,12 +52,12 @@ internal fun EnergyCheckInScreen(
                 title = {
                     Column {
                         Text(
-                            text = "Come Sta il Tuo Corpo?",
+                            text = stringResource(Strings.Wellness.energyTitle),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            text = if (state.savedToday) "Aggiorna il check-in" else "Check-in fisico giornaliero",
+                            text = stringResource(if (state.savedToday) Strings.Wellness.energySubtitleUpdate else Strings.Wellness.energySubtitleCreate),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -78,7 +78,7 @@ internal fun EnergyCheckInScreen(
                         } else {
                             Icon(
                                 Icons.Default.Check,
-                                contentDescription = "Salva",
+                                contentDescription = stringResource(Strings.Action.save),
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
@@ -109,7 +109,7 @@ internal fun EnergyCheckInScreen(
             // 1. Energy Level (1-10)
             AnimatedSection(index = 0) {
                 EnergySliderCard(
-                    title = "Energia percepita",
+                    title = stringResource(Strings.Wellness.energySectionPerceived),
                     icon = energyIcon(state.energyLevel),
                     value = state.energyLevel,
                     valueLabel = "${state.energyLevel}/10",
@@ -122,7 +122,7 @@ internal fun EnergyCheckInScreen(
             // 2. Sleep Hours
             AnimatedSection(index = 1) {
                 EnergySliderCard(
-                    title = "Ore di sonno",
+                    title = stringResource(Strings.Wellness.energySectionSleepHours),
                     icon = sleepIcon(state.sleepHours),
                     value = state.sleepHours.roundToInt(),
                     valueLabel = "${state.sleepHours.roundToHalf()}h",
@@ -169,7 +169,7 @@ internal fun EnergyCheckInScreen(
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text(
-                    text = if (state.savedToday) "Aggiorna" else "Salva check-in",
+                    text = stringResource(if (state.savedToday) Strings.Wellness.energySaveUpdate else Strings.Wellness.energySaveCreate),
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
             }
@@ -253,12 +253,12 @@ private fun WaterCounterCard(
             Spacer(Modifier.width(8.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Bicchieri d'acqua",
+                    text = stringResource(Strings.Wellness.energySectionWater),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Medium
                 )
                 Text(
-                    text = waterFeedback(glasses),
+                    text = stringResource(waterFeedbackRes(glasses)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -269,7 +269,7 @@ private fun WaterCounterCard(
                     enabled = glasses > 0,
                     modifier = Modifier.size(36.dp)
                 ) {
-                    Icon(Icons.Default.Remove, contentDescription = "Meno", modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Remove, contentDescription = stringResource(Strings.Wellness.energyMinusCd), modifier = Modifier.size(18.dp))
                 }
                 Text(
                     text = "$glasses",
@@ -282,7 +282,7 @@ private fun WaterCounterCard(
                     onClick = onIncrement,
                     modifier = Modifier.size(36.dp)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Piu'", modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Add, contentDescription = stringResource(Strings.Wellness.energyPlusCd), modifier = Modifier.size(18.dp))
                 }
             }
         }
@@ -308,7 +308,7 @@ private fun MovementCard(
                 Text(text = "\uD83C\uDFC3", style = MaterialTheme.typography.headlineSmall)
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = "Movimento oggi?",
+                    text = stringResource(Strings.Wellness.energySectionMovement),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.weight(1f)
@@ -323,7 +323,7 @@ private fun MovementCard(
                 Column {
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        text = "Che tipo?",
+                        text = stringResource(Strings.Wellness.energySectionMovementType),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -373,12 +373,12 @@ private fun MealsCard(
             Spacer(Modifier.width(8.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Pasti regolari?",
+                    text = stringResource(Strings.Wellness.energySectionMeals),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Medium
                 )
                 Text(
-                    text = if (regularMeals) "Mangiato con regolarita'" else "Pasti saltati o irregolari",
+                    text = stringResource(if (regularMeals) Strings.Wellness.energyMealsYes else Strings.Wellness.energyMealsNo),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -425,11 +425,11 @@ private fun sleepIcon(hours: Float): ImageVector = when {
     else -> Icons.Outlined.Hotel
 }
 
-private fun waterFeedback(glasses: Int): String = when {
-    glasses == 0 -> "Nessun bicchiere ancora"
-    glasses < 4 -> "Bevi di piu'!"
-    glasses < 8 -> "Buon progresso"
-    else -> "Ottima idratazione!"
+private fun waterFeedbackRes(glasses: Int): org.jetbrains.compose.resources.StringResource = when {
+    glasses == 0 -> Strings.Wellness.energyWaterNone
+    glasses < 4 -> Strings.Wellness.energyWaterLow
+    glasses < 8 -> Strings.Wellness.energyWaterGood
+    else -> Strings.Wellness.energyWaterExcellent
 }
 
 private fun Float.roundToHalf(): Float = (this * 2).roundToInt() / 2f

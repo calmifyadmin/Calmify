@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.lifo.ui.components.CalmifyTopBar
 import com.lifo.ui.i18n.Strings
+import org.jetbrains.compose.resources.StringResource
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 
@@ -75,10 +76,10 @@ private val circleIcons = mapOf(
 
 private data class GardenActivityData(
     val id: String,
-    val name: String,
-    val description: String,
-    val longDescription: String,
-    val benefits: List<String>,
+    val nameRes: StringResource,
+    val descriptionRes: StringResource,
+    val longDescriptionRes: StringResource,
+    val benefitsRes: List<StringResource>,
     val estimatedMinutes: Int,
     val difficulty: GardenContract.Difficulty,
     val icon: ImageVector,
@@ -89,121 +90,121 @@ private data class GardenActivityData(
 private val allActivities = listOf(
     // Scrittura
     GardenActivityData(
-        "diary", "Diario", "Scrivi i tuoi pensieri",
-        "Scrivere i tuoi pensieri ti aiuta a elaborare emozioni e trovare chiarezza. Il diario e' il cuore del tuo percorso di crescita.",
-        listOf("Riduce ansia", "Migliora autoconsapevolezza", "Traccia la crescita personale"),
+        "diary", Strings.Garden.Activity.diaryName, Strings.Garden.Activity.diaryDesc,
+        Strings.GardenCard.diaryLong,
+        listOf(Strings.GardenCard.diaryB1, Strings.GardenCard.diaryB2, Strings.GardenCard.diaryB3),
         5, GardenContract.Difficulty.FACILE, Icons.Outlined.Edit, Color(0xFF2E7D55), GardenContract.Category.SCRITTURA,
     ),
     GardenActivityData(
-        "braindump", "Brain Dump", "Svuota la mente",
-        "Libera la mente da tutto cio' che la occupa, senza giudizio e senza struttura.",
-        listOf("Riduce carico mentale", "Migliora focus", "Facilita il sonno"),
+        "braindump", Strings.Garden.Activity.brainDumpName, Strings.Garden.Activity.brainDumpDesc,
+        Strings.GardenCard.brainDumpLong,
+        listOf(Strings.GardenCard.brainDumpB1, Strings.GardenCard.brainDumpB2, Strings.GardenCard.brainDumpB3),
         3, GardenContract.Difficulty.FACILE, Icons.Outlined.Stream, Color(0xFF78909C), GardenContract.Category.SCRITTURA,
     ),
     GardenActivityData(
-        "gratitude", "Gratitudine", "3 cose belle",
-        "Riconoscere il bello quotidiano allena il cervello alla positivita'.",
-        listOf("Aumenta felicita'", "Riduce stress", "Migliora relazioni"),
+        "gratitude", Strings.Garden.Activity.gratitudeName, Strings.Garden.Activity.gratitudeDesc,
+        Strings.GardenCard.gratitudeLong,
+        listOf(Strings.GardenCard.gratitudeB1, Strings.GardenCard.gratitudeB2, Strings.GardenCard.gratitudeB3),
         3, GardenContract.Difficulty.FACILE, Icons.Outlined.Favorite, Color(0xFFE91E63), GardenContract.Category.SCRITTURA,
     ),
     // Mente
     GardenActivityData(
-        "meditation", "Meditazione", "Respira e centra",
-        "Pochi minuti di presenza trasformano la qualita' della giornata.",
-        listOf("Riduce cortisolo", "Migliora concentrazione", "Aumenta resilienza"),
+        "meditation", Strings.Garden.Activity.meditationName, Strings.Garden.Activity.meditationDesc,
+        Strings.GardenCard.meditationLong,
+        listOf(Strings.GardenCard.meditationB1, Strings.GardenCard.meditationB2, Strings.GardenCard.meditationB3),
         10, GardenContract.Difficulty.MEDIO, Icons.Outlined.SelfImprovement, Color(0xFF7E57C2), GardenContract.Category.MENTE,
     ),
     GardenActivityData(
-        "reframe", "Reframing", "Cambia prospettiva",
-        "Cambiare prospettiva su un pensiero negativo ne riduce il potere.",
-        listOf("Rompe schemi negativi", "Aumenta flessibilita' mentale", "Riduce ruminazione"),
+        "reframe", Strings.Garden.Activity.reframingName, Strings.Garden.Activity.reframingDesc,
+        Strings.GardenCard.reframingLong,
+        listOf(Strings.GardenCard.reframingB1, Strings.GardenCard.reframingB2, Strings.GardenCard.reframingB3),
         5, GardenContract.Difficulty.MEDIO, Icons.Outlined.Psychology, Color(0xFF5C6BC0), GardenContract.Category.MENTE,
     ),
     GardenActivityData(
-        "block", "Blocchi", "Riconosci gli ostacoli",
-        "Riconoscere cosa ti blocca e' il primo passo per superarlo.",
-        listOf("Aumenta consapevolezza", "Identifica pattern", "Sblocca azione"),
+        "block", Strings.Garden.Activity.blocksName, Strings.Garden.Activity.blocksDesc,
+        Strings.GardenCard.blocksLong,
+        listOf(Strings.GardenCard.blocksB1, Strings.GardenCard.blocksB2, Strings.GardenCard.blocksB3),
         5, GardenContract.Difficulty.MEDIO, Icons.Outlined.Extension, Color(0xFFEF6C00), GardenContract.Category.MENTE,
     ),
     GardenActivityData(
-        "recurring", "Pensieri Ricorrenti", "Osserva i pattern",
-        "Osservare i pattern mentali ti da' potere su di essi.",
-        listOf("Riduce ruminazione", "Identifica trigger", "Aumenta meta-cognizione"),
+        "recurring", Strings.Garden.Activity.recurringThoughtsName, Strings.Garden.Activity.recurringThoughtsDesc,
+        Strings.GardenCard.recurringThoughtsLong,
+        listOf(Strings.GardenCard.recurringThoughtsB1, Strings.GardenCard.recurringThoughtsB2, Strings.GardenCard.recurringThoughtsB3),
         5, GardenContract.Difficulty.MEDIO, Icons.Outlined.BubbleChart, Color(0xFF00897B), GardenContract.Category.MENTE,
     ),
     // Corpo
     GardenActivityData(
-        "energy", "Energia", "Come stai oggi?",
-        "Monitorare i tuoi livelli di energia rivela i tuoi ritmi naturali.",
-        listOf("Ottimizza produttivita'", "Previene burnout", "Migliora decisioni"),
+        "energy", Strings.Garden.Activity.energyName, Strings.Garden.Activity.energyDesc,
+        Strings.GardenCard.energyLong,
+        listOf(Strings.GardenCard.energyB1, Strings.GardenCard.energyB2, Strings.GardenCard.energyB3),
         2, GardenContract.Difficulty.FACILE, Icons.Outlined.BatteryChargingFull, Color(0xFFFF9800), GardenContract.Category.CORPO,
     ),
     GardenActivityData(
-        "sleep", "Sonno", "Traccia il riposo",
-        "Il sonno e' il fondamento di ogni altra area del benessere.",
-        listOf("Migliora umore", "Aumenta energia", "Consolida memoria"),
+        "sleep", Strings.Garden.Activity.sleepName, Strings.Garden.Activity.sleepDesc,
+        Strings.GardenCard.sleepLong,
+        listOf(Strings.GardenCard.sleepB1, Strings.GardenCard.sleepB2, Strings.GardenCard.sleepB3),
         2, GardenContract.Difficulty.FACILE, Icons.Outlined.Bedtime, Color(0xFF5C6BC0), GardenContract.Category.CORPO,
     ),
     GardenActivityData(
-        "movement", "Movimento", "Registra attivita'",
-        "Registrare il movimento ti motiva a muoverti di piu'.",
-        listOf("Riduce sedentarieta'", "Migliora umore", "Aumenta energia"),
+        "movement", Strings.Garden.Activity.movementName, Strings.Garden.Activity.movementDesc,
+        Strings.GardenCard.movementLong,
+        listOf(Strings.GardenCard.movementB1, Strings.GardenCard.movementB2, Strings.GardenCard.movementB3),
         2, GardenContract.Difficulty.FACILE, Icons.AutoMirrored.Outlined.DirectionsRun, Color(0xFFEF6C00), GardenContract.Category.CORPO,
     ),
     GardenActivityData(
-        "dashboard", "Dashboard", "Panoramica corpo",
-        "Visione d'insieme del tuo benessere fisico in un colpo d'occhio.",
-        listOf("Visione olistica", "Identifica trend", "Motiva azione"),
+        "dashboard", Strings.Garden.Activity.dashboardName, Strings.Garden.Activity.dashboardDesc,
+        Strings.GardenCard.dashboardLong,
+        listOf(Strings.GardenCard.dashboardB1, Strings.GardenCard.dashboardB2, Strings.GardenCard.dashboardB3),
         1, GardenContract.Difficulty.FACILE, Icons.Outlined.Terrain, Color(0xFF26A69A), GardenContract.Category.CORPO,
     ),
     // Spirito
     GardenActivityData(
-        "values", "Valori", "Scopri cosa conta",
-        "Scoprire i tuoi valori guida decisioni allineate alla tua essenza.",
-        listOf("Chiarezza decisionale", "Aumenta soddisfazione", "Riduce conflitti interni"),
+        "values", Strings.Garden.Activity.valuesName, Strings.Garden.Activity.valuesDesc,
+        Strings.GardenCard.valuesLong,
+        listOf(Strings.GardenCard.valuesB1, Strings.GardenCard.valuesB2, Strings.GardenCard.valuesB3),
         10, GardenContract.Difficulty.AVANZATO, Icons.Outlined.Explore, Color(0xFF42A5F5), GardenContract.Category.SPIRITO,
     ),
     GardenActivityData(
-        "ikigai", "Ikigai", "Trova il tuo scopo",
-        "Trovare l'intersezione tra passione, talento, missione e professione.",
-        listOf("Scopri il tuo scopo", "Allinea vita e lavoro", "Aumenta motivazione"),
+        "ikigai", Strings.Garden.Activity.ikigaiName, Strings.Garden.Activity.ikigaiDesc,
+        Strings.GardenCard.ikigaiLong,
+        listOf(Strings.GardenCard.ikigaiB1, Strings.GardenCard.ikigaiB2, Strings.GardenCard.ikigaiB3),
         15, GardenContract.Difficulty.AVANZATO, Icons.Outlined.Interests, Color(0xFFAB47BC), GardenContract.Category.SPIRITO,
     ),
     GardenActivityData(
-        "awe", "Awe", "Meraviglia quotidiana",
-        "Coltivare meraviglia espande la percezione del tempo e dello spazio.",
-        listOf("Riduce stress", "Aumenta generosita'", "Amplia prospettiva"),
+        "awe", Strings.Garden.Activity.aweName, Strings.Garden.Activity.aweDesc,
+        Strings.GardenCard.aweLong,
+        listOf(Strings.GardenCard.aweB1, Strings.GardenCard.aweB2, Strings.GardenCard.aweB3),
         3, GardenContract.Difficulty.FACILE, Icons.Outlined.Park, Color(0xFF66BB6A), GardenContract.Category.SPIRITO,
     ),
     GardenActivityData(
-        "silence", "Silenzio", "Pratica il vuoto",
-        "Il silenzio intenzionale rigenera la mente e apre spazio alla creativita'.",
-        listOf("Riduce sovraccarico", "Migliora ascolto interiore", "Aumenta creativita'"),
+        "silence", Strings.Garden.Activity.silenceName, Strings.Garden.Activity.silenceDesc,
+        Strings.GardenCard.silenceLong,
+        listOf(Strings.GardenCard.silenceB1, Strings.GardenCard.silenceB2, Strings.GardenCard.silenceB3),
         5, GardenContract.Difficulty.MEDIO, Icons.Outlined.SelfImprovement, Color(0xFF78909C), GardenContract.Category.SPIRITO,
     ),
     GardenActivityData(
-        "connection", "Connessioni", "Relazioni che contano",
-        "Le relazioni significative sono il miglior predittore di benessere a lungo termine.",
-        listOf("Rafforza legami", "Riduce solitudine", "Aumenta senso di appartenenza"),
+        "connection", Strings.Garden.Activity.connectionsName, Strings.Garden.Activity.connectionsDesc,
+        Strings.GardenCard.connectionsLong,
+        listOf(Strings.GardenCard.connectionsB1, Strings.GardenCard.connectionsB2, Strings.GardenCard.connectionsB3),
         5, GardenContract.Difficulty.FACILE, Icons.Outlined.People, Color(0xFFE91E63), GardenContract.Category.SPIRITO,
     ),
     GardenActivityData(
-        "inspiration", "Ispirazione", "Raccogli spunti",
-        "Raccogliere spunti nutre la crescita personale e apre nuove strade.",
-        listOf("Stimola creativita'", "Amplia orizzonti", "Motiva azione"),
+        "inspiration", Strings.Garden.Activity.inspirationName, Strings.Garden.Activity.inspirationDesc,
+        Strings.GardenCard.inspirationLong,
+        listOf(Strings.GardenCard.inspirationB1, Strings.GardenCard.inspirationB2, Strings.GardenCard.inspirationB3),
         3, GardenContract.Difficulty.FACILE, Icons.Outlined.FormatQuote, Color(0xFFFFCA28), GardenContract.Category.SPIRITO,
     ),
     // Abitudini
     GardenActivityData(
-        "habits", "Abitudini", "Costruisci routine",
-        "Piccole azioni ripetute creano grandi trasformazioni nel tempo.",
-        listOf("Automatizza il miglioramento", "Costruisce disciplina", "Crea momentum"),
+        "habits", Strings.Garden.Activity.habitsName, Strings.Garden.Activity.habitsDesc,
+        Strings.GardenCard.habitsLong,
+        listOf(Strings.GardenCard.habitsB1, Strings.GardenCard.habitsB2, Strings.GardenCard.habitsB3),
         5, GardenContract.Difficulty.MEDIO, Icons.Outlined.CheckCircle, Color(0xFF26A69A), GardenContract.Category.ABITUDINI,
     ),
     GardenActivityData(
-        "environment", "Ambiente", "Disegna il contesto",
-        "Il contesto in cui vivi influenza profondamente chi diventi.",
-        listOf("Riduce frizione", "Aumenta benessere", "Supporta obiettivi"),
+        "environment", Strings.Garden.Activity.environmentName, Strings.Garden.Activity.environmentDesc,
+        Strings.GardenCard.environmentLong,
+        listOf(Strings.GardenCard.environmentB1, Strings.GardenCard.environmentB2, Strings.GardenCard.environmentB3),
         10, GardenContract.Difficulty.AVANZATO, Icons.Outlined.Spa, Color(0xFF4CAF7D), GardenContract.Category.ABITUDINI,
     ),
 )
@@ -861,7 +862,7 @@ private fun GardenExpandableCard(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             Text(
-                                text = activity.name,
+                                text = stringResource(activity.nameRes),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.SemiBold,
                                 color = colorScheme.onSurface,
@@ -882,7 +883,7 @@ private fun GardenExpandableCard(
                             }
                         }
                         Text(
-                            text = activity.description,
+                            text = stringResource(activity.descriptionRes),
                             style = MaterialTheme.typography.bodySmall,
                             color = colorScheme.onSurfaceVariant,
                         )
@@ -911,7 +912,7 @@ private fun GardenExpandableCard(
                     ) {
                         // Long description
                         Text(
-                            text = activity.longDescription,
+                            text = stringResource(activity.longDescriptionRes),
                             style = MaterialTheme.typography.bodyMedium,
                             color = colorScheme.onSurface,
                             lineHeight = 20.sp,
@@ -919,12 +920,12 @@ private fun GardenExpandableCard(
 
                         // Benefits
                         Text(
-                            "Benefici",
+                            stringResource(Strings.GardenCard.benefitsHeader),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = colorScheme.onSurface,
                         )
-                        activity.benefits.forEach { benefit ->
+                        activity.benefitsRes.forEach { benefitRes ->
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalAlignment = Alignment.Top,
@@ -937,7 +938,7 @@ private fun GardenExpandableCard(
                                         .offset(y = 6.dp),
                                 ) {}
                                 Text(
-                                    benefit,
+                                    stringResource(benefitRes),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = colorScheme.onSurfaceVariant,
                                 )
@@ -1008,7 +1009,7 @@ private fun GardenExpandableCard(
                             ),
                         ) {
                             Text(
-                                "Inizia Attivita'",
+                                stringResource(Strings.GardenCard.startActivity),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.SemiBold,
                             )

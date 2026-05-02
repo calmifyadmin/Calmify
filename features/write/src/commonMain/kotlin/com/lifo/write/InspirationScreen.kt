@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lifo.ui.i18n.Strings
 import org.jetbrains.compose.resources.stringResource
 import com.lifo.ui.resources.Res
 import com.lifo.ui.resources.*
@@ -96,14 +97,14 @@ fun InspirationScreen(
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            "Diario della Bellezza",
+                            stringResource(Strings.Wellness.inspirationTitle),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                         )
                     }
 
                     Text(
-                        "Cosa di bello hai notato oggi?",
+                        stringResource(Strings.Wellness.inspirationQuestion),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -139,7 +140,7 @@ fun InspirationScreen(
                         ) {
                             Icon(Icons.Default.AutoAwesome, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text("Salva")
+                            Text(stringResource(Strings.Wellness.inspirationSave))
                         }
                     }
                 }
@@ -161,7 +162,7 @@ fun InspirationScreen(
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(
-                        "Definisci la tua pratica personale nelle Impostazioni e aggiungila come abitudine nel Habit Tracker.",
+                        stringResource(Strings.Wellness.inspirationPracticeHint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

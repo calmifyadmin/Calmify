@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lifo.util.model.ThoughtCategory
 import kotlinx.coroutines.delay
+import com.lifo.ui.i18n.Strings
 import org.jetbrains.compose.resources.stringResource
 import com.lifo.ui.resources.Res
 import com.lifo.ui.resources.*
@@ -43,11 +44,15 @@ internal fun ReframeScreen(
     onBackPressed: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val stepTitles = listOf("Cattura il pensiero", "Osserva e metti in discussione", "Riscrivi")
+    val stepTitles = listOf(
+        stringResource(Strings.Wellness.reframeStep1Title),
+        stringResource(Strings.Wellness.reframeStep2Title),
+        stringResource(Strings.Wellness.reframeStep3Title),
+    )
     val stepSubtitles = listOf(
-        "Scrivi il pensiero che ti blocca, esattamente come lo senti.",
-        "Metti il pensiero sotto la lente.",
-        "Non positivita' tossica. Un'alternativa onesta e credibile."
+        stringResource(Strings.Wellness.reframeStep1Subtitle),
+        stringResource(Strings.Wellness.reframeStep2Subtitle),
+        stringResource(Strings.Wellness.reframeStep3Subtitle),
     )
 
     Scaffold(
@@ -57,7 +62,7 @@ internal fun ReframeScreen(
                     Column {
                         Text(stringResource(Res.string.reframe_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         Text(
-                            "Passo ${state.currentStep + 1} di 3",
+                            stringResource(Strings.Wellness.reframeStepIndicator, state.currentStep + 1),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -94,7 +99,7 @@ internal fun ReframeScreen(
                             onClick = { onIntent(ReframeContract.Intent.NextStep) },
                             enabled = state.canProceed
                         ) {
-                            Text("Avanti")
+                            Text(stringResource(Strings.Coach.buttonNext))
                             Spacer(Modifier.width(4.dp))
                             Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, Modifier.size(18.dp))
                         }
@@ -169,7 +174,7 @@ private fun StepCapture(state: ReframeContract.State, onIntent: (ReframeContract
     ReframeTextField(
         value = state.originalThought,
         onValueChange = { onIntent(ReframeContract.Intent.SetOriginalThought(it)) },
-        placeholder = "es. \"Non sono capace di fare nulla bene\"",
+        placeholder = stringResource(Strings.Wellness.reframePlaceholderThought),
         focusRequester = focusRequester,
         minHeight = 120.dp,
     )
@@ -206,20 +211,20 @@ private fun StepQuestion(state: ReframeContract.State, onIntent: (ReframeContrac
 
     // Socratic questions
     QuestionField(
-        question = "E' davvero vero? Sempre, in ogni situazione?",
-        subtext = "Quali prove hai a FAVORE?",
+        question = stringResource(Strings.Wellness.reframeStep1Subtitle),
+        subtext = stringResource(Strings.Wellness.reframeEvidenceFor),
         value = state.evidenceFor,
         onValueChange = { onIntent(ReframeContract.Intent.SetEvidenceFor(it)) },
     )
     QuestionField(
-        question = "E le prove CONTRO?",
-        subtext = "Ci sono momenti in cui non era vero?",
+        question = stringResource(Strings.Wellness.reframeStep2Title),
+        subtext = stringResource(Strings.Wellness.reframeException),
         value = state.evidenceAgainst,
         onValueChange = { onIntent(ReframeContract.Intent.SetEvidenceAgainst(it)) },
     )
     QuestionField(
-        question = "Come lo direbbe un amico che ti vuole bene?",
-        subtext = "Tra un anno, quanto pesera' questo pensiero?",
+        question = stringResource(Strings.Wellness.reframeFriendQuestion),
+        subtext = stringResource(Strings.Wellness.reframeYearQuestion),
         value = state.friendPerspective,
         onValueChange = { onIntent(ReframeContract.Intent.SetFriendPerspective(it)) },
     )
@@ -247,7 +252,7 @@ private fun StepReframe(state: ReframeContract.State, onIntent: (ReframeContract
     }
 
     Text(
-        text = "Ora riscrivi in modo onesto e credibile:",
+        text = stringResource(Strings.Wellness.reframeRewritePrompt),
         style = MaterialTheme.typography.bodyMedium,
         fontWeight = FontWeight.Medium,
     )
@@ -255,7 +260,7 @@ private fun StepReframe(state: ReframeContract.State, onIntent: (ReframeContract
     ReframeTextField(
         value = state.reframedThought,
         onValueChange = { onIntent(ReframeContract.Intent.SetReframedThought(it)) },
-        placeholder = "es. \"Sto imparando e ho gia' fatto progressi in...\"",
+        placeholder = stringResource(Strings.Wellness.reframePlaceholderRewrite),
         focusRequester = focusRequester,
         minHeight = 120.dp,
     )
@@ -290,7 +295,7 @@ private fun QuestionField(
             ReframeTextField(
                 value = value,
                 onValueChange = onValueChange,
-                placeholder = "Scrivi qui...",
+                placeholder = stringResource(Strings.Wellness.reframePlaceholderGeneric),
                 minHeight = 60.dp,
             )
         }

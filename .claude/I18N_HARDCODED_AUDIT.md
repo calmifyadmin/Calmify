@@ -135,6 +135,46 @@ Fully EN ✓ (Tier 3.G coverage works). No new debt.
 - Per-pillar stats labels: `Meditazione` / `0 sessioni`, `Reframing` / `0 fatti`, `Gratitudine` / `0/7`, `Energia`, `Sonno`, `Movimento`, `Valori`, `Connessioni`, `Ikigai`, `Awe`, `Silenzio`, `Ispirazione`, `Ambiente`
 - Suffix patterns: `0 sessioni`, `0 fatti`, `0 atti`, `1 abitudini` — count + IT noun (parameterized)
 
+## Tier 3.D + 3.F — DONE 2026-05-02 (FULL CLOSURE — BUILD GREEN)
+
+**Tier 3.D — Wellness wizard screens** (~120 keys × 6 langs ≈ 720 translations + 8 file refactor):
+
+8 wellness screen migrated end-to-end (BrainDump / Gratitude / EnergyCheckIn / Movement / SleepLog / Inspiration / Reframe / Connection). Each screen got its top app bar title+subtitle, save buttons (text + a11y), section headers, dialog buttons (Conferma/Annulla), placeholder hints, plural-aware labels, and contentDescription strings migrated. New `Strings.Wellness` group (~110 keys covering 8 screens).
+
+Per-screen highlights:
+- **BrainDump**: "Scarica tutto" / "Non analizzare. Solo scrivi." titles + placeholder hint
+- **Gratitude**: dual subtitle (update vs today), 3 numbered labels (Prima/Seconda/Terza cosa bella), dual save button, journal item question
+- **EnergyCheckIn** (most complex): "Come Sta il Tuo Corpo?" + dual subtitle + 5 sections (energia/ore di sonno/bicchieri d'acqua/movimento+tipo/pasti regolari) + meals dual state + 4 water feedback states (`waterFeedbackRes` returns StringResource) + dual save button
+- **Movement**: title + subtitle + 4 sections (cosa/duration/dopo/notes) + 2 streak labels (Ottimo!/Continua così)
+- **SleepLog**: title + dual subtitle + bedtime question + dual save + tap-to-edit + dialog confirm/cancel + quality question + disturbance section + screens question + 5 quality labels (Pessima/Male/Cosi'/Bene/Ottima via `qualityLabelRes` returning StringResource?)
+- **Inspiration**: "Diario della Bellezza" title + question + save + practice hint paragraph
+- **Reframe**: 3 step titles + 3 step subtitles + step indicator (parameterized "Passo %d di 3") + thought placeholder + 4 question/subtext pairs (evidence for, exception, friend question, year question) + rewrite prompt + 3 placeholders
+- **Connection**: title + subtitle + question type + 3 type-conditional questions ("A chi sei grato"/"Cosa hai fatto per qualcuno"/"Con chi hai trascorso") + 3 type-conditional follow-ups (told them/unsolicited/quality time together) + 3 type-conditional input labels (per cosa grato/cosa fatto/come passato) + Glielo ho detto + recent connections + Espresso badge + 3 contentDesc (delete/remove/add) + 3 stat labels (Gratitudine/Servizio/Quality Time) + monthly reflection title + 2 relations sections (nourish/drain) + save + close
+
+**"Indietro" sweep continued** (zero new keys, all reuse `Strings.Action.back`):
+- 11 wellness/diary files already swept in Tier 3.H commit `04e7070`
+- This commit adds nothing — sweep was already done
+
+**Tier 3.F — Garden activity expanded card** (~80 keys × 6 langs ≈ 480 translations + 1 file refactor):
+
+`GardenScreen.kt` `GardenActivityData` data class refactored:
+- `name: String` → `nameRes: StringResource` (reuses `Strings.Garden.Activity.*Name` from Tier 2.A)
+- `description: String` → `descriptionRes: StringResource` (reuses `Strings.Garden.Activity.*Desc`)
+- `longDescription: String` → `longDescriptionRes: StringResource` (NEW — `Strings.GardenCard.{x}Long` × 19)
+- `benefits: List<String>` → `benefitsRes: List<StringResource>` (NEW — `Strings.GardenCard.{x}B1/B2/B3` × 19)
+
+Plus chrome:
+- "Benefici" header → `Strings.GardenCard.benefitsHeader`
+- "Inizia Attività" CTA → `Strings.GardenCard.startActivity`
+
+`allActivities` list rewritten with 19 GardenActivityData using StringResource references.
+
+New `Strings.GardenCard` group (78 keys: 2 chrome + 19 long descriptions + 19 × 3 = 57 benefits).
+
+**Cumulative Phase J after Tier 3.D + 3.F: ~598 keys × 6 langs ≈ 3588 translations + 76 Kotlin files refactored**.
+
+Build: `./gradlew :app:assembleDebug` BUILD SUCCESSFUL.
+
 ## Tier 3.H + 3.I — DONE 2026-05-02 (BUILD GREEN)
 
 **Tier 3.H (diary creation wizard)**: `WriteContent.kt` 10 steps fully migrated. Per-step heading + subtitle (title/description/6 metric steps via MetricStepWrapper/almost-done) + Indietro button + Salva diario CTA + Smart Capture + Rianalizza. New `Strings.WriteWizard` group (22 keys). Reused `Strings.Action.back` and `Strings.Coach.buttonNext` for wizard chrome (no duplication). Plus `Strings.WriteWizard.complete` for final step "Completa" / "Complete" wizard CTA.

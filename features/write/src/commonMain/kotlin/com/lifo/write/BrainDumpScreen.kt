@@ -60,11 +60,11 @@ internal fun BrainDumpScreen(
                 title = {
                     Column {
                         Text(
-                            text = "Scarica tutto",
+                            text = stringResource(Strings.Wellness.brainDumpTitle),
                             style = MaterialTheme.typography.titleMedium
                         )
                         Text(
-                            text = "Non analizzare. Solo scrivi.",
+                            text = stringResource(Strings.Wellness.brainDumpSubtitle),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -85,7 +85,7 @@ internal fun BrainDumpScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Save,
-                            contentDescription = "Salva",
+                            contentDescription = stringResource(Strings.Wellness.brainDumpSaveCd),
                             tint = if (canSave) {
                                 MaterialTheme.colorScheme.primary
                             } else {
@@ -123,7 +123,7 @@ internal fun BrainDumpScreen(
                     Box {
                         if (description.isEmpty()) {
                             Text(
-                                text = "Scrivi tutto quello che hai in testa.\nPreoccupazioni, idee, compiti, emozioni.\nNon serve che abbia senso.",
+                                text = stringResource(Strings.Wellness.brainDumpPlaceholderHint),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                             )

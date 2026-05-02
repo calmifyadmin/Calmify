@@ -42,12 +42,12 @@ fun ConnectionScreen(
                 title = {
                     Column {
                         Text(
-                            "Check-in Settimanale",
+                            stringResource(Strings.Wellness.connectionTitle),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            "Le tue connessioni",
+                            stringResource(Strings.Wellness.connectionSubtitle),
                             style = MaterialTheme.typography.bodySmall,
                             color = colorScheme.onSurfaceVariant
                         )
@@ -94,7 +94,7 @@ fun ConnectionScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            "Che tipo di connessione?",
+                            stringResource(Strings.Wellness.connectionQuestionType),
                             style = MaterialTheme.typography.titleSmall.copy(
                                 fontWeight = FontWeight.SemiBold
                             ),
@@ -147,11 +147,11 @@ fun ConnectionScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text = when (state.selectedType) {
-                                ConnectionType.GRATITUDE -> "A chi sei grato oggi?"
-                                ConnectionType.SERVICE -> "Cosa hai fatto per qualcuno?"
-                                ConnectionType.QUALITY_TIME -> "Con chi hai trascorso del tempo?"
-                            },
+                            text = stringResource(when (state.selectedType) {
+                                ConnectionType.GRATITUDE -> Strings.Wellness.connectionWhoGratitude
+                                ConnectionType.SERVICE -> Strings.Wellness.connectionWhoService
+                                ConnectionType.QUALITY_TIME -> Strings.Wellness.connectionWhoQualityTime
+                            }),
                             style = MaterialTheme.typography.titleSmall.copy(
                                 fontWeight = FontWeight.SemiBold
                             ),
@@ -159,11 +159,11 @@ fun ConnectionScreen(
                         )
 
                         Text(
-                            text = when (state.selectedType) {
-                                ConnectionType.GRATITUDE -> "Glielo hai detto?"
-                                ConnectionType.SERVICE -> "Senza che te lo chiedesse"
-                                ConnectionType.QUALITY_TIME -> "Tempo di qualita' insieme"
-                            },
+                            text = stringResource(when (state.selectedType) {
+                                ConnectionType.GRATITUDE -> Strings.Wellness.connectionToldThem
+                                ConnectionType.SERVICE -> Strings.Wellness.connectionUnsolicited
+                                ConnectionType.QUALITY_TIME -> Strings.Wellness.connectionQualityTimeTogetherQ
+                            }),
                             style = MaterialTheme.typography.bodySmall,
                             color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                         )
@@ -185,11 +185,11 @@ fun ConnectionScreen(
                             onValueChange = { onIntent(ConnectionContract.Intent.UpdateDescription(it)) },
                             label = {
                                 Text(
-                                    when (state.selectedType) {
-                                        ConnectionType.GRATITUDE -> "Per cosa sei grato?"
-                                        ConnectionType.SERVICE -> "Cosa hai fatto?"
-                                        ConnectionType.QUALITY_TIME -> "Come avete passato il tempo?"
-                                    }
+                                    stringResource(when (state.selectedType) {
+                                        ConnectionType.GRATITUDE -> Strings.Wellness.connectionGratefulFor
+                                        ConnectionType.SERVICE -> Strings.Wellness.connectionWhatDidYouDo
+                                        ConnectionType.QUALITY_TIME -> Strings.Wellness.connectionHowSpentTime
+                                    })
                                 )
                             },
                             modifier = Modifier.fillMaxWidth(),
@@ -220,7 +220,7 @@ fun ConnectionScreen(
                                     )
                                     Spacer(Modifier.width(12.dp))
                                     Text(
-                                        "Glielo ho detto",
+                                        stringResource(Strings.Wellness.connectionToldThemYes),
                                         style = MaterialTheme.typography.bodyMedium,
                                         modifier = Modifier.weight(1f)
                                     )
@@ -241,7 +241,7 @@ fun ConnectionScreen(
                         ) {
                             Icon(Icons.Default.Favorite, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text("Salva", style = MaterialTheme.typography.labelLarge)
+                            Text(stringResource(Strings.Wellness.connectionSave), style = MaterialTheme.typography.labelLarge)
                         }
                     }
                 }
@@ -251,7 +251,7 @@ fun ConnectionScreen(
             if (state.entries.isNotEmpty()) {
                 item {
                     Text(
-                        "Le tue connessioni recenti",
+                        stringResource(Strings.Wellness.connectionRecent),
                         style = MaterialTheme.typography.titleSmall.copy(
                             fontWeight = FontWeight.SemiBold
                         ),
@@ -292,7 +292,7 @@ fun ConnectionScreen(
                                         color = colorScheme.primary.copy(alpha = 0.1f)
                                     ) {
                                         Text(
-                                            "Espresso",
+                                            stringResource(Strings.Wellness.connectionExpressed),
                                             style = MaterialTheme.typography.labelSmall.copy(
                                                 fontWeight = FontWeight.SemiBold
                                             ),
@@ -305,7 +305,7 @@ fun ConnectionScreen(
                             IconButton(onClick = { onIntent(ConnectionContract.Intent.DeleteEntry(entry.id)) }) {
                                 Icon(
                                     Icons.Default.Close,
-                                    contentDescription = "Elimina",
+                                    contentDescription = stringResource(Strings.Wellness.connectionDeleteCd),
                                     tint = colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                                     modifier = Modifier.size(18.dp)
                                 )
@@ -335,7 +335,7 @@ private fun WeeklyConnectionStats(gratitude: Int, service: Int, qualityTime: Int
     ) {
         Column(modifier = Modifier.padding(24.dp)) {
             Text(
-                "Questa settimana",
+                stringResource(Strings.Screen.Home.weekThis),
                 style = MaterialTheme.typography.titleSmall.copy(
                     fontWeight = FontWeight.SemiBold
                 ),
@@ -348,7 +348,7 @@ private fun WeeklyConnectionStats(gratitude: Int, service: Int, qualityTime: Int
             ) {
                 ConnectionStatItem(
                     icon = Icons.Default.Favorite,
-                    label = "Gratitudine",
+                    label = stringResource(Strings.Wellness.connectionLabelGratitude),
                     count = gratitude,
                     color = colorScheme.onPrimaryContainer
                 )
@@ -360,7 +360,7 @@ private fun WeeklyConnectionStats(gratitude: Int, service: Int, qualityTime: Int
                 ) {}
                 ConnectionStatItem(
                     icon = Icons.Default.VolunteerActivism,
-                    label = "Servizio",
+                    label = stringResource(Strings.Wellness.connectionLabelService),
                     count = service,
                     color = colorScheme.onPrimaryContainer
                 )
@@ -372,7 +372,7 @@ private fun WeeklyConnectionStats(gratitude: Int, service: Int, qualityTime: Int
                 ) {}
                 ConnectionStatItem(
                     icon = Icons.Default.People,
-                    label = "Quality Time",
+                    label = stringResource(Strings.Wellness.connectionLabelQualityTime),
                     count = qualityTime,
                     color = colorScheme.onPrimaryContainer
                 )
@@ -420,7 +420,7 @@ private fun ReflectionDialog(
         onDismissRequest = { onIntent(ConnectionContract.Intent.DismissReflection) },
         title = {
             Text(
-                "Riflessione Mensile",
+                stringResource(Strings.Wellness.connectionMonthlyReflection),
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.SemiBold
                 )
@@ -430,7 +430,7 @@ private fun ReflectionDialog(
             LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 item {
                     Text(
-                        "Le relazioni che ti nutrono",
+                        stringResource(Strings.Wellness.connectionRelationsNourish),
                         style = MaterialTheme.typography.titleSmall.copy(
                             fontWeight = FontWeight.SemiBold
                         ),
@@ -442,7 +442,7 @@ private fun ReflectionDialog(
                         selected = false,
                         onClick = { onIntent(ConnectionContract.Intent.RemoveNurturing(index)) },
                         label = { Text(state.nurturingInput[index]) },
-                        trailingIcon = { Icon(Icons.Default.Close, contentDescription = "Rimuovi", modifier = Modifier.size(16.dp)) },
+                        trailingIcon = { Icon(Icons.Default.Close, contentDescription = stringResource(Strings.Wellness.connectionRemoveCd), modifier = Modifier.size(16.dp)) },
                         shape = RoundedCornerShape(20.dp)
                     )
                 }
@@ -460,7 +460,7 @@ private fun ReflectionDialog(
                                     onIntent(ConnectionContract.Intent.AddNurturing(nurturingInput))
                                     nurturingInput = ""
                                 }) {
-                                    Icon(Icons.Default.Add, contentDescription = "Aggiungi")
+                                    Icon(Icons.Default.Add, contentDescription = stringResource(Strings.Wellness.connectionAddCd))
                                 }
                             }
                         },
@@ -469,7 +469,7 @@ private fun ReflectionDialog(
                 item {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Le relazioni che ti prosciugano",
+                        stringResource(Strings.Wellness.connectionRelationsDrain),
                         style = MaterialTheme.typography.titleSmall.copy(
                             fontWeight = FontWeight.SemiBold
                         ),
@@ -481,7 +481,7 @@ private fun ReflectionDialog(
                         selected = false,
                         onClick = { onIntent(ConnectionContract.Intent.RemoveDraining(index)) },
                         label = { Text(state.drainingInput[index]) },
-                        trailingIcon = { Icon(Icons.Default.Close, contentDescription = "Rimuovi", modifier = Modifier.size(16.dp)) },
+                        trailingIcon = { Icon(Icons.Default.Close, contentDescription = stringResource(Strings.Wellness.connectionRemoveCd), modifier = Modifier.size(16.dp)) },
                         shape = RoundedCornerShape(20.dp)
                     )
                 }
@@ -499,7 +499,7 @@ private fun ReflectionDialog(
                                     onIntent(ConnectionContract.Intent.AddDraining(drainingInput))
                                     drainingInput = ""
                                 }) {
-                                    Icon(Icons.Default.Add, contentDescription = "Aggiungi")
+                                    Icon(Icons.Default.Add, contentDescription = stringResource(Strings.Wellness.connectionAddCd))
                                 }
                             }
                         },
@@ -520,12 +520,12 @@ private fun ReflectionDialog(
         },
         confirmButton = {
             TextButton(onClick = { onIntent(ConnectionContract.Intent.SaveReflection) }) {
-                Text("Salva")
+                Text(stringResource(Strings.Wellness.connectionSave))
             }
         },
         dismissButton = {
             TextButton(onClick = { onIntent(ConnectionContract.Intent.DismissReflection) }) {
-                Text("Chiudi")
+                Text(stringResource(Strings.Wellness.connectionClose))
             }
         },
         shape = RoundedCornerShape(28.dp)

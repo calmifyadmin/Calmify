@@ -59,12 +59,12 @@ internal fun SleepLogScreen(
                 title = {
                     Column {
                         Text(
-                            "Diario del Sonno",
+                            stringResource(Strings.Wellness.sleepTitle),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            text = if (state.savedToday) "Aggiorna il log di oggi" else "Come hai dormito?",
+                            text = stringResource(if (state.savedToday) Strings.Wellness.sleepSubtitleUpdate else Strings.Wellness.sleepSubtitleCreate),
                             style = MaterialTheme.typography.bodySmall,
                             color = colorScheme.onSurfaceVariant
                         )
@@ -83,7 +83,7 @@ internal fun SleepLogScreen(
                         if (state.isSaving) {
                             CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
                         } else {
-                            Icon(Icons.Default.Check, contentDescription = "Salva", tint = colorScheme.primary)
+                            Icon(Icons.Default.Check, contentDescription = stringResource(Strings.Wellness.sleepSaveCd), tint = colorScheme.primary)
                         }
                     }
                 }
@@ -117,7 +117,7 @@ internal fun SleepLogScreen(
             // Bedtime — conversational
             AnimatedSection(1) {
                 TimeDisplayCard(
-                    question = "Quando sei andato a letto?",
+                    question = stringResource(Strings.Wellness.sleepQuestionBedtime),
                     icon = Icons.Outlined.Bedtime,
                     hour = state.bedtimeHour,
                     minute = state.bedtimeMinute,
@@ -169,7 +169,7 @@ internal fun SleepLogScreen(
                 contentPadding = PaddingValues(vertical = 16.dp)
             ) {
                 Text(
-                    if (state.savedToday) "Aggiorna" else "Salva log sonno",
+                    stringResource(if (state.savedToday) Strings.Wellness.sleepSaveUpdate else Strings.Wellness.sleepSaveCreate),
                     style = MaterialTheme.typography.labelLarge
                 )
             }
@@ -183,7 +183,7 @@ internal fun SleepLogScreen(
         TimePickerDialog(
             initialHour = state.bedtimeHour,
             initialMinute = state.bedtimeMinute,
-            title = "Quando sei andato a letto?",
+            title = stringResource(Strings.Wellness.sleepQuestionBedtime),
             onConfirm = { h, m ->
                 onIntent(SleepContract.Intent.SetBedtime(h, m))
                 showBedtimePicker = false
@@ -369,7 +369,7 @@ private fun TimeDisplayCard(
             }
 
             Text(
-                text = "Tocca per modificare",
+                text = stringResource(Strings.Wellness.sleepTapEdit),
                 style = MaterialTheme.typography.labelSmall,
                 color = colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                 modifier = Modifier.fillMaxWidth(),
@@ -402,12 +402,12 @@ private fun TimePickerDialog(
             TextButton(onClick = {
                 onConfirm(timePickerState.hour, timePickerState.minute)
             }) {
-                Text("Conferma")
+                Text(stringResource(Strings.Wellness.sleepDialogConfirm))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Annulla")
+                Text(stringResource(Strings.Wellness.sleepDialogCancel))
             }
         },
         title = {
@@ -449,7 +449,7 @@ private fun QualitySelector(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
-                "Come hai dormito?",
+                stringResource(Strings.Wellness.sleepQualityQuestion),
                 style = MaterialTheme.typography.titleSmall.copy(
                     fontWeight = FontWeight.SemiBold
                 ),
@@ -463,7 +463,7 @@ private fun QualitySelector(
                 for (level in 1..5) {
                     val isSelected = level == quality
                     val icon = qualityIcon(level)
-                    val label = qualityLabel(level)
+                    val label = qualityLabelRes(level)?.let { stringResource(it) } ?: ""
 
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -532,7 +532,7 @@ private fun DisturbancesSection(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                "Cosa ti ha disturbato durante il sonno?",
+                stringResource(Strings.Wellness.sleepDisturbanceQuestion),
                 style = MaterialTheme.typography.titleSmall.copy(
                     fontWeight = FontWeight.SemiBold
                 ),
@@ -572,7 +572,7 @@ private fun DisturbancesSection(
 
             if (selected.isEmpty()) {
                 Text(
-                    "Nessun disturbo? Ottimo!",
+                    stringResource(Strings.Wellness.sleepNoDisturbance),
                     style = MaterialTheme.typography.labelSmall,
                     color = colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                 )
@@ -607,14 +607,14 @@ private fun ScreenFreeCard(screenFree: Boolean, onToggle: (Boolean) -> Unit) {
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    "Schermi evitati?",
+                    stringResource(Strings.Wellness.sleepScreensQuestion),
                     style = MaterialTheme.typography.titleSmall.copy(
                         fontWeight = FontWeight.SemiBold
                     ),
                     color = colorScheme.onSurface
                 )
                 Text(
-                    "Ultima ora prima di dormire",
+                    stringResource(Strings.Wellness.sleepScreensSubtitle),
                     style = MaterialTheme.typography.bodySmall,
                     color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                 )
@@ -656,11 +656,11 @@ private fun qualityIcon(quality: Int): ImageVector = when (quality) {
     else -> Icons.Outlined.SentimentNeutral
 }
 
-private fun qualityLabel(quality: Int): String = when (quality) {
-    1 -> "Pessima"
-    2 -> "Male"
-    3 -> "Cosi'"
-    4 -> "Bene"
-    5 -> "Ottima"
-    else -> ""
+private fun qualityLabelRes(quality: Int): org.jetbrains.compose.resources.StringResource? = when (quality) {
+    1 -> Strings.Wellness.sleepQuality1
+    2 -> Strings.Wellness.sleepQuality2
+    3 -> Strings.Wellness.sleepQuality3
+    4 -> Strings.Wellness.sleepQuality4
+    5 -> Strings.Wellness.sleepQuality5
+    else -> null
 }
