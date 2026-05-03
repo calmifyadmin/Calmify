@@ -51,16 +51,27 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.focusable
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.hideFromAccessibility
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifo.meditation.MeditationContract
+import com.lifo.ui.accessibility.isReducedMotionEnabled
 import com.lifo.ui.i18n.Strings
 import com.lifo.ui.i18n.coachRes
 import com.lifo.ui.i18n.cueRes
@@ -111,9 +122,33 @@ internal fun MeditationSessionScreen(
     modifier: Modifier = Modifier,
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val reducedMotion = isReducedMotionEnabled()
+
+    // Keyboard shortcut focus target (ESC opens stop modal, SPACE toggles pause).
+    // Matters for hardware keyboards (Bluetooth, tablet docks, Chromebook) and
+    // for the Level 3 desktop/web ports — no behavior change on phone-only.
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
     Surface(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .focusRequester(focusRequester)
+            .focusable()
+            .onPreviewKeyEvent { event ->
+                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                when (event.key) {
+                    Key.Escape -> {
+                        if (!showStopDialog) onRequestStop()
+                        true
+                    }
+                    Key.Spacebar -> {
+                        if (!showStopDialog) onPauseToggle()
+                        true
+                    }
+                    else -> false
+                }
+            },
         color = colorScheme.background,
     ) {
         Column(
@@ -171,12 +206,14 @@ internal fun MeditationSessionScreen(
                 verticalArrangement = Arrangement.Center,
             ) {
                 Box(
-                    modifier = Modifier
-                        .size(320.dp)
-                        .semantics { hideFromAccessibility() },
+                    modifier = Modifier.size(320.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    BreathingPacer(runtime = runtime)
+                    // Pacer geometry is decorative — TalkBack reads cue word + count
+                    // from the PacerCueOverlay's liveRegion semantics instead.
+                    Box(modifier = Modifier.semantics { hideFromAccessibility() }) {
+                        BreathingPacer(runtime = runtime, reducedMotion = reducedMotion)
+                    }
                     PacerCueOverlay(runtime = runtime)
                 }
 
@@ -267,13 +304,18 @@ internal fun MeditationSessionScreen(
 @Composable
 private fun BreathingPacer(
     runtime: MeditationContract.SessionRuntime,
+    reducedMotion: Boolean,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val pacingActive = runtime.subPhase == MeditationContract.SubPhase.PRACTICE &&
         runtime.technique.hasPattern && runtime.currentSegment != null
 
     if (pacingActive) {
-        ActivePacer(runtime = runtime, colorScheme = colorScheme)
+        ActivePacer(runtime = runtime, colorScheme = colorScheme, reducedMotion = reducedMotion)
+    } else if (reducedMotion) {
+        // Reduced-motion: no infinite ambient pulse — render a static mid-scale circle
+        // so the visual still grounds the user but doesn't move.
+        PacerLayers(scale = 0.55f, opacity = AMBIENT_OPACITY, colorScheme = colorScheme)
     } else {
         AmbientPulsePacer(colorScheme = colorScheme)
     }
@@ -283,6 +325,7 @@ private fun BreathingPacer(
 private fun ActivePacer(
     runtime: MeditationContract.SessionRuntime,
     colorScheme: androidx.compose.material3.ColorScheme,
+    reducedMotion: Boolean,
 ) {
     val pacerEasing = remember { CubicBezierEasing(0.4f, 0f, 0.2f, 1f) }
     val scale = remember { Animatable(SCALE_LOW) }
@@ -306,12 +349,22 @@ private fun ActivePacer(
         val progress = (intoMillis / totalMillis).coerceIn(0f, 1f)
         val resumeStart = start + (end - start) * progress
         scale.snapTo(resumeStart)
-        val remainingMillis = (totalMillis - intoMillis).coerceAtLeast(0f).toInt()
-        if (remainingMillis > 0 && start != end) {
-            scale.animateTo(
-                targetValue = end,
-                animationSpec = tween(durationMillis = remainingMillis, easing = pacerEasing),
-            )
+        if (start != end) {
+            // Reduced motion: clamp every per-segment tween to a short fixed duration.
+            // The breath rhythm is still conveyed by the cue word + count overlay.
+            val durationMs = if (reducedMotion) {
+                REDUCED_MOTION_TWEEN_MILLIS
+            } else {
+                (totalMillis - intoMillis).coerceAtLeast(0f).toInt()
+            }
+            if (durationMs > 0) {
+                scale.animateTo(
+                    targetValue = end,
+                    animationSpec = tween(durationMillis = durationMs, easing = pacerEasing),
+                )
+            } else {
+                scale.snapTo(end)
+            }
         }
     }
 
@@ -423,8 +476,13 @@ private fun PacerCueOverlay(runtime: MeditationContract.SessionRuntime) {
     val cue = cueWordFor(runtime)
     val count = cueCountFor(runtime)
 
+    // The cue word is the primary semantic surface for screen readers — TalkBack
+    // re-announces it on each segment boundary. The count is intentionally NOT
+    // a live region (announcing "5, 4, 3, 2, 1" every breath would be hostile).
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .semantics { liveRegion = LiveRegionMode.Polite },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -453,6 +511,7 @@ private fun PacerCueOverlay(runtime: MeditationContract.SessionRuntime) {
                     letterSpacing = 0.4.sp,
                 ),
                 color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                modifier = Modifier.semantics { hideFromAccessibility() },
             )
         }
     }
@@ -709,3 +768,10 @@ private const val INTEGRATE_LINES = 3
 
 /** Practice coach line rotation cadence — design uses 12s. */
 private const val COACH_ROTATION_MILLIS = 12_000L
+
+/**
+ * Per-segment scale tween duration when the user has enabled reduced motion.
+ * Short enough to feel snappy, long enough to remain perceptually a transition
+ * (rather than a teleport). 200ms is the WCAG-compatible safe minimum.
+ */
+private const val REDUCED_MOTION_TWEEN_MILLIS = 200
