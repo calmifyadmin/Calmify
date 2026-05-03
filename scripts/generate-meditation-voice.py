@@ -2,7 +2,7 @@
 """
 Meditation voice generator.
 
-Reads `scripts/meditation-voice-catalog.csv` (asset_key → strings_xml_key
+Reads `scripts/meditation-voice-catalog.csv` (asset_key -> strings_xml_key
 mapping) and the 12 `core/ui/.../composeResources/values{,-it,-es,...}/strings.xml`
 files. For each (locale, asset_key) pair, calls ElevenLabs to synthesize the
 text and writes the .mp3 to:
@@ -14,7 +14,7 @@ Run from the repo root:
     export ELEVENLABS_API_KEY=sk_...
     python scripts/generate-meditation-voice.py [--locales en,it] [--keys cue_breathe_in,cue_hold] [--dry-run]
 
-Total catalog: 29 unique keys × 12 locales = 348 files.
+Total catalog: 29 unique keys x 12 locales = 348 files.
 
 The script is **idempotent**: it skips files that already exist on disk
 unless `--force` is passed. Re-running after a partial failure resumes from
@@ -60,13 +60,14 @@ LOCALES = {
 }
 
 # ElevenLabs config
-# - Voice ID: pick once from https://elevenlabs.io/app/voice-library and pin here.
-#   Default below is "Rachel" (calm, clear, neutral) — change if you want a
-#   different brand voice. Same voice ID is used for ALL locales because
-#   eleven_multilingual_v2 produces the same character across languages.
+# - Voice ID: default is "Sarah" (premade — "Mature, Reassuring, Confident";
+#   accessible on the free tier). Library voices like Rachel require a paid
+#   plan via API and return HTTP 402. To use a different voice, override
+#   `ELEVENLABS_VOICE_ID` env var with a voice ID that is either premade
+#   ("category": "premade" in `GET /v1/voices`) or in your VoiceLab.
 # - Model: eleven_multilingual_v2 supports all 12 of our target locales with a
-#   single model + voice.
-ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")  # Rachel
+#   single model + voice (consistent character across langs).
+ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "EXAVITQu4vr4xnSDxMaL")  # Sarah (premade)
 ELEVENLABS_MODEL_ID = "eleven_multilingual_v2"
 ELEVENLABS_API_BASE = "https://api.elevenlabs.io/v1"
 
@@ -173,7 +174,7 @@ def main() -> int:
     else:
         locale_pairs = list(LOCALES.items())
 
-    print(f"Catalog: {len(catalog)} keys × {len(locale_pairs)} locales = {len(catalog) * len(locale_pairs)} files")
+    print(f"Catalog: {len(catalog)} keys x {len(locale_pairs)} locales = {len(catalog) * len(locale_pairs)} files")
     if args.dry_run:
         print("(dry-run — no API calls)")
 
@@ -199,7 +200,7 @@ def main() -> int:
                 skipped += 1
                 continue
 
-            print(f"  → [{locale_tag}] {asset_key} ← \"{text[:60]}{'...' if len(text) > 60 else ''}\"")
+            print(f"  -> [{locale_tag}] {asset_key} <- \"{text[:60]}{'...' if len(text) > 60 else ''}\"")
             if args.dry_run:
                 continue
 
