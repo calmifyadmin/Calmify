@@ -14,8 +14,9 @@
 |---|---|---|---|---|---|
 | 1 — Foundation | **DONE** | 2026-05-02 | 2026-05-02 | `d54d2f5` | Domain + 161 keys × 6 langs + Strings facade + Contract/VM + 5 screens. Build green. |
 | 2 — Polish | **DONE** | 2026-05-03 | 2026-05-03 | `6d0e5b6` | Per-segment BreathingPacer (Animatable + cubic-bezier(.4,0,.2,1)) + cue/count overlay + coach rotation (12s practice / progressive settle+integrate) + ModalBottomSheet stop + millis-precision contract + 4Hz VM ticker. |
-| 3.A — A11y batch | **DONE** | 2026-05-03 | 2026-05-03 | _pending_ | Reduced-motion (Android `Settings.Global.ANIMATOR_DURATION_SCALE` + iOS `UIAccessibilityIsReduceMotionEnabled` + desktop stub) → 200ms clamped tweens + static ambient layer; keyboard shortcuts (ESC=stop, SPACE=pause) via focusable + onPreviewKeyEvent + autofocus; TalkBack pass — pacer geometry `hideFromAccessibility`, cue word `liveRegion = Polite` for per-segment announcements, count `hideFromAccessibility` (no countdown spam). Build green. |
-| 3.B — TTS | NOT STARTED | — | — | — | Sherpa-ONNX voice guidance (gated audio=VOICE) — cue words + coach lines, volume ducking. |
+| 3.A — A11y batch | **DONE** | 2026-05-03 | 2026-05-03 | `bee4a17` | Reduced-motion + keyboard shortcuts + TalkBack liveRegion. |
+| 3.B — Audio gating + TTS decision doc | **DONE** | 2026-05-03 | 2026-05-03 | _pending_ | Gated `MeditationBellPlayer.play()` on `audio != SILENT` (was firing regardless — SILENT didn't actually silence). Wrote `.claude/MEDITATION_TTS_DECISION.md` surveying 4 TTS approaches (pre-generated audio bundle / Android system TTS / Sherpa-ONNX / defer); recommends Option A (pre-generated, ElevenLabs, ~13 MB for 6 Latin). VOICE mode currently behaves as CHIMES until user picks an approach. |
+| 3.B' — TTS implementation | BLOCKED on user decision | — | — | — | Awaits decision in `MEDITATION_TTS_DECISION.md`. |
 | 3.C — Screenshots + marketing | NOT STARTED | — | — | — | Cross-locale screenshot regression (5 phases × 6 Latin) + marketing screenshots. |
 
 ---
