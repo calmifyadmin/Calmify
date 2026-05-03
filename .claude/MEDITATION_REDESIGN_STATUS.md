@@ -15,9 +15,9 @@
 | 1 — Foundation | **DONE** | 2026-05-02 | 2026-05-02 | `d54d2f5` | Domain + 161 keys × 6 langs + Strings facade + Contract/VM + 5 screens. Build green. |
 | 2 — Polish | **DONE** | 2026-05-03 | 2026-05-03 | `6d0e5b6` | Per-segment BreathingPacer (Animatable + cubic-bezier(.4,0,.2,1)) + cue/count overlay + coach rotation (12s practice / progressive settle+integrate) + ModalBottomSheet stop + millis-precision contract + 4Hz VM ticker. |
 | 3.A — A11y batch | **DONE** | 2026-05-03 | 2026-05-03 | `bee4a17` | Reduced-motion + keyboard shortcuts + TalkBack liveRegion. |
-| 3.B — Audio gating + TTS decision doc | **DONE** | 2026-05-03 | 2026-05-03 | _pending_ | Gated `MeditationBellPlayer.play()` on `audio != SILENT` (was firing regardless — SILENT didn't actually silence). Wrote `.claude/MEDITATION_TTS_DECISION.md` surveying 4 TTS approaches (pre-generated audio bundle / Android system TTS / Sherpa-ONNX / defer); recommends Option A (pre-generated, ElevenLabs, ~13 MB for 6 Latin). VOICE mode currently behaves as CHIMES until user picks an approach. |
-| 3.B' — TTS implementation | BLOCKED on user decision | — | — | — | Awaits decision in `MEDITATION_TTS_DECISION.md`. |
-| 3.C — Screenshots + marketing | NOT STARTED | — | — | — | Cross-locale screenshot regression (5 phases × 6 Latin) + marketing screenshots. |
+| 3.B — Audio gating + TTS decision doc | **DONE** | 2026-05-03 | 2026-05-03 | `e14b876` | Gated `MeditationBellPlayer.play()` on `audio != SILENT` + decision doc. |
+| 3.B' — TTS implementation | **DONE (code, audio assets pending user)** | 2026-05-03 | 2026-05-03 | _pending_ | User picked Option A + ElevenLabs + all 12 langs + speak-each-coach-once policy. Built: `VoiceUtterance` sealed class + `CoachKey` (commonMain), `MeditationVoicePlayer` (androidMain MediaPlayer + audio focus + EN fallback), VM `Effect.Speak(VoiceUtterance)` + emission on segment boundary (cue) + first-display (coach), entry-point handler (gated on audio == VOICE, resolves locale via `Locale.getDefault().language`). Generation script `scripts/generate-meditation-voice.py` + catalog CSV + assets README. **VOICE mode is silent until user runs the generator** — code path is complete, missing only the .mp3 files. Build green. |
+| 3.C — Screenshots + marketing | NOT STARTED | — | — | — | Cross-locale screenshot regression (5 phases × 12 langs) + marketing screenshots. |
 
 ---
 

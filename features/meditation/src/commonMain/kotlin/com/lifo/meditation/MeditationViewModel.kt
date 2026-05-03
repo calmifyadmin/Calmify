@@ -1,7 +1,11 @@
 package com.lifo.meditation
 
+import com.lifo.meditation.voice.CoachKey
+import com.lifo.meditation.voice.SubPhaseCueKey
+import com.lifo.meditation.voice.VoiceUtterance
 import com.lifo.util.auth.AuthProvider
 import com.lifo.util.currentTimeMillis
+import com.lifo.util.model.MeditationAudio
 import com.lifo.util.model.MeditationSession
 import com.lifo.util.model.MeditationType
 import com.lifo.util.mvi.MviViewModel
@@ -38,6 +42,15 @@ class MeditationViewModel(
     private var timerJob: Job? = null
     /** Tracks which sub-phase we last announced via PlayBell — prevents duplicate chimes. */
     private var lastAnnouncedSubPhase: MeditationContract.SubPhase? = null
+
+    /**
+     * Per-session record of which voice cues / coach lines have already been
+     * spoken. Drives the "speak each coach line at most once per session"
+     * policy — visual rotation continues, but the voice does not repeat.
+     * Cleared on `startSession()`.
+     */
+    private var spokenSegmentIndex: Int = -1
+    private var spokenCoachKeys: MutableSet<CoachKey> = mutableSetOf()
 
     private companion object {
         /** Timer tick interval. 250ms balances cue countdown smoothness with CPU. */
@@ -129,6 +142,8 @@ class MeditationViewModel(
         val technique = s.effectiveTechnique
         val durationSec = s.config.duration * 60
         lastAnnouncedSubPhase = null
+        spokenSegmentIndex = -1
+        spokenCoachKeys = mutableSetOf()
         updateState {
             copy(
                 phase = MeditationContract.SessionPhase.SESSION,
@@ -140,6 +155,10 @@ class MeditationViewModel(
             )
         }
         sendEffect(MeditationContract.Effect.PlayBell)
+        // Voice opener for the settle phase ("Arrive")
+        if (s.config.audio == MeditationAudio.VOICE) {
+            sendEffect(MeditationContract.Effect.Speak(VoiceUtterance.SubPhaseCue(SubPhaseCueKey.ARRIVE)))
+        }
         startTimer()
     }
 
@@ -218,11 +237,26 @@ class MeditationViewModel(
                 val updated = current.copy(elapsedMillis = newElapsedMillis)
                 updateState { copy(session = updated) }
 
-                // Sub-phase change → bell (deduped via lastAnnouncedSubPhase)
+                val voiceOn = s.config.audio == MeditationAudio.VOICE
+
+                // Sub-phase change → bell + voice opener cue (deduped via lastAnnouncedSubPhase)
                 val newSubPhase = updated.subPhase
                 if (newSubPhase != lastAnnouncedSubPhase) {
                     lastAnnouncedSubPhase = newSubPhase
                     sendEffect(MeditationContract.Effect.PlayBell)
+                    if (voiceOn) {
+                        when (newSubPhase) {
+                            MeditationContract.SubPhase.INTEGRATION ->
+                                sendEffect(MeditationContract.Effect.Speak(VoiceUtterance.SubPhaseCue(SubPhaseCueKey.RELEASE)))
+                            // SETTLING opener spoken at session start, not here
+                            // PRACTICE has no opener cue — pacer takes over
+                            else -> Unit
+                        }
+                    }
+                }
+
+                if (voiceOn) {
+                    emitVoiceForTick(updated)
                 }
 
                 // Auto-complete
@@ -230,6 +264,71 @@ class MeditationViewModel(
                     onIntent(MeditationContract.Intent.SessionAutoComplete)
                     break
                 }
+            }
+        }
+    }
+
+    /**
+     * Voice emission per tick — gated on `audio == VOICE` by caller.
+     * Two emission paths:
+     *
+     * 1. **Cue per breath segment** — fired once when `currentSegmentIndex` changes
+     *    (segments are 4-8s long; emitting per VM tick is bounded by segment count,
+     *    not tick count).
+     *
+     * 2. **Coach line on first display** — settle + integrate lines speak as the
+     *    sub-phase progresses (one per third of the sub-phase). Practice lines
+     *    speak the first time each rotation lands on them, then stay quiet
+     *    on repeats — the visual still rotates, but a meditator who's heard
+     *    "Through the nose. Belly soft, shoulders quiet." once does not need
+     *    to hear it every 36 seconds.
+     */
+    private fun emitVoiceForTick(runtime: MeditationContract.SessionRuntime) {
+        // 1. Per-segment cue
+        when (runtime.subPhase) {
+            MeditationContract.SubPhase.PRACTICE -> {
+                val seg = runtime.currentSegment
+                val idx = runtime.currentSegmentIndex
+                if (seg != null && idx >= 0 && idx != spokenSegmentIndex) {
+                    spokenSegmentIndex = idx
+                    sendEffect(MeditationContract.Effect.Speak(VoiceUtterance.Cue(seg.kind)))
+                }
+            }
+            else -> Unit
+        }
+
+        // 2. Coach line — speak first time each key surfaces
+        val coachKey = currentCoachKey(runtime) ?: return
+        if (coachKey !in spokenCoachKeys) {
+            spokenCoachKeys.add(coachKey)
+            sendEffect(MeditationContract.Effect.Speak(coachKey.toUtterance()))
+        }
+    }
+
+    /**
+     * Mirror of `MeditationSessionScreen.currentCoachLine()` — must stay in sync
+     * with the visual indexing rules so voice always matches what the user sees.
+     */
+    private fun currentCoachKey(runtime: MeditationContract.SessionRuntime): CoachKey? {
+        return when (runtime.subPhase) {
+            MeditationContract.SubPhase.SETTLING -> {
+                val settleSec = runtime.settleSeconds.coerceAtLeast(1)
+                val sliceSec = settleSec / 3f
+                val idx = (runtime.elapsedSeconds.coerceAtLeast(0) / sliceSec).toInt().coerceIn(0, 2)
+                CoachKey.Settle(idx)
+            }
+            MeditationContract.SubPhase.INTEGRATION -> {
+                val intoIntegrateSec = (runtime.elapsedSeconds - runtime.settleSeconds - runtime.practiceCapSeconds)
+                    .coerceAtLeast(0)
+                val sliceSec = runtime.integrateSeconds.coerceAtLeast(1) / 3f
+                val idx = (intoIntegrateSec / sliceSec).toInt().coerceIn(0, 2)
+                CoachKey.Integrate(idx)
+            }
+            MeditationContract.SubPhase.PRACTICE -> {
+                if (!runtime.technique.hasPattern) return null
+                val practiceMillis = runtime.practiceElapsedMillis.coerceAtLeast(0L)
+                val rotationIdx = ((practiceMillis / 12_000L).toInt()) % 3
+                CoachKey.Practice(runtime.technique, rotationIdx)
             }
         }
     }

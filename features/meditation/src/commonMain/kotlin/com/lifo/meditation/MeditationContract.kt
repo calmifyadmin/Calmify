@@ -1,5 +1,6 @@
 package com.lifo.meditation
 
+import com.lifo.meditation.voice.VoiceUtterance
 import com.lifo.util.model.BreathSegmentKind
 import com.lifo.util.model.BreathingPattern
 import com.lifo.util.model.BreathingSegment
@@ -247,6 +248,14 @@ object MeditationContract {
         data class Error(val message: String) : Effect
         /** Emitted at sub-phase boundaries (settling → practice → integration). */
         data object PlayBell : Effect
+
+        /**
+         * Emitted when the voice player should speak an utterance. The entry-point
+         * handler gates on `state.config.audio == MeditationAudio.VOICE` and
+         * resolves the localized audio asset. ViewModel emits these only when
+         * audio mode is VOICE — handler still defends against late mode changes.
+         */
+        data class Speak(val utterance: VoiceUtterance) : Effect
     }
 }
 

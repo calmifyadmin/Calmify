@@ -1,10 +1,15 @@
 package com.lifo.meditation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import com.lifo.meditation.voice.MeditationVoicePlayer
 import com.lifo.util.model.MeditationAudio
+import java.util.Locale
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -13,8 +18,12 @@ import org.koin.compose.viewmodel.koinViewModel
  * Audio handling — gated on [MeditationAudio]:
  * - SILENT: no audio output (visual + cue text only)
  * - CHIMES: bell tone at sub-phase boundaries + session-complete
- * - VOICE: bell tone + (Phase 3.B') TTS voice guidance for cue words and coach
- *   lines. Voice is not yet wired — see `.claude/MEDITATION_TTS_DECISION.md`.
+ * - VOICE: bell tone + ducked voice utterances (cue per breath segment + coach
+ *   line on first display per session — see [MeditationVoicePlayer]).
+ *
+ * The voice player is created on session entry and released on disposal (the
+ * Compose lifecycle owns the player's lifetime — when the user navigates away
+ * from the meditation flow, the player + audio focus are torn down).
  *
  * The session save Effect is silent (no Toast) — the OVERVIEW phase is the
  * user-facing confirmation. Errors are surfaced via inline message in Overview
@@ -30,17 +39,28 @@ fun MeditationRouteContent(
 ) {
     val viewModel: MeditationViewModel = koinViewModel(key = "meditation_vm")
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
+
+    val voicePlayer = remember(context) { MeditationVoicePlayer(context.applicationContext) }
+    DisposableEffect(voicePlayer) {
+        onDispose { voicePlayer.release() }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.effects.collect { effect ->
+            // Read live audio mode at emission time — user may have re-entered
+            // Configure between sessions; stale closure capture is unsafe.
+            val audio = viewModel.state.value.config.audio
             when (effect) {
                 MeditationContract.Effect.SessionCompleted,
                 MeditationContract.Effect.PlayBell -> {
-                    // Read the live audio mode at emission time (the user may have
-                    // re-entered Configure between sessions; we should not rely on
-                    // a stale closure capture).
-                    if (viewModel.state.value.config.audio != MeditationAudio.SILENT) {
+                    if (audio != MeditationAudio.SILENT) {
                         MeditationBellPlayer.play()
+                    }
+                }
+                is MeditationContract.Effect.Speak -> {
+                    if (audio == MeditationAudio.VOICE) {
+                        voicePlayer.play(effect.utterance, currentLocaleTag())
                     }
                 }
                 MeditationContract.Effect.SessionSaved -> Unit  // silent
@@ -54,4 +74,14 @@ fun MeditationRouteContent(
         onIntent = viewModel::onIntent,
         onExit = navigateBack,
     )
+}
+
+/**
+ * Returns the current per-app locale's primary language tag (`it`, `en`, `ja`,
+ * etc.). Used to resolve the voice asset path. Falls back to `en` for any
+ * unrecognized language so the voice player's EN fallback path always matches.
+ */
+private fun currentLocaleTag(): String {
+    val tag = Locale.getDefault().language.lowercase()
+    return tag.ifEmpty { "en" }
 }
