@@ -1509,7 +1509,7 @@
     <string name="meditation_tech_coherent_short">5,5 in · 5,5 out</string>
     <string name="meditation_tech_coherent_summary">Respiri uguali e gentili a circa 5,5 al minuto — un reset per il sistema nervoso.</string>
     <string name="meditation_tech_coherent_mechanism">A circa 5,5 respiri al minuto, la variabilità della frequenza cardiaca aumenta e il nervo vago segnala sicurezza, alleggerendo il corpo dallo stress.</string>
-    <string name="meditation_tech_coherent_coach1">Attraverso il naso. Pancia morbida, spalle calme.</string>
+    <string name="meditation_tech_coherent_coach1">Dal naso. Pancia morbida, spalle rilassate.</string>
     <string name="meditation_tech_coherent_coach2">Lascia che il respiro trovi un ritmo morbido e regolare.</string>
     <string name="meditation_tech_coherent_coach3">Se il tuo corpo vuole più aria, prendine di più.</string>
 
@@ -1525,9 +1525,9 @@
     <string name="meditation_tech_box_short">4 · 4 · 4 · 4</string>
     <string name="meditation_tech_box_summary">Conteggio quadrato di quattro tempi — costante, focalizzato, usato da clinici e piloti.</string>
     <string name="meditation_tech_box_mechanism">Intervalli uguali e contenuti creano un metronomo che la mente può seguire, restringendo l\'attenzione e calmando la reattività.</string>
-    <string name="meditation_tech_box_coach1">Le trattenute sono pause gentili, non gare di apnea.</string>
-    <string name="meditation_tech_box_coach2">Se una trattenuta sembra troppo lunga, accorciala — il ritmo è il tuo.</string>
-    <string name="meditation_tech_box_coach3">Attraverso il naso, morbido e regolare.</string>
+    <string name="meditation_tech_box_coach1">Le pause sono dolci, non una prova di resistenza.</string>
+    <string name="meditation_tech_box_coach2">Se una pausa sembra troppo lunga, accorciala — il ritmo è tuo.</string>
+    <string name="meditation_tech_box_coach3">Dal naso, morbido e regolare.</string>
 
     <string name="meditation_tech_478_name">Respiro 4-7-8</string>
     <string name="meditation_tech_478_short">4 in · 7 trattieni · 8 out</string>
@@ -1543,7 +1543,7 @@
     <string name="meditation_tech_belly_mechanism">Coinvolgere il diaframma invece del torace approfondisce lo scambio di ossigeno e segnala sicurezza al corpo.</string>
     <string name="meditation_tech_belly_coach1">Una mano sulla pancia, una sul petto.</string>
     <string name="meditation_tech_belly_coach2">Nell\'inspirazione, solo la mano sulla pancia dovrebbe alzarsi.</string>
-    <string name="meditation_tech_belly_coach3">Niente conteggio. Lascia che il ritmo sia il tuo.</string>
+    <string name="meditation_tech_belly_coach3">Senza contare. Lascia che il ritmo sia tuo.</string>
 
     <string name="meditation_tech_scan_name">Scansione corporea</string>
     <string name="meditation_tech_scan_short">Respiro naturale, senza conteggio</string>
@@ -1551,7 +1551,7 @@
     <string name="meditation_tech_scan_mechanism">Nominare le sensazioni senza cambiarle interrompe la ruminazione e ti radica nel momento presente.</string>
     <string name="meditation_tech_scan_coach1">Nota i tuoi piedi. Le tue gambe. I tuoi fianchi.</string>
     <string name="meditation_tech_scan_coach2">Pancia. Petto. Spalle. Mascella.</string>
-    <string name="meditation_tech_scan_coach3">Non cambiare nulla. Solo nota.</string>
+    <string name="meditation_tech_scan_coach3">Non cambiare nulla. Soltanto osserva.</string>
 
     <string name="meditation_session_phase_settling">Sistemazione</string>
     <string name="meditation_session_phase_practice">Pratica</string>
@@ -1559,15 +1559,15 @@
     <string name="meditation_cue_breathe_in">Inspira</string>
     <string name="meditation_cue_hold">Trattieni</string>
     <string name="meditation_cue_breathe_out">Espira</string>
-    <string name="meditation_cue_arrive">Arriva</string>
-    <string name="meditation_cue_release">Rilascia</string>
+    <string name="meditation_cue_arrive">Sei qui</string>
+    <string name="meditation_cue_release">Lascia andare</string>
     <string name="meditation_cue_breathe">Respira</string>
     <string name="meditation_settle_coach1">Trova una posizione comoda. Rilassa le spalle, ammorbidisci la mascella.</string>
     <string name="meditation_settle_coach2">Lascia riposare gli occhi, o chiudili. Nota il tuo respiro naturale, senza cambiarlo.</string>
-    <string name="meditation_settle_coach3">Niente ritmo per ora. Solo arrivare, qui.</string>
+    <string name="meditation_settle_coach3">Nessun ritmo per ora. Solo essere qui.</string>
     <string name="meditation_integrate_coach1">Lascia andare il ritmo. Respira come il tuo corpo desidera.</string>
     <string name="meditation_integrate_coach2">Nota cosa è cambiato — un petto più morbido, un pensiero più lento, qualsiasi cosa.</string>
-    <string name="meditation_integrate_coach3">Quando sei pronto, apri lentamente gli occhi. Torna nella stanza.</string>
+    <string name="meditation_integrate_coach3">Quando sei pronto, apri lentamente gli occhi. Torna in questo spazio.</string>
 
     <string name="meditation_session_paused">In pausa</string>
     <string name="meditation_session_stop_button">Stop</string>
