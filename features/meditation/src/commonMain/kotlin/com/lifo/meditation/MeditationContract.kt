@@ -1,12 +1,16 @@
 package com.lifo.meditation
 
+import com.lifo.util.model.BreathSegmentKind
 import com.lifo.util.model.BreathingPattern
+import com.lifo.util.model.BreathingSegment
 import com.lifo.util.model.MeditationAudio
 import com.lifo.util.model.MeditationExperience
 import com.lifo.util.model.MeditationGoal
 import com.lifo.util.model.MeditationRiskFlag
 import com.lifo.util.model.MeditationSession
 import com.lifo.util.mvi.MviContract
+import kotlin.math.floor
+import kotlin.math.max
 
 /**
  * MVI contract for the redesigned 5-phase meditation flow:
@@ -98,15 +102,23 @@ object MeditationContract {
     /**
      * Live session state. Created when entering [SessionPhase.SESSION],
      * cleared when transitioning to [SessionPhase.OVERVIEW].
+     *
+     * `elapsedMillis` is the source of truth for time. The Phase 2 ViewModel
+     * tickers at ~250ms granularity, fine enough for cue countdown updates
+     * and segment boundary detection (segments are ≥4s for all techniques).
+     * Per-segment scale animations interpolate at 60fps via Compose
+     * `Animatable.snapTo` + `animateTo`, keyed on `currentSegmentIndex`.
      */
     data class SessionRuntime(
         val technique: BreathingPattern,
         val durationSeconds: Int,
-        val elapsedSeconds: Int = 0,
+        val elapsedMillis: Long = 0L,
         val isPaused: Boolean = false,
-        val cyclesCompleted: Int = 0,
         val stopped: Boolean = false,
     ) {
+        /** Convenience whole seconds, used by the timer + progress display. */
+        val elapsedSeconds: Int get() = (elapsedMillis / 1000L).toInt()
+
         /** Settling sub-phase length: max(20s, 15% of duration). */
         val settleSeconds: Int get() = maxOf(20, (durationSeconds * 0.15f).toInt())
 
@@ -129,6 +141,7 @@ object MeditationContract {
             }
 
         val totalActiveSeconds: Int get() = settleSeconds + practiceCapSeconds + integrateSeconds
+        val totalActiveMillis: Long get() = totalActiveSeconds * 1000L
 
         val subPhase: SubPhase
             get() = when {
@@ -139,6 +152,82 @@ object MeditationContract {
 
         /** Seconds remaining before auto-complete. Clamped to >= 0. */
         val remainingSeconds: Int get() = (totalActiveSeconds - elapsedSeconds).coerceAtLeast(0)
+
+        /** Millis spent inside the practice sub-phase (negative during settle, clamped to >=0). */
+        val practiceElapsedMillis: Long
+            get() = max(0L, elapsedMillis - settleSeconds * 1000L)
+
+        /** Cycle duration in millis (full inhale+hold+exhale+hold loop). 0 if no pattern. */
+        val cycleMillis: Long
+            get() = (technique.totalCycleSeconds * 1000f).toLong()
+
+        /** Number of complete breath cycles finished. 0 outside of PRACTICE or for techniques without a pattern. */
+        val cyclesCompleted: Int
+            get() {
+                if (!technique.hasPattern || cycleMillis == 0L) return 0
+                if (subPhase == SubPhase.SETTLING) return 0
+                val effectiveMillis = if (subPhase == SubPhase.INTEGRATION) {
+                    practiceCapSeconds * 1000L
+                } else {
+                    practiceElapsedMillis
+                }
+                return floor(effectiveMillis.toFloat() / cycleMillis).toInt().coerceAtLeast(0)
+            }
+
+        /**
+         * Current breath segment within the active cycle, or null if outside PRACTICE
+         * or technique has no pattern. Segment index wraps around `technique.segments.size`.
+         */
+        val currentSegment: BreathingSegment?
+            get() {
+                if (subPhase != SubPhase.PRACTICE || !technique.hasPattern) return null
+                val segs = technique.segments.takeIf { it.isNotEmpty() } ?: return null
+                val cycleMs = cycleMillis.takeIf { it > 0L } ?: return null
+                val intoCycle = practiceElapsedMillis % cycleMs
+                var acc = 0L
+                for (seg in segs) {
+                    val segMs = (seg.seconds * 1000f).toLong()
+                    if (intoCycle < acc + segMs) return seg
+                    acc += segMs
+                }
+                return segs.last()
+            }
+
+        /** Position within the current segment, in millis. 0 outside PRACTICE. */
+        val intoSegmentMillis: Long
+            get() {
+                if (subPhase != SubPhase.PRACTICE || !technique.hasPattern) return 0L
+                val segs = technique.segments.takeIf { it.isNotEmpty() } ?: return 0L
+                val cycleMs = cycleMillis.takeIf { it > 0L } ?: return 0L
+                val intoCycle = practiceElapsedMillis % cycleMs
+                var acc = 0L
+                for (seg in segs) {
+                    val segMs = (seg.seconds * 1000f).toLong()
+                    if (intoCycle < acc + segMs) return intoCycle - acc
+                    acc += segMs
+                }
+                return 0L
+            }
+
+        /**
+         * Globally-monotonic segment index (`floor(practiceElapsedMillis / cycleMillis) * segments.size + idxInCycle`).
+         * Used as the `key` for the pacer's `Animatable` so it restarts on each segment boundary.
+         */
+        val currentSegmentIndex: Int
+            get() {
+                if (subPhase != SubPhase.PRACTICE || !technique.hasPattern) return -1
+                val segs = technique.segments.takeIf { it.isNotEmpty() } ?: return -1
+                val cycleMs = cycleMillis.takeIf { it > 0L } ?: return -1
+                val cycleNumber = (practiceElapsedMillis / cycleMs).toInt()
+                val intoCycle = practiceElapsedMillis % cycleMs
+                var acc = 0L
+                for ((i, seg) in segs.withIndex()) {
+                    val segMs = (seg.seconds * 1000f).toLong()
+                    if (intoCycle < acc + segMs) return cycleNumber * segs.size + i
+                    acc += segMs
+                }
+                return cycleNumber * segs.size + (segs.size - 1)
+            }
     }
 
     // ── Phase + sub-phase enums ─────────────────────────────────────────

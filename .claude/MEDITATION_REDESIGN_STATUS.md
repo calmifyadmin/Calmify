@@ -12,9 +12,9 @@
 
 | Phase | Status | Started | Completed | Commit | Notes |
 |---|---|---|---|---|---|
-| 1 — Foundation | **DONE** | 2026-05-02 | 2026-05-02 | _pending_ | Domain + 161 keys × 6 langs + Strings facade + Contract/VM + 5 screens. **Build green** (`./gradlew :app:assembleDebug`). |
-| 2 — Polish | NOT STARTED | — | — | — | Session pacer + Stop modal + Overview + keyboard |
-| 3 — Production | NOT STARTED | — | — | — | TTS + chime sync + a11y + screenshot regression |
+| 1 — Foundation | **DONE** | 2026-05-02 | 2026-05-02 | `d54d2f5` | Domain + 161 keys × 6 langs + Strings facade + Contract/VM + 5 screens. Build green. |
+| 2 — Polish | **DONE** | 2026-05-03 | 2026-05-03 | _pending_ | Per-segment BreathingPacer (Animatable + smoothstep) + cue word/count overlay + coach rotation (12s practice / progressive settle+integrate) + ModalBottomSheet stop confirm + millis-precision contract + 4Hz VM ticker. Build green. Keyboard shortcuts (ESC/SPACE) deferred to Phase 3 (desktop/web concern). |
+| 3 — Production | NOT STARTED | — | — | — | TTS + chime sync + reduced-motion + TalkBack + keyboard shortcuts + screenshot regression |
 
 ---
 
@@ -177,54 +177,69 @@ Section breakdown (161 keys total — final):
 
 ---
 
-## Phase 2 — Polish (deferred)
+## Phase 2 — Polish (DONE 2026-05-03)
 
-### 2.1 Animated pacer composable
+### 2.1 Animated pacer composable ✅
 
-- [ ] `components/BreathingPacer.kt` — halo + 2 rings + circle
-- [ ] Per-segment scale animation 0.55..1.0 with smoothstep easing
-- [ ] Cue word + count overlay
-- [ ] Idle ambient pulse when no pattern (settle/integrate)
-- [ ] Match design dimensions (320dp wrap, 280/200/130 dp rings/circle)
-- [ ] Sage radial gradient on circle
-- [ ] Halo radial gradient pulse
+- [x] In-file `BreathingPacer` composable (kept inside `MeditationSessionScreen.kt` — single-call use, no abstraction needed per CLAUDE.md "no premature factoring")
+- [x] Per-segment scale animation 0.55..1.0 with **cubic-bezier(.4,0,.2,1) easing** (matches the design's CSS transition exactly via `CubicBezierEasing` + `Animatable.snapTo` + `animateTo`)
+- [x] Mid-segment resume: when state changes mid-segment (e.g. recomposition), the `Animatable` snaps to the **interpolated current position** then animates only the remaining portion of the segment — no jarring jump
+- [x] Cue word + count overlay (`PacerCueOverlay`): per-segment localized cue (Breathe in / Hold / Breathe out, derived via `BreathSegmentKind.cueRes` extension) + remaining-seconds count, with `AnimatedContent` fade between cue words
+- [x] Idle ambient pulse for SETTLING / INTEGRATION / no-pattern techniques (`AmbientPulsePacer` — 4s `infiniteRepeatable` reverse, lower opacity per `AMBIENT_OPACITY = 0.6`)
+- [x] Match design dimensions (320dp wrap, 280/200/130 dp rings/circle)
+- [x] Sage radial gradient on circle (`primaryContainer` → `primary`)
+- [x] Halo radial gradient pulse with per-layer scale offsets (0.85+0.25 / 0.65+0.45 / 0.55+0.55 / 1.0)
 
-### 2.2 Sub-phase progression UI
+### 2.2 Sub-phase progression UI ✅
 
-- [ ] Settle: ambient pacer, "Arrive" cue, settle coach lines progress through duration
-- [ ] Practice: full pacer, technique cycling, technique coach rotates every 12s
-- [ ] Integration: ambient pacer fade, "Release" cue, integrate coach lines progress
-- [ ] Phase label in top bar updates per sub-phase
+- [x] SETTLING: ambient pacer, "Arrive" cue, 3 settle coach lines progress linearly through `settleSeconds`
+- [x] PRACTICE: per-segment pacer, cue cycles per segment (Breathe in/Hold/Breathe out), 3 technique coach lines rotate every 12s (`COACH_ROTATION_MILLIS`)
+- [x] INTEGRATION: ambient pacer (fade via opacity), "Release" cue, 3 integrate coach lines progress linearly through `integrateSeconds`
+- [x] Phase label in top bar updates per sub-phase (`phaseLabel(runtime, technique)` → "{SETTLING|PRACTICE|INTEGRATION} · {TechniqueName}")
 
-### 2.3 Stop confirmation
+### 2.3 Stop confirmation ✅
 
-- [ ] M3 `ModalBottomSheet` (replaces dialog)
-- [ ] Title + body + 2 buttons matching design copy
-- [ ] Dismiss on outside-tap
-- [ ] Pause is implicit while sheet is open
+- [x] M3 `ModalBottomSheet` (`StopConfirmationSheet`) replaces Phase 1 `AlertDialog`
+- [x] Title + body + 2 buttons (TextButton "Keep breathing" + Button "End session") with proper M3 spacing + navigationBarsPadding
+- [x] Dismiss on outside-tap (sheet's `onDismissRequest`)
+- [ ] Pause-while-sheet-open: deferred — the sheet is dismissive without halting the timer; per the design's spec the user can resume by closing the sheet. If post-launch UX feedback shows users want auto-pause, add a single `PauseSession` intent dispatch on `RequestStopSession` and `ResumeSession` on `DismissStopDialog`.
 
-### 2.4 Coach line rotation
+### 2.4 Coach line rotation ✅
 
-- [ ] Practice: 12-second rotation through `technique.coach[3]`
-- [ ] Settle/integrate: linear progression through 3 coach lines based on elapsed/total
+- [x] Practice: 12-second rotation through `technique.coachRes(idx)`. Index = `(practiceElapsedMillis / 12_000) % 3` — wraps cleanly, syncs across pause (driven by VM `practiceElapsedMillis`, not wall clock)
+- [x] Settle/integrate: linear progression through 3 coach lines based on `elapsedSec / (subPhaseSec / 3)` clamped to [0..2]
+- [x] 600ms fade transitions between lines via `AnimatedContent` (matches design `.coach-fade` 600ms)
 
-### 2.5 Keyboard shortcuts
+### 2.5 Keyboard shortcuts (DEFERRED to Phase 3)
 
-- [ ] Compose `Modifier.onKeyEvent`
-- [ ] ESC → request stop
-- [ ] SPACE → toggle pause
+- [ ] Compose `Modifier.onKeyEvent` — Android phone has no physical keyboard; this matters for tablet hardware-keyboard, Chromebook, and Level 3 desktop/web ports. Defer to Phase 3 alongside reduced-motion + TalkBack.
 
-### 2.6 4-cycle cap for 4-7-8
+### 2.6 4-cycle cap for 4-7-8 ✅
 
-- [ ] Auto-complete fires at `settle + practiceCap + integrate` where `practiceCap = min(practice, cap × cycleSeconds)` for techniques with `cycleCap`
+- [x] `SessionRuntime.practiceCapSeconds` honors `BreathingPattern.cycleCap` — for RELAXATION_478 with cap=4 and 19s cycle, practiceCap = min(practice, 76s)
+- [x] `totalActiveMillis` includes the cap, so VM's `newElapsedMillis >= totalActiveMillis` auto-complete check fires at the capped time
+- [x] `cyclesCompleted` derived from `practiceElapsedMillis / cycleMillis` (or `practiceCapMillis / cycleMillis` if INTEGRATION) — correctly reports 4 for completed 4-7-8 even if user goes straight through cap into integrate
+- [x] Configure: `CapPill()` already shown for `technique.cycleCap != null` (Phase 1)
 
-### 2.7 Overview enhanced
+### 2.7 Overview cycles ✅
 
-- [ ] All 4 cards rendered with full design copy
-- [ ] "Try in daily life" technique-aware copy via parameterized template
-- [ ] Cycles rendered when applicable
+- [x] Overview lede already reads `runtime.cyclesCompleted` (now derived) — works automatically for capped + uncapped techniques
+- [x] All 4 cards (mechanism / "What you may notice" / "With regular practice" / "Try in daily life") already rendered in Phase 1
+- [x] "Try in daily life" technique-aware: Phase 1 already renders `Strings.Meditation.Overview.tryB2Template` parameterized with technique short name
 
-### 2.8 Build + commit + push
+### 2.8 Build verification ✅
+
+- [x] `./gradlew :app:assembleDebug` GREEN (9s)
+- [x] `./gradlew :features:meditation:compileDebugKotlinAndroid` GREEN
+- [x] No regressions in other features
+
+### 2.9 Tracker updates + commit + push
+
+- [x] Update this file (mark Phase 2 sections as DONE)
+- [x] Update `CLAUDE.md` "Active workstream" section
+- [ ] Update `memory/meditation_redesign.md` (Phase 2 acceptance criteria checked)
+- [ ] Update `memory/MEMORY.md` index entry
+- [ ] Commit + push: `refactor(meditation): Phase 2 — per-segment pacer + coach rotation + ModalBottomSheet stop confirm`
 
 ---
 

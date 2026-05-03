@@ -1,5 +1,6 @@
 package com.lifo.ui.i18n
 
+import com.lifo.util.model.BreathSegmentKind
 import com.lifo.util.model.BreathingPattern
 import com.lifo.util.model.MeditationAudio
 import com.lifo.util.model.MeditationExperience
@@ -102,6 +103,20 @@ fun BreathingPattern.coachRes(idx: Int): StringResource? = when (this) {
         else -> null
     }
 }
+
+// ── BreathSegmentKind → cue label ─────────────────────────────────────────
+
+/**
+ * Pacer cue word per breath segment. Used by [com.lifo.meditation.screens.MeditationSessionScreen]
+ * to show the live "Breathe in / Hold / Breathe out" overlay on the breathing pacer.
+ */
+val BreathSegmentKind.cueRes: StringResource
+    get() = when (this) {
+        BreathSegmentKind.INHALE -> Strings.Meditation.Cue.breatheIn
+        BreathSegmentKind.EXHALE -> Strings.Meditation.Cue.breatheOut
+        BreathSegmentKind.HOLD_IN -> Strings.Meditation.Cue.hold
+        BreathSegmentKind.HOLD_OUT -> Strings.Meditation.Cue.hold
+    }
 
 // ── MeditationGoal → label ────────────────────────────────────────────────
 

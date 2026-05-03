@@ -89,6 +89,19 @@ enum class BreathingPattern(
     val totalCycleSeconds: Float
         get() = inhaleSeconds + holdInSeconds + exhaleSeconds + holdOutSeconds
 
+    /**
+     * Ordered list of non-zero breath segments composing one cycle.
+     * Empty for techniques without a pattern (BELLY_NATURAL / BODY_SCAN_NATURAL).
+     * Used by the pacer composable to drive per-segment scale animations and the cue label.
+     */
+    val segments: List<BreathingSegment>
+        get() = buildList {
+            if (inhaleSeconds > 0f) add(BreathingSegment(BreathSegmentKind.INHALE, inhaleSeconds))
+            if (holdInSeconds > 0f) add(BreathingSegment(BreathSegmentKind.HOLD_IN, holdInSeconds))
+            if (exhaleSeconds > 0f) add(BreathingSegment(BreathSegmentKind.EXHALE, exhaleSeconds))
+            if (holdOutSeconds > 0f) add(BreathingSegment(BreathSegmentKind.HOLD_OUT, holdOutSeconds))
+        }
+
     companion object {
         /**
          * Backward-compat parser. Accepts both new (`BELLY_NATURAL`) and old
@@ -100,6 +113,29 @@ enum class BreathingPattern(
             else -> entries.firstOrNull { it.name == name }
         }
     }
+}
+
+/**
+ * One segment of a breath cycle. The pacer visual drives a `scale` value
+ * between 0.55 (smallest) and 1.0 (largest) following these targets:
+ * - INHALE: 0.55 → 1.0   (smoothstep ease-in-out)
+ * - EXHALE: 1.0 → 0.55   (smoothstep ease-in-out)
+ * - HOLD_IN: 1.0 (held)
+ * - HOLD_OUT: 0.55 (held)
+ *
+ * The cue overlay shows a localized label per kind (BREATHE_IN / HOLD / BREATHE_OUT)
+ * and counts down the remaining whole seconds in the segment.
+ */
+data class BreathingSegment(
+    val kind: BreathSegmentKind,
+    val seconds: Float,
+)
+
+enum class BreathSegmentKind {
+    INHALE,
+    EXHALE,
+    HOLD_IN,
+    HOLD_OUT;
 }
 
 /**

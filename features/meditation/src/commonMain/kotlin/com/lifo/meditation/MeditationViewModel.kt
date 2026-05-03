@@ -18,13 +18,15 @@ import kotlin.uuid.Uuid
  * State machine: WELCOME → SCREENING → CONFIGURE → SESSION → OVERVIEW.
  * Within SESSION: settling (15%) → practice (70%) → integration (15%).
  *
- * The session timer runs as a coroutine ticking 1Hz. It is pause-aware
- * (cancelled on PauseSession, restarted on ResumeSession) and auto-fires
- * [MeditationContract.Intent.SessionAutoComplete] when elapsed reaches
- * [MeditationContract.SessionRuntime.totalActiveSeconds].
+ * The session timer runs as a coroutine ticking every [TICK_INTERVAL_MILLIS]
+ * (~250ms / 4Hz). It is pause-aware (cancelled on PauseSession, restarted on
+ * ResumeSession) and auto-fires [MeditationContract.Intent.SessionAutoComplete]
+ * when elapsed reaches [MeditationContract.SessionRuntime.totalActiveMillis].
  *
- * Phase 1 keeps the timer simple (1Hz integer ticks). Phase 2 will add
- * the per-segment chime/voice scheduling on sub-phase boundaries.
+ * 250ms granularity is enough for crisp segment boundary detection (segments
+ * are >= 4s for all techniques) and for the cue countdown text. Per-frame scale
+ * smoothness comes from Compose's `Animatable.animateTo` in the pacer composable,
+ * not from the VM tick.
  */
 class MeditationViewModel(
     private val repository: MeditationRepository,
@@ -36,6 +38,11 @@ class MeditationViewModel(
     private var timerJob: Job? = null
     /** Tracks which sub-phase we last announced via PlayBell — prevents duplicate chimes. */
     private var lastAnnouncedSubPhase: MeditationContract.SubPhase? = null
+
+    private companion object {
+        /** Timer tick interval. 250ms balances cue countdown smoothness with CPU. */
+        const val TICK_INTERVAL_MILLIS: Long = 250L
+    }
 
     init {
         onIntent(MeditationContract.Intent.LoadStats)
@@ -202,22 +209,16 @@ class MeditationViewModel(
         timerJob?.cancel()
         timerJob = scope.launch {
             while (true) {
-                delay(1000L)
+                delay(TICK_INTERVAL_MILLIS)
                 val s = state.value
                 val current = s.session ?: break
                 if (current.isPaused) continue
 
-                val newElapsed = current.elapsedSeconds + 1
-                val newCycles = if (current.technique.hasPattern && newElapsed > current.settleSeconds) {
-                    val practiceElapsed = (newElapsed - current.settleSeconds)
-                        .coerceAtMost(current.practiceCapSeconds)
-                    (practiceElapsed / current.technique.totalCycleSeconds).toInt()
-                } else current.cyclesCompleted
-
-                val updated = current.copy(elapsedSeconds = newElapsed, cyclesCompleted = newCycles)
+                val newElapsedMillis = current.elapsedMillis + TICK_INTERVAL_MILLIS
+                val updated = current.copy(elapsedMillis = newElapsedMillis)
                 updateState { copy(session = updated) }
 
-                // Sub-phase change → bell
+                // Sub-phase change → bell (deduped via lastAnnouncedSubPhase)
                 val newSubPhase = updated.subPhase
                 if (newSubPhase != lastAnnouncedSubPhase) {
                     lastAnnouncedSubPhase = newSubPhase
@@ -225,7 +226,7 @@ class MeditationViewModel(
                 }
 
                 // Auto-complete
-                if (newElapsed >= updated.totalActiveSeconds) {
+                if (newElapsedMillis >= updated.totalActiveMillis) {
                     onIntent(MeditationContract.Intent.SessionAutoComplete)
                     break
                 }
