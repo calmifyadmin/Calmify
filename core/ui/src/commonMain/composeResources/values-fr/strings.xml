@@ -471,7 +471,11 @@
 
     <!-- Ikigai screen -->
     <string name="ikigai_title">Votre Ikigai</string>
+    <string name="ikigai_card_subtitle">Touchez pour explorer</string>
+    <string name="ikigai_halo_prompt">Quatre lumières, un seul point de rencontre. Allume la première quand tu te sens prêt.</string>
+    <string name="ikigai_progress_label">%1$d sur %2$d activités explorées</string>
     <string name="ikigai_add_placeholder">Ajouter...</string>
+    <string name="ikigai_add_to_template">Ajouter à %1$s…</string>
 
     <!-- Inspiration screen -->
     <string name="inspiration_title">Inspiration</string>

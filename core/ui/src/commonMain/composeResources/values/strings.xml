@@ -475,7 +475,11 @@
     <string name="connection_add_person_label">Add person</string>
     <string name="dashboard_title">Your Ground</string>
     <string name="ikigai_title">Your Ikigai</string>
+    <string name="ikigai_card_subtitle">Tap to explore</string>
+    <string name="ikigai_halo_prompt">Four lights, one meeting point. Light the first when you feel ready.</string>
+    <string name="ikigai_progress_label">%1$d of %2$d activities explored</string>
     <string name="ikigai_add_placeholder">Add...</string>
+    <string name="ikigai_add_to_template">Add to %1$s…</string>
     <string name="inspiration_title">Inspiration</string>
     <string name="inspiration_already_noted">You\'ve already noted today\'s beauty!</string>
     <string name="inspiration_detail_label">A detail, a color, a gesture, a sound...</string>

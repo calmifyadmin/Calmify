@@ -55,13 +55,17 @@ import org.jetbrains.compose.resources.StringResource
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 
-// ── Peaceful palette (same as IkigaiScreen) ──
+// ── Halo palette (matches `C:\Design\Calmify\Meditation\Ikigai.html` 1:1) ──
+// Soft watercolor pastels — pink (passion), sky (talent), teal-sage (mission), gold (profession).
+// The center medallion uses Calmify's accent sage `#4CAF7D` for stroke and
+// `#A8F0CB` (accent-bright) for the IKIGAI label / spa icon glyph.
 
-private val PetalRose = Color(0xFFE8728B)
-private val PetalSky = Color(0xFF5BA3D9)
-private val PetalSage = Color(0xFF4CAF7D)
-private val PetalSand = Color(0xFFE8A94D)
-private val CenterGold = Color(0xFFD4C4A0)
+private val PetalRose = Color(0xFFE08CA9)   // Passion
+private val PetalSky = Color(0xFF8FB6E0)    // Talent
+private val PetalSage = Color(0xFF7CC9A4)   // Mission
+private val PetalSand = Color(0xFFE0B884)   // Profession
+private val IkigaiAccent = Color(0xFF4CAF7D)        // Center medallion stroke
+private val IkigaiAccentBright = Color(0xFFA8F0CB)  // Center spa + IKIGAI label
 
 private val gardenPetalColors = listOf(PetalRose, PetalSky, PetalSage, PetalSand)
 
@@ -267,25 +271,20 @@ fun GardenScreen(
                 .padding(padding),
             contentPadding = PaddingValues(bottom = 96.dp),
         ) {
-            // ── Ikigai Header with inline add ──
+            // ── Ikigai Header (halo + prompt + selector + add input + progress) ──
+            // Progress footer is now inside the card per the design source
+            // (`Ikigai.html` `progress-footer`); no separate progress item below.
             item(key = "ikigai_header") {
                 GardenIkigaiHeader(
                     exploration = state.ikigaiExploration,
                     selectedCircle = state.selectedIkigaiCircle,
                     inputText = state.ikigaiInput,
+                    exploredCount = exploredCount,
+                    totalActivities = totalActivities,
                     onCircleSelect = { onIntent(GardenContract.Intent.SelectIkigaiCircle(it)) },
                     onInputChange = { onIntent(GardenContract.Intent.UpdateIkigaiInput(it)) },
                     onAddItem = { onIntent(GardenContract.Intent.AddIkigaiItem) },
                     onIkigaiClick = { onActivityClick("ikigai") },
-                )
-            }
-
-            // ── Global Progress ──
-            item(key = "progress") {
-                GardenGlobalProgress(
-                    explored = exploredCount,
-                    total = totalActivities,
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
                 )
             }
 
@@ -325,9 +324,11 @@ fun GardenScreen(
 
 @Composable
 private fun GardenIkigaiHeader(
-    exploration: com.lifo.util.model.IkigaiExploration?,
+    @Suppress("UNUSED_PARAMETER") exploration: com.lifo.util.model.IkigaiExploration?,
     selectedCircle: GardenContract.IkigaiCircle?,
     inputText: String,
+    exploredCount: Int,
+    totalActivities: Int,
     onCircleSelect: (GardenContract.IkigaiCircle) -> Unit,
     onInputChange: (String) -> Unit,
     onAddItem: () -> Unit,
@@ -343,89 +344,74 @@ private fun GardenIkigaiHeader(
         color = colorScheme.surfaceContainerLow,
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            // Title row
+            // ── Card head: title + subtitle + spa chip ──────────────────────
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                    .clickable { onIkigaiClick() }
-                    .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { onIkigaiClick() },
+                verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        "Il Tuo Ikigai",
+                        text = stringResource(Strings.Garden.ikigaiTitle),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = colorScheme.onSurface,
                     )
                     Text(
-                        "Tocca per approfondire",
+                        text = stringResource(Strings.Garden.ikigaiCardSubtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp),
                     )
                 }
                 Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = Color(0xFFAB47BC).copy(alpha = 0.10f),
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFFA864E8).copy(alpha = 0.18f),
                     modifier = Modifier.size(36.dp),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            Icons.Outlined.Interests,
+                            imageVector = Icons.Outlined.Spa,
                             contentDescription = null,
                             modifier = Modifier.size(20.dp),
-                            tint = Color(0xFFAB47BC),
+                            tint = Color(0xFFC9A4F0),
                         )
                     }
                 }
             }
 
-            // Petals diagram
-            GardenIkigaiPetals(
-                exploration = exploration,
+            // ── Halo chart ─────────────────────────────────────────────────
+            GardenIkigaiHalo(
                 selectedCircle = selectedCircle,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(250.dp)
-                    .padding(horizontal = 8.dp),
+                onTagClick = onCircleSelect,
+                modifier = Modifier.fillMaxWidth(),
             )
 
-            // Minimal legend with colored dots
-            Row(
+            // ── Halo prompt ────────────────────────────────────────────────
+            Text(
+                text = stringResource(Strings.Garden.ikigaiHaloPrompt),
+                style = MaterialTheme.typography.bodySmall,
+                color = colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                lineHeight = 18.sp,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-            ) {
-                GardenContract.IkigaiCircle.entries.forEachIndexed { i, circle ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Canvas(Modifier.size(8.dp)) {
-                            drawCircle(color = gardenPetalColors[i])
-                        }
-                        Text(
-                            stringResource(circle.displayNameRes),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
+                    .padding(horizontal = 8.dp),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
 
-            Spacer(Modifier.height(16.dp))
-
-            // Circle selector — ExpressiveDailyChip style (tonal pills)
+            // ── Circle selector pills (functional — tag clicks already select,
+            //    but pills provide a more discoverable alternative entry point
+            //    on smaller screens where tags can be tight to tap) ──────────
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 GardenContract.IkigaiCircle.entries.forEachIndexed { i, circle ->
@@ -445,13 +431,13 @@ private fun GardenIkigaiHeader(
                         ),
                     ) {
                         Icon(
-                            circleIcons[circle] ?: Icons.Outlined.Star,
+                            imageVector = circleIcons[circle] ?: Icons.Outlined.Star,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
                         )
                         Spacer(Modifier.width(4.dp))
                         Text(
-                            stringResource(circle.displayNameRes),
+                            text = stringResource(circle.displayNameRes),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                             maxLines = 1,
@@ -460,13 +446,10 @@ private fun GardenIkigaiHeader(
                 }
             }
 
-            // Quick-add input row — only visible when a circle is selected
+            // ── Quick-add input — only visible when a circle is selected ──
             if (selectedCircle != null) {
-                Spacer(Modifier.height(10.dp))
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp, bottom = 20.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -476,7 +459,10 @@ private fun GardenIkigaiHeader(
                         modifier = Modifier.weight(1f),
                         placeholder = {
                             Text(
-                                "Aggiungi a ${stringResource(selectedCircle.displayNameRes)}...",
+                                text = stringResource(
+                                    Strings.Garden.ikigaiAddToTemplate,
+                                    stringResource(selectedCircle.displayNameRes),
+                                ),
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         },
@@ -497,8 +483,8 @@ private fun GardenIkigaiHeader(
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
-                                Icons.Default.Add,
-                                contentDescription = "Aggiungi",
+                                imageVector = Icons.Default.Add,
+                                contentDescription = stringResource(Strings.Action.add),
                                 modifier = Modifier.size(20.dp),
                                 tint = if (inputText.isNotBlank()) colorScheme.onPrimary
                                 else colorScheme.onSurfaceVariant,
@@ -506,225 +492,320 @@ private fun GardenIkigaiHeader(
                         }
                     }
                 }
-            } else {
-                Spacer(Modifier.height(20.dp))
-            }
-        }
-    }
-}
-
-/**
- * Watercolor petals Venn diagram for the Garden header —
- * breathing animation, radial gradients, warm center glow.
- */
-@Composable
-private fun GardenIkigaiPetals(
-    exploration: com.lifo.util.model.IkigaiExploration?,
-    selectedCircle: GardenContract.IkigaiCircle?,
-    modifier: Modifier = Modifier,
-) {
-    val textMeasurer = rememberTextMeasurer()
-    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
-
-    // Breathing animation
-    val infiniteTransition = rememberInfiniteTransition(label = "garden-ikigai")
-    val breathScale by infiniteTransition.animateFloat(
-        initialValue = 0.97f,
-        targetValue = 1.03f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(5000, easing = EaseInOutCubic),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "breathe",
-    )
-    val glowAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.10f,
-        targetValue = 0.22f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(6000, easing = EaseInOutCubic),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "glow",
-    )
-
-    // -1 = none selected (all equal)
-    val selectedIndex = selectedCircle?.ordinal ?: -1
-
-    Canvas(modifier = modifier) {
-        val cx = size.width / 2f
-        val cy = size.height / 2f
-        val baseR = size.minDimension * 0.33f
-        val r = baseR * breathScale
-        val spread = r * 0.36f
-
-        val centers = listOf(
-            Offset(cx - spread, cy - spread),
-            Offset(cx + spread, cy - spread),
-            Offset(cx - spread, cy + spread),
-            Offset(cx + spread, cy + spread),
-        )
-
-        // Filled circles
-        val noneSelected = selectedIndex == -1
-        centers.forEachIndexed { i, center ->
-            val isSelected = i == selectedIndex
-            val coreAlpha = when {
-                noneSelected -> 0.28f   // all equal, vivid
-                isSelected -> 0.35f
-                else -> 0.12f           // dimmed when another is selected
-            }
-            val edgeAlpha = when {
-                noneSelected -> 0.10f
-                isSelected -> 0.14f
-                else -> 0.04f
             }
 
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        gardenPetalColors[i].copy(alpha = coreAlpha),
-                        gardenPetalColors[i].copy(alpha = edgeAlpha),
-                    ),
-                    center = center,
-                    radius = r,
-                ),
-                radius = r,
-                center = center,
-            )
-
-            val strokeAlpha = when {
-                noneSelected -> 0.30f
-                isSelected -> 0.50f
-                else -> 0.10f
-            }
-            val strokeWidth = when {
-                noneSelected -> 1.4.dp.toPx()
-                isSelected -> 2.dp.toPx()
-                else -> 0.8.dp.toPx()
-            }
-            drawCircle(
-                color = gardenPetalColors[i].copy(alpha = strokeAlpha),
-                radius = r,
-                center = center,
-                style = Stroke(width = strokeWidth),
-            )
-        }
-
-        // Center glow
-        val glowR = r * 0.38f
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(
-                    CenterGold.copy(alpha = glowAlpha),
-                    CenterGold.copy(alpha = glowAlpha * 0.3f),
-                    Color.Transparent,
-                ),
-                center = Offset(cx, cy),
-                radius = glowR,
-            ),
-            radius = glowR,
-            center = Offset(cx, cy),
-        )
-
-        // "IKIGAI" label at center
-        val ikigaiResult = textMeasurer.measure(
-            AnnotatedString("IKIGAI"),
-            TextStyle(
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = onSurfaceColor.copy(alpha = 0.65f),
-                letterSpacing = 1.5.sp,
-            ),
-        )
-        drawText(
-            ikigaiResult,
-            topLeft = Offset(
-                cx - ikigaiResult.size.width / 2f,
-                cy - ikigaiResult.size.height / 2f,
-            ),
-        )
-
-        // Numbers
-        val counts = listOf(
-            exploration?.passionItems?.size ?: 0,
-            exploration?.talentItems?.size ?: 0,
-            exploration?.missionItems?.size ?: 0,
-            exploration?.professionItems?.size ?: 0,
-        )
-
-        counts.forEachIndexed { i, count ->
-            val pushFactor = 0.52f
-            val numPos = Offset(
-                centers[i].x + (centers[i].x - cx) * pushFactor,
-                centers[i].y + (centers[i].y - cy) * pushFactor,
-            )
-
-            val isHighlighted = noneSelected || i == selectedIndex
-            val numResult = textMeasurer.measure(
-                AnnotatedString("$count"),
-                TextStyle(
-                    fontSize = if (isHighlighted) 18.sp else 14.sp,
-                    fontWeight = if (isHighlighted) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isHighlighted) gardenPetalColors[i]
-                    else gardenPetalColors[i].copy(alpha = 0.35f),
-                ),
-            )
-            drawText(
-                numResult,
-                topLeft = Offset(
-                    numPos.x - numResult.size.width / 2f,
-                    numPos.y - numResult.size.height / 2f,
-                ),
+            // ── Progress footer (matches design `progress-footer`) ──
+            GardenProgressFooter(
+                explored = exploredCount,
+                total = totalActivities,
             )
         }
     }
 }
 
-// ── Global Progress Bar ──
-
+/** Garden activity progress — bottom of the Ikigai card. Matches design `progress-footer`. */
 @Composable
-private fun GardenGlobalProgress(
+private fun GardenProgressFooter(
     explored: Int,
     total: Int,
-    modifier: Modifier = Modifier,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val progress by animateFloatAsState(
         targetValue = if (total > 0) explored.toFloat() / total else 0f,
         animationSpec = spring(stiffness = Spring.StiffnessLow),
-        label = "progress",
+        label = "ikigaiCardProgress",
     )
-
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                "$explored di $total attivita' esplorate",
-                style = MaterialTheme.typography.bodySmall,
+                text = stringResource(Strings.Garden.ikigaiProgressLabel, explored, total),
+                style = MaterialTheme.typography.labelMedium,
                 color = colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Medium,
             )
             Text(
-                "${(progress * 100).toInt()}%",
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.SemiBold,
+                text = "${(progress * 100).toInt()}%",
+                style = MaterialTheme.typography.labelMedium,
                 color = colorScheme.primary,
+                fontWeight = FontWeight.Medium,
             )
         }
-        Spacer(Modifier.height(6.dp))
         LinearProgressIndicator(
             progress = { progress },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(6.dp)
-                .clip(RoundedCornerShape(3.dp)),
+                .height(4.dp)
+                .clip(RoundedCornerShape(999.dp)),
             color = colorScheme.primary,
             trackColor = colorScheme.surfaceContainerHigh,
         )
     }
 }
+
+/**
+ * Halo Venn diagram for the Garden Ikigai header — 1:1 with the Claude
+ * Design source `C:\Design\Calmify\Meditation\Ikigai.html`.
+ *
+ * Anatomy:
+ * - **4 bloom halos** in a 2×2 grid (passion / talent / mission / profession),
+ *   each a soft radial gradient drawn with `BlendMode.Plus` for the watercolor
+ *   feel of overlapping petals.
+ * - **4 thin outline rings** — one per bloom, faint at rest, brightened when
+ *   that pillar's tag is the selected one (mirrors the design's CSS `:has()`
+ *   hover state, but driven by `selectedCircle` state).
+ * - **Center medallion** — dark circle with the Calmify accent sage stroke +
+ *   a fainter inner ring at half the radius. Houses the spa icon glyph + the
+ *   letter-spaced "IKIGAI" label.
+ * - **4 pillar tag pills** positioned via `BiasAlignment` at the design's
+ *   exact percentages (23.75% / 76.25% × 26.59% / 73.81%). Tap to select the
+ *   corresponding pillar — selection animates the bloom out (r 64 → 76)
+ *   and brightens the matching ring.
+ *
+ * The chart's intrinsic viewBox is 240×252 (matches the design); we honor
+ * that via `aspectRatio(240f/252f)` so all geometry stays proportional
+ * regardless of the parent's width.
+ *
+ * Per the design's restraint — no breathing animation, no glow pulse, no
+ * count badges. Counts live in the IkigaiScreen detail view; the chart's
+ * job is to invite engagement, not display data.
+ */
+@Composable
+private fun GardenIkigaiHalo(
+    selectedCircle: GardenContract.IkigaiCircle?,
+    onTagClick: (GardenContract.IkigaiCircle) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    BoxWithConstraints(
+        modifier = modifier
+            .aspectRatio(IKIGAI_VIEWBOX_W / IKIGAI_VIEWBOX_H)
+    ) {
+        val pillarOrder = remember {
+            listOf(
+                GardenContract.IkigaiCircle.PASSION,
+                GardenContract.IkigaiCircle.TALENT,
+                GardenContract.IkigaiCircle.MISSION,
+                GardenContract.IkigaiCircle.PROFESSION,
+            )
+        }
+
+        // Animate bloom radius + ring opacity per pillar based on selection.
+        // Matches the design's CSS transitions (360ms r, 320ms opacity) — we
+        // run them in parallel via Compose animations.
+        val animatedBloomR = pillarOrder.map { pillar ->
+            animateFloatAsState(
+                targetValue = if (selectedCircle == pillar) IKIGAI_BLOOM_R_HOVER else IKIGAI_BLOOM_R_REST,
+                animationSpec = tween(durationMillis = 360, easing = EaseInOutCubic),
+                label = "bloom_${pillar.name}",
+            ).value
+        }
+        val animatedRingOpacity = pillarOrder.map { pillar ->
+            animateFloatAsState(
+                targetValue = if (selectedCircle == pillar) IKIGAI_RING_OPACITY_HOVER else IKIGAI_RING_OPACITY_REST,
+                animationSpec = tween(durationMillis = 320, easing = EaseInOutCubic),
+                label = "ring_${pillar.name}",
+            ).value
+        }
+        val animatedRingStroke = pillarOrder.map { pillar ->
+            animateFloatAsState(
+                targetValue = if (selectedCircle == pillar) IKIGAI_RING_STROKE_HOVER_DP else IKIGAI_RING_STROKE_REST_DP,
+                animationSpec = tween(durationMillis = 320, easing = EaseInOutCubic),
+                label = "ringStroke_${pillar.name}",
+            ).value
+        }
+
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val sx = size.width / IKIGAI_VIEWBOX_W
+            val sy = size.height / IKIGAI_VIEWBOX_H
+
+            fun pt(x: Float, y: Float) = Offset(x * sx, y * sy)
+            fun radius(r: Float) = r * sx
+
+            // Center medallion is anchored at viewBox (120, 126).
+            val medallionCenter = pt(120f, 126f)
+
+            // Bloom halos — one per pillar. Plus blend mode adds the colors
+            // softly where they overlap (gives the watercolor "petals meet"
+            // effect from the design source).
+            IKIGAI_BLOOM_CENTERS.forEachIndexed { i, (bx, by) ->
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            gardenPetalColors[i].copy(alpha = 0.42f),
+                            gardenPetalColors[i].copy(alpha = 0.10f),
+                            Color.Transparent,
+                        ),
+                        center = pt(bx, by),
+                        radius = radius(animatedBloomR[i]),
+                    ),
+                    radius = radius(animatedBloomR[i]),
+                    center = pt(bx, by),
+                    blendMode = androidx.compose.ui.graphics.BlendMode.Plus,
+                )
+            }
+
+            // Outline rings — kept thin to preserve the Venn structure
+            // (matches design `circle.ring` stroke 0.6, opacity 0.18 default).
+            IKIGAI_BLOOM_CENTERS.forEachIndexed { i, (bx, by) ->
+                drawCircle(
+                    color = gardenPetalColors[i].copy(alpha = animatedRingOpacity[i]),
+                    radius = radius(IKIGAI_RING_R),
+                    center = pt(bx, by),
+                    style = Stroke(width = animatedRingStroke[i].dp.toPx()),
+                )
+            }
+
+            // Center medallion: dark inner fill + sage stroke + faint inner ring.
+            // Outer fill matches surface color so it visually "punches" the
+            // overlapping blooms in the middle.
+            drawCircle(
+                color = Color(0xFF0F0F0F),
+                radius = radius(IKIGAI_MEDALLION_R),
+                center = medallionCenter,
+            )
+            drawCircle(
+                color = IkigaiAccent,
+                radius = radius(IKIGAI_MEDALLION_R),
+                center = medallionCenter,
+                style = Stroke(width = 1.2.dp.toPx()),
+            )
+            drawCircle(
+                color = IkigaiAccent.copy(alpha = 0.4f),
+                radius = radius(IKIGAI_MEDALLION_INNER_R),
+                center = medallionCenter,
+                style = Stroke(width = 0.5.dp.toPx()),
+            )
+        }
+
+        // Center label: spa icon + letter-spaced "IKIGAI"
+        Column(
+            modifier = Modifier.align(Alignment.Center),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Spa,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = IkigaiAccentBright,
+            )
+            Text(
+                text = "IKIGAI",
+                color = IkigaiAccentBright,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.4.sp,
+            )
+        }
+
+        // 4 pillar tags — positioned via BiasAlignment to the design's exact
+        // percentages. BiasAlignment(-1=start, +1=end, 0=center).
+        pillarOrder.forEachIndexed { i, pillar ->
+            val (xPct, yPct) = IKIGAI_TAG_POSITIONS[i]
+            // Convert percentage → bias: bias = (pct - 0.5) / 0.5 = pct * 2 - 1
+            PillarTag(
+                pillar = pillar,
+                color = gardenPetalColors[i],
+                onClick = { onTagClick(pillar) },
+                modifier = Modifier.align(
+                    androidx.compose.ui.BiasAlignment(
+                        horizontalBias = xPct * 2f - 1f,
+                        verticalBias = yPct * 2f - 1f,
+                    )
+                ),
+            )
+        }
+    }
+}
+
+/** Pillar tag pill — colored dot + label, design-styled outlined chip. */
+@Composable
+private fun PillarTag(
+    pillar: GardenContract.IkigaiCircle,
+    color: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(999.dp),
+        color = colorScheme.surface.copy(alpha = 0.85f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outline.copy(alpha = 0.4f)),
+        modifier = modifier,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Canvas(Modifier.size(6.dp)) {
+                drawCircle(color = color)
+            }
+            Text(
+                text = stringResource(pillar.displayNameRes),
+                color = color,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                lineHeight = 14.sp,
+            )
+        }
+    }
+}
+
+// ── Halo geometry constants (viewBox 240×252, matches the design source) ──
+
+private const val IKIGAI_VIEWBOX_W = 240f
+private const val IKIGAI_VIEWBOX_H = 252f
+
+/** Bloom halo centers in viewBox units. Top-left (passion), top-right (talent), bottom-left (mission), bottom-right (profession). */
+private val IKIGAI_BLOOM_CENTERS = listOf(
+    85f to 95f,    // PASSION
+    155f to 95f,   // TALENT
+    85f to 158f,   // MISSION
+    155f to 158f,  // PROFESSION
+)
+
+/** Resting bloom radius (viewBox units) — matches `circle.bloom { r="64" }`. */
+private const val IKIGAI_BLOOM_R_REST = 64f
+
+/** Selected bloom radius — matches `:has(.halo-tag.X:hover) .bloom.X { r: 76 }`. */
+private const val IKIGAI_BLOOM_R_HOVER = 76f
+
+/** Outline ring radius — fixed at 58 viewBox units regardless of bloom expansion. */
+private const val IKIGAI_RING_R = 58f
+
+/** Outline ring resting opacity — matches `.ring { opacity: 0.18 }`. */
+private const val IKIGAI_RING_OPACITY_REST = 0.18f
+
+/** Outline ring selected opacity — matches `.ring.X { opacity: 0.85 }`. */
+private const val IKIGAI_RING_OPACITY_HOVER = 0.85f
+
+/** Outline ring stroke width in dp at rest (design uses 0.6 in viewBox units; we approximate to dp here). */
+private const val IKIGAI_RING_STROKE_REST_DP = 0.6f
+
+/** Outline ring stroke width when selected. */
+private const val IKIGAI_RING_STROKE_HOVER_DP = 1.0f
+
+/** Medallion outer radius (viewBox) — matches `<circle r="26">`. */
+private const val IKIGAI_MEDALLION_R = 26f
+
+/** Medallion inner faint ring radius — matches `<circle r="18">`. */
+private const val IKIGAI_MEDALLION_INNER_R = 18f
+
+/** Tag positions (xPct, yPct) of the parent halo-stage. Matches the design's inline `style="left: X%; top: Y%;"`. */
+private val IKIGAI_TAG_POSITIONS = listOf(
+    0.2375f to 0.2659f,  // PASSION
+    0.7625f to 0.2659f,  // TALENT
+    0.2375f to 0.7381f,  // MISSION
+    0.7625f to 0.7381f,  // PROFESSION
+)
 
 // ── Section Header with mini progress ──
 

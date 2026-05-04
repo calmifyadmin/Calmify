@@ -463,6 +463,14 @@ object Strings {
         val ikigaiMission: StringResource get() = Res.string.garden_ikigai_mission
         val ikigaiProfession: StringResource get() = Res.string.garden_ikigai_profession
 
+        /** Halo-redesign card chrome (added 2026-05-04, matches `Ikigai.html` design source). */
+        val ikigaiTitle: StringResource get() = Res.string.ikigai_title
+        val ikigaiCardSubtitle: StringResource get() = Res.string.ikigai_card_subtitle
+        val ikigaiHaloPrompt: StringResource get() = Res.string.ikigai_halo_prompt
+        val ikigaiProgressLabel: StringResource get() = Res.string.ikigai_progress_label
+        val ikigaiAddPlaceholder: StringResource get() = Res.string.ikigai_add_placeholder
+        val ikigaiAddToTemplate: StringResource get() = Res.string.ikigai_add_to_template
+
         /** Per-activity name + description pairs (19 entries). */
         object Activity {
             val diaryName: StringResource get() = Res.string.garden_activity_diary_name
