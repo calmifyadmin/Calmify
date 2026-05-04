@@ -36,9 +36,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
@@ -582,6 +584,19 @@ private fun GardenIkigaiHalo(
     onTagClick: (GardenContract.IkigaiCircle) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Theme-adaptive watercolor: in dark mode we want overlaps to LIGHTEN
+    // (the halos brighten the dark BG; medallion stays dark to punch through).
+    // In light mode we need the opposite — overlaps DARKEN, medallion stays
+    // light. Without the theme branch, `BlendMode.Plus` on a white surface
+    // saturates to white and the halos disappear (the user-reported bug).
+    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+    val haloBlendMode = if (isLight) BlendMode.Multiply else BlendMode.Plus
+    // Light mode needs higher alpha because Multiply on faint pastels barely
+    // darkens; dark mode needs less because Plus over dark BG amplifies fast.
+    val coreAlpha = if (isLight) 0.55f else 0.42f
+    val midAlpha = if (isLight) 0.18f else 0.10f
+    val medallionFill = MaterialTheme.colorScheme.surfaceContainerLow
+
     BoxWithConstraints(
         modifier = modifier
             .aspectRatio(IKIGAI_VIEWBOX_W / IKIGAI_VIEWBOX_H)
@@ -630,15 +645,16 @@ private fun GardenIkigaiHalo(
             // Center medallion is anchored at viewBox (120, 126).
             val medallionCenter = pt(120f, 126f)
 
-            // Bloom halos — one per pillar. Plus blend mode adds the colors
-            // softly where they overlap (gives the watercolor "petals meet"
-            // effect from the design source).
+            // Bloom halos — one per pillar. Theme-adaptive blend mode:
+            // - Dark surfaces: Plus (additive — halos lighten the dark BG, overlaps brighten)
+            // - Light surfaces: Multiply (subtractive — halos tint the light BG, overlaps darken)
+            // Both achieve the watercolor "petals meet" effect from the design.
             IKIGAI_BLOOM_CENTERS.forEachIndexed { i, (bx, by) ->
                 drawCircle(
                     brush = Brush.radialGradient(
                         colors = listOf(
-                            gardenPetalColors[i].copy(alpha = 0.42f),
-                            gardenPetalColors[i].copy(alpha = 0.10f),
+                            gardenPetalColors[i].copy(alpha = coreAlpha),
+                            gardenPetalColors[i].copy(alpha = midAlpha),
                             Color.Transparent,
                         ),
                         center = pt(bx, by),
@@ -646,7 +662,7 @@ private fun GardenIkigaiHalo(
                     ),
                     radius = radius(animatedBloomR[i]),
                     center = pt(bx, by),
-                    blendMode = androidx.compose.ui.graphics.BlendMode.Plus,
+                    blendMode = haloBlendMode,
                 )
             }
 
@@ -661,11 +677,12 @@ private fun GardenIkigaiHalo(
                 )
             }
 
-            // Center medallion: dark inner fill + sage stroke + faint inner ring.
-            // Outer fill matches surface color so it visually "punches" the
-            // overlapping blooms in the middle.
+            // Center medallion: theme-aware fill + sage stroke + faint inner ring.
+            // Fill matches the parent card's elevated surface so the medallion
+            // visually "punches" the overlapping blooms — dark in dark mode,
+            // a slightly elevated panel in light mode.
             drawCircle(
-                color = Color(0xFF0F0F0F),
+                color = medallionFill,
                 radius = radius(IKIGAI_MEDALLION_R),
                 center = medallionCenter,
             )
