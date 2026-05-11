@@ -140,7 +140,7 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
 
 **Stima rimanente post-checkpoint R0+R1+R3.1-3**: ~9-13 giorni per chiudere R3+R4. Poi sblocca bio-signal Phase 0.
 
-### Active Workstream — Bio-Signal Integration (Health Connect / HealthKit) (started 2026-05-11, Phase 0+1+2+2.UI DONE)
+### Active Workstream — Bio-Signal Integration (Health Connect / HealthKit) (started 2026-05-11, Phase 0+1+2+2.UI+3 DONE)
 
 **Planning closed, code phase 0 NOT STARTED.** Integrazione wearable (HR/HRV/Sleep/Steps/RestingHR/SpO2/Activity) come **contesto** per mental-wellness flow esistenti (journal/meditation/insight/home), NOT come nuovo "Fitness" tab. Posizionamento esplicitamente non-competitivo vs Google Health / Fitbit Premium / Apple Health: la grammatica visiva è adottata (in-range bands, narrative cards, AI coach micro-summaries, banda dotted del typical-range), il framing è invertito (no scores, no targets, no "out of range" anxiety, no paywall su dati vitali).
 

@@ -1659,4 +1659,50 @@
 
     <string name="bio_statement_title">Le nostre promesse</string>
     <string name="bio_statement_no_sell_ads">Non vendiamo i tuoi dati. Non li usiamo per pubblicità. Non li condividiamo con terze parti senza il tuo consenso esplicito.</string>
+
+    <!-- Bio-Signal Onboarding (Phase 3) — 5-step pager, 32 keys -->
+    <string name="bio_onb_skip">Salta per ora</string>
+    <string name="bio_onb_back">Indietro</string>
+    <string name="bio_onb_continue">Continua</string>
+    <string name="bio_onb_step_label">Passo %1$d di %2$d</string>
+
+    <!-- Step 1 — Intro -->
+    <string name="bio_onb_intro_title">Il tuo corpo sa cose prima della tua mente.</string>
+    <string name="bio_onb_intro_body">Calmify può leggere i pattern del tuo wearable — battito, sonno, segnali di stress — e rispecchiarteli quando rilevante. Nessun punteggio, nessun obiettivo. Solo contesto.</string>
+    <string name="bio_onb_intro_cta">Iniziamo</string>
+
+    <!-- Step 2 — DataTypes -->
+    <string name="bio_onb_types_title">Cosa possiamo leggere?</string>
+    <string name="bio_onb_types_subtitle">Disattiva qualunque cosa. Le scelte sono reversibili.</string>
+    <string name="bio_onb_type_hr_explain">Battiti al minuto. Riflette quanto sei attivato o calmo in questo momento.</string>
+    <string name="bio_onb_type_hrv_explain">Variabilità tra battiti. Spesso il primo segnale di stress — a volte prima che tu lo senta.</string>
+    <string name="bio_onb_type_sleep_explain">Fasi, durata, risvegli. Il sonno è la base su cui tutto il resto si poggia.</string>
+    <string name="bio_onb_type_steps_explain">Totale passi giornaliero. Non è un obiettivo, non è una striscia — solo un input tra tanti.</string>
+    <string name="bio_onb_type_resting_hr_explain">La tua media notturna. Una deriva lenta nel tempo è spesso il segnale più onesto.</string>
+    <string name="bio_onb_type_spo2_explain">Ossigeno nel sangue durante il sonno. Utile quando il respiro non emerge da altro.</string>
+    <string name="bio_onb_type_activity_explain">Allenamenti che il tuo orologio rileva automaticamente. Non impostiamo mai obiettivi.</string>
+
+    <!-- Step 3 — Why -->
+    <string name="bio_onb_why_title">A cosa serve davvero?</string>
+    <string name="bio_onb_why_card1_title">Un diario che si accorge che hai dormito male</string>
+    <string name="bio_onb_why_card1_body">Una notte cattiva orienta il suggerimento di domani verso la gentilezza, non l\'ottimizzazione.</string>
+    <string name="bio_onb_why_card2_title">Una meditazione che conferma ciò che hai sentito</string>
+    <string name="bio_onb_why_card2_body">Dopo una sessione, una piccola nota: il tuo battito è sceso di 8 bpm. Il corpo se ne è accorto.</string>
+    <string name="bio_onb_why_card3_title">Insight che collegano i puntini che non avevi notato</string>
+    <string name="bio_onb_why_card3_body">Le settimane in cui hai camminato di più hanno avuto serate più calme. Pattern, mostrati con delicatezza.</string>
+
+    <!-- Step 4 — Permission -->
+    <string name="bio_onb_perm_title">Connetti via Health Connect</string>
+    <string name="bio_onb_perm_body">Health Connect è l\'hub condiviso di Android per i dati sanitari. Calmify legge solamente — non scriviamo mai indietro. L\'app del tuo wearable resta la fonte di verità.</string>
+    <string name="bio_onb_perm_install_needed">Health Connect non è installato. Tocca qui sotto per scaricarlo dal Play Store.</string>
+    <string name="bio_onb_perm_install_cta">Installa Health Connect</string>
+    <string name="bio_onb_perm_grant_cta">Concedi permessi</string>
+    <string name="bio_onb_perm_granted_summary">%1$d tipi di dato concessi</string>
+
+    <!-- Step 5 — Confirm -->
+    <string name="bio_onb_confirm_title">Tutto pronto.</string>
+    <string name="bio_onb_confirm_body">Inizieremo a raccogliere i segnali nei prossimi giorni, in silenzio. Puoi cambiare tutto in Impostazioni → Bio-segnali — inclusa la cancellazione totale in un tocco.</string>
+    <string name="bio_onb_confirm_skipped_title">Va benissimo.</string>
+    <string name="bio_onb_confirm_skipped_body">Calmify funziona benissimo anche senza bio-segnali. Puoi connetterti più tardi da Impostazioni → Bio-segnali in qualsiasi momento.</string>
+    <string name="bio_onb_confirm_cta">Portami all\'app</string>
 </resources>

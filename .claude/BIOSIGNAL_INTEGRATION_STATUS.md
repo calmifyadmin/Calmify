@@ -2,7 +2,7 @@
 
 > **Plan**: `.claude/BIOSIGNAL_INTEGRATION_PLAN.md`
 > **Started**: 2026-05-11
-> **Current phase**: **Phase 0+1+2+2.UI DONE 2026-05-11**, Phase 3 NEXT (Onboarding 5-step pager)
+> **Current phase**: **Phase 0+1+2+2.UI+3 DONE 2026-05-11**, Phase 4 NEXT (Server-side aggregates)
 > **Branch**: `design-system-refactor` (Phase 0+1 commits live here; bio-signal Phase 2+ will continue or branch)
 > **Last update**: 2026-05-11 — design-system-refactor COMPLETE (4 commits) + Bio-Signal Phase 0+1 DONE same day.
 
@@ -113,21 +113,26 @@ Smoke test deferred until UI exists (Phase 2.UI):
 
 ---
 
-## Phase 3 — Onboarding
+## Phase 3 — Onboarding ✅ DONE 2026-05-11
 **Goal**: Dedicated opt-in section in onboarding flow.
-**Est**: 2-3 days
-**Status**: ⬜ NOT STARTED
+**Est**: 2-3 days. **Actual: same day**.
+**Status**: ✅ DONE
 
-- [ ] `BioOnboardingScreen.kt` — 5-step pager
-  - [ ] Step 1: Intro (empatica, niente sales-y)
-  - [ ] Step 2: What we collect (per-data-type list with icons)
-  - [ ] Step 3: Why (use-case-driven explanation per signal)
-  - [ ] Step 4: Health Connect permission flow + install fallback
-  - [ ] Step 5: Confirmation + skip-it-all CTA
-- [ ] Decompose destination `BioOnboardingRoute` + child in `RootComponent`
-- [ ] Skip path: marks `bioOnboardingSkipped=true` in user prefs, re-accessible from Settings
-- [ ] i18n keys: ~20 in `Strings.BioOnboarding`
-- [ ] **Smoke test**: complete path + skip path both work
+- [x] `BioOnboardingScreen.kt` — 5-step pager with AnimatedContent fade
+  - [x] Step 1: Intro (empathic — hero waveform + body about body knowing first)
+  - [x] Step 2: DataTypes (7 toggle rows per BioSignalDataType with explain text)
+  - [x] Step 3: Why (3 narrative use-case cards — journal/meditation/insight)
+  - [x] Step 4: Health Connect permission flow (install card OR grant card based on ProviderStatus + status-aware messaging)
+  - [x] Step 5: Confirm — variant based on whether user is connected or skipped
+- [x] Decompose destination `RootDestination.BioOnboarding` + `Child.BioOnboarding` in `RootComponent` + `navigateToBioOnboarding()` + DecomposeApp rendering
+- [x] 32 i18n keys EN+IT in `Strings.BioOnboarding` facade
+- [x] BioOnboardingEntryPoint with `rememberLauncherForActivityResult` for HC permission contract + Play Store deep-link install fallback
+- [x] `:app:assembleDebug` verde 43s
+
+Polish deferrals (small, non-blocking):
+- [ ] Skip prefs persistence — `bioOnboardingSkipped=true` flag in SharedPreferences (today the skip just exits the flow; next app launch will allow re-entry from Settings → Bio-signals)
+- [ ] **Smoke test**: complete path + skip path both work (deferred — needs device with Health Connect installed)
+- [ ] Entry point in main app onboarding flow OR Settings entry (today reachable only programmatically via `rootComponent.navigateToBioOnboarding()`)
 
 ---
 

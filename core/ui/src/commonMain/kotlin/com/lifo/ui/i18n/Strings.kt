@@ -1357,4 +1357,56 @@ object Strings {
         val statementTitle: StringResource get() = Res.string.bio_statement_title
         val statementNoSellAds: StringResource get() = Res.string.bio_statement_no_sell_ads
     }
+
+    /**
+     * Bio-Signal Onboarding (Phase 3, 2026-05-11) — 5-step dedicated pager.
+     * Pager order: Intro → DataTypes → Why → Permission → Confirm.
+     */
+    object BioOnboarding {
+        // Chrome
+        val skip: StringResource get() = Res.string.bio_onb_skip
+        val back: StringResource get() = Res.string.bio_onb_back
+        val cont: StringResource get() = Res.string.bio_onb_continue
+        val stepLabel: StringResource get() = Res.string.bio_onb_step_label
+
+        // Step 1 — Intro
+        val introTitle: StringResource get() = Res.string.bio_onb_intro_title
+        val introBody: StringResource get() = Res.string.bio_onb_intro_body
+        val introCta: StringResource get() = Res.string.bio_onb_intro_cta
+
+        // Step 2 — DataTypes
+        val typesTitle: StringResource get() = Res.string.bio_onb_types_title
+        val typesSubtitle: StringResource get() = Res.string.bio_onb_types_subtitle
+        val typeHrExplain: StringResource get() = Res.string.bio_onb_type_hr_explain
+        val typeHrvExplain: StringResource get() = Res.string.bio_onb_type_hrv_explain
+        val typeSleepExplain: StringResource get() = Res.string.bio_onb_type_sleep_explain
+        val typeStepsExplain: StringResource get() = Res.string.bio_onb_type_steps_explain
+        val typeRestingHrExplain: StringResource get() = Res.string.bio_onb_type_resting_hr_explain
+        val typeSpo2Explain: StringResource get() = Res.string.bio_onb_type_spo2_explain
+        val typeActivityExplain: StringResource get() = Res.string.bio_onb_type_activity_explain
+
+        // Step 3 — Why
+        val whyTitle: StringResource get() = Res.string.bio_onb_why_title
+        val whyCard1Title: StringResource get() = Res.string.bio_onb_why_card1_title
+        val whyCard1Body: StringResource get() = Res.string.bio_onb_why_card1_body
+        val whyCard2Title: StringResource get() = Res.string.bio_onb_why_card2_title
+        val whyCard2Body: StringResource get() = Res.string.bio_onb_why_card2_body
+        val whyCard3Title: StringResource get() = Res.string.bio_onb_why_card3_title
+        val whyCard3Body: StringResource get() = Res.string.bio_onb_why_card3_body
+
+        // Step 4 — Permission
+        val permTitle: StringResource get() = Res.string.bio_onb_perm_title
+        val permBody: StringResource get() = Res.string.bio_onb_perm_body
+        val permInstallNeeded: StringResource get() = Res.string.bio_onb_perm_install_needed
+        val permInstallCta: StringResource get() = Res.string.bio_onb_perm_install_cta
+        val permGrantCta: StringResource get() = Res.string.bio_onb_perm_grant_cta
+        val permGrantedSummary: StringResource get() = Res.string.bio_onb_perm_granted_summary
+
+        // Step 5 — Confirm
+        val confirmTitle: StringResource get() = Res.string.bio_onb_confirm_title
+        val confirmBody: StringResource get() = Res.string.bio_onb_confirm_body
+        val confirmSkippedTitle: StringResource get() = Res.string.bio_onb_confirm_skipped_title
+        val confirmSkippedBody: StringResource get() = Res.string.bio_onb_confirm_skipped_body
+        val confirmCta: StringResource get() = Res.string.bio_onb_confirm_cta
+    }
 }

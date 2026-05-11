@@ -739,9 +739,14 @@ fun DecomposeApp(
                         )
                     }
 
-                    // === Bio-Signal Integration (Phase 2.UI, 2026-05-11) ===
+                    // === Bio-Signal Integration (Phase 2.UI + 3, 2026-05-11) ===
                     is RootComponent.Child.BioContext -> {
                         com.lifo.biocontext.BioContextRouteContent(
+                            navigateBack = { rootComponent.navigateBack() },
+                        )
+                    }
+                    is RootComponent.Child.BioOnboarding -> {
+                        com.lifo.biocontext.BioOnboardingRouteContent(
                             navigateBack = { rootComponent.navigateBack() },
                         )
                     }

@@ -1663,4 +1663,50 @@
     <string name="bio_statement_title">Our promises</string>
     <string name="bio_statement_no_sell_ads">We don\'t sell your data. We don\'t use it for advertising. We don\'t share it with third parties without your explicit consent.</string>
 
+    <!-- Bio-Signal Onboarding (Phase 3) — 5-step pager, 32 keys -->
+    <string name="bio_onb_skip">Skip for now</string>
+    <string name="bio_onb_back">Back</string>
+    <string name="bio_onb_continue">Continue</string>
+    <string name="bio_onb_step_label">Step %1$d of %2$d</string>
+
+    <!-- Step 1 — Intro -->
+    <string name="bio_onb_intro_title">Your body knows things before your mind does.</string>
+    <string name="bio_onb_intro_body">Calmify can read patterns from your wearable — heart, sleep, stress signals — and quietly mirror them back when they\'re relevant. No score, no goal. Just context.</string>
+    <string name="bio_onb_intro_cta">Let\'s set it up</string>
+
+    <!-- Step 2 — DataTypes -->
+    <string name="bio_onb_types_title">What can we read?</string>
+    <string name="bio_onb_types_subtitle">Toggle anything off. Decisions are reversible.</string>
+    <string name="bio_onb_type_hr_explain">Beats per minute. Reflects how aroused or calm you are right now.</string>
+    <string name="bio_onb_type_hrv_explain">Variability between beats. Often the earliest signal of stress — sometimes before you feel it.</string>
+    <string name="bio_onb_type_sleep_explain">Stages, duration, awakenings. Sleep is the foundation everything else rests on.</string>
+    <string name="bio_onb_type_steps_explain">Daily step totals. Not a goal, not a streak — just one input among many.</string>
+    <string name="bio_onb_type_resting_hr_explain">Your nightly average. A slow drift over weeks is often the most honest signal.</string>
+    <string name="bio_onb_type_spo2_explain">Blood oxygen during sleep. Helpful when your breathing isn\'t obvious from anything else.</string>
+    <string name="bio_onb_type_activity_explain">Workouts your watch picks up automatically. We never set targets.</string>
+
+    <!-- Step 3 — Why -->
+    <string name="bio_onb_why_title">What does it actually help with?</string>
+    <string name="bio_onb_why_card1_title">Journal that notices when you didn\'t sleep</string>
+    <string name="bio_onb_why_card1_body">A bad night nudges tomorrow\'s prompt toward gentleness instead of optimization.</string>
+    <string name="bio_onb_why_card2_title">Meditation that confirms what you felt</string>
+    <string name="bio_onb_why_card2_body">After a session, a small note: your heart rate slowed by 8 bpm. The body kept score.</string>
+    <string name="bio_onb_why_card3_title">Insight that connects dots you missed</string>
+    <string name="bio_onb_why_card3_body">Weeks where you walked more had calmer evenings. Patterns, gently surfaced.</string>
+
+    <!-- Step 4 — Permission -->
+    <string name="bio_onb_perm_title">Connect via Health Connect</string>
+    <string name="bio_onb_perm_body">Health Connect is Android\'s shared hub for health data. Calmify only reads — we never write back. Your wearable\'s own app stays the source of truth.</string>
+    <string name="bio_onb_perm_install_needed">Health Connect isn\'t installed. Tap below to get it from the Play Store.</string>
+    <string name="bio_onb_perm_install_cta">Install Health Connect</string>
+    <string name="bio_onb_perm_grant_cta">Grant permissions</string>
+    <string name="bio_onb_perm_granted_summary">%1$d data types granted</string>
+
+    <!-- Step 5 — Confirm -->
+    <string name="bio_onb_confirm_title">You\'re set.</string>
+    <string name="bio_onb_confirm_body">We\'ll quietly start collecting signals over the next day or two. You can change anything in Settings → Bio-signals — including deleting everything in one tap.</string>
+    <string name="bio_onb_confirm_skipped_title">All good.</string>
+    <string name="bio_onb_confirm_skipped_body">Calmify works just as well without bio-signals. You can connect later from Settings → Bio-signals any time.</string>
+    <string name="bio_onb_confirm_cta">Take me to the app</string>
+
 </resources>

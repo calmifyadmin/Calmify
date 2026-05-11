@@ -29,6 +29,10 @@ kotlin {
         androidMain.dependencies {
             implementation libs.core.ktx
             implementation libs.coroutines.android
+            // Bridge to Health Connect permission contract (BioOnboardingEntryPoint)
+            implementation project(':data:mongo')
+            // ActivityResultContract launcher
+            implementation libs.health.connect.client
         }
 
         commonTest.dependencies {

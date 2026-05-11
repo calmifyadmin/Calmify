@@ -17,8 +17,14 @@ import com.lifo.util.model.BioSignalDataType
  *
  * **Read-only by design**: only `READ` permissions are requested. Calmify
  * never writes back to Health Connect.
+ *
+ * **Visibility**: `public` so [com.lifo.biocontext.BioOnboardingRouteContent]
+ * can resolve the ActivityResultContract + map permission strings back to
+ * [BioSignalDataType]. The contract creator is the only platform-bridge that
+ * crosses the data → feature boundary by design (Android permission UIs
+ * require an Activity host that ViewModels cannot provide).
  */
-internal object HealthConnectPermissions {
+object HealthConnectPermissions {
 
     /** Set of HC permission strings for a single Calmify data type. */
     fun permissionsFor(type: BioSignalDataType): Set<String> = when (type) {
