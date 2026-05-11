@@ -2,6 +2,7 @@ package com.lifo.util.model
 
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
+import kotlinx.serialization.Serializable
 
 /**
  * Bio-signal domain — wearable + phone sensor data as **context** for mental wellness.
@@ -17,12 +18,14 @@ import kotlinx.datetime.LocalDate
  * helpful-not-optimizing, data sovereignty, NASA-quality, accessible, KMP-first,
  * sustainable organism).
  */
+@Serializable
 sealed class BioSignal {
     abstract val timestamp: Instant
     abstract val source: BioSignalSource
     abstract val confidence: DataConfidence
 
     /** Continuous or spot heart-rate sample in BPM. */
+    @Serializable
     data class HeartRateSample(
         override val timestamp: Instant,
         val bpm: Int,
@@ -31,6 +34,7 @@ sealed class BioSignal {
     ) : BioSignal()
 
     /** Heart-rate variability (RMSSD) sample in milliseconds. Higher = lower stress. */
+    @Serializable
     data class HrvSample(
         override val timestamp: Instant,
         val rmssdMillis: Double,
@@ -39,6 +43,7 @@ sealed class BioSignal {
     ) : BioSignal()
 
     /** A full sleep session with start/end + sleep stages. */
+    @Serializable
     data class SleepSession(
         override val timestamp: Instant,        // session start
         val endTimestamp: Instant,
@@ -51,6 +56,7 @@ sealed class BioSignal {
     }
 
     /** Daily step count for a given local date. */
+    @Serializable
     data class StepCount(
         override val timestamp: Instant,        // start of the day in user TZ
         val date: LocalDate,
@@ -60,6 +66,7 @@ sealed class BioSignal {
     ) : BioSignal()
 
     /** Resting heart rate measurement (typically nightly average). */
+    @Serializable
     data class RestingHeartRate(
         override val timestamp: Instant,
         val date: LocalDate,
@@ -69,6 +76,7 @@ sealed class BioSignal {
     ) : BioSignal()
 
     /** Blood-oxygen saturation (SpO2) spot reading, 0..100 %. */
+    @Serializable
     data class OxygenSaturationSample(
         override val timestamp: Instant,
         val percent: Double,
@@ -77,6 +85,7 @@ sealed class BioSignal {
     ) : BioSignal()
 
     /** Exercise / activity session (walking, running, cycling, etc.). */
+    @Serializable
     data class ActivitySession(
         override val timestamp: Instant,        // session start
         val endTimestamp: Instant,
@@ -112,6 +121,7 @@ enum class BioSignalDataType {
  * Mi Band reading to look as authoritative as a Whoop continuous stream.
  * See `memory/feedback_calmify_values.md` dogma #4 (data sovereignty + transparency).
  */
+@Serializable
 data class DataConfidence(
     val level: ConfidenceLevel,
     val reasoning: String,                      // e.g. "12 samples in last 7d (typical: 200+)"
@@ -127,6 +137,7 @@ enum class ConfidenceLevel {
  * Provider source identity — which device + app produced this data.
  * Displayed to the user in [DataConfidence] footer ("📊 From Mi Band 10 via Mi Fitness").
  */
+@Serializable
 data class BioSignalSource(
     val kind: SourceKind,
     val deviceName: String,                     // e.g. "Mi Band 10"
@@ -144,6 +155,7 @@ enum class SourceKind {
 // Sleep + Activity sub-types
 // ──────────────────────────────────────────────────────────────────────────
 
+@Serializable
 data class SleepStage(
     val startTimestamp: Instant,
     val endTimestamp: Instant,
@@ -182,6 +194,7 @@ enum class ActivityType {
  * Raw samples stay local in SQLDelight with TTL (default 30 days). Optional
  * opt-in raw upload windows for PRO-tier advanced correlations.
  */
+@Serializable
 data class BioAggregate(
     val type: BioSignalDataType,
     val period: AggregatePeriod,

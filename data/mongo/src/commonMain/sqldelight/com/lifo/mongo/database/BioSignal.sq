@@ -1,0 +1,94 @@
+-- Bio-Signal local cache.
+-- Raw samples ingested from Health Connect / HealthKit. Per
+-- `.claude/BIOSIGNAL_INTEGRATION_PLAN.md` Decision 1 these stay LOCAL by
+-- default (TTL configurable, default 30d). Server receives only
+-- BioAggregate (see BioAggregate.sq).
+--
+-- Single-table-with-JSON pattern matches WellnessEntry.sq — minimizes
+-- schema churn since each BioSignal subclass has different fields.
+-- The Kotlin layer (BioSignalRepositoryImpl) deserializes payload via
+-- kotlinx.serialization into the appropriate BioSignal subtype.
+
+CREATE TABLE bio_signals (
+    -- Primary key — synthesized as "{owner_id}|{type}|{timestamp_millis}|{source_app}"
+    -- to make ingestion idempotent on re-runs (overlap window) per
+    -- BioSignalRepository.ingestFromProvider contract.
+    id TEXT NOT NULL PRIMARY KEY,
+    owner_id TEXT NOT NULL,
+    data_type TEXT NOT NULL,                -- BioSignalDataType.name
+    timestamp_millis INTEGER NOT NULL,      -- sample timestamp (epoch millis)
+    day_key TEXT NOT NULL DEFAULT '',       -- ISO LocalDate in user TZ (for daily grouping)
+    source_device TEXT NOT NULL DEFAULT '', -- e.g. "Xiaomi Mi Band 10"
+    source_app TEXT NOT NULL DEFAULT '',    -- e.g. "com.mi.health"
+    confidence_level TEXT NOT NULL DEFAULT 'MEDIUM',  -- ConfidenceLevel.name
+    payload TEXT NOT NULL DEFAULT '{}',     -- full JSON of the BioSignal subtype
+    created_at INTEGER NOT NULL             -- when WE ingested it (epoch millis)
+);
+
+-- Indexes optimized for the dominant read paths:
+-- 1) "all samples of type X for user Y in date range" — observeRawSamples()
+-- 2) "all samples for daily aggregation" — repository.computeDailyAggregate()
+-- 3) "purge old samples" — pruneExpiredSamples()
+CREATE INDEX idx_bio_owner_type_ts ON bio_signals(owner_id, data_type, timestamp_millis DESC);
+CREATE INDEX idx_bio_owner_day ON bio_signals(owner_id, day_key);
+CREATE INDEX idx_bio_created ON bio_signals(created_at);
+
+-- ─────────────────────────────────────────────────────────────────────
+-- Queries
+-- ─────────────────────────────────────────────────────────────────────
+
+observeByTypeRange:
+SELECT * FROM bio_signals
+WHERE owner_id = :userId
+  AND data_type = :dataType
+  AND timestamp_millis BETWEEN :fromMillis AND :untilMillis
+ORDER BY timestamp_millis DESC;
+
+getByTypeRange:
+SELECT * FROM bio_signals
+WHERE owner_id = :userId
+  AND data_type = :dataType
+  AND timestamp_millis BETWEEN :fromMillis AND :untilMillis
+ORDER BY timestamp_millis ASC;
+
+getByDay:
+SELECT * FROM bio_signals
+WHERE owner_id = :userId AND day_key = :dayKey
+ORDER BY timestamp_millis ASC;
+
+upsert:
+INSERT OR REPLACE INTO bio_signals(
+    id, owner_id, data_type, timestamp_millis, day_key,
+    source_device, source_app, confidence_level, payload, created_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+countByOwner:
+SELECT COUNT(*) FROM bio_signals WHERE owner_id = :userId;
+
+countByOwnerAndType:
+SELECT COUNT(*) FROM bio_signals
+WHERE owner_id = :userId AND data_type = :dataType;
+
+countByOwnerInRange:
+SELECT COUNT(*) FROM bio_signals
+WHERE owner_id = :userId
+  AND timestamp_millis BETWEEN :fromMillis AND :untilMillis;
+
+-- Source mix (device → count) for transparency dashboard
+sourceMixByOwner:
+SELECT source_device, COUNT(*) AS cnt FROM bio_signals
+WHERE owner_id = :userId
+GROUP BY source_device;
+
+deleteAllByOwner:
+DELETE FROM bio_signals WHERE owner_id = :userId;
+
+deleteByOwnerAndType:
+DELETE FROM bio_signals WHERE owner_id = :userId AND data_type = :dataType;
+
+pruneOlderThan:
+DELETE FROM bio_signals WHERE created_at < :thresholdMillis;
+
+pruneByOwnerInDayRange:
+DELETE FROM bio_signals
+WHERE owner_id = :userId AND day_key BETWEEN :fromDay AND :untilDay;

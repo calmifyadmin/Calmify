@@ -90,6 +90,7 @@ import com.lifo.util.repository.SleepRepository
 import com.lifo.util.repository.WellbeingRepository
 import com.lifo.mongo.repository.FirestoreWaitlistRepository
 import com.lifo.mongo.repository.FirebaseAvatarRepository
+import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
 val firebaseModule = module {
@@ -169,4 +170,25 @@ val repositoryModule = module {
 
     // Avatar System (Wave 10)
     single<AvatarRepository> { FirebaseAvatarRepository(get(), get()) }
+}
+
+/**
+ * Bio-Signal Integration (Phase 2, 2026-05-11) — Android Health Connect provider
+ * + local SQLDelight-backed repository.
+ *
+ * Server-side syncPendingAggregates() is a no-op stub until Phase 4 wires the
+ * Ktor REST client (see .claude/BIOSIGNAL_INTEGRATION_PLAN.md §6).
+ *
+ * Add to `allKoinModules` in `app/di/KoinModules.kt` to activate.
+ */
+val bioSignalModule = module {
+    single<com.lifo.util.repository.HealthDataProvider> {
+        com.lifo.mongo.biosignal.HealthConnectProvider(androidContext())
+    }
+    single<com.lifo.util.repository.BioSignalRepository> {
+        com.lifo.mongo.biosignal.BioSignalRepositoryImpl(
+            database = get(),
+            authProvider = get(),
+        )
+    }
 }

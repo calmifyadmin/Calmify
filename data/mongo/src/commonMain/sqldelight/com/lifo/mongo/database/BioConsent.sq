@@ -1,0 +1,44 @@
+-- Bio-Signal consent audit log.
+-- Every GRANT / REVOKE event is recorded for GDPR Art.7 demonstrability —
+-- "We can prove the user consented (or revoked) at time T for data type X".
+-- Mirrors server contract BioConsentEventProto.
+
+CREATE TABLE bio_consent_log (
+    id TEXT NOT NULL PRIMARY KEY,
+    owner_id TEXT NOT NULL,
+    timestamp_millis INTEGER NOT NULL,
+    action TEXT NOT NULL,                   -- "GRANT" / "REVOKE"
+    data_type TEXT NOT NULL,                -- BioSignalDataType.name or "*" for bulk
+    client_version TEXT NOT NULL DEFAULT '',
+    timezone TEXT NOT NULL DEFAULT '',
+    is_dirty INTEGER NOT NULL DEFAULT 1     -- 1 = pending server push
+);
+
+CREATE INDEX idx_consent_owner_ts ON bio_consent_log(owner_id, timestamp_millis DESC);
+CREATE INDEX idx_consent_dirty ON bio_consent_log(is_dirty);
+
+insert:
+INSERT INTO bio_consent_log(
+    id, owner_id, timestamp_millis, action, data_type,
+    client_version, timezone, is_dirty
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+getAllByOwner:
+SELECT * FROM bio_consent_log
+WHERE owner_id = :userId
+ORDER BY timestamp_millis DESC;
+
+getRecentByOwner:
+SELECT * FROM bio_consent_log
+WHERE owner_id = :userId
+ORDER BY timestamp_millis DESC
+LIMIT :limit;
+
+getDirty:
+SELECT * FROM bio_consent_log WHERE is_dirty = 1 ORDER BY timestamp_millis ASC;
+
+markClean:
+UPDATE bio_consent_log SET is_dirty = 0 WHERE id = :id;
+
+deleteAllByOwner:
+DELETE FROM bio_consent_log WHERE owner_id = :userId;

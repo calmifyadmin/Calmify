@@ -1,0 +1,69 @@
+-- Bio-Signal aggregate cache.
+-- Mirror of the server contract (BioAggregateProto). Stored locally too so
+-- the UI can render trends offline.
+--
+-- Server: pushed to Firestore `bio_aggregates/{userId}/{period}/{periodKey}`.
+-- Local: this table.
+--
+-- `is_dirty = 1` means the aggregate was computed locally but never pushed to
+-- the server (offline-first reconcile path — BioSignalRepository.syncPendingAggregates).
+
+CREATE TABLE bio_aggregates (
+    -- Synthesized id: "{owner_id}|{data_type}|{period}|{period_key}"
+    -- Ensures idempotent upsert across re-runs of ingestion.
+    id TEXT NOT NULL PRIMARY KEY,
+    owner_id TEXT NOT NULL,
+    data_type TEXT NOT NULL,                -- BioSignalDataType.name
+    period TEXT NOT NULL,                   -- AggregatePeriod.name (DAILY/WEEKLY/MONTHLY)
+    period_key TEXT NOT NULL,               -- ISO format depending on period
+    mean REAL NOT NULL DEFAULT 0.0,
+    p10 REAL NOT NULL DEFAULT 0.0,
+    p90 REAL NOT NULL DEFAULT 0.0,
+    sample_count INTEGER NOT NULL DEFAULT 0,
+    confidence_weighted_mean REAL NOT NULL DEFAULT 0.0,
+    source_mix_json TEXT NOT NULL DEFAULT '{}',
+    computed_at INTEGER NOT NULL,
+    is_dirty INTEGER NOT NULL DEFAULT 1     -- 1 = pending server push
+);
+
+CREATE INDEX idx_agg_owner_type_period ON bio_aggregates(owner_id, data_type, period, period_key DESC);
+CREATE INDEX idx_agg_dirty ON bio_aggregates(is_dirty);
+
+-- ─────────────────────────────────────────────────────────────────────
+-- Queries
+-- ─────────────────────────────────────────────────────────────────────
+
+getByOwnerTypePeriodKey:
+SELECT * FROM bio_aggregates
+WHERE owner_id = :userId AND data_type = :dataType
+  AND period = :period AND period_key = :periodKey;
+
+observeByOwnerTypePeriod:
+SELECT * FROM bio_aggregates
+WHERE owner_id = :userId AND data_type = :dataType AND period = :period
+ORDER BY period_key DESC;
+
+getRecentByOwnerTypePeriod:
+SELECT * FROM bio_aggregates
+WHERE owner_id = :userId AND data_type = :dataType AND period = :period
+ORDER BY period_key DESC
+LIMIT :limit;
+
+upsert:
+INSERT OR REPLACE INTO bio_aggregates(
+    id, owner_id, data_type, period, period_key,
+    mean, p10, p90, sample_count, confidence_weighted_mean,
+    source_mix_json, computed_at, is_dirty
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+markClean:
+UPDATE bio_aggregates SET is_dirty = 0 WHERE id = :id;
+
+getAllDirty:
+SELECT * FROM bio_aggregates WHERE is_dirty = 1 ORDER BY computed_at ASC;
+
+countByOwner:
+SELECT COUNT(*) FROM bio_aggregates WHERE owner_id = :userId;
+
+deleteAllByOwner:
+DELETE FROM bio_aggregates WHERE owner_id = :userId;

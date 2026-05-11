@@ -5,6 +5,7 @@ import app.cash.sqldelight.db.AfterVersion
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import com.lifo.calmifyapp.connectivity.NetworkConnectivityObserver
 import com.lifo.mongo.database.CalmifyDatabase
+import com.lifo.mongo.di.bioSignalModule
 import com.lifo.mongo.di.firebaseModule
 import com.lifo.mongo.di.repositoryModule
 import com.lifo.mongo.repository.WaitlistSubscriptionRepository
@@ -216,6 +217,7 @@ val allKoinModules = listOf(
     onboardingUiModule,
     firebaseModule,
     repositoryModule,           // Firestore-backed (base layer)
+    bioSignalModule,            // Bio-Signal Phase 2 (Health Connect + local SQLDelight)
     ktorNetworkModule,          // KtorApiClient + SyncExecutor
     syncModule,                 // SyncEngine + DeltaApplier
     restOverrideModule,         // REST overrides (last-wins, only active flags)

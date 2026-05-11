@@ -2,7 +2,7 @@
 
 > **Plan**: `.claude/BIOSIGNAL_INTEGRATION_PLAN.md`
 > **Started**: 2026-05-11
-> **Current phase**: **Phase 0+1 DONE 2026-05-11**, Phase 2 NEXT (Trust & Sovereignty)
+> **Current phase**: **Phase 0+1+2 DONE 2026-05-11** (Phase 2 data layer; UI deferred to 2.UI follow-up)
 > **Branch**: `design-system-refactor` (Phase 0+1 commits live here; bio-signal Phase 2+ will continue or branch)
 > **Last update**: 2026-05-11 — design-system-refactor COMPLETE (4 commits) + Bio-Signal Phase 0+1 DONE same day.
 
@@ -73,17 +73,34 @@ Bio-signal Phase 0 starts when:
 
 ---
 
-## Phase 2 — Trust & Sovereignty
+## Phase 2 — Trust & Sovereignty (data layer) ✅ DONE 2026-05-11; UI deferred to 2.UI follow-up
 **Goal**: Transparency + GDPR atomic operations live.
-**Est**: 3-4 days
-**Status**: ⬜ NOT STARTED
+**Est**: 3-4 days. **Actual data-layer: same day**. UI: separate focused commit.
+**Status**: ✅ DATA LAYER DONE / ⬜ UI PENDING
 
+Data layer (this commit):
+- [x] SQLDelight schemas (`BioSignal.sq` + `BioAggregate.sq` + `BioConsent.sq`)
+- [x] `BioSignalRepositoryImpl` — full impl (observeRawSamples Flow, getAggregate/observeAggregate, ingestFromProvider with daily aggregate computation, syncPendingAggregates STUB for Phase 4, exportAll Art.20, deleteAll Art.17 atomic, pruneExpiredSamples TTL, logConsentEvent audit)
+- [x] `@Serializable` on BioSignal sealed + 7 subtypes + DataConfidence + BioSignalSource + SleepStage + BioAggregate
+- [x] Koin wiring: new `bioSignalModule` in MongoKoinModule, added to `allKoinModules` in app/di/KoinModules.kt
+- [x] GDPR Art.17 atomic delete (local SQLDelight; server-side fan-out deferred to Phase 4)
+- [x] GDPR Art.20 export — JSON includes raw_samples + aggregates + consent_log
+- [x] Local consent audit log (`bio_consent_log` table) — server push deferred to Phase 4
+- [x] `:app:assembleDebug` verde 17s
+
+UI (deferred to 2.UI follow-up commit):
 - [ ] `BioContextScreen.kt` — transparency dashboard (data inventory + sources + last sync + CTA)
 - [ ] Settings → Bio-signals section (granular per-type toggles)
-- [ ] Revoke flow: per-type permission + local data wipe (default) / preserve-readonly (toggle)
-- [ ] GDPR Art.17 atomic delete (local SQLDelight + server endpoint chained)
-- [ ] GDPR Art.20 export extension (bio data as separate JSON section)
-- [ ] Server-side `bio_consent_log/{userId}/{timestamp}` audit trail
+- [ ] Revoke flow UI: per-type permission + local data wipe (default) / preserve-readonly (toggle)
+- [ ] New `:features:biocontext` Gradle module + Decompose destination
+- [ ] `Strings.BioContext` i18n facade (~30 keys × 12 langs)
+
+Deferred to Phase 4 (server-side):
+- [ ] Server-side `bio_consent_log/{userId}/{timestamp}` audit trail (Ktor endpoint + Firestore)
+- [ ] Real `syncPendingAggregates` (currently STUB returning 0)
+- [ ] Server-side delete fan-out for Art.17
+
+Smoke test deferred until UI exists (Phase 2.UI):
 - [ ] **Smoke test**: grant → use → revoke → verify local + server clean
 
 ---
