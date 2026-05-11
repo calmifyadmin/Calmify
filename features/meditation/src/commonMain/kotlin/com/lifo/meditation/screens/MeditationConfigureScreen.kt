@@ -65,6 +65,8 @@ import com.lifo.ui.i18n.labelRes
 import com.lifo.ui.i18n.nameRes
 import com.lifo.ui.i18n.shortRes
 import com.lifo.ui.i18n.summaryRes
+import com.lifo.ui.theme.CalmifyRadius
+import com.lifo.ui.theme.CalmifySpacing
 import com.lifo.util.model.BreathingPattern
 import com.lifo.util.model.MeditationAudio
 import com.lifo.util.model.MeditationExperience
@@ -151,11 +153,11 @@ internal fun MeditationConfigureScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        .padding(horizontal = CalmifySpacing.xl, vertical = CalmifySpacing.lg), // was 20+16 → xl+lg
+                    horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.md),  // was 12.dp ✓
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TextButton(onClick = onBack, modifier = Modifier.height(52.dp)) {
+                    TextButton(onClick = onBack, modifier = Modifier.height(52.dp)) {  // CTA height
                         Text(
                             text = stringResource(Strings.Action.back),
                             style = MaterialTheme.typography.titleSmall,
@@ -166,7 +168,7 @@ internal fun MeditationConfigureScreen(
                         modifier = Modifier
                             .weight(1f)
                             .height(52.dp),
-                        shape = RoundedCornerShape(20.dp),
+                        shape = RoundedCornerShape(CalmifyRadius.xl),                  // was 20.dp ✓
                         colors = ButtonDefaults.buttonColors(
                             containerColor = colorScheme.primary,
                             contentColor = colorScheme.onPrimary,
@@ -177,11 +179,11 @@ internal fun MeditationConfigureScreen(
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
                         )
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(6.dp))                                   // micro gap text↔icon
                         Icon(
                             imageVector = Icons.Filled.PlayArrow,
                             contentDescription = null,
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(20.dp),                            // M3 medium icon
                         )
                     }
                 }
@@ -193,10 +195,10 @@ internal fun MeditationConfigureScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = CalmifySpacing.xl),                 // was 20.dp → xl (24)
+            verticalArrangement = Arrangement.spacedBy(CalmifySpacing.md),// was 12.dp ✓
         ) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(CalmifySpacing.sm))                    // was 8.dp ✓
 
             // ── Title + lockpill ────────────────────────────────────────
             Text(
@@ -211,7 +213,7 @@ internal fun MeditationConfigureScreen(
                 LockPill()
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(CalmifySpacing.sm))                    // was 8.dp ✓
 
             // ── 1. Duration ─────────────────────────────────────────────
             SectionCard(
@@ -257,7 +259,7 @@ internal fun MeditationConfigureScreen(
                     )
                 }
                 if (cfg.experience == MeditationExperience.FIRST) {
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(CalmifySpacing.md))            // was 12.dp ✓
                     InfoChip(
                         text = stringResource(Strings.Meditation.Configure.firstTimeBanner),
                         icon = Icons.Outlined.Favorite,
@@ -293,7 +295,7 @@ internal fun MeditationConfigureScreen(
 
             // ── Fineprint ───────────────────────────────────────────────
             FineprintWithLink(onLinkClick = onRedoScreening)
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(CalmifySpacing.sm))                    // was 8.dp ✓
         }
     }
 }
@@ -309,10 +311,10 @@ private fun SectionCard(
     val colorScheme = MaterialTheme.colorScheme
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(CalmifyRadius.xxl),                    // was 24.dp → xxl (28)
         color = colorScheme.surfaceContainerLow,
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
+        Column(modifier = Modifier.padding(CalmifySpacing.xl)) {           // was 20.dp → xl (24)
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
@@ -322,14 +324,14 @@ private fun SectionCard(
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall.copy(
-                        lineHeight = 18.sp,
+                        lineHeight = 18.sp,                                // custom — fineprint
                         letterSpacing = 0.25.sp,
                     ),
                     color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                    modifier = Modifier.padding(top = 4.dp),
+                    modifier = Modifier.padding(top = CalmifySpacing.xs), // was 4.dp ✓
                 )
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(CalmifySpacing.lg))                     // was 16.dp ✓
             content()
         }
     }
@@ -343,7 +345,7 @@ private fun <T> EvenChoiceRow(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.sm),   // was 8.dp ✓
     ) {
         items.forEach { value ->
             Box(modifier = Modifier.weight(1f)) {
@@ -360,9 +362,9 @@ private fun <T> ChoiceFlow(
     chunkSize: Int,
     item: @Composable (T) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(CalmifySpacing.sm)) {     // was 8.dp ✓
         items.chunked(chunkSize).forEach { rowItems ->
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.sm)) { // was 8.dp ✓
                 rowItems.forEach { value ->
                     Box(modifier = Modifier.weight(1f)) {
                         item(value)
@@ -400,16 +402,16 @@ private fun ChoiceTile(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(CalmifyRadius.lg))                    // was 16.dp ✓
             .clickable(enabled = enabled, onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(CalmifyRadius.lg),                      // was 16.dp ✓
         color = bg,
         border = border,
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 14.dp, horizontal = 12.dp),
+                .padding(vertical = CalmifySpacing.lg, horizontal = CalmifySpacing.md), // was 14+12 → lg+md snap
             contentAlignment = Alignment.Center,
         ) {
             content()
@@ -543,13 +545,13 @@ private fun TechniqueCard(
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(CalmifyRadius.xxl),                     // was 24.dp → xxl (28)
         color = colorScheme.surfaceContainerLow,
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
+        Column(modifier = Modifier.padding(CalmifySpacing.xl)) {            // was 20.dp → xl (24)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.md), // was 12.dp ✓
                 verticalAlignment = Alignment.Top,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
@@ -561,11 +563,11 @@ private fun TechniqueCard(
                     Text(
                         text = stringResource(subText),
                         style = MaterialTheme.typography.bodySmall.copy(
-                            lineHeight = 18.sp,
+                            lineHeight = 18.sp,                            // custom — tighter fineprint
                             letterSpacing = 0.25.sp,
                         ),
                         color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        modifier = Modifier.padding(top = 4.dp),
+                        modifier = Modifier.padding(top = CalmifySpacing.xs), // was 4.dp ✓
                     )
                 }
                 if (state.config.techniqueOverride == null && !state.restricted) {
@@ -573,12 +575,12 @@ private fun TechniqueCard(
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(CalmifySpacing.lg))                     // was 16.dp ✓
 
             // Technique grid: 2 columns
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(CalmifySpacing.sm)) { // was 8.dp ✓
                 techniqueOptions.chunked(2).forEach { rowTechs ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.sm)) { // was 8.dp ✓
                         rowTechs.forEach { tech ->
                             Box(modifier = Modifier.weight(1f)) {
                                 TechniqueTile(
@@ -595,13 +597,13 @@ private fun TechniqueCard(
             }
 
             // Selected technique summary box
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(CalmifySpacing.lg))                     // was 16.dp ✓
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(CalmifyRadius.lg),              // was 16.dp ✓
                 color = colorScheme.surfaceContainerHigh,
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(CalmifySpacing.lg)) {    // was 16.dp ✓
                     Text(
                         text = stringResource(effectiveTechnique.nameRes),
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
@@ -609,9 +611,9 @@ private fun TechniqueCard(
                     )
                     Text(
                         text = stringResource(effectiveTechnique.summaryRes),
-                        style = MaterialTheme.typography.bodySmall.copy(lineHeight = 20.sp),
+                        style = MaterialTheme.typography.bodySmall.copy(lineHeight = 20.sp), // custom line-height
                         color = colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
-                        modifier = Modifier.padding(top = 4.dp),
+                        modifier = Modifier.padding(top = CalmifySpacing.xs), // was 4.dp ✓
                     )
                 }
             }
@@ -639,16 +641,16 @@ private fun TechniqueTile(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(CalmifyRadius.lg))                    // was 16.dp ✓
             .clickable(enabled = enabled, onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(CalmifyRadius.lg),                      // was 16.dp ✓
         color = bg,
         border = border,
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
+        Column(modifier = Modifier.padding(CalmifySpacing.lg)) {            // was 14.dp → lg (16) snap
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),         // micro gap text↔cap-pill
             ) {
                 Text(
                     text = stringResource(technique.nameRes),
@@ -664,7 +666,7 @@ private fun TechniqueTile(
                 text = stringResource(technique.shortRes),
                 style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.4.sp),
                 color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                modifier = Modifier.padding(top = 4.dp),
+                modifier = Modifier.padding(top = CalmifySpacing.xs),       // was 4.dp ✓
             )
         }
     }
@@ -676,7 +678,7 @@ private fun TechniqueTile(
 private fun AutoPill() {
     val colorScheme = MaterialTheme.colorScheme
     Surface(
-        shape = RoundedCornerShape(999.dp),
+        shape = RoundedCornerShape(CalmifyRadius.pill),                   // was 999.dp ✓
         color = colorScheme.primaryContainer.copy(alpha = 0.3f),
     ) {
         Row(
@@ -706,7 +708,7 @@ private fun AutoPill() {
 private fun CapPill() {
     val colorScheme = MaterialTheme.colorScheme
     Surface(
-        shape = RoundedCornerShape(999.dp),
+        shape = RoundedCornerShape(CalmifyRadius.pill),                   // was 999.dp ✓
         color = colorScheme.surfaceContainerHigh,
     ) {
         Text(
@@ -725,7 +727,7 @@ private fun CapPill() {
 private fun LockPill() {
     val colorScheme = MaterialTheme.colorScheme
     Surface(
-        shape = RoundedCornerShape(999.dp),
+        shape = RoundedCornerShape(CalmifyRadius.pill),                   // was 999.dp ✓
         color = colorScheme.errorContainer.copy(alpha = 0.3f),
     ) {
         Row(
@@ -759,18 +761,18 @@ private fun InfoChip(
     val colorScheme = MaterialTheme.colorScheme
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(CalmifyRadius.lg),                      // was 16.dp ✓
         color = colorScheme.primaryContainer.copy(alpha = 0.3f),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(horizontal = CalmifySpacing.lg, vertical = CalmifySpacing.md), // was 16+12 ✓
+            horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.md),// was 12.dp ✓
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(20.dp),                            // M3 medium icon size
                 tint = colorScheme.primary,
             )
             Text(
@@ -794,7 +796,7 @@ private fun FineprintWithLink(onLinkClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onLinkClick)
-            .padding(top = 8.dp, bottom = 16.dp),
+            .padding(top = CalmifySpacing.sm, bottom = CalmifySpacing.lg), // was 8+16 ✓
     ) {
         Text(
             text = buildAnnotatedString {

@@ -53,6 +53,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifo.ui.i18n.Strings
+import com.lifo.ui.theme.CalmifyRadius
+import com.lifo.ui.theme.CalmifySpacing
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -102,9 +104,9 @@ internal fun MeditationWelcomeScreen(
                     onClick = onBegin,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 16.dp)
-                        .height(56.dp),
-                    shape = RoundedCornerShape(20.dp),
+                        .padding(horizontal = CalmifySpacing.xl, vertical = CalmifySpacing.lg) // was 20+16 → xl(24)+lg(16)
+                        .height(56.dp),                                  // CTA standard height
+                    shape = RoundedCornerShape(CalmifyRadius.xl),        // was 20.dp ✓
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colorScheme.primary,
                         contentColor = colorScheme.onPrimary,
@@ -124,10 +126,10 @@ internal fun MeditationWelcomeScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+                .padding(horizontal = CalmifySpacing.xl),                // was 20.dp → xl (24)
+            verticalArrangement = Arrangement.spacedBy(CalmifySpacing.xl), // was 20.dp → xl (24)
         ) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(CalmifySpacing.sm))                   // was 8.dp ✓
 
             // ── Pill ────────────────────────────────────────────────────
             HeroPill(label = stringResource(Strings.Meditation.Welcome.pill))
@@ -157,7 +159,7 @@ internal fun MeditationWelcomeScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(220.dp)
+                    .height(220.dp)                                       // hero decorative animation container
                     .semantics { hideFromAccessibility() },
                 contentAlignment = Alignment.Center,
             ) {
@@ -171,11 +173,11 @@ internal fun MeditationWelcomeScreen(
             Text(
                 text = stringResource(Strings.Meditation.Welcome.fineprint),
                 style = MaterialTheme.typography.bodySmall.copy(
-                    lineHeight = 18.sp,
+                    lineHeight = 18.sp,                                  // custom — tighter than bodySmall default for fineprint
                     letterSpacing = 0.25.sp,
                 ),
                 color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                modifier = Modifier.padding(top = 8.dp, bottom = 16.dp),
+                modifier = Modifier.padding(top = CalmifySpacing.sm, bottom = CalmifySpacing.lg), // was 8+16 ✓
             )
         }
     }
@@ -187,25 +189,25 @@ internal fun MeditationWelcomeScreen(
 private fun HeroPill(label: String) {
     val colorScheme = MaterialTheme.colorScheme
     Surface(
-        shape = RoundedCornerShape(999.dp),
+        shape = RoundedCornerShape(CalmifyRadius.pill),                  // was 999.dp ✓
         color = colorScheme.primaryContainer.copy(alpha = 0.3f),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = CalmifySpacing.md, vertical = 6.dp), // h=md(12) ✓; v=6 micro between xs(4)/sm(8)
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),          // micro gap pill internal
         ) {
             Icon(
                 imageVector = Icons.Outlined.Spa,
                 contentDescription = null,
-                modifier = Modifier.size(14.dp),
+                modifier = Modifier.size(14.dp),                          // micro icon size for pill
                 tint = colorScheme.primary,
             )
             Text(
                 text = label.uppercase(),
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 0.8.sp,
+                    letterSpacing = 0.8.sp,                              // custom — uppercase pill tracking
                 ),
                 color = colorScheme.primary,
             )
@@ -218,16 +220,16 @@ private fun ExpectCard() {
     val colorScheme = MaterialTheme.colorScheme
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(CalmifyRadius.xxl),                   // was 24.dp → xxl (28); design intent: hero card radius
         color = colorScheme.surfaceContainerLow,
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
+        Column(modifier = Modifier.padding(CalmifySpacing.xl)) {         // was 20.dp → xl (24)
             Text(
                 text = stringResource(Strings.Meditation.Welcome.cardTitle),
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                 color = colorScheme.onSurface,
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(CalmifySpacing.md))                   // was 12.dp ✓
             ExpectBullet(
                 icon = Icons.Outlined.HealthAndSafety,
                 title = Strings.Meditation.Welcome.b1Title,
@@ -257,12 +259,12 @@ private fun ExpectBullet(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(vertical = CalmifySpacing.sm),                       // was 8.dp ✓
+        horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.md),  // was 12.dp ✓
         verticalAlignment = Alignment.Top,
     ) {
         Surface(
-            modifier = Modifier.size(28.dp),
+            modifier = Modifier.size(28.dp),                              // icon container — content-driven
             shape = CircleShape,
             color = colorScheme.primaryContainer.copy(alpha = 0.4f),
         ) {
@@ -270,12 +272,12 @@ private fun ExpectBullet(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier.size(16.dp),                      // M3 micro icon size
                     tint = colorScheme.primary,
                 )
             }
         }
-        Column(modifier = Modifier.padding(top = 2.dp)) {
+        Column(modifier = Modifier.padding(top = 2.dp)) {                 // 2.dp baseline-align micro
             Text(
                 text = stringResource(title),
                 style = MaterialTheme.typography.bodyMedium.copy(
@@ -299,14 +301,14 @@ private fun LeafLogo() {
     val colorScheme = MaterialTheme.colorScheme
     Box(
         modifier = Modifier
-            .padding(start = 16.dp)
-            .size(32.dp),
+            .padding(start = CalmifySpacing.lg)                          // was 16.dp ✓
+            .size(CalmifySpacing.xxl),                                   // was 32.dp ✓ (used as logo container dim)
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             imageVector = Icons.Outlined.Spa,
             contentDescription = null,
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier.size(24.dp),                              // M3 default icon size
             tint = colorScheme.primary,
         )
     }

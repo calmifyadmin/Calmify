@@ -49,6 +49,8 @@ import com.lifo.meditation.MeditationContract
 import com.lifo.ui.i18n.Strings
 import com.lifo.ui.i18n.mechanismRes
 import com.lifo.ui.i18n.nameRes
+import com.lifo.ui.theme.CalmifyRadius
+import com.lifo.ui.theme.CalmifySpacing
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -108,11 +110,11 @@ internal fun MeditationOverviewScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        .padding(horizontal = CalmifySpacing.xl, vertical = CalmifySpacing.lg), // was 20+16 → xl+lg
+                    horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.md),  // was 12.dp ✓
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TextButton(onClick = onDifferent, modifier = Modifier.height(52.dp)) {
+                    TextButton(onClick = onDifferent, modifier = Modifier.height(52.dp)) { // CTA height
                         Text(
                             text = stringResource(Strings.Meditation.Overview.btnDifferent),
                             style = MaterialTheme.typography.titleSmall,
@@ -122,8 +124,8 @@ internal fun MeditationOverviewScreen(
                         onClick = onRedo,
                         modifier = Modifier
                             .weight(1f)
-                            .height(52.dp),
-                        shape = RoundedCornerShape(20.dp),
+                            .height(52.dp),                                            // CTA standard height
+                        shape = RoundedCornerShape(CalmifyRadius.xl),                  // was 20.dp ✓
                         colors = ButtonDefaults.buttonColors(
                             containerColor = colorScheme.primary,
                             contentColor = colorScheme.onPrimary,
@@ -150,8 +152,8 @@ internal fun MeditationOverviewScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(horizontal = CalmifySpacing.xl),                 // was 20.dp → xl (24)
+            verticalArrangement = Arrangement.spacedBy(CalmifySpacing.lg), // was 16.dp ✓
         ) {
             Spacer(Modifier.height(8.dp))
 
@@ -263,7 +265,7 @@ private fun OverviewLeafLogo() {
 private fun CompletePill() {
     val colorScheme = MaterialTheme.colorScheme
     Surface(
-        shape = RoundedCornerShape(999.dp),
+        shape = RoundedCornerShape(CalmifyRadius.pill), // was 999.dp ✓
         color = colorScheme.primaryContainer.copy(alpha = 0.3f),
     ) {
         Row(
@@ -297,10 +299,10 @@ private fun OverviewCard(
     val colorScheme = MaterialTheme.colorScheme
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(CalmifyRadius.xxl), // was 24.dp → xxl (28)
         color = colorScheme.surfaceContainerLow,
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
+        Column(modifier = Modifier.padding(CalmifySpacing.xl)) { // was 20.dp → xl (24)
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
@@ -333,10 +335,10 @@ private fun BulletCard(
     val colorScheme = MaterialTheme.colorScheme
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(CalmifyRadius.xxl), // was 24.dp → xxl (28)
         color = colorScheme.surfaceContainerLow,
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
+        Column(modifier = Modifier.padding(CalmifySpacing.xl)) { // was 20.dp → xl (24)
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
@@ -403,7 +405,7 @@ private fun DisclaimerBanner() {
     val colorScheme = MaterialTheme.colorScheme
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(CalmifyRadius.lg), // was 16.dp ✓
         color = colorScheme.primaryContainer.copy(alpha = 0.3f),
     ) {
         Row(

@@ -130,7 +130,7 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
 - ✅ R3.1 `HomeContent.kt` (excl. ExpressiveHero subtree)
 - ✅ R3.2 `WizardComponents.kt` (single-file refactor → propaga a 16 wellness wizards)
 - ✅ R3.3 `AuthenticationContent.kt` (first-impression surface)
-- ⬜ R3.4 Meditation screens (5 files — verifica drift residuo Phase 1+2)
+- ✅ R3.4 Meditation screens (5 files: Welcome/Screening/Configure/Session/Overview)
 - ⬜ R3.5+ ProfileDashboard / PaywallScreen / ComposerScreen / ChatBubble / tail
 
 **Tracker files (READ FIRST before any design refactor work)**:

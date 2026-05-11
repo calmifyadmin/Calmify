@@ -49,6 +49,8 @@ import androidx.compose.ui.unit.sp
 import com.lifo.ui.i18n.Strings
 import com.lifo.ui.i18n.labelRes
 import com.lifo.ui.i18n.subRes
+import com.lifo.ui.theme.CalmifyRadius
+import com.lifo.ui.theme.CalmifySpacing
 import com.lifo.util.model.MeditationRiskFlag
 import org.jetbrains.compose.resources.stringResource
 
@@ -112,13 +114,13 @@ internal fun MeditationScreeningScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        .padding(horizontal = CalmifySpacing.xl, vertical = CalmifySpacing.lg), // was 20+16 → xl(24)+lg(16)
+                    horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.md),  // was 12.dp ✓
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     TextButton(
                         onClick = onBack,
-                        modifier = Modifier.height(52.dp),
+                        modifier = Modifier.height(52.dp),                            // CTA secondary height
                     ) {
                         Text(
                             text = stringResource(Strings.Action.back),
@@ -129,8 +131,8 @@ internal fun MeditationScreeningScreen(
                         onClick = onContinue,
                         modifier = Modifier
                             .weight(1f)
-                            .height(52.dp),
-                        shape = RoundedCornerShape(20.dp),
+                            .height(52.dp),                                            // CTA standard height
+                        shape = RoundedCornerShape(CalmifyRadius.xl),                  // was 20.dp ✓
                         colors = ButtonDefaults.buttonColors(
                             containerColor = colorScheme.primary,
                             contentColor = colorScheme.onPrimary,
@@ -141,11 +143,11 @@ internal fun MeditationScreeningScreen(
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
                         )
-                        Spacer(Modifier.size(6.dp))
+                        Spacer(Modifier.size(6.dp))                                    // micro gap text↔icon (between xs/sm)
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(18.dp),                           // M3 small icon size
                         )
                     }
                 }
@@ -157,10 +159,10 @@ internal fun MeditationScreeningScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(horizontal = CalmifySpacing.xl),                  // was 20.dp → xl (24)
+            verticalArrangement = Arrangement.spacedBy(CalmifySpacing.lg), // was 16.dp ✓
         ) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(CalmifySpacing.sm))                     // was 8.dp ✓
 
             // ── Title + lede ────────────────────────────────────────────
             Text(
@@ -190,10 +192,10 @@ internal fun MeditationScreeningScreen(
             // ── Risk flags card ─────────────────────────────────────────
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(CalmifyRadius.xxl),             // was 24.dp → xxl (28)
                 color = colorScheme.surfaceContainerLow,
             ) {
-                Column(modifier = Modifier.padding(8.dp)) {
+                Column(modifier = Modifier.padding(CalmifySpacing.sm)) {    // was 8.dp ✓
                     MeditationRiskFlag.entries.forEach { flag ->
                         RiskFlagRow(
                             flag = flag,
@@ -202,7 +204,7 @@ internal fun MeditationScreeningScreen(
                         )
                     }
                     HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(horizontal = CalmifySpacing.sm, vertical = CalmifySpacing.xs), // was 8+4 ✓
                         color = colorScheme.outlineVariant.copy(alpha = 0.4f),
                     )
                     NoneApplyRow(
@@ -225,11 +227,11 @@ internal fun MeditationScreeningScreen(
             Text(
                 text = stringResource(Strings.Meditation.Screening.fineprint),
                 style = MaterialTheme.typography.bodySmall.copy(
-                    lineHeight = 18.sp,
+                    lineHeight = 18.sp,                                    // custom — tighter fineprint
                     letterSpacing = 0.25.sp,
                 ),
                 color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                modifier = Modifier.padding(top = 8.dp, bottom = 16.dp),
+                modifier = Modifier.padding(top = CalmifySpacing.sm, bottom = CalmifySpacing.lg), // was 8+16 ✓
             )
         }
     }
@@ -251,7 +253,7 @@ private fun RiskFlagRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(CalmifyRadius.md))                    // was 12.dp ✓
             .clickable(
                 onClick = onToggle,
                 role = Role.Checkbox,
@@ -259,14 +261,14 @@ private fun RiskFlagRow(
             .semantics {
                 contentDescription = labelText + (subText?.let { " — $it" } ?: "")
             }
-            .padding(horizontal = 14.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
+            .padding(horizontal = CalmifySpacing.lg, vertical = CalmifySpacing.lg), // was 14+14 → lg (16) snap to scale
+        horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.lg),    // was 14.dp → lg (16) snap
         verticalAlignment = Alignment.Top,
     ) {
         // Custom checkbox box matching design
         CheckBox(checked = checked)
 
-        Column(modifier = Modifier.padding(top = 1.dp)) {
+        Column(modifier = Modifier.padding(top = 1.dp)) {                   // 1.dp baseline micro-adjust
             Text(
                 text = labelText,
                 style = MaterialTheme.typography.bodyMedium.copy(
@@ -298,14 +300,14 @@ private fun NoneApplyRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(CalmifyRadius.md))                    // was 12.dp ✓
             .clickable(onClick = onClear, role = Role.Button)
-            .padding(horizontal = 14.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
+            .padding(horizontal = CalmifySpacing.lg, vertical = CalmifySpacing.lg), // was 14+14 → lg snap
+        horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.lg),    // was 14.dp → lg snap
         verticalAlignment = Alignment.Top,
     ) {
         CheckBox(checked = checked)
-        Column(modifier = Modifier.padding(top = 1.dp)) {
+        Column(modifier = Modifier.padding(top = 1.dp)) {                   // 1.dp baseline micro-adjust
             Text(
                 text = stringResource(Strings.Meditation.Screening.noneApply),
                 style = MaterialTheme.typography.bodyMedium.copy(letterSpacing = 0.15.sp),
@@ -390,16 +392,16 @@ private fun InfoBanner(
     }
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(CalmifyRadius.lg),                       // was 16.dp ✓
         color = bg,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(horizontal = CalmifySpacing.lg, vertical = CalmifySpacing.md), // was 16+12 ✓
+            horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.md),    // was 12.dp ✓
             verticalAlignment = Alignment.Top,
         ) {
             Surface(
-                modifier = Modifier.size(28.dp),
+                modifier = Modifier.size(28.dp),                                // icon container — content-driven
                 shape = CircleShape,
                 color = androidx.compose.ui.graphics.Color.Transparent,
             ) {
@@ -407,7 +409,7 @@ private fun InfoBanner(
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(20.dp),                        // M3 medium icon size
                         tint = fg,
                     )
                 }

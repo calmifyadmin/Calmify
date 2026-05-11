@@ -77,6 +77,8 @@ import com.lifo.ui.i18n.coachRes
 import com.lifo.ui.i18n.cueRes
 import com.lifo.ui.i18n.nameRes
 import com.lifo.ui.i18n.shortRes
+import com.lifo.ui.theme.CalmifyRadius
+import com.lifo.ui.theme.CalmifySpacing
 import com.lifo.util.model.BreathSegmentKind
 import com.lifo.util.model.BreathingPattern
 import com.lifo.util.model.MeditationAudio
@@ -158,7 +160,7 @@ internal fun MeditationSessionScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
+                    .padding(horizontal = CalmifySpacing.xl) // was 20.dp → xl (24)
                     .height(64.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -189,9 +191,9 @@ internal fun MeditationSessionScreen(
                 progress = { progressFraction },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
+                    .padding(horizontal = CalmifySpacing.xl) // was 20.dp → xl (24)
                     .height(3.dp)
-                    .clip(RoundedCornerShape(999.dp)),
+                    .clip(RoundedCornerShape(CalmifyRadius.pill)),                                  // was 999.dp ✓
                 color = colorScheme.primary,
                 trackColor = colorScheme.surfaceContainerHighest,
             )
@@ -201,7 +203,7 @@ internal fun MeditationSessionScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .padding(horizontal = 20.dp),
+                    .padding(horizontal = CalmifySpacing.xl),                 // was 20.dp → xl (24)
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
@@ -227,13 +229,13 @@ internal fun MeditationSessionScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                    .padding(horizontal = CalmifySpacing.xl, vertical = CalmifySpacing.lg), // was 20+16 → xl+lg
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 OutlinedButton(
                     onClick = onRequestStop,
-                    shape = RoundedCornerShape(999.dp),
+                    shape = RoundedCornerShape(CalmifyRadius.pill), // was 999.dp ✓
                     modifier = Modifier.height(44.dp),
                 ) {
                     Icon(
@@ -639,14 +641,14 @@ private fun StopConfirmationSheet(
                 ),
                 color = colorScheme.onSurfaceVariant,
             )
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(CalmifySpacing.xl))                    // was 24.dp ✓
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.md), // was 12.dp ✓
             ) {
                 TextButton(
                     onClick = onDismiss,
-                    modifier = Modifier.weight(1f).height(48.dp),
+                    modifier = Modifier.weight(1f).height(48.dp),           // CTA height (= xxxl)
                 ) {
                     Text(
                         text = stringResource(Strings.Meditation.Stop.keep),
@@ -656,7 +658,7 @@ private fun StopConfirmationSheet(
                 Button(
                     onClick = onConfirm,
                     modifier = Modifier.weight(1f).height(48.dp),
-                    shape = RoundedCornerShape(999.dp),
+                    shape = RoundedCornerShape(CalmifyRadius.pill), // was 999.dp ✓
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colorScheme.primary,
                         contentColor = colorScheme.onPrimary,

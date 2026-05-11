@@ -23,7 +23,9 @@
 
 **Hard exclusion confermata**: `ExpressiveHero.kt` MAI toccato (user directive 2026-05-11).
 
-**Prossimo**: R3.4 Meditation screens (5 files), R3.5+ ProfileDashboard/Paywall/Composer/ChatBubble, R4 theme README, POI bio-signal Phase 0.
+**R3.4 DONE 2026-05-11** (commit pending): 5 meditation screens refactorati 1:1 con CSS scale. Welcome/Screening/Configure/Session/Overview. `:features:meditation` compileDebugKotlinAndroid green 4s post-refactor. Snap pattern: 20→xl(24), 12→md, 16→lg, 8→sm, 4→xs, 14→lg snap, 999→pill, RoundedCornerShape(24)→xxl(28). Icon sizes (14/16/18/20/22/24/28/32 dp) lasciati custom con commento. 4-cycle cap pill + LockPill + AutoPill (Configure) tutti pill.
+
+**Prossimo**: R3.5+ ProfileDashboard/Paywall/Composer/ChatBubble, R4 theme README, POI bio-signal Phase 0.
 
 ---
 
