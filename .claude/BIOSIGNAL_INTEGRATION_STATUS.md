@@ -2,9 +2,9 @@
 
 > **Plan**: `.claude/BIOSIGNAL_INTEGRATION_PLAN.md`
 > **Started**: 2026-05-11
-> **Current phase**: **Phase 0 DONE 2026-05-11**, Phase 1 NEXT
-> **Branch**: `design-system-refactor` (Phase 0 commits live here; bio-signal Phase 1+ will likely branch after merge-back)
-> **Last update**: 2026-05-11 — design-system-refactor COMPLETE (4 commits) + Bio-Signal Phase 0 DONE same day.
+> **Current phase**: **Phase 0+1 DONE 2026-05-11**, Phase 2 NEXT (Trust & Sovereignty)
+> **Branch**: `design-system-refactor` (Phase 0+1 commits live here; bio-signal Phase 2+ will continue or branch)
+> **Last update**: 2026-05-11 — design-system-refactor COMPLETE (4 commits) + Bio-Signal Phase 0+1 DONE same day.
 
 ## Dependency on design-system-refactor
 
@@ -54,22 +54,22 @@ Bio-signal Phase 0 starts when:
 
 ---
 
-## Phase 1 — Android Health Connect
+## Phase 1 — Android Health Connect ✅ DONE 2026-05-11
 **Goal**: Read-only ingestion working on S24 + Mi Band 10.
-**Est**: 3-5 days
-**Status**: ⬜ NOT STARTED
+**Est**: 3-5 days. **Actual: same day**.
+**Status**: ✅ DONE
 
-- [ ] Add `androidx.health.connect:connect-client` to `data/mongo/build.gradle` (androidMain)
-- [ ] `HealthConnectProvider.kt` actual implementation
-- [ ] `HealthConnectPermissions.kt` — `PermissionController` flow + ActivityResultContract
-- [ ] `HealthConnectMappers.kt` — Record → BioSignal domain mappers (7 record types)
-- [ ] `BioSignalSyncWorker.kt` — WorkManager daily reconcile (15min flex window)
-- [ ] **Tester Activity** `BioCoverageDumper.kt` — dump all record types after 48h wear
-- [ ] Manifest: `<queries>` declaration for Health Connect package
-- [ ] Manifest: `<intent-filter>` for rationale activity (Play Store requirement)
-- [ ] Privacy policy URL updated with bio-data section
-- [ ] **Build check**: `assembleDebug` green
-- [ ] **Device test**: install on S24, pair Mi Band 10, capture 48h, verify dumper output
+- [x] Add `androidx.health.connect:connect-client:1.1.0-rc03` + `androidx.work:work-runtime-ktx:2.10.0` to `libs.versions.toml` + `data/mongo/build.gradle` (androidMain)
+- [x] `HealthConnectProvider.kt` actual implementation — read-only, all `withContext(Dispatchers.IO)`, lazy `HealthConnectClient.getOrCreate`, complete SDK_AVAILABLE / UNAVAILABLE / PROVIDER_UPDATE_REQUIRED status mapping
+- [x] `HealthConnectPermissions.kt` — `BioSignalDataType` ↔ HC permission string bidirectional mapping + `createRequestPermissionResultContract` exposed to UI
+- [x] `HealthConnectMappers.kt` — Record → BioSignal mappers for all 7 record types (HeartRate, HRV-Rmssd, SleepSession w/ stages, Steps, RestingHeartRate, OxygenSaturation, ExerciseSession) + `inferConfidence` helper + `sourceFrom(Metadata)` device+app provenance extraction
+- [x] `BioSignalSyncWorker.kt` — WorkManager `CoroutineWorker`, 24h period + 4h flex window, UNMETERED + battery-not-low constraints, idempotent (matches Repository contract), exponential-backoff retry on uncaught exception, periodic TTL prune piggyback
+- [x] **Tester `BioCoverageDumper.kt`** — debug-only probe, returns `Report` with row-per-type (sample count, unique sources, time span). Surfaces real coverage on Mi Band 10 + S24 (worst-case test target per `memory/user_hardware.md`)
+- [x] Manifest: `<queries>` declaration for `com.google.android.apps.healthdata` package (Android 11+ visibility) + ACTION_SHOW_PERMISSIONS_RATIONALE intent declaration
+- [ ] Manifest: `<intent-filter>` for rationale activity (Play Store ship requirement) — **DEFERRED to Phase 3 onboarding** when PrivacyRationaleActivity exists
+- [ ] Privacy policy URL updated with bio-data section — **DEFERRED to Phase 3** alongside rationale activity
+- [x] **Build check**: `:app:assembleDebug` green (2m 56s)
+- [ ] **Device test**: install on S24, pair Mi Band 10, capture 48h, verify dumper output — **DEFERRED** (requires physical wearable wear-time, not blocking Phase 2)
 
 ---
 

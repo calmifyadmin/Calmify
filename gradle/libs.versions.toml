@@ -112,6 +112,10 @@ essenty = "2.5.0"
 # GitLive Firebase KMP SDK (bridge until official KFire is stable)
 gitlive-firebase = "2.4.0"
 
+# Bio-Signal Integration (Phase 1) — Health Connect + WorkManager
+health-connect-client = "1.1.0-rc03"      # androidx.health.connect:connect-client
+work-runtime = "2.10.0"                    # androidx.work:work-runtime-ktx
+
 [libraries]
 # Core Android
 core-ktx = { module = "androidx.core:core-ktx", version.ref = "core-ktx" }
@@ -299,6 +303,10 @@ kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 kotlinx-serialization-protobuf = { module = "org.jetbrains.kotlinx:kotlinx-serialization-protobuf", version.ref = "kotlinx-serialization" }
 multiplatform-settings = { module = "com.russhwolf:multiplatform-settings", version.ref = "multiplatform-settings" }
+
+# Bio-Signal Integration (Phase 1) — Android-only deps
+health-connect-client = { module = "androidx.health.connect:connect-client", version.ref = "health-connect-client" }
+work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "work-runtime" }
 
 [plugins]
 com-android-application = { id = "com.android.application", version.ref = "agp" }

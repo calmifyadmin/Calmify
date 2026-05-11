@@ -65,6 +65,10 @@ kotlin {
 
                 // Ktor engine (Android)
                 implementation libs.ktor.client.okhttp
+
+                // Bio-Signal Integration (Phase 1) — Health Connect + WorkManager
+                implementation libs.health.connect.client
+                implementation libs.work.runtime.ktx
             }
         }
 

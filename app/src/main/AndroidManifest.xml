@@ -19,6 +19,21 @@
     <!-- Week 8: FCM Notification Permission (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!--
+        Bio-Signal Integration (Phase 1, 2026-05-11)
+        Health Connect SDK requires `<queries>` to resolve the Health Connect
+        provider package on Android 11+ (package visibility restrictions).
+        See .claude/BIOSIGNAL_INTEGRATION_PLAN.md §3.
+        The rationale intent-filter (Play Store ship requirement) is added on
+        a dedicated PrivacyRationaleActivity in Phase 3 onboarding work.
+    -->
+    <queries>
+        <package android:name="com.google.android.apps.healthdata" />
+        <intent>
+            <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="true"
         android:name=".CalmifyApplication"
