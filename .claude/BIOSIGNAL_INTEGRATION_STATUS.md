@@ -2,9 +2,9 @@
 
 > **Plan**: `.claude/BIOSIGNAL_INTEGRATION_PLAN.md`
 > **Started**: 2026-05-11
-> **Current phase**: Phase 0 BLOCKED on `design-system-refactor` (precursor workstream)
-> **Branch (when unblocked)**: `bio-signal-integration` off `design-system-refactor`
-> **Last update**: 2026-05-11 — design-system-refactor R0+R1+R3.1-3 done, R3 continuing.
+> **Current phase**: **Phase 0 DONE 2026-05-11**, Phase 1 NEXT
+> **Branch**: `design-system-refactor` (Phase 0 commits live here; bio-signal Phase 1+ will likely branch after merge-back)
+> **Last update**: 2026-05-11 — design-system-refactor COMPLETE (4 commits) + Bio-Signal Phase 0 DONE same day.
 
 ## Dependency on design-system-refactor
 
@@ -17,28 +17,40 @@ Bio-signal Phase 0 starts when:
 
 ---
 
-## Phase 0 — Foundations
+## Phase 0 — Foundations ✅ DONE 2026-05-11
 **Goal**: Domain models + Provider interface compile-green on all KMP targets.
-**Est**: 2-3 days
-**Status**: ⬜ NOT STARTED
+**Est**: 2-3 days. **Actual: same day**.
+**Status**: ✅ DONE
 
-- [ ] `core/util/domain/biosignal/BioSignal.kt` — sealed class hierarchy
-  - [ ] `HeartRateSample(timestamp, bpm, source, confidence)`
-  - [ ] `HrvSample(timestamp, rmssdMillis, source, confidence)`
-  - [ ] `SleepSession(start, end, stages, score?, source)`
-  - [ ] `StepCount(date, count, source)`
-  - [ ] `RestingHeartRate(date, bpm, source)`
-  - [ ] `OxygenSaturationSample(timestamp, percent, source)`
-  - [ ] `ActivitySession(start, end, type, calories?, source)`
-- [ ] `DataConfidence.kt` — enum HIGH/MEDIUM/LOW + sourceDevice + reasoning
-- [ ] `BioSignalSource.kt` — sealed: WEARABLE / PHONE / MANUAL / DERIVED + deviceName + appName
-- [ ] `HealthDataProvider.kt` — interface (read-only contract)
-- [ ] `ProviderStatus.kt` — sealed: NotInstalled / NotSupported / NeedsUpdate / NeedsPermission / Ready
-- [ ] `DataType.kt` — enum HEART_RATE / HRV / SLEEP / STEPS / RESTING_HR / SPO2 / ACTIVITY
-- [ ] `BioAggregate.kt` — rolling stats DTO (server contract)
-- [ ] `shared/models/BioSignalProtos.kt` — Protobuf DTOs (zero-nullable, regola 3)
-- [ ] `core/util/repository/BioSignalRepository.kt` — interface
-- [ ] **Build check**: `assembleDebug` + `compileCommonMainKotlinMetadata` green
+- [x] `core/util/.../model/BioSignal.kt` — sealed class hierarchy (consolidated single file)
+  - [x] `HeartRateSample(timestamp, bpm, source, confidence)`
+  - [x] `HrvSample(timestamp, rmssdMillis, source, confidence)`
+  - [x] `SleepSession(start, end, stages, efficiencyPercent, source, confidence)` + `SleepStage` + `SleepStageKind` enum
+  - [x] `StepCount(timestamp, date, count, source, confidence)`
+  - [x] `RestingHeartRate(timestamp, date, bpm, source, confidence)`
+  - [x] `OxygenSaturationSample(timestamp, percent, source, confidence)`
+  - [x] `ActivitySession(start, end, activityType, calories, distance, source, confidence)` + `ActivityType` enum
+  - [x] `BioSignalDataType` enum (HEART_RATE/HRV/SLEEP/STEPS/RESTING_HR/SPO2/ACTIVITY)
+  - [x] `DataConfidence` + `ConfidenceLevel` enum (HIGH/MEDIUM/LOW)
+  - [x] `BioSignalSource` + `SourceKind` enum (WEARABLE/PHONE/MANUAL/DERIVED)
+  - [x] `BioAggregate` server contract + `AggregatePeriod` enum (DAILY/WEEKLY/MONTHLY)
+- [x] `core/util/.../repository/HealthDataProvider.kt` — interface
+  - [x] `checkAvailability()`, `requestPermissions()`, `revokePermissions()`
+  - [x] 7 `read*` functions, one per data type
+  - [x] `ProviderStatus` sealed class (NotInstalled/NotSupported/NeedsUpdate/NeedsPermission/Ready)
+- [x] `core/util/.../repository/BioSignalRepository.kt` — repository contract
+  - [x] `observeRawSamples()` Flow, `getRawSamples()` one-shot
+  - [x] `getAggregate()`, `observeAggregate()` Flow
+  - [x] `ingestFromProvider()`, `syncPendingAggregates()`
+  - [x] `exportAll()` GDPR Art.20, `deleteAll()` GDPR Art.17
+  - [x] `pruneExpiredSamples()`, `pruneSamplesInRange()` TTL management
+  - [x] `IngestionResult` data class
+- [x] `shared/models/.../model/BioSignalProto.kt` — Protobuf-safe DTOs (zero-nullable, regola 3)
+  - [x] 7 raw sample Protos + `SleepStageProto`
+  - [x] `BioAggregateProto` + `BioAggregateBatchProto` + `BioAggregateResponseProto`
+  - [x] `BioSignalSourceProto`, `DataConfidenceProto`
+  - [x] `BioConsentEventProto` (GDPR Art.7 demonstrability)
+- [x] **Build check**: `:core:util:compileDebugKotlinAndroid` + `:shared:models:compileDebugKotlinAndroid` GREEN 27s
 
 ---
 

@@ -127,15 +127,11 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
 5. Custom (icon sizes 18/24/48, hero card 280, button vertical 14) → keep + `// custom — <reason>` comment
 
 **Fase R3 surgical refactor** (~30 file candidate dall'audit, 11 done):
-- ✅ R3.1 `HomeContent.kt` (excl. ExpressiveHero subtree)
-- ✅ R3.2 `WizardComponents.kt` (single-file refactor → propaga a 16 wellness wizards)
-- ✅ R3.3 `AuthenticationContent.kt` (first-impression surface)
-- ✅ R3.4 Meditation screens (5 files: Welcome/Screening/Configure/Session/Overview)
-- ✅ R3.5 `ProfileDashboard.kt`
-- ✅ R3.6 `PaywallScreen.kt`
-- ✅ R3.7 `ComposerScreen.kt` + `ChatBubble.kt`
-- ⬜ R3.8 tail (~15-19 minor files) — DEFERRED: major user-visible surfaces all covered, tail può procedere on-demand
-- ⬜ R4 Theme README — NEXT
+- ✅ R3.1-7 (8 file: HomeContent, WizardComponents, AuthenticationContent, 5 Meditation, ProfileDashboard, PaywallScreen, ComposerScreen, ChatBubble)
+- ⬜ R3.8 tail (~15-19 minor files) — DEFERRED, on-demand
+- ✅ R4 Theme README at [core/ui/.../theme/README.md](core/ui/src/commonMain/kotlin/com/lifo/ui/theme/README.md)
+
+**WORKSTREAM COMPLETE 2026-05-11.** 4 atomic commits: `a88afd4` → `376fb44` → `c992a2a` → `2593eae`. Bio-Signal Phase 0 unblocked + DONE same day.
 
 **Tracker files (READ FIRST before any design refactor work)**:
 - `memory/project_design_system_refactor.md` — workstream state + refactor rules + file inventory
@@ -144,7 +140,7 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
 
 **Stima rimanente post-checkpoint R0+R1+R3.1-3**: ~9-13 giorni per chiudere R3+R4. Poi sblocca bio-signal Phase 0.
 
-### Active Workstream — Bio-Signal Integration (Health Connect / HealthKit) (started 2026-05-11, BLOCKED on design-system-refactor R3+R4)
+### Active Workstream — Bio-Signal Integration (Health Connect / HealthKit) (started 2026-05-11, Phase 0 DONE)
 
 **Planning closed, code phase 0 NOT STARTED.** Integrazione wearable (HR/HRV/Sleep/Steps/RestingHR/SpO2/Activity) come **contesto** per mental-wellness flow esistenti (journal/meditation/insight/home), NOT come nuovo "Fitness" tab. Posizionamento esplicitamente non-competitivo vs Google Health / Fitbit Premium / Apple Health: la grammatica visiva è adottata (in-range bands, narrative cards, AI coach micro-summaries, banda dotted del typical-range), il framing è invertito (no scores, no targets, no "out of range" anxiety, no paywall su dati vitali).
 
