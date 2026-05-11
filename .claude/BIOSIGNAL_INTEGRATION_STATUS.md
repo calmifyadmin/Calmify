@@ -1,0 +1,254 @@
+# Bio-Signal Integration — Live Status Tracker
+
+> **Plan**: `.claude/BIOSIGNAL_INTEGRATION_PLAN.md`
+> **Started**: 2026-05-11
+> **Current phase**: Phase 0 BLOCKED on `design-system-refactor` (precursor workstream)
+> **Branch (when unblocked)**: `bio-signal-integration` off `design-system-refactor`
+> **Last update**: 2026-05-11 — design-system-refactor R0+R1+R3.1-3 done, R3 continuing.
+
+## Dependency on design-system-refactor
+
+Bio-signal UI components (BioMetricCard, BioNarrativeCard, BioContextScreen, BioOnboardingScreen, etc.) must be built on **canonical tokens** matching `design/biosignal/calmify.css`. The precursor workstream `design-system-refactor` aligns Kotlin theme to the CSS port. See `memory/project_design_system_refactor.md` for that workstream's tracker.
+
+Bio-signal Phase 0 starts when:
+- ✅ R1 token canonical refactor (DONE 2026-05-11)
+- ⬜ R3 surgical refactor of high-impact UI files (~30 files, 3/30+ done)
+- ⬜ R4 theme README (final documentation)
+
+---
+
+## Phase 0 — Foundations
+**Goal**: Domain models + Provider interface compile-green on all KMP targets.
+**Est**: 2-3 days
+**Status**: ⬜ NOT STARTED
+
+- [ ] `core/util/domain/biosignal/BioSignal.kt` — sealed class hierarchy
+  - [ ] `HeartRateSample(timestamp, bpm, source, confidence)`
+  - [ ] `HrvSample(timestamp, rmssdMillis, source, confidence)`
+  - [ ] `SleepSession(start, end, stages, score?, source)`
+  - [ ] `StepCount(date, count, source)`
+  - [ ] `RestingHeartRate(date, bpm, source)`
+  - [ ] `OxygenSaturationSample(timestamp, percent, source)`
+  - [ ] `ActivitySession(start, end, type, calories?, source)`
+- [ ] `DataConfidence.kt` — enum HIGH/MEDIUM/LOW + sourceDevice + reasoning
+- [ ] `BioSignalSource.kt` — sealed: WEARABLE / PHONE / MANUAL / DERIVED + deviceName + appName
+- [ ] `HealthDataProvider.kt` — interface (read-only contract)
+- [ ] `ProviderStatus.kt` — sealed: NotInstalled / NotSupported / NeedsUpdate / NeedsPermission / Ready
+- [ ] `DataType.kt` — enum HEART_RATE / HRV / SLEEP / STEPS / RESTING_HR / SPO2 / ACTIVITY
+- [ ] `BioAggregate.kt` — rolling stats DTO (server contract)
+- [ ] `shared/models/BioSignalProtos.kt` — Protobuf DTOs (zero-nullable, regola 3)
+- [ ] `core/util/repository/BioSignalRepository.kt` — interface
+- [ ] **Build check**: `assembleDebug` + `compileCommonMainKotlinMetadata` green
+
+---
+
+## Phase 1 — Android Health Connect
+**Goal**: Read-only ingestion working on S24 + Mi Band 10.
+**Est**: 3-5 days
+**Status**: ⬜ NOT STARTED
+
+- [ ] Add `androidx.health.connect:connect-client` to `data/mongo/build.gradle` (androidMain)
+- [ ] `HealthConnectProvider.kt` actual implementation
+- [ ] `HealthConnectPermissions.kt` — `PermissionController` flow + ActivityResultContract
+- [ ] `HealthConnectMappers.kt` — Record → BioSignal domain mappers (7 record types)
+- [ ] `BioSignalSyncWorker.kt` — WorkManager daily reconcile (15min flex window)
+- [ ] **Tester Activity** `BioCoverageDumper.kt` — dump all record types after 48h wear
+- [ ] Manifest: `<queries>` declaration for Health Connect package
+- [ ] Manifest: `<intent-filter>` for rationale activity (Play Store requirement)
+- [ ] Privacy policy URL updated with bio-data section
+- [ ] **Build check**: `assembleDebug` green
+- [ ] **Device test**: install on S24, pair Mi Band 10, capture 48h, verify dumper output
+
+---
+
+## Phase 2 — Trust & Sovereignty
+**Goal**: Transparency + GDPR atomic operations live.
+**Est**: 3-4 days
+**Status**: ⬜ NOT STARTED
+
+- [ ] `BioContextScreen.kt` — transparency dashboard (data inventory + sources + last sync + CTA)
+- [ ] Settings → Bio-signals section (granular per-type toggles)
+- [ ] Revoke flow: per-type permission + local data wipe (default) / preserve-readonly (toggle)
+- [ ] GDPR Art.17 atomic delete (local SQLDelight + server endpoint chained)
+- [ ] GDPR Art.20 export extension (bio data as separate JSON section)
+- [ ] Server-side `bio_consent_log/{userId}/{timestamp}` audit trail
+- [ ] **Smoke test**: grant → use → revoke → verify local + server clean
+
+---
+
+## Phase 3 — Onboarding
+**Goal**: Dedicated opt-in section in onboarding flow.
+**Est**: 2-3 days
+**Status**: ⬜ NOT STARTED
+
+- [ ] `BioOnboardingScreen.kt` — 5-step pager
+  - [ ] Step 1: Intro (empatica, niente sales-y)
+  - [ ] Step 2: What we collect (per-data-type list with icons)
+  - [ ] Step 3: Why (use-case-driven explanation per signal)
+  - [ ] Step 4: Health Connect permission flow + install fallback
+  - [ ] Step 5: Confirmation + skip-it-all CTA
+- [ ] Decompose destination `BioOnboardingRoute` + child in `RootComponent`
+- [ ] Skip path: marks `bioOnboardingSkipped=true` in user prefs, re-accessible from Settings
+- [ ] i18n keys: ~20 in `Strings.BioOnboarding`
+- [ ] **Smoke test**: complete path + skip path both work
+
+---
+
+## Phase 4 — Server-Side Aggregates
+**Goal**: 4 REST endpoints live + Firestore schema + indexes.
+**Est**: 4-6 days
+**Status**: ⬜ NOT STARTED
+
+- [ ] `calmify-server/service/BioSignalService.kt`
+- [ ] `calmify-server/routes/BioSignalRoutes.kt`
+  - [ ] `POST /api/v1/bio/ingest` (Protobuf CN + JSON fallback)
+  - [ ] `GET /api/v1/bio/aggregate?range=&types=`
+  - [ ] `DELETE /api/v1/bio/all` (Art.17)
+  - [ ] `GET /api/v1/bio/export` (Art.20)
+- [ ] Firestore schema: `bio_aggregates/{userId}/{daily|weekly|monthly}/{period}`
+- [ ] Composite indexes in `firestore.indexes.json` (PRE-DEPLOY — lezione Phase 5)
+  - [ ] `bio_aggregates/{userId}/daily` ORDER BY date DESC, type ASC, __name__ DESC
+  - [ ] `bio_aggregates/{userId}/weekly` ORDER BY week DESC, __name__ DESC
+  - [ ] `bio_consent_log/{userId}` ORDER BY timestamp DESC, __name__ DESC
+- [ ] Rate limit applied (60 req/min/user on `/ingest`)
+- [ ] Audit log on every mutation
+- [ ] `BackendConfig.BIO_REST=false` flag (default off) — flip via Remote Config
+- [ ] `KtorBioSignalRepository.kt` (data/network) client impl
+- [ ] Koin module registration
+- [ ] **Deploy**: commit+push → Cloud Build → smoke test new endpoints (NOT just /health)
+- [ ] **Audit trail**: verify endpoints return 401 without token (smoke test pattern)
+
+---
+
+## Phase 5 — Wellness Integration (NO new tab)
+**Goal**: Bio-signals enrich existing flows surgically.
+**Est**: 5-8 days
+**Status**: ⬜ NOT STARTED
+
+- [ ] **Journal**: inline contextual card on new entry composer
+  - [ ] "Stamattina il tuo HRV era leggermente più basso del solito" (dismissable)
+- [ ] **Meditation**: post-session card (HR drop + HRV recovery confirmation, PRO gates AI narrative)
+- [ ] **Insight**: cross-signal correlation panel (PRO gated)
+- [ ] **Home Today**: single narrative card (MAI ring, MAI score)
+- [ ] **Settings**: bio-signals section with granular toggles + privacy disclaimer
+- [ ] **Build check**: all touched modules compile green
+- [ ] **A11y check**: TalkBack reads narrative, not raw numbers
+
+---
+
+## Phase 6 — UI Calmify Design Language
+**Goal**: Reusable components + visual review.
+**Est**: 5-7 days
+**Status**: ⬜ NOT STARTED
+
+- [ ] `BioMetricCard` composable (in-range band + dotted typical-range overlay + emotion-aware copy)
+- [ ] `BioNarrativeCard` composable (AI-generated, PRO gated)
+- [ ] `ConfidenceFooter` composable (source + confidence chip)
+- [ ] `BioOnboardingStepCard` composable
+- [ ] Color-blind safe palette verified (simulator test)
+- [ ] Reduced-motion support (charts fall back to static views)
+- [ ] Visual review vs Calmify Design source (TBD: dedicated Figma/HTML mockup or iterate in-app)
+
+---
+
+## Phase 7 — Accessibility + i18n
+**Goal**: A11y from day 1 + 12 langs.
+**Est**: 3-4 days
+**Status**: ⬜ NOT STARTED
+
+- [ ] TalkBack: every metric narrated semantically (no raw number reading)
+- [ ] `liveRegion = Polite` on narrative cards
+- [ ] Keyboard shortcuts in `BioContextScreen` (ESC=close, TAB nav)
+- [ ] ~100 keys × 12 langs (Phase J pattern)
+- [ ] AR RTL verified via screenshot
+- [ ] Color contrast WCAG AA verified
+- [ ] **Strings facade groups**: `BioOnboarding` / `BioContext` / `BioMetric` / `BioNarrative` / `BioSettings`
+
+---
+
+## Phase 8 — PRO Tier Implementation
+**Goal**: Monetization aligned with sustainable organism principle.
+**Est**: 4-6 days
+**Status**: ⬜ NOT STARTED
+
+- [ ] Subscription gate on AI narrative cards + cross-correlation + cohort + PDF report
+- [ ] Gemini integration server-side for narratives (cached 24h, rate-limited)
+- [ ] Cloud Billing cost monitor alert (threshold TBD)
+- [ ] Stripe `ManageSubscriptionCard` mentions "Bio Insight Avanzati"
+- [ ] PRO badge visible on gated features (existing `ProBadge.kt` pattern)
+- [ ] FREE-tier path: gated features show "Diventa PRO per insight intelligenti" CTA (non-hostile)
+- [ ] **Smoke test**: FREE user sees gates correctly, PRO user sees full features
+
+---
+
+## Phase 9 — iOS Parity (HealthKit)
+**Goal**: Same UX on iOS via HealthKit.
+**Est**: 5-7 days
+**Status**: ⬜ NOT STARTED
+
+- [ ] `HealthKitProvider.kt` actual in iosMain (using HealthKit via Cinterop)
+- [ ] `HealthKitMappers.kt` — HKQuantitySample/HKCategorySample → BioSignal
+- [ ] iOS permission flow (Info.plist `NSHealthShareUsageDescription` + request flow)
+- [ ] `BioContextScreen` unchanged (KMP success: pure commonMain UI)
+- [ ] **Build check**: `compileKotlinIosSimulatorArm64` green
+- [ ] **Device test**: iOS simulator + physical iPhone if available
+
+---
+
+## Phase 10 — Multi-device Validation
+**Goal**: Coverage matrix across hardware tiers.
+**Est**: 3-5 days
+**Status**: ⬜ NOT STARTED (premium device acquisition gated on user)
+
+- [ ] Worst-case: Mi Band 10 + S24 (sparse HRV, no continuous, baseline test)
+- [ ] Mid-tier: Samsung Galaxy Watch 7 (Samsung Health native, S24 pair)
+- [ ] Premium: Pixel Watch / Oura / Whoop (TBD user choice)
+- [ ] iOS: Apple Watch / Oura via HealthKit
+- [ ] Coverage matrix doc: which signals work per device with what confidence
+- [ ] Regression suite checklist
+
+---
+
+## Cumulative Estimates
+
+| Milestone | Days |
+|---|---:|
+| MVP Android-only (Phases 0-7) | 28-40 |
+| + PRO tier (Phase 8) | +4-6 |
+| + iOS parity (Phase 9) | +5-7 |
+| + Multi-device validation (Phase 10) | +3-5 |
+| **Total full-featured cross-platform** | **40-58** |
+
+---
+
+## Open Items (decide before Phase 6)
+
+- [ ] **Branch name**: default suggested `bio-signal-integration`
+- [ ] **Premium device for validation**: default suggested Galaxy Watch 7 (Samsung Health native + S24 pair)
+- [ ] **PRO pricing impact**: default suggested "incluso nel PRO esistente"
+- [ ] **AI narrative engine**: Gemini direct vs Vertex AI batch — decide in Phase 8
+
+---
+
+## Quality Gates (per commit)
+
+Every commit on this workstream MUST satisfy:
+
+1. ✅ `assembleDebug` green
+2. ✅ Zero hardcoded strings (Detekt rule)
+3. ✅ All 12 langs in sync
+4. ✅ This tracker updated BEFORE commit (same atomic commit bundles code + tracker)
+5. ✅ Commit message format: `<type>(biosignal): <what>` + Problems/Gains section
+6. ✅ Smoke test specific change (not just `/health`)
+7. ✅ Memory updated if architectural decision made
+
+---
+
+## Reference
+
+- **Plan**: `.claude/BIOSIGNAL_INTEGRATION_PLAN.md`
+- **Memory**:
+  - `memory/feedback_calmify_values.md` — 7 product dogmas
+  - `memory/user_hardware.md` — testing fleet
+  - `memory/project_biosignal_integration.md` — project state
+- **Quality mandate**: `CLAUDE.md` §QUALITY MANDATE

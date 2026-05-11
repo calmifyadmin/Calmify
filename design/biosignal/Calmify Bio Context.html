@@ -1,0 +1,1267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Calmify — Your biological data</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="calmify.css" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+<style>
+  /* Material Symbols helper — keep ligatures isolated to this class */
+  .material-symbols-rounded {
+    font-family: 'Material Symbols Rounded';
+    font-weight: normal; font-style: normal;
+    font-size: 24px; line-height: 1;
+    letter-spacing: normal; text-transform: none;
+    display: inline-block; white-space: nowrap;
+    word-wrap: normal; direction: ltr;
+    font-feature-settings: 'liga';
+    -webkit-font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ====================================================================
+     Local semantic accents — derived from the existing palette so the
+     wider design system stays unchanged. Amber = attention (never red).
+     Color-blind safety is provided primarily through density / shape;
+     hue is a redundant signal.
+     ==================================================================== */
+  :root {
+    --semantic-good:        var(--accent);          /* sage green */
+    --semantic-good-soft:   var(--accent-alpha-12);
+    --semantic-attention:   #E0A93D;                /* amber, not red */
+    --semantic-attention-soft: rgba(224, 169, 61, 0.14);
+    --semantic-danger-fg:   #FFB4AB;
+    --semantic-danger-soft: rgba(255, 180, 171, 0.10);
+  }
+  .light-theme {
+    --semantic-attention:      #B5811E;
+    --semantic-attention-soft: rgba(181, 129, 30, 0.12);
+    --semantic-danger-fg:      #BA1A1A;
+    --semantic-danger-soft:    rgba(186, 26, 26, 0.08);
+  }
+
+  html, body { margin: 0; height: 100%; background: var(--bg); }
+  #root { min-height: 100vh; display: flex; align-items: stretch; justify-content: center; }
+
+  /* ====================================================================
+     App shell — phone-shaped, breathes wider on desktop (parity with
+     Calmify Meditation.html so the two screens belong to one product).
+     ==================================================================== */
+  .app {
+    width: 100%;
+    max-width: 440px;
+    min-height: 900px;
+    background: var(--bg);
+    color: var(--fg);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  @media (min-width: 700px) {
+    .app {
+      border-radius: 32px;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.55);
+      margin: 24px 0;
+    }
+  }
+  .light-theme .app {
+    box-shadow: 0 30px 80px rgba(17,17,17,0.10);
+  }
+
+  /* ====================================================================
+     Top bar
+     ==================================================================== */
+  .topbar {
+    height: 64px; padding: 0 8px 0 4px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .icon-btn {
+    width: 44px; height: 44px; border-radius: 999px;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent; color: var(--fg); border: 0; cursor: pointer;
+    transition: background var(--dur-short-2) var(--ease-emphasized);
+  }
+  .icon-btn:hover { background: var(--bg-elev-2); }
+  .icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .topbar .ttl {
+    font: 500 16px/20px var(--font-sans);
+    letter-spacing: .15px; color: var(--fg);
+  }
+
+  /* ====================================================================
+     Page scroll body
+     ==================================================================== */
+  .page {
+    flex: 1;
+    overflow: auto;
+    padding: 8px 20px 140px;   /* extra bottom for sticky action bar */
+    scroll-behavior: smooth;
+  }
+
+  /* ====================================================================
+     Typography helpers — locked to the M3 scale in calmify.css.
+     We only add a couple of layout helpers here.
+     ==================================================================== */
+  h1.display { font: 600 30px/36px var(--font-display); letter-spacing: -.2px; margin: 0; }
+  .lede { color: var(--fg-subtle); font: 400 15px/22px var(--font-sans); letter-spacing: .15px; margin-top: 8px; max-width: 380px; }
+
+  /* Section pre-title — small caps eyebrow used between cards */
+  .section-eyebrow {
+    display: flex; align-items: center; gap: 10px;
+    margin: 32px 4px 12px;
+    color: var(--fg-subtle);
+    font: 600 11px/14px var(--font-sans); letter-spacing: 1.2px; text-transform: uppercase;
+  }
+  .section-eyebrow .num {
+    width: 22px; height: 22px; border-radius: 999px;
+    background: var(--bg-elev-2);
+    color: var(--fg-muted);
+    display: inline-flex; align-items: center; justify-content: center;
+    font: 600 11px/14px var(--font-mono);
+    letter-spacing: 0;
+  }
+
+  /* ====================================================================
+     Cards
+     ==================================================================== */
+  .card {
+    background: var(--bg-elev-1);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-xl);
+  }
+  .card + .card { margin-top: 12px; }
+  .card-title { font: 600 18px/24px var(--font-sans); color: var(--fg); }
+  .card-sub   { font: 400 13px/20px var(--font-sans); color: var(--fg-subtle); margin-top: 6px; letter-spacing: .15px; }
+
+  /* The "narrative" card — the typographic vessel for one metric. */
+  .narrative {
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .narrative .row-top {
+    display: flex; align-items: center; gap: 10px;
+    color: var(--fg-subtle);
+    font: 500 12px/16px var(--font-sans); letter-spacing: .8px; text-transform: uppercase;
+  }
+  .narrative .row-top .icn { color: var(--fg-muted); }
+  .narrative .sentence {
+    /* The number is part of the sentence — never naked. */
+    font: 400 18px/28px var(--font-sans);
+    color: var(--fg);
+    letter-spacing: .15px;
+  }
+  .narrative .sentence strong {
+    font-weight: 600;
+    color: var(--fg);
+  }
+  .narrative .sentence .num {
+    font-feature-settings: 'tnum';
+    font-variant-numeric: tabular-nums;
+  }
+  .narrative .footer-line {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    color: var(--fg-subtle);
+    font: 400 12px/16px var(--font-sans); letter-spacing: .25px;
+    padding-top: 2px;
+  }
+  .narrative .footer-line .dot-sep {
+    width: 3px; height: 3px; border-radius: 999px; background: var(--fg-subtle); opacity: .6;
+  }
+
+  /* ====================================================================
+     Status dot — filled = fresh, hollow = stale.
+     Shape difference makes the state legible without relying on hue.
+     ==================================================================== */
+  .status {
+    display: inline-flex; align-items: center; gap: 8px;
+    font: 500 12px/16px var(--font-sans); letter-spacing: .25px;
+  }
+  .status .dot {
+    width: 10px; height: 10px; border-radius: 999px;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 4px transparent;
+  }
+  .status.ok   { color: var(--semantic-good); }
+  .status.ok .dot     { background: var(--semantic-good); box-shadow: 0 0 0 4px var(--semantic-good-soft); }
+  .status.warn { color: var(--semantic-attention); }
+  .status.warn .dot   { background: transparent; border: 2px solid var(--semantic-attention); box-shadow: 0 0 0 3px var(--semantic-attention-soft); }
+  .status.muted { color: var(--fg-subtle); }
+  .status.muted .dot  { background: var(--fg-subtle); opacity: .55; }
+
+  /* ====================================================================
+     Confidence: 3-segment dotted bar.
+     The "typical range dotted band" grammar — adapted to mean "how much
+     of the picture we have". 3 filled = high, 2 = medium, 1 = low.
+     Color-blind safe: density does the work, hue reinforces.
+     ==================================================================== */
+  .confidence {
+    display: inline-flex; align-items: center; gap: 8px;
+    font: 500 11px/14px var(--font-sans); letter-spacing: .8px; text-transform: uppercase;
+    color: var(--fg-subtle);
+  }
+  .confidence .bars {
+    display: inline-flex; gap: 3px;
+  }
+  .confidence .seg {
+    width: 14px; height: 6px; border-radius: 999px;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--fg-disabled) 0 2px,
+      transparent 2px 4px
+    );
+    opacity: .55;
+  }
+  .confidence.high .seg            { background: var(--semantic-good); opacity: 1; }
+  .confidence.medium .seg:nth-child(-n+2) { background: var(--semantic-good); opacity: 1; }
+  .confidence.low    .seg:nth-child(1)    { background: var(--semantic-attention); opacity: 1; }
+  .confidence.high   { color: var(--semantic-good); }
+  .confidence.medium { color: var(--fg); }
+  .confidence.low    { color: var(--semantic-attention); }
+
+  /* ====================================================================
+     Source line — a row used in Connections + Confidence table
+     ==================================================================== */
+  .source-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 4px;
+  }
+  .source-row + .source-row { border-top: 1px solid var(--divider); }
+  .source-row .device {
+    width: 40px; height: 40px; border-radius: var(--radius-md);
+    background: var(--bg-elev-2);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--fg-subtle);
+    flex-shrink: 0;
+  }
+  .source-row .device .material-symbols-rounded { font-size: 22px; }
+  .source-row .meta { flex: 1; min-width: 0; }
+  .source-row .name {
+    font: 500 15px/20px var(--font-sans); letter-spacing: .1px; color: var(--fg);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .source-row .sub {
+    font: 400 12px/16px var(--font-sans); letter-spacing: .25px; color: var(--fg-subtle);
+    margin-top: 2px;
+  }
+
+  /* ====================================================================
+     Inventory grid — counts of raw samples held locally on device.
+     2 columns at 375px, 3 columns at ≥600px.
+     ==================================================================== */
+  .inventory-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  @media (min-width: 600px) {
+    .inventory-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  .inv-cell {
+    background: var(--bg-elev-2);
+    border-radius: var(--radius-lg);
+    padding: 14px;
+    display: flex; flex-direction: column; gap: 8px;
+    min-height: 116px;
+  }
+  .inv-cell .row {
+    display: flex; align-items: center; justify-content: space-between;
+    color: var(--fg-subtle);
+  }
+  .inv-cell .row .material-symbols-rounded { font-size: 18px; }
+  .inv-cell .row .kind {
+    font: 500 11px/14px var(--font-sans); letter-spacing: .8px; text-transform: uppercase;
+    color: var(--fg-subtle);
+  }
+  .inv-cell .big {
+    font: 500 26px/30px var(--font-sans);
+    color: var(--fg);
+    letter-spacing: -.2px;
+    font-variant-numeric: tabular-nums;
+  }
+  .inv-cell .lbl {
+    font: 400 12px/16px var(--font-sans); color: var(--fg-subtle); letter-spacing: .25px;
+  }
+
+  /* Window picker chips inside the inventory card */
+  .window-tabs {
+    display: inline-flex; padding: 3px;
+    background: var(--bg-elev-2);
+    border-radius: 999px;
+    gap: 2px;
+  }
+  .window-tab {
+    border: 0; cursor: pointer;
+    padding: 6px 14px; border-radius: 999px;
+    background: transparent; color: var(--fg-muted);
+    font: 500 12px/16px var(--font-sans); letter-spacing: .25px;
+    transition: background var(--dur-short-2) var(--ease-emphasized), color var(--dur-short-2) var(--ease-emphasized);
+  }
+  .window-tab:hover { color: var(--fg); }
+  .window-tab.on {
+    background: var(--bg);
+    color: var(--fg);
+    box-shadow: var(--elev-1);
+  }
+  .light-theme .window-tab.on { background: var(--light-background); }
+  .window-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ====================================================================
+     "Sent to server" timeline
+     ==================================================================== */
+  .sent-list { display: flex; flex-direction: column; }
+  .sent-item {
+    display: flex; gap: 14px;
+    padding: 14px 0;
+    position: relative;
+  }
+  .sent-item + .sent-item { border-top: 1px solid var(--divider); }
+  .sent-item .when {
+    width: 64px; flex-shrink: 0;
+    color: var(--fg-subtle);
+    font: 400 12px/16px var(--font-sans); letter-spacing: .25px;
+    padding-top: 2px;
+  }
+  .sent-item .body { flex: 1; min-width: 0; }
+  .sent-item .summary {
+    font: 400 15px/22px var(--font-sans); color: var(--fg); letter-spacing: .15px;
+  }
+  .sent-item .summary strong { font-weight: 600; }
+  .sent-item .reveal {
+    margin-top: 8px;
+    display: inline-flex; align-items: center; gap: 6px;
+    background: transparent; border: 0; cursor: pointer; padding: 0;
+    color: var(--accent);
+    font: 500 13px/16px var(--font-sans); letter-spacing: .25px;
+  }
+  .sent-item .reveal:hover { text-decoration: underline; }
+  .sent-item .reveal:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
+  .sent-item .reveal .material-symbols-rounded { font-size: 16px; transition: transform var(--dur-short-2) var(--ease-emphasized); }
+  .sent-item .reveal[aria-expanded="true"] .material-symbols-rounded { transform: rotate(180deg); }
+
+  .payload {
+    margin-top: 10px;
+    background: var(--bg-elev-2);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    overflow: auto;
+    font: 400 12px/20px var(--font-mono);
+    color: var(--fg);
+    letter-spacing: 0;
+    border-left: 2px solid var(--accent);
+    white-space: pre;
+  }
+  .payload .k { color: var(--fg-subtle); }
+  .payload .s { color: var(--accent); }
+  .payload .n { color: var(--fg); }
+  .payload .c { color: var(--fg-disabled); }
+
+  /* ====================================================================
+     Confidence table (sources × data types × level)
+     ==================================================================== */
+  .conf-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+  }
+  .conf-row + .conf-row { border-top: 1px solid var(--divider); }
+  .conf-row .left { min-width: 0; }
+  .conf-row .src {
+    font: 500 14px/18px var(--font-sans); color: var(--fg); letter-spacing: .1px;
+  }
+  .conf-row .types {
+    font: 400 12px/16px var(--font-sans); color: var(--fg-subtle); letter-spacing: .25px;
+    margin-top: 4px;
+  }
+
+  /* ====================================================================
+     Privacy statement card
+     ==================================================================== */
+  .privacy-list { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+  .privacy-item {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 12px 14px;
+    background: var(--bg-elev-2);
+    border-radius: var(--radius-lg);
+  }
+  .privacy-item .glyph {
+    width: 24px; height: 24px; border-radius: 999px;
+    flex-shrink: 0;
+    background: var(--semantic-good-soft);
+    color: var(--semantic-good);
+    display: flex; align-items: center; justify-content: center;
+    margin-top: 1px;
+  }
+  .privacy-item .glyph .material-symbols-rounded {
+    font-size: 16px;
+    font-variation-settings: 'wght' 700;
+  }
+  .privacy-item .text {
+    font: 400 14px/20px var(--font-sans); color: var(--fg); letter-spacing: .15px;
+  }
+  .privacy-item .text strong { font-weight: 600; }
+
+  /* ====================================================================
+     Buttons (parity with Meditation file)
+     ==================================================================== */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 0 20px; height: 48px;
+    border-radius: var(--radius-xl);
+    border: 0; cursor: pointer;
+    font: 500 14px/20px var(--font-sans); letter-spacing: .1px;
+    background: var(--bg-elev-2); color: var(--fg);
+    transition: background var(--dur-short-2) var(--ease-emphasized),
+                transform var(--dur-short-1) var(--ease-emphasized),
+                color var(--dur-short-2) var(--ease-emphasized);
+  }
+  .btn:hover  { background: var(--bg-elev-3); }
+  .btn:active { transform: scale(.98); }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .btn-primary { background: var(--accent); color: var(--fg-on-accent); }
+  .btn-primary:hover { background: var(--seed-sage-light); }
+  .btn-primary:active { background: var(--accent-pressed); }
+  .btn-danger {
+    background: transparent; color: var(--semantic-danger-fg);
+    box-shadow: inset 0 0 0 1px var(--semantic-danger-fg);
+  }
+  .btn-danger:hover { background: var(--semantic-danger-soft); }
+  .btn-block { width: 100%; }
+
+  /* ====================================================================
+     Sticky action bar — only the two highest-stakes actions live here.
+     The full destructive flow is gated through a modal.
+     ==================================================================== */
+  .action-bar {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 16px 20px calc(16px + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, var(--bg) 70%, color-mix(in oklab, var(--bg) 0%, transparent));
+    display: flex; gap: 10px; align-items: center;
+  }
+  .action-bar .btn { flex: 1; }
+
+  /* ====================================================================
+     Privacy modal (Art. 17 confirmation, payload inspector reuses .scrim)
+     ==================================================================== */
+  .scrim {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex; align-items: flex-end; justify-content: center;
+    z-index: 20;
+    animation: fade-in 200ms var(--ease-emphasized);
+  }
+  .light-theme .scrim { background: rgba(17,17,17,0.45); }
+  .sheet {
+    width: 100%;
+    background: var(--bg-elev-2);
+    border-radius: 28px 28px 0 0;
+    padding: 24px 24px calc(20px + env(safe-area-inset-bottom));
+    animation: slide-up 320ms var(--ease-emphasized-decel);
+    max-height: 80%;
+    overflow: auto;
+  }
+  .sheet h3 { font: 600 20px/26px var(--font-sans); margin: 0 0 8px; color: var(--fg); }
+  .sheet p  { color: var(--fg-subtle); font: 400 14px/22px var(--font-sans); letter-spacing: .15px; }
+  .sheet .row { display: flex; gap: 12px; margin-top: 20px; }
+  .sheet .row .btn { flex: 1; }
+  @keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
+  @keyframes slide-up { from { transform: translateY(100%) } to { transform: translateY(0) } }
+
+  /* Toast (light, just for "Copied / Triggered") */
+  .toast {
+    position: absolute; left: 50%; bottom: 96px;
+    transform: translateX(-50%);
+    background: var(--bg-elev-4); color: var(--fg);
+    padding: 10px 16px; border-radius: 999px;
+    box-shadow: var(--elev-3);
+    font: 500 13px/16px var(--font-sans); letter-spacing: .15px;
+    display: inline-flex; align-items: center; gap: 8px;
+    z-index: 15;
+    animation: fade-in 160ms var(--ease-emphasized);
+  }
+  .toast .material-symbols-rounded { font-size: 18px; color: var(--accent); }
+
+  /* Link */
+  .link { color: var(--accent); text-decoration: none; cursor: pointer; }
+  .link:hover { text-decoration: underline; }
+
+  /* Disclaimer / fineprint */
+  .fineprint {
+    color: var(--fg-subtle);
+    font: 400 12px/18px var(--font-sans); letter-spacing: .25px;
+    margin-top: 16px;
+  }
+
+  /* Empty state */
+  .empty {
+    padding: 24px 16px;
+    text-align: center;
+    color: var(--fg-subtle);
+    font: 400 14px/22px var(--font-sans); letter-spacing: .15px;
+  }
+  .empty .glyph {
+    width: 48px; height: 48px; border-radius: 999px;
+    background: var(--bg-elev-2);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--fg-muted);
+    margin-bottom: 10px;
+  }
+
+  /* Theme toggle pill in topbar */
+  .theme-pill {
+    height: 36px; padding: 0 12px; border-radius: 999px;
+    background: var(--bg-elev-2); color: var(--fg-muted);
+    border: 0; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    font: 500 12px/16px var(--font-sans); letter-spacing: .25px;
+  }
+  .theme-pill .material-symbols-rounded { font-size: 16px; }
+  .theme-pill:hover { color: var(--fg); background: var(--bg-elev-3); }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* Skeleton accent for the "info" leading icon */
+  .info-leading {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 999px;
+    background: var(--accent-alpha-12); color: var(--accent);
+    flex-shrink: 0;
+  }
+  .info-leading .material-symbols-rounded { font-size: 16px; }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="env,react">
+const { useState, useEffect, useMemo, useRef } = React;
+
+/* ============================================================
+   ICONS — thin wrapper around Material Symbols
+   ============================================================ */
+function Icon({ name, size, fill, weight, color }) {
+  const style = {};
+  if (size) style.fontSize = size + 'px';
+  if (color) style.color = color;
+  const variation = [];
+  if (weight) variation.push(`'wght' ${weight}`);
+  if (fill !== undefined) variation.push(`'FILL' ${fill ? 1 : 0}`);
+  if (variation.length) style.fontVariationSettings = variation.join(',');
+  return <span className="material-symbols-rounded" style={style}>{name}</span>;
+}
+
+/* ============================================================
+   DOMAIN — mocked but plausible. Numbers shown in the UI all
+   come from these arrays so the demo is self-consistent.
+   ============================================================ */
+
+const CONNECTIONS = [
+  {
+    id: 'mi-band',
+    name: 'Mi Band 10',
+    bridge: 'via Mi Fitness',
+    icon: 'watch',
+    lastSyncMin: 28,
+    status: 'ok',
+  },
+  {
+    id: 'iphone-health',
+    name: 'iPhone Health',
+    bridge: 'HealthKit',
+    icon: 'smartphone',
+    lastSyncMin: 6,
+    status: 'ok',
+  },
+  {
+    id: 'pixel-health',
+    name: 'Pixel Watch',
+    bridge: 'via Health Connect',
+    icon: 'watch_wake',
+    lastSyncMin: 41 * 60,   // 41h — stale
+    status: 'warn',
+    note: 'Last sync was 1d 17h ago — open the source app to refresh.',
+  },
+];
+
+const INVENTORY_WINDOWS = {
+  '7d':  'last 7 days',
+  '30d': 'last 30 days',
+  'all': 'all-time',
+};
+
+const INVENTORY = [
+  {
+    id: 'hr',          kind: 'Heart rate',          icon: 'favorite',
+    counts: { '7d': 847,  '30d': 3641, 'all': 12480 },
+    unit: 'samples',
+    confidence: 'high',
+  },
+  {
+    id: 'hrv',         kind: 'HRV',                 icon: 'graphic_eq',
+    counts: { '7d': 12,   '30d': 48,   'all': 156   },
+    unit: 'samples',
+    confidence: 'low',
+    note: 'sparse — only at-rest readings',
+  },
+  {
+    id: 'sleep',       kind: 'Sleep',               icon: 'bedtime',
+    counts: { '7d': 7,    '30d': 28,   'all': 91    },
+    unit: 'sessions',
+    confidence: 'medium',
+  },
+  {
+    id: 'steps',       kind: 'Steps',               icon: 'directions_walk',
+    counts: { '7d': 7,    '30d': 30,   'all': 184   },
+    unit: 'days',
+    confidence: 'high',
+  },
+  {
+    id: 'rhr',         kind: 'Resting HR',          icon: 'monitor_heart',
+    counts: { '7d': 7,    '30d': 29,   'all': 132   },
+    unit: 'values',
+    confidence: 'medium',
+  },
+  {
+    id: 'spo2',        kind: 'SpO₂',                icon: 'pulmonology',
+    counts: { '7d': 14,   '30d': 56,   'all': 188   },
+    unit: 'spot reads',
+    confidence: 'medium',
+  },
+  {
+    id: 'activity',    kind: 'Workouts',            icon: 'directions_run',
+    counts: { '7d': 3,    '30d': 11,   'all': 47    },
+    unit: 'sessions',
+    confidence: 'high',
+  },
+  {
+    id: 'skintemp',    kind: 'Skin temp',           icon: 'device_thermostat',
+    counts: { '7d': 6,    '30d': 24,   'all': 76    },
+    unit: 'nights',
+    confidence: 'medium',
+  },
+];
+
+const SENT = [
+  {
+    id: 'w-may-7-13',
+    label: 'Weekly aggregate · May 7–13',
+    relative: '2h ago',
+    summary: 'Averages of HRV and resting HR, plus weekly step total.',
+    payload: {
+      kind: 'weekly_aggregate',
+      window: '2026-05-07/2026-05-13',
+      hrv_ms_mean: 42.6,
+      resting_hr_bpm_mean: 61,
+      steps_total: 48217,
+      sleep_minutes_mean: 412,
+      raw_samples_included: false,
+      sent_at: '2026-05-13T19:02:00Z',
+    },
+  },
+  {
+    id: 'w-apr-30-may-6',
+    label: 'Weekly aggregate · Apr 30 – May 6',
+    relative: '8d ago',
+    summary: 'Averages of HRV and resting HR, plus weekly step total.',
+    payload: {
+      kind: 'weekly_aggregate',
+      window: '2026-04-30/2026-05-06',
+      hrv_ms_mean: 39.1,
+      resting_hr_bpm_mean: 63,
+      steps_total: 41902,
+      sleep_minutes_mean: 398,
+      raw_samples_included: false,
+      sent_at: '2026-05-06T18:55:00Z',
+    },
+  },
+  {
+    id: 'm-apr',
+    label: 'Monthly aggregate · April',
+    relative: '11d ago',
+    summary: 'Monthly averages and trend deltas for the wellbeing model.',
+    payload: {
+      kind: 'monthly_aggregate',
+      window: '2026-04-01/2026-04-30',
+      hrv_ms_mean: 38.4,
+      resting_hr_bpm_mean: 64,
+      sleep_minutes_mean: 384,
+      steps_daily_mean: 6420,
+      trend_vs_prev: { hrv: '+2.1%', rhr: '-1.4%', steps: '+8.0%' },
+      raw_samples_included: false,
+      sent_at: '2026-05-02T02:10:00Z',
+    },
+  },
+  {
+    id: 'profile-init',
+    label: 'Initial profile',
+    relative: '18d ago',
+    summary: 'Age band and biological-sex bracket used to pick reference ranges.',
+    payload: {
+      kind: 'profile_init',
+      age_band: '30-39',
+      sex_bracket: 'female',
+      timezone: 'Europe/Rome',
+      raw_samples_included: false,
+      sent_at: '2026-04-25T11:14:00Z',
+    },
+  },
+];
+
+const CONF_TABLE = [
+  { source: 'Mi Band 10',       types: 'Heart rate · Sleep · Steps', level: 'medium' },
+  { source: 'Mi Band 10',       types: 'HRV (at-rest only)',         level: 'low'    },
+  { source: 'iPhone Health',    types: 'Steps · Workouts · SpO₂',    level: 'high'   },
+  { source: 'iPhone Health',    types: 'Resting HR',                 level: 'medium' },
+  { source: 'Pixel Watch',      types: 'All types (sync stale)',     level: 'low'    },
+];
+
+/* ============================================================
+   FORMATTERS
+   ============================================================ */
+const fmtSync = (mins) => {
+  if (mins < 1)    return 'just now';
+  if (mins < 60)   return `${Math.round(mins)} min ago`;
+  const h = mins / 60;
+  if (h < 24)      return `${Math.round(h)}h ago`;
+  const d = Math.floor(h / 24);
+  const r = Math.round(h - d * 24);
+  return r === 0 ? `${d}d ago` : `${d}d ${r}h ago`;
+};
+
+const N = (n) => n.toLocaleString('en-US');
+
+const confLabel = (lvl) => lvl[0].toUpperCase() + lvl.slice(1);
+
+/* ============================================================
+   PRIMITIVES
+   ============================================================ */
+function Status({ kind, label }) {
+  return (
+    <span className={`status ${kind}`}>
+      <span className="dot" aria-hidden="true" />
+      <span>{label}</span>
+    </span>
+  );
+}
+
+function Confidence({ level, prefix = 'Confidence' }) {
+  return (
+    <span
+      className={`confidence ${level}`}
+      role="img"
+      aria-label={`${prefix}: ${confLabel(level)}`}
+    >
+      <span className="bars" aria-hidden="true">
+        <span className="seg" />
+        <span className="seg" />
+        <span className="seg" />
+      </span>
+      <span>{confLabel(level)}</span>
+    </span>
+  );
+}
+
+/* Pretty-prints a JSON object with light syntax tinting. */
+function jsonLines(obj, indent = 0) {
+  const pad = '  '.repeat(indent);
+  const innerPad = '  '.repeat(indent + 1);
+  if (Array.isArray(obj)) {
+    if (obj.length === 0) return '[]';
+    return `[\n${obj.map(v => innerPad + jsonLines(v, indent + 1)).join(',\n')}\n${pad}]`;
+  }
+  if (obj && typeof obj === 'object') {
+    const keys = Object.keys(obj);
+    if (keys.length === 0) return '{}';
+    return `{\n${keys.map(k => `${innerPad}<KEY>${JSON.stringify(k)}</KEY>: ${jsonLines(obj[k], indent + 1)}`).join(',\n')}\n${pad}}`;
+  }
+  if (typeof obj === 'string') return `<STR>${JSON.stringify(obj)}</STR>`;
+  if (typeof obj === 'number') return `<NUM>${obj}</NUM>`;
+  return String(obj);
+}
+
+function PrettyJson({ obj }) {
+  // Tokenize using the placeholder markers so React can colorize spans.
+  const raw = jsonLines(obj);
+  const parts = [];
+  const re = /<(KEY|STR|NUM)>([\s\S]*?)<\/\1>/g;
+  let last = 0; let m; let i = 0;
+  while ((m = re.exec(raw)) !== null) {
+    if (m.index > last) parts.push(<span key={i++} className="c">{raw.slice(last, m.index)}</span>);
+    const cls = m[1] === 'KEY' ? 'k' : m[1] === 'STR' ? 's' : 'n';
+    parts.push(<span key={i++} className={cls}>{m[2]}</span>);
+    last = re.lastIndex;
+  }
+  if (last < raw.length) parts.push(<span key={i++} className="c">{raw.slice(last)}</span>);
+  return <pre className="payload" aria-label="Payload sent to server">{parts}</pre>;
+}
+
+/* ============================================================
+   SECTIONS
+   ============================================================ */
+
+function HeaderHero({ onInfo }) {
+  return (
+    <div data-screen-label="01 Header">
+      <h1 className="display">Your biological data.</h1>
+      <p className="lede">
+        Exactly what we have, where each piece came from, and what we’ve sent to the server. No softer words.
+      </p>
+      <div className="card" style={{ marginTop: 18, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+        <span className="info-leading"><Icon name="lock" /></span>
+        <div>
+          <div style={{ font: '500 14px/20px var(--font-sans)', color: 'var(--fg)' }}>
+            Raw samples stay on this device.
+          </div>
+          <div style={{ font: '400 13px/20px var(--font-sans)', color: 'var(--fg-subtle)', marginTop: 4 }}>
+            Only weekly and monthly aggregates leave your phone — never individual readings, never your location.{' '}
+            <span className="link" onClick={onInfo}>How this works</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ConnectionsSection() {
+  return (
+    <section aria-labelledby="sec-connections" data-screen-label="02 Connections">
+      <div className="section-eyebrow">
+        <span className="num">1</span>
+        <span id="sec-connections">Active connections</span>
+      </div>
+      <div className="card">
+        {CONNECTIONS.length === 0 ? (
+          <div className="empty">
+            <span className="glyph"><Icon name="watch_off" /></span>
+            <div>No device connected.</div>
+            <div style={{ marginTop: 4 }}>
+              Calmify can read steps, sleep and heart-rate context from your phone or wearable.
+            </div>
+            <button className="btn btn-primary" style={{ marginTop: 16 }}>
+              <Icon name="add_link" size={18} /> Connect a device
+            </button>
+          </div>
+        ) : (
+          <>
+            {CONNECTIONS.map((c) => (
+              <div key={c.id} className="source-row">
+                <span className="device" aria-hidden="true">
+                  <Icon name={c.icon} />
+                </span>
+                <div className="meta">
+                  <div className="name">
+                    {c.name} <span style={{ color: 'var(--fg-subtle)', fontWeight: 400 }}>· {c.bridge}</span>
+                  </div>
+                  <div className="sub">
+                    {c.status === 'ok'
+                      ? `Last sync ${fmtSync(c.lastSyncMin)}`
+                      : c.note || `Last sync ${fmtSync(c.lastSyncMin)} — stale`}
+                  </div>
+                </div>
+                <Status
+                  kind={c.status}
+                  label={c.status === 'ok' ? 'Synced' : 'Stale'}
+                />
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function InventorySection() {
+  const [window, setWindow] = useState('7d');
+  return (
+    <section aria-labelledby="sec-inventory" data-screen-label="03 Inventory">
+      <div className="section-eyebrow">
+        <span className="num">2</span>
+        <span id="sec-inventory">On this device</span>
+      </div>
+      <div className="card">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+          <div>
+            <div className="card-title">Raw samples we hold locally</div>
+            <div className="card-sub">
+              Counts of the actual readings sitting in Calmify’s on-device store. Nothing here is in the cloud.
+            </div>
+          </div>
+          <div className="window-tabs" role="tablist" aria-label="Time window">
+            {Object.entries(INVENTORY_WINDOWS).map(([k, label]) => (
+              <button
+                key={k}
+                role="tab"
+                aria-selected={window === k}
+                className={`window-tab ${window === k ? 'on' : ''}`}
+                onClick={() => setWindow(k)}
+              >
+                {k === 'all' ? 'All-time' : k}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="inventory-grid" aria-live="polite">
+          {INVENTORY.map((m) => (
+            <div key={m.id} className="inv-cell">
+              <div className="row">
+                <span className="kind">{m.kind}</span>
+                <Icon name={m.icon} />
+              </div>
+              <div>
+                <div className="big">{N(m.counts[window])}</div>
+                <div className="lbl">{m.unit} · {INVENTORY_WINDOWS[window]}</div>
+              </div>
+              <div style={{ marginTop: 'auto' }}>
+                <Confidence level={m.confidence} prefix={`${m.kind} confidence`} />
+                {m.note && (
+                  <div style={{ font: '400 11px/14px var(--font-sans)', color: 'var(--fg-subtle)', marginTop: 4, letterSpacing: '.25px' }}>
+                    {m.note}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SentSection() {
+  const [open, setOpen] = useState({});  // id -> bool
+  const toggle = (id) => setOpen((o) => ({ ...o, [id]: !o[id] }));
+
+  return (
+    <section aria-labelledby="sec-sent" data-screen-label="04 Sent">
+      <div className="section-eyebrow">
+        <span className="num">3</span>
+        <span id="sec-sent">Sent to the server</span>
+      </div>
+      <div className="card narrative">
+        <div className="row-top">
+          <Icon name="cloud_upload" className="icn" size={16} />
+          <span>What left this device</span>
+        </div>
+        <div className="sentence">
+          We’ve sent <strong>4 aggregates</strong> to Calmify’s server in the last 30 days — the most recent{' '}
+          <strong>2 hours ago</strong>. <strong className="num">0</strong> raw samples have ever been transmitted.
+        </div>
+
+        <div className="sent-list" style={{ marginTop: 4 }}>
+          {SENT.map((s) => {
+            const isOpen = !!open[s.id];
+            return (
+              <div key={s.id} className="sent-item">
+                <div className="when">{s.relative}</div>
+                <div className="body">
+                  <div className="summary"><strong>{s.label}</strong>. {s.summary}</div>
+                  <button
+                    className="reveal"
+                    aria-expanded={isOpen}
+                    aria-controls={`payload-${s.id}`}
+                    onClick={() => toggle(s.id)}
+                  >
+                    {isOpen ? 'Hide payload' : 'See exactly what was sent'}
+                    <Icon name="expand_more" />
+                  </button>
+                  {isOpen && (
+                    <div id={`payload-${s.id}`}>
+                      <PrettyJson obj={s.payload} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="footer-line" aria-live="polite">
+          <Icon name="verified_user" size={14} color="var(--accent)" />
+          <span>Aggregates only. Never raw, never per-second, never location.</span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ConfidenceSection() {
+  return (
+    <section aria-labelledby="sec-confidence" data-screen-label="05 Confidence">
+      <div className="section-eyebrow">
+        <span className="num">4</span>
+        <span id="sec-confidence">Confidence per source</span>
+      </div>
+      <div className="card">
+        <div className="card-title">How sure we are about each signal</div>
+        <div className="card-sub">
+          Confidence reflects sampling density and source consistency — it isn’t a quality judgment of your device.
+        </div>
+        <div style={{ marginTop: 12 }}>
+          {CONF_TABLE.map((r, i) => (
+            <div key={i} className="conf-row">
+              <div className="left">
+                <div className="src">{r.source}</div>
+                <div className="types">{r.types}</div>
+              </div>
+              <Confidence level={r.level} prefix={`${r.source} ${r.types}`} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PrivacyActionsSection({ onExport, onDelete, onDisconnect }) {
+  return (
+    <section aria-labelledby="sec-actions" data-screen-label="06 Privacy actions">
+      <div className="section-eyebrow">
+        <span className="num">5</span>
+        <span id="sec-actions">Your rights</span>
+      </div>
+      <div className="card">
+        <div className="card-title">Take everything with you. Or take it back.</div>
+        <div className="card-sub">
+          GDPR rights are one tap away, not buried six menus deep.
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
+          <button className="btn btn-block" onClick={onExport}>
+            <Icon name="download" size={18} />
+            Export everything (Art. 20)
+          </button>
+          <button className="btn btn-block" onClick={onDisconnect}>
+            <Icon name="link_off" size={18} />
+            Disconnect bio integration
+          </button>
+          <button className="btn btn-block btn-danger" onClick={onDelete}>
+            <Icon name="delete_forever" size={18} />
+            Delete everything (Art. 17)
+          </button>
+        </div>
+
+        <p className="fineprint" style={{ marginTop: 16 }}>
+          Export returns a single JSON file with every local sample and every aggregate we’ve sent.
+          Delete removes the local store and asks the server to erase the aggregates linked to your account — usually within 30 days.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function PrivacyStatementSection() {
+  const items = [
+    { glyph: 'block',         text: <><strong>Calmify does not sell your data.</strong> Not to anyone, not in any form.</> },
+    { glyph: 'campaign',      text: <><strong>Calmify does not use your data for advertising.</strong> There are no ads in the app and there never will be.</> },
+    { glyph: 'share_off',     text: <><strong>Calmify does not share data with third parties</strong> without an explicit, per-purpose opt-in from you.</> },
+    { glyph: 'psychology',    text: <><strong>Aggregates train the wellbeing model anonymously.</strong> You can opt out without losing the app’s features.</> },
+  ];
+
+  return (
+    <section aria-labelledby="sec-privacy" data-screen-label="07 Privacy statement">
+      <div className="section-eyebrow">
+        <span className="num">6</span>
+        <span id="sec-privacy">What we promise</span>
+      </div>
+      <div className="card">
+        <div className="card-title">Our four no’s.</div>
+        <div className="card-sub">
+          These aren’t aspirations — they’re commitments we’d be liable for breaking.
+        </div>
+        <div className="privacy-list">
+          {items.map((it, i) => (
+            <div key={i} className="privacy-item">
+              <span className="glyph"><Icon name={it.glyph} /></span>
+              <div className="text">{it.text}</div>
+            </div>
+          ))}
+        </div>
+        <p className="fineprint" style={{ marginTop: 14 }}>
+          Read the <span className="link">full Privacy Policy</span> · <span className="link">Data processing agreement</span> · last reviewed May 2026.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+/* ============================================================
+   MODALS
+   ============================================================ */
+function DeleteSheet({ onCancel, onConfirm }) {
+  const [phrase, setPhrase] = useState('');
+  const ok = phrase.trim().toLowerCase() === 'delete';
+  return (
+    <div className="scrim" role="dialog" aria-modal="true" aria-labelledby="del-title">
+      <div className="sheet">
+        <h3 id="del-title">Delete everything we hold about your body?</h3>
+        <p>
+          This removes every local sample and asks the server to erase the {SENT.length} aggregates linked to your account.
+          The action is irreversible — Calmify has no backup of biological data outside what you’d be deleting.
+        </p>
+
+        <div style={{ marginTop: 18, padding: 14, background: 'var(--bg)', borderRadius: 'var(--radius-md)' }}>
+          <div style={{ font: '500 13px/18px var(--font-sans)', color: 'var(--fg)', marginBottom: 8 }}>
+            Type <code style={{ color: 'var(--accent)', fontWeight: 600 }}>delete</code> to confirm.
+          </div>
+          <input
+            value={phrase}
+            onChange={(e) => setPhrase(e.target.value)}
+            placeholder="delete"
+            autoFocus
+            style={{
+              width: '100%', boxSizing: 'border-box',
+              padding: '12px 14px',
+              background: 'var(--bg-elev-3)',
+              color: 'var(--fg)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-md)',
+              font: '400 14px/20px var(--font-mono)',
+              outline: 'none',
+            }}
+          />
+        </div>
+
+        <div className="row">
+          <button className="btn" onClick={onCancel}>Cancel</button>
+          <button
+            className="btn btn-danger"
+            disabled={!ok}
+            style={!ok ? { opacity: .38, cursor: 'not-allowed' } : {}}
+            onClick={() => ok && onConfirm()}
+          >
+            <Icon name="delete_forever" size={18} />
+            Delete everything
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HowSheet({ onClose }) {
+  return (
+    <div className="scrim" role="dialog" aria-modal="true" aria-labelledby="how-title">
+      <div className="sheet">
+        <h3 id="how-title">How aggregation works.</h3>
+        <p>
+          Every Sunday night and the first of each month, Calmify computes statistics from the raw samples on this device —
+          means, variability, totals — and sends only those numbers. Individual readings, timestamps below the day level,
+          and any location data are never transmitted.
+        </p>
+        <p style={{ marginTop: 12 }}>
+          The server uses these aggregates to keep your wellbeing model warm across reinstalls, and (anonymously, if you’ve
+          opted in) to improve the model for everyone. You can opt out at any time without losing any feature.
+        </p>
+        <div className="row" style={{ marginTop: 22 }}>
+          <button className="btn btn-primary" onClick={onClose}>Got it</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   APP
+   ============================================================ */
+function App() {
+  const [theme, setTheme] = useState('dark');     // 'dark' | 'light'
+  const [showDelete, setShowDelete] = useState(false);
+  const [showHow,    setShowHow]    = useState(false);
+  const [toast,      setToast]      = useState(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const id = setTimeout(() => setToast(null), 2200);
+    return () => clearTimeout(id);
+  }, [toast]);
+
+  const fireToast = (msg, icon = 'check_circle') => setToast({ msg, icon });
+
+  return (
+    <div className={`app ${theme === 'light' ? 'light-theme' : ''}`}>
+      {/* Top bar */}
+      <div className="topbar">
+        <button className="icon-btn" aria-label="Back" onClick={() => fireToast('Demo — no back stack', 'info')}>
+          <Icon name="arrow_back" />
+        </button>
+        <span className="ttl">Bio context</span>
+        <button
+          className="theme-pill"
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          aria-label="Toggle theme"
+        >
+          <Icon name={theme === 'dark' ? 'light_mode' : 'dark_mode'} />
+          {theme === 'dark' ? 'Light' : 'Dark'}
+        </button>
+      </div>
+
+      {/* Scrollable page */}
+      <div className="page">
+        <HeaderHero onInfo={() => setShowHow(true)} />
+        <ConnectionsSection />
+        <InventorySection />
+        <SentSection />
+        <ConfidenceSection />
+        <PrivacyActionsSection
+          onExport={() => fireToast('Export started · check Downloads')}
+          onDisconnect={() => fireToast('Bio integration paused', 'pause_circle')}
+          onDelete={() => setShowDelete(true)}
+        />
+        <PrivacyStatementSection />
+
+        <p className="fineprint" style={{ textAlign: 'center', marginTop: 24 }}>
+          Calmify is a wellness tool, not a medical service. Biological data is used as context for your wellbeing — never as a score or target.
+        </p>
+      </div>
+
+      {/* Sticky action bar — only the two highest-value actions */}
+      <div className="action-bar">
+        <button className="btn" onClick={() => fireToast('Export started · check Downloads')}>
+          <Icon name="download" size={18} /> Export
+        </button>
+        <button className="btn btn-primary" onClick={() => setShowHow(true)}>
+          <Icon name="help" size={18} /> How this works
+        </button>
+      </div>
+
+      {/* Toast */}
+      {toast && (
+        <div className="toast" role="status" aria-live="polite">
+          <Icon name={toast.icon} />
+          {toast.msg}
+        </div>
+      )}
+
+      {/* Modals */}
+      {showDelete && (
+        <DeleteSheet
+          onCancel={() => setShowDelete(false)}
+          onConfirm={() => { setShowDelete(false); fireToast('Deletion requested', 'delete_forever'); }}
+        />
+      )}
+      {showHow && <HowSheet onClose={() => setShowHow(false)} />}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

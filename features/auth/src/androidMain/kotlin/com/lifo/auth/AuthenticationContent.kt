@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.lifo.ui.components.GoogleButton
+import com.lifo.ui.theme.CalmifySpacing
 
 @Composable
 fun AuthenticationContent(
@@ -36,16 +37,16 @@ fun AuthenticationContent(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .padding(horizontal = 40.dp),
+                .padding(horizontal = 40.dp),                  // custom — out-of-scale auth side margin, intentional
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Image(
-                modifier = Modifier.size(96.dp),
+                modifier = Modifier.size(96.dp),               // logo container — content-driven
                 painter = painterResource(id = com.lifo.ui.R.drawable.logo_calmify),
                 contentDescription = "Calmify"
             )
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(CalmifySpacing.xxl))  // was 32.dp ✓
             Text(
                 text = stringResource(id = R.string.auth_title),
                 style = MaterialTheme.typography.headlineMedium,
@@ -53,7 +54,7 @@ fun AuthenticationContent(
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onBackground
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(CalmifySpacing.md))   // was 12.dp ✓
             Text(
                 text = stringResource(id = R.string.auth_subtitle),
                 style = MaterialTheme.typography.bodyLarge,
@@ -66,7 +67,7 @@ fun AuthenticationContent(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 40.dp, vertical = 48.dp),
+                .padding(horizontal = 40.dp, vertical = CalmifySpacing.xxxl), // h=40 custom, v=48 → xxxl ✓
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             GoogleButton(

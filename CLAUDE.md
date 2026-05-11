@@ -105,6 +105,65 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
 
 **Ad ogni nuova sessione, LEGGERE SUBITO questo file prima di fare qualsiasi cosa.**
 
+### Active Workstream — Design System Refactor (started 2026-05-11, precursor a bio-signal)
+
+**Design-first approach.** Claude Design ha consegnato 7 HTML mockup + `calmify.css` (port da Kotlin source-of-truth). Drift audit ha rivelato che il Kotlin è **dietro** rispetto al CSS port (Typography essenzialmente vuoto, Motion mancante, 2 token gap, Roboto Flex VF non bundlato). Costruire bio-signal su token incompleti = drift compounding → CLAUDE.md regola 1 violata. Workstream precursor obbligatorio.
+
+**Branch**: `design-system-refactor` (off `backend-architecture-refactor @ 7a0b7ca`) — preserva 100% del lavoro corrente.
+
+**Design assets versionati** in `design/biosignal/` (7 HTML + calmify.css + 2 SVG). Le CSS variables mappano 1:1 a tokens Kotlin canonical.
+
+**Quality gates (NASA-grade, regola 13)**:
+- ✅ Build-verify per file refattorato (`compileDebugKotlinAndroid` green prima del prossimo refactor)
+- ✅ **Hard exclusion**: `ExpressiveHero.kt` MAI toccato (user directive 2026-05-11: "tranne prima card nella home")
+- ✅ Decorative files (`*Particle*`, `*Chart*`, `*Animation*`, `*Shape*`, `EmotionAware*`, `MoodColors`) MAI toccati
+- ✅ `Color.kt` palette MAI refattorato (è già 1:1 con CSS)
+
+**Refactor rules per file** (4 regole meccaniche):
+1. `X.dp` letterale dove `X ∈ {4,8,12,16,24,32,48}` → `CalmifySpacing.{xs,sm,md,lg,xl,xxl,xxxl}`
+2. `RoundedCornerShape(X.dp)` dove `X ∈ {8,12,16,20,28,999}` → `CalmifyRadius.{sm,md,lg,xl,xxl,pill}`
+3. `X.sp` standalone → check `MaterialTheme.typography.X`; sostituisci se equivalente
+4. `Color(0xFF...)` in screen Kotlin → `MaterialTheme.colorScheme.X` se semantico; lascia se decorativo
+5. Custom (icon sizes 18/24/48, hero card 280, button vertical 14) → keep + `// custom — <reason>` comment
+
+**Fase R3 surgical refactor** (in corso, ~30 file candidate dall'audit):
+- ✅ R3.1 `HomeContent.kt` (excl. ExpressiveHero subtree)
+- ✅ R3.2 `WizardComponents.kt` (single-file refactor → propaga a 16 wellness wizards)
+- ✅ R3.3 `AuthenticationContent.kt` (first-impression surface)
+- ⬜ R3.4 Meditation screens (5 files — verifica drift residuo Phase 1+2)
+- ⬜ R3.5+ ProfileDashboard / PaywallScreen / ComposerScreen / ChatBubble / tail
+
+**Tracker files (READ FIRST before any design refactor work)**:
+- `memory/project_design_system_refactor.md` — workstream state + refactor rules + file inventory
+- `.claude/THEME_DRIFT_AUDIT.md` — drift matrix Kotlin↔CSS + hot-spot list quantificato
+- `design/biosignal/calmify.css` — canonical CSS port (source-of-truth visivo)
+
+**Stima rimanente post-checkpoint R0+R1+R3.1-3**: ~9-13 giorni per chiudere R3+R4. Poi sblocca bio-signal Phase 0.
+
+### Active Workstream — Bio-Signal Integration (Health Connect / HealthKit) (started 2026-05-11, BLOCKED on design-system-refactor R3+R4)
+
+**Planning closed, code phase 0 NOT STARTED.** Integrazione wearable (HR/HRV/Sleep/Steps/RestingHR/SpO2/Activity) come **contesto** per mental-wellness flow esistenti (journal/meditation/insight/home), NOT come nuovo "Fitness" tab. Posizionamento esplicitamente non-competitivo vs Google Health / Fitbit Premium / Apple Health: la grammatica visiva è adottata (in-range bands, narrative cards, AI coach micro-summaries, banda dotted del typical-range), il framing è invertito (no scores, no targets, no "out of range" anxiety, no paywall su dati vitali).
+
+**4 decisioni fondative (baked in 2026-05-11)**:
+1. **Aggregates server + raw locale** — raw stays on device (SQLDelight + TTL 30d), server riceve solo 7/30/90d rolling stats. Raw upload opt-in solo per PRO advanced correlations.
+2. **DataConfidence always visible** — ogni metrica mostra `📊 Da {device} · affidabilità {high/medium/low}`. Onestà radicale > effetto wow.
+3. **Sustainable organism split (free vs PRO)** — FREE: viewing dati vitali, granular permissions, transparency dashboard, GDPR Art.17/Art.20, sleep stages, 7d local aggregates. PRO: AI narrative Gemini-powered, server 30/90d aggregates, cross-signal correlations, predictive baseline, PDF report, cohort comparison, raw upload windows. **Rule**: features ~zero-cost-at-margin = free; features con compute/storage/external API costs = PRO. *"Non può solo dare"*.
+4. **Dedicated onboarding section** — `BioOnboardingScreen` 5-step pager dopo onboarding base (skippable + re-accessible da Settings). NOT contextual prompt.
+
+**10 fasi** (vedi `.claude/BIOSIGNAL_INTEGRATION_PLAN.md`): Foundations → Android HC → Trust/Sovereignty → Onboarding → Server aggregates → Wellness integration (surgical, no new tab) → UI Calmify-aligned → A11y+i18n → PRO tier → iOS HealthKit parity → Multi-device validation.
+
+**Stime oneste** (no shortcuts, CLAUDE.md regola 1): MVP Android-only 28-40 giorni. Full cross-platform con PRO 40-58 giorni.
+
+**Hardware day-1** (per `memory/user_hardware.md`): Samsung Galaxy S24 + Xiaomi Mi Band 10 (worst-case coverage — Mi Band HRV via Health Connect è sparso; se la pipeline regge qui regge ovunque). Phase 10 premium device TBD (suggerimento: Galaxy Watch 7 per Samsung Health native + S24 pair).
+
+**Tracker files (READ FIRST before any bio-signal work)**:
+- `memory/project_biosignal_integration.md` — long-term context, why, decisions
+- `memory/feedback_calmify_values.md` — 7 dogmi (etica + sustainable organism)
+- `.claude/BIOSIGNAL_INTEGRATION_PLAN.md` — strategic plan, architecture KMP, phased delivery
+- `.claude/BIOSIGNAL_INTEGRATION_STATUS.md` — live checklist with checkbox per task
+
+**Quality gates per commit**: build green + zero hardcoded strings + all 12 langs in sync + tracker updated BEFORE commit + audit trail (smoke test specifico, non solo `/health`).
+
 ### Active Workstream — Meditation Feature Redesign (started 2026-05-02)
 
 **Major feature redesign in progress.** Full rebuild of meditation flow to match Claude Design source `C:\Design\Calmify\Meditation\Calmify Meditation.html` + `calmify.css`. User explicit quality mandate: "Non mi importa se ci metto tanto, [...] Fatta bene 1:1 come minimo se non addirittura 1:1.5". NASA-grade rigor, full a11y, all 12 langs, no hardcoded strings.

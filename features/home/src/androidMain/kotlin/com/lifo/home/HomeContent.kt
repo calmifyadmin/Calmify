@@ -38,6 +38,8 @@ import com.lifo.ui.components.coaching.rememberCoachMarkState
 import com.lifo.ui.components.tooltips.InfoTooltip
 import com.lifo.ui.components.tooltips.TooltipContent
 import com.lifo.ui.onboarding.OnboardingManager
+import com.lifo.ui.theme.CalmifyRadius
+import com.lifo.ui.theme.CalmifySpacing
 import com.lifo.util.model.Diary
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
@@ -181,12 +183,12 @@ internal fun HomeContent(
                         state = lazyListState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
-                            start = 20.dp,
-                            end = 20.dp,
-                            top = 8.dp,
-                            bottom = 100.dp
+                            start = CalmifySpacing.xl,        // was 20.dp → xl (24)
+                            end   = CalmifySpacing.xl,
+                            top   = CalmifySpacing.sm,        // was 8.dp ✓
+                            bottom = 100.dp                   // custom — FAB clearance, no scale token applies
                         ),
-                        verticalArrangement = Arrangement.spacedBy(20.dp)
+                        verticalArrangement = Arrangement.spacedBy(CalmifySpacing.xl) // was 20.dp → xl (24)
                     ) {
                         // 1. Expressive Hero
                         item(key = "hero") {
@@ -362,66 +364,66 @@ internal fun HomeContent(
 private fun DashboardSkeleton(modifier: Modifier = Modifier) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(20.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+        contentPadding = PaddingValues(CalmifySpacing.xl),                // was 20.dp → xl (24)
+        verticalArrangement = Arrangement.spacedBy(CalmifySpacing.xl)     // was 20.dp → xl (24)
     ) {
-        // Hero skeleton
+        // Hero skeleton — mirrors ExpressiveHero footprint, 32dp radius is hero-specific
         item {
             SkeletonBox(
-                height = 280.dp,
-                cornerRadius = 32.dp
+                height = 280.dp,                                          // hero card height — content-driven, no scale token
+                cornerRadius = 32.dp                                      // hero-only radius (above CalmifyRadius.xxl=28)
             )
         }
         // Quick actions skeleton
         item {
             SkeletonBox(
-                height = 80.dp,
-                cornerRadius = 28.dp
+                height = 80.dp,                                           // QuickActions card height
+                cornerRadius = CalmifyRadius.xxl                          // was 28.dp ✓
             )
         }
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.md) // was 12.dp ✓
             ) {
                 SkeletonBox(
                     modifier = Modifier.weight(1f),
-                    height = 56.dp,
-                    cornerRadius = 20.dp
+                    height = 56.dp,                                       // chip row height
+                    cornerRadius = CalmifyRadius.xl                       // was 20.dp ✓
                 )
                 SkeletonBox(
                     modifier = Modifier.weight(1f),
                     height = 56.dp,
-                    cornerRadius = 20.dp
+                    cornerRadius = CalmifyRadius.xl
                 )
             }
         }
         // Week strip skeleton
         item {
             SkeletonBox(
-                height = 140.dp,
-                cornerRadius = 28.dp
+                height = 140.dp,                                          // week strip height
+                cornerRadius = CalmifyRadius.xxl                          // was 28.dp ✓
             )
         }
         // Stats skeleton (asymmetric)
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.md)
             ) {
                 SkeletonBox(
                     modifier = Modifier.weight(1f),
                     height = 180.dp,
-                    cornerRadius = 24.dp
+                    cornerRadius = 24.dp                                  // custom — mid-card radius, between xl(20) and xxl(28)
                 )
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(CalmifySpacing.md)
                 ) {
                     repeat(3) {
                         SkeletonBox(
-                            height = 48.dp,
-                            cornerRadius = 20.dp
+                            height = CalmifySpacing.xxxl,                 // was 48.dp ✓ (scale, used as height here)
+                            cornerRadius = CalmifyRadius.xl               // was 20.dp ✓
                         )
                     }
                 }
@@ -431,7 +433,7 @@ private fun DashboardSkeleton(modifier: Modifier = Modifier) {
         item {
             SkeletonBox(
                 height = 140.dp,
-                cornerRadius = 32.dp
+                cornerRadius = 32.dp                                      // hero-tier radius (matches reflection card)
             )
         }
     }
@@ -453,38 +455,38 @@ private fun EmptyDashboardState(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(40.dp)
+            modifier = Modifier.padding(CalmifySpacing.xxxl)              // was 40.dp → xxxl (48); +8dp delta accepted for breathing room
         ) {
             // Large expressive icon
             Surface(
-                modifier = Modifier.size(96.dp),
-                shape = RoundedCornerShape(32.dp),
+                modifier = Modifier.size(96.dp),                          // icon container — content-driven dimension
+                shape = RoundedCornerShape(32.dp),                        // hero-tier radius (above CalmifyRadius.xxl=28)
                 color = colorScheme.primaryContainer.copy(alpha = 0.5f)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Default.AutoAwesome,
                         contentDescription = null,
-                        modifier = Modifier.size(48.dp),
+                        modifier = Modifier.size(48.dp),                  // M3 large icon size
                         tint = colorScheme.primary
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(CalmifySpacing.xxl))        // was 32.dp ✓
 
             Text(
                 text = "Inizia il tuo\npercorso",
                 style = MaterialTheme.typography.displaySmall.copy(
                     fontWeight = FontWeight.Bold,
-                    letterSpacing = (-1).sp,
-                    lineHeight = 40.sp
+                    letterSpacing = (-1).sp,                              // custom typography override — display headline tracking
+                    lineHeight = 40.sp                                    // custom — fixed line-height to align dual-line display
                 ),
                 color = colorScheme.onSurface,
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(CalmifySpacing.md))         // was 12.dp ✓
 
             Text(
                 text = "Scrivi, parla, rifletti — anche solo una riga",
@@ -493,28 +495,28 @@ private fun EmptyDashboardState(
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(CalmifySpacing.xxl))        // was 32.dp ✓
 
             Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.md) // was 12.dp ✓
             ) {
                 Button(
                     onClick = onWrite,
-                    shape = RoundedCornerShape(20.dp),
-                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
+                    shape = RoundedCornerShape(CalmifyRadius.xl),         // was 20.dp ✓
+                    contentPadding = PaddingValues(horizontal = CalmifySpacing.xl, vertical = 14.dp) // 14dp = M3 button vertical default
                 ) {
                     Icon(
                         imageVector = Icons.Default.EditNote,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(18.dp)                   // M3 small icon size
                     )
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(CalmifySpacing.sm))             // was 8.dp ✓
                     Text(stringResource(Res.string.write_action), style = MaterialTheme.typography.labelLarge)
                 }
                 FilledTonalButton(
                     onClick = onTalkToEve,
-                    shape = RoundedCornerShape(20.dp),
-                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
+                    shape = RoundedCornerShape(CalmifyRadius.xl),
+                    contentPadding = PaddingValues(horizontal = CalmifySpacing.xl, vertical = 14.dp)
                 ) {
                     Text(stringResource(Res.string.home_talk_to_eve), style = MaterialTheme.typography.labelLarge)
                 }
@@ -552,7 +554,7 @@ internal fun ExpressiveDailyActions(
         )
     }
 
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(CalmifySpacing.md)) { // was 10.dp → md (12) snapped to scale
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -571,8 +573,8 @@ internal fun ExpressiveDailyActions(
             )
         }
         LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            contentPadding = PaddingValues(horizontal = 0.dp)
+            horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.md),  // was 10.dp → md (12)
+            contentPadding = PaddingValues(horizontal = 0.dp)                  // explicit zero — LazyRow inside parent-padded Column
         ) {
             items(actions) { action ->
                 ExpressiveDailyChip(
@@ -594,16 +596,16 @@ private fun ExpressiveDailyChip(
 ) {
     FilledTonalButton(
         onClick = onClick,
-        modifier = modifier.height(44.dp),
-        shape = RoundedCornerShape(20.dp),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+        modifier = modifier.height(44.dp),                                 // a11y minimum touch-target
+        shape = RoundedCornerShape(CalmifyRadius.xl),                      // was 20.dp ✓
+        contentPadding = PaddingValues(horizontal = CalmifySpacing.lg, vertical = 0.dp), // was 16.dp ✓
         colors = ButtonDefaults.filledTonalButtonColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
         )
     ) {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(8.dp))
+        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp)) // M3 small icon size
+        Spacer(Modifier.width(CalmifySpacing.sm))                          // was 8.dp ✓
         Text(
             label,
             style = MaterialTheme.typography.labelMedium.copy(
@@ -631,7 +633,7 @@ internal fun EnhancedDateHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = CalmifySpacing.sm),                        // was 8.dp ✓
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {

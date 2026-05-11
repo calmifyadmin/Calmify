@@ -3,7 +3,47 @@
 > Questo file viene letto da Jarvis all'inizio di ogni sessione.
 > Aggiornato automaticamente dopo ogni operazione completata.
 
-## STATO ATTUALE 2026-04-19 (Sprint i18n A→E COMPLETE)
+## STATO ATTUALE 2026-05-11 (Design System Refactor — R0+R1+R3.1-3 DONE, branch `design-system-refactor`)
+
+**Pivot strategico**: prima di partire con bio-signal Phase 0, design-first refactor del token system Kotlin per allinearlo 1:1 al CSS port di Claude Design. Audit ha rivelato che Typography era essenzialmente vuoto (solo `bodyLarge` + `FontFamily.Default`, M3 defaults coprivano a runtime), Motion mancante, 2 minor token gap. Non si costruisce bio-signal su tokens incompleti (CLAUDE.md regola 1).
+
+**Branch**: `design-system-refactor` (off `backend-architecture-refactor @ 7a0b7ca`) — preserva tutto il lavoro corrente.
+
+**Done**:
+- R0: `.claude/THEME_DRIFT_AUDIT.md` con matrix Kotlin↔CSS + 30-file hot-spot quantificato (216 dp literals non-scale, 126 sp literals, 109 fontWeight overrides, 436 Color literals di cui ~250 legitimate)
+- R1.1: `Dimensions.kt` esteso (`xxxl=48dp` + `pill=999dp`)
+- R1.2: `Motion.kt` nuovo (`CalmifyEasing` 5 M3 + `CalmifyDuration` 5 levels)
+- R1.3: `Type.kt` ricostruito (full M3 13-style scale, `CalmifyFontFamily` placeholder con flip-path Roboto Flex VF ready)
+- R1.4: Roboto Flex VF wiring documented in `font/README.md`, binary deferred (segue Noto pattern)
+- R1.5: `Elevation.kt` KDoc surface-tint pattern
+- R3.1: `HomeContent.kt` non-Hero refactor + build green 16s
+- R3.2: `WizardComponents.kt` (propaga a 16 wizard) + build green 19s
+- R3.3: `AuthenticationContent.kt` + build green 5s
+- Versioned: `design/biosignal/` con 7 HTML + calmify.css + assets
+
+**Hard exclusion confermata**: `ExpressiveHero.kt` MAI toccato (user directive 2026-05-11).
+
+**Prossimo**: R3.4 Meditation screens (5 files), R3.5+ ProfileDashboard/Paywall/Composer/ChatBubble, R4 theme README, POI bio-signal Phase 0.
+
+---
+
+## STATO PRECEDENTE 2026-05-11 (Bio-Signal Integration — PLANNING CLOSED)
+
+**Nuovo workstream avviato** (planning only, no code yet): integrazione Health Connect (Android) + HealthKit (iOS) come **contesto** per mental-wellness flows esistenti. Posizionamento esplicitamente non-competitivo vs Google Health / Fitbit Premium / Apple Health. Visual grammar adottata (in-range bands, narrative cards, banda dotted typical-range), framing invertito (no scores, no targets, no "out of range" anxiety, no paywall su dati vitali).
+
+**4 decisioni fondative** (baked in 2026-05-11): (1) aggregates server + raw locale, (2) DataConfidence always visible, (3) sustainable organism free/PRO split — *"non può solo dare"*, (4) dedicated onboarding section (skippable, re-accessible).
+
+**10 fasi**: Foundations → Android HC → Trust/Sovereignty → Onboarding → Server aggregates → Wellness integration (surgical, no new tab) → UI Calmify-aligned → A11y+i18n → PRO tier → iOS HealthKit parity → Multi-device validation.
+
+**Stime**: MVP Android 28-40 giorni / full cross-platform con PRO 40-58 giorni. No shortcuts (CLAUDE.md regola 1).
+
+**Hardware day-1**: Samsung Galaxy S24 + Xiaomi Mi Band 10 (worst-case coverage). Phase 10 premium TBD (suggerimento Galaxy Watch 7).
+
+Vedi `.claude/BIOSIGNAL_INTEGRATION_PLAN.md` + `.claude/BIOSIGNAL_INTEGRATION_STATUS.md` + `memory/project_biosignal_integration.md` + `memory/feedback_calmify_values.md` (dogma 8: sustainable organism).
+
+---
+
+## STATO PRECEDENTE 2026-04-19 (Sprint i18n A→E COMPLETE)
 
 **Level 1 KMP REST CHIUSO + DEPLOYED**. Smoke test E2E 91/92 verdi.
 **Sprint i18n COMPLETE** (2026-04-19): 140 keys × 12 lingue ≈ 1680 translation entries + ~145 hardcoded migrati su 31 file Kotlin (27 feature + 4 core/social-ui) in 11 commit atomic (A→E). `Strings` facade + `AppText` helpers + LocaleController (12 SupportedLocale, AR RTL) + Detekt wired. Default lang IT→EN, `values-en/` rimosso. Phase E: I18N_GUIDE.md consolidato (default EN, 12-locale table, typed-facade preferred call site, Noto fonts deferred post-sprint, PR checklist extended). Tutti i tracker allineati "COMPLETE". **Level 3 (iOS+Web) unblocked** — Compose MP Resources garantisce ereditarieta' automatica su tutte le piattaforme.

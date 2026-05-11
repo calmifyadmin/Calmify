@@ -1,6 +1,42 @@
-# Fonts — Calmify i18n
+# Fonts — Calmify Design System + i18n
 
-## Purpose
+## Purpose — two tracks
+
+### Track A — Design System (Roboto Flex Variable, 2026-05-11 — `design-system-refactor`)
+
+The Claude Design CSS port at [design/biosignal/calmify.css](../../../../../../../design/biosignal/calmify.css) declares **Roboto Flex** as the canonical font family for M3 Expressive parity. Today `CalmifyFontFamily` in [Type.kt](../kotlin/com/lifo/ui/theme/Type.kt) falls back to `FontFamily.SansSerif` (renders Roboto on Android, San Francisco on iOS, system sans on Desktop/Web) — visually identical for Latin scripts at body sizes, but lacks the variable axes (opsz, wdth, wght, GRAD) the design system was tuned for.
+
+To activate Roboto Flex VF:
+
+```bash
+# From repo root — Roboto Flex variable font (~360 KB, all 13 axes)
+curl -L -o core/ui/src/commonMain/composeResources/font/RobotoFlex_Variable.ttf \
+  'https://github.com/googlefonts/roboto-flex/raw/main/fonts/variable/RobotoFlex%5BGRAD%2CXOPQ%2CXTRA%2CYOPQ%2CYTAS%2CYTDE%2CYTFI%2CYTLC%2CYTUC%2Copsz%2Cslnt%2Cwdth%2Cwght%5D.ttf'
+```
+
+Then in [Type.kt](../kotlin/com/lifo/ui/theme/Type.kt), swap the placeholder:
+
+```kotlin
+import com.lifo.ui.resources.Res
+import org.jetbrains.compose.resources.Font
+
+val CalmifyFontFamily: FontFamily = FontFamily(
+    Font(Res.font.RobotoFlex_Variable, FontWeight.Normal),
+    Font(Res.font.RobotoFlex_Variable, FontWeight.Medium),
+    Font(Res.font.RobotoFlex_Variable, FontWeight.SemiBold),
+    Font(Res.font.RobotoFlex_Variable, FontWeight.Bold),
+)
+```
+
+Roboto Flex is a single VF file (~360 KB) — Compose's `Font(...)` invocations for different weights all reference the same binary, which is much cheaper than bundling 4 static TTFs (~1.2 MB total). The font has 13 variable axes; for Calmify we drive only `wght` (matching FontWeight enum) and let `opsz` auto-adjust with text size.
+
+License: Apache License 2.0 — see [https://github.com/googlefonts/roboto-flex/blob/main/LICENSE](https://github.com/googlefonts/roboto-flex/blob/main/LICENSE). Attribution optional, recommended in app credits.
+
+**Why not bundled in `design-system-refactor` commit**: matches the existing Track B deferral pattern. Subsetting decision (full vs Latin-only, ~360 KB vs ~120 KB) is a separate optimization call. Flip to bundled VF is a single-file edit + one binary commit.
+
+---
+
+### Track B — i18n script coverage (Noto fonts)
 
 Calmify supports 12 languages, and some require specific font files because the
 device-default system font may not include the required script:

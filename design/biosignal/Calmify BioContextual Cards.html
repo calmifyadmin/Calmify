@@ -1,0 +1,1354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Calmify — Bio-signal Inline Cards</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="calmify.css" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+<style>
+  /* ==========================================================================
+     Bio-signal · inline contextual cards
+     ----------------------------------------------------------------------
+     Four micro-cards that thread bio data through EXISTING Calmify flows:
+       1. Journal composer  — slim banner above the writing surface
+       2. Meditation outro  — celebratory mini-chart inside the post-session
+       3. Home Today        — narrative line replacing the would-be quick stats
+       4. Insight tab       — cross-signal correlation card (PRO)
+     All four:
+       — dismissable, never modal, never blocking
+       — observational copy, never prescriptive
+       — radical-honesty footer "From {device} · {level} confidence"
+       — no scores, no rings, no targets
+     ========================================================================== */
+
+  /* Material Symbols — keep ligatures local */
+  .material-symbols-rounded {
+    font-family: 'Material Symbols Rounded';
+    font-weight: normal; font-style: normal;
+    font-size: 24px; line-height: 1;
+    letter-spacing: normal; text-transform: none;
+    display: inline-block; white-space: nowrap;
+    word-wrap: normal; direction: ltr;
+    font-feature-settings: 'liga';
+    -webkit-font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :root {
+    --semantic-good:           var(--accent);
+    --semantic-good-soft:      var(--accent-alpha-12);
+    --semantic-attention:      #E0A93D;
+    --semantic-attention-soft: rgba(224, 169, 61, 0.14);
+  }
+  .light-theme {
+    --semantic-attention:      #B5811E;
+    --semantic-attention-soft: rgba(181, 129, 30, 0.12);
+  }
+
+  html, body { margin: 0; min-height: 100%; background: var(--bg); }
+
+  /* =========================== Gallery chrome =========================== */
+  .gallery { max-width: 1280px; margin: 0 auto; padding: 56px 24px 96px; }
+  .gallery-header {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 24px; flex-wrap: wrap; margin-bottom: 12px;
+  }
+  .crumbs {
+    color: var(--fg-subtle);
+    font: 500 11px/14px var(--font-sans);
+    letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 6px;
+  }
+  .crumbs .sep { opacity: .5; padding: 0 6px; }
+  .gallery-header h1 {
+    font: 600 30px/36px var(--font-display);
+    letter-spacing: -.2px; color: var(--fg); margin: 0;
+  }
+  .lede {
+    color: var(--fg-subtle);
+    font: 400 15px/22px var(--font-sans);
+    letter-spacing: .15px; max-width: 640px; margin-top: 12px;
+  }
+  .theme-pill {
+    height: 36px; padding: 0 14px; border-radius: 999px;
+    background: var(--bg-elev-2); color: var(--fg-muted);
+    border: 0; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    font: 500 12px/16px var(--font-sans); letter-spacing: .25px;
+  }
+  .theme-pill:hover { color: var(--fg); background: var(--bg-elev-3); }
+  .theme-pill .material-symbols-rounded { font-size: 16px; }
+
+  /* Variant grid */
+  .variants {
+    display: grid; grid-template-columns: 1fr;
+    gap: 36px 28px; margin-top: 40px;
+  }
+  @media (min-width: 780px)  { .variants { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1180px) { .variants { grid-template-columns: repeat(4, 1fr); } }
+
+  .variant { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .variant-meta {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 0 4px; color: var(--fg-subtle);
+  }
+  .variant-meta .tag {
+    width: 28px; height: 28px; border-radius: 999px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--bg-elev-2); color: var(--fg);
+    font: 600 13px/16px var(--font-mono);
+    flex-shrink: 0;
+  }
+  .variant-meta .title { color: var(--fg); font: 500 14px/20px var(--font-sans); letter-spacing: .1px; }
+  .variant-meta .desc  { color: var(--fg-subtle); font: 400 13px/20px var(--font-sans); letter-spacing: .15px; }
+
+  /* =========================== Host frame ============================== */
+  .frame {
+    width: 375px; max-width: 100%;
+    box-sizing: border-box;
+    margin: 0 auto;
+    background: var(--bg);
+    border-radius: 32px;
+    border: 1px solid var(--divider);
+    overflow: hidden;
+    position: relative;
+  }
+  .light-theme .frame { box-shadow: var(--elev-2); }
+
+  /* Generic phone status bar — sketched, not pixel-perfect */
+  .status {
+    height: 28px; padding: 0 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    color: var(--fg-muted);
+    font: 600 12px/16px var(--font-sans);
+  }
+  .status .glyphs {
+    display: inline-flex; gap: 6px; align-items: center;
+    color: var(--fg-muted);
+  }
+  .status .glyphs .material-symbols-rounded { font-size: 14px; }
+
+  /* Section dividers / faux UI rows (placeholder content for the host) */
+  .ghost-row {
+    height: 12px; background: var(--bg-elev-2);
+    border-radius: 6px;
+  }
+  .ghost-row.short { width: 40%; }
+  .ghost-row.med   { width: 62%; }
+  .ghost-row.long  { width: 86%; }
+  .ghost-row.tiny  { width: 28%; height: 10px; }
+
+  /* ========================================================================
+     CARD 1 — Journal entry composer
+     ======================================================================== */
+  .frame-journal { display: flex; flex-direction: column; min-height: 580px; }
+  .journal-top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 12px 8px;
+    color: var(--fg-muted);
+  }
+  .journal-top .icon-btn {
+    width: 40px; height: 40px; border-radius: 999px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: transparent; color: var(--fg-muted); border: 0;
+  }
+  .journal-top .icon-btn .material-symbols-rounded { font-size: 22px; }
+  .journal-top .right { display: inline-flex; gap: 2px; }
+  .journal-top .save-pill {
+    height: 32px; padding: 0 14px; border-radius: 999px;
+    background: var(--bg-elev-2); color: var(--fg);
+    border: 0; font: 600 12px/16px var(--font-sans); letter-spacing: .1px;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .journal-date {
+    padding: 4px 20px 12px;
+    color: var(--fg-subtle);
+    font: 500 12px/16px var(--font-sans); letter-spacing: .4px;
+    text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .journal-date .dot { width: 4px; height: 4px; border-radius: 999px; background: var(--fg-subtle); opacity: .6; }
+
+  /* The actual bio-banner */
+  .bio-banner {
+    margin: 0 16px 16px;
+    background: var(--bg-elev-2);
+    border: 1px solid color-mix(in oklab, var(--accent) 16%, transparent);
+    border-radius: var(--radius-lg);
+    padding: 12px 12px 12px 14px;
+    display: grid;
+    grid-template-columns: 36px 1fr 32px;
+    gap: 10px;
+    align-items: start;
+    position: relative;
+  }
+  .bio-banner .heart {
+    width: 36px; height: 36px; border-radius: 12px;
+    background: var(--accent-alpha-12);
+    color: var(--accent);
+    display: inline-flex; align-items: center; justify-content: center;
+    align-self: center;
+  }
+  .bio-banner .heart .material-symbols-rounded {
+    font-size: 20px;
+    font-variation-settings: 'FILL' 1, 'wght' 500;
+  }
+  .bio-banner .copy {
+    color: var(--fg);
+    font: 400 13px/19px var(--font-sans); letter-spacing: .1px;
+    text-wrap: pretty;
+    align-self: center;
+  }
+  .bio-banner .copy b {
+    font-weight: 600;
+    color: var(--fg);
+  }
+  .bio-banner .copy .src {
+    display: block;
+    margin-top: 4px;
+    color: var(--fg-subtle);
+    font: 400 11px/14px var(--font-sans); letter-spacing: .25px;
+  }
+  .bio-banner .dismiss {
+    width: 32px; height: 32px; border-radius: 999px;
+    background: transparent; color: var(--fg-subtle);
+    border: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    align-self: start;
+    cursor: pointer;
+    transition: background var(--dur-short-2) var(--ease-emphasized);
+  }
+  .bio-banner .dismiss:hover { background: var(--bg-elev-3); color: var(--fg); }
+  .bio-banner .dismiss .material-symbols-rounded { font-size: 18px; }
+  .bio-banner.is-dismissed { display: none; }
+
+  /* Mood chips row */
+  .mood-row {
+    padding: 0 20px 14px;
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .mood-row .chip {
+    height: 32px; padding: 0 12px; border-radius: 999px;
+    background: var(--bg-elev-2); color: var(--fg-muted);
+    font: 500 12px/16px var(--font-sans); letter-spacing: .25px;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .mood-row .chip .dotpip { width: 8px; height: 8px; border-radius: 999px; }
+  .mood-row .chip.selected { background: var(--accent-alpha-12); color: var(--fg); }
+
+  /* Composer */
+  .composer { padding: 0 20px; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+  .composer h2 {
+    font: 400 22px/30px var(--font-display); color: var(--fg);
+    margin: 0;
+  }
+  .composer .caret {
+    color: var(--fg-subtle);
+    font: 400 15px/22px var(--font-sans);
+    position: relative;
+  }
+  .composer .caret::after {
+    content: '';
+    display: inline-block;
+    width: 1.5px; height: 18px;
+    background: var(--accent);
+    margin-left: 2px; vertical-align: -3px;
+    animation: blink 1s infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .composer-toolbar {
+    margin: 16px -20px 0;
+    padding: 12px 20px;
+    border-top: 1px solid var(--divider);
+    display: flex; gap: 8px; align-items: center;
+    color: var(--fg-subtle);
+  }
+  .composer-toolbar .material-symbols-rounded { font-size: 20px; }
+  .composer-toolbar .sp { flex: 1; }
+
+  /* ========================================================================
+     CARD 2 — Meditation post-session
+     ======================================================================== */
+  .frame-medi { min-height: 720px; display: flex; flex-direction: column; }
+  .medi-hero {
+    padding: 28px 24px 20px;
+    text-align: center;
+    background:
+      radial-gradient(120% 80% at 50% 0%,
+        color-mix(in oklab, var(--accent) 22%, transparent) 0%,
+        transparent 60%);
+  }
+  .medi-hero .stamp {
+    width: 56px; height: 56px; border-radius: 999px;
+    background: var(--accent-alpha-12); color: var(--accent);
+    display: inline-flex; align-items: center; justify-content: center;
+    margin-bottom: 14px;
+  }
+  .medi-hero .stamp .material-symbols-rounded {
+    font-size: 28px;
+    font-variation-settings: 'FILL' 1;
+  }
+  .medi-hero h2 {
+    font: 600 24px/30px var(--font-display);
+    letter-spacing: -.1px; color: var(--fg); margin: 0;
+  }
+  .medi-hero .sub {
+    color: var(--fg-subtle);
+    font: 400 14px/20px var(--font-sans); letter-spacing: .15px;
+    margin-top: 6px;
+  }
+  .medi-hero .meta-row {
+    display: flex; justify-content: center; gap: 16px;
+    margin-top: 14px;
+    color: var(--fg-muted);
+    font: 500 12px/16px var(--font-sans); letter-spacing: .25px;
+  }
+  .medi-hero .meta-row .b { color: var(--fg); font-weight: 600; }
+  .medi-hero .meta-row .dotp { width: 3px; height: 3px; border-radius: 999px; background: var(--fg-subtle); opacity: .55; align-self: center; }
+
+  /* Bio narrative inside the outro */
+  .bio-medi {
+    margin: 8px 16px 16px;
+    background: var(--bg-elev-2);
+    border-radius: var(--radius-2xl);
+    padding: 16px;
+    border: 1px solid color-mix(in oklab, var(--accent) 14%, transparent);
+    box-shadow: var(--elev-1);
+  }
+  .bio-medi .head {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 4px;
+  }
+  .bio-medi .head .glyph {
+    width: 30px; height: 30px; border-radius: 10px;
+    background: var(--accent-alpha-12); color: var(--accent);
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .bio-medi .head .glyph .material-symbols-rounded {
+    font-size: 17px;
+    font-variation-settings: 'wght' 500;
+  }
+  .bio-medi .head .ttl {
+    color: var(--fg); font: 600 14px/18px var(--font-sans); letter-spacing: .1px;
+    flex: 1;
+  }
+  .bio-medi .head .source {
+    color: var(--fg-subtle);
+    font: 500 11px/14px var(--font-sans); letter-spacing: .25px;
+  }
+  .bio-medi .narrative {
+    color: var(--fg);
+    font: 400 14px/22px var(--font-sans); letter-spacing: .1px;
+    text-wrap: pretty;
+    margin: 6px 0 12px;
+  }
+  .bio-medi .narrative b { font-weight: 600; }
+
+  /* Mini HR chart */
+  .hr-chart {
+    background: var(--bg-elev-1);
+    border-radius: var(--radius-lg);
+    padding: 12px 14px 10px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+    column-gap: 12px;
+    row-gap: 6px;
+  }
+  .hr-chart .axis {
+    grid-column: 1; grid-row: 1 / span 2;
+    display: flex; flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: 4px 0 18px;
+    color: var(--fg-subtle);
+    font: 500 10px/12px var(--font-mono); letter-spacing: 0;
+  }
+  .hr-chart .plot {
+    grid-column: 2; grid-row: 1;
+    position: relative;
+    height: 84px;
+  }
+  .hr-chart .plot svg {
+    display: block; width: 100%; height: 100%;
+    overflow: visible;
+  }
+  .hr-chart .plot .endpoint {
+    position: absolute;
+    top: 0; right: 4px;
+    background: var(--accent);
+    color: var(--fg-on-accent);
+    font: 600 10px/14px var(--font-mono);
+    padding: 2px 7px; border-radius: 999px;
+    transform: translateY(40px);
+  }
+  .hr-chart .plot .startpoint {
+    position: absolute;
+    top: 8px; left: -2px;
+    color: var(--fg-subtle);
+    font: 500 10px/12px var(--font-mono);
+  }
+  .hr-chart .xaxis {
+    grid-column: 2; grid-row: 2;
+    display: flex; justify-content: space-between;
+    color: var(--fg-subtle);
+    font: 500 10px/12px var(--font-sans); letter-spacing: .4px;
+  }
+
+  /* HRV — gated for FREE — inside the medi card */
+  .hrv-gate {
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: var(--radius-md);
+    background: var(--accent-alpha-08);
+    border: 1px dashed color-mix(in oklab, var(--accent) 36%, transparent);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .hrv-gate .lock {
+    width: 28px; height: 28px; border-radius: 999px;
+    background: var(--accent-alpha-12); color: var(--accent);
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .hrv-gate .lock .material-symbols-rounded { font-size: 16px; }
+  .hrv-gate .copy {
+    color: var(--fg);
+    font: 500 12px/16px var(--font-sans); letter-spacing: .1px;
+    flex: 1;
+  }
+  .hrv-gate .copy .b { color: var(--fg-subtle); font-weight: 400; }
+  .hrv-gate .pro {
+    color: var(--accent); background: var(--accent-alpha-12);
+    border-radius: 999px; padding: 3px 8px;
+    font: 600 10px/12px var(--font-sans); letter-spacing: .8px;
+    text-transform: uppercase;
+  }
+
+  .bio-medi .conf {
+    display: flex; align-items: center; gap: 6px;
+    margin-top: 12px; padding-top: 10px;
+    border-top: 1px solid var(--divider);
+    color: var(--fg-subtle);
+    font: 400 11px/14px var(--font-sans); letter-spacing: .4px;
+    flex-wrap: wrap;
+  }
+  .bio-medi .conf .bars { display: inline-flex; gap: 2px; margin-right: 2px; }
+  .bio-medi .conf .seg { width: 10px; height: 4px; border-radius: 999px; background: var(--fg-disabled); opacity: .45; }
+  .bio-medi .conf.high .seg { background: var(--semantic-good); opacity: 1; }
+  .bio-medi .conf .device { color: var(--fg-muted); }
+  .bio-medi .conf .dotp { width: 3px; height: 3px; border-radius: 999px; background: var(--fg-subtle); opacity: .55; }
+  .bio-medi .conf .lvl { color: var(--semantic-good); }
+
+  /* Outro CTAs */
+  .medi-cta {
+    padding: 0 20px 28px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .btn-pill {
+    height: 52px; border-radius: 999px; border: 0;
+    font: 600 14px/18px var(--font-sans); letter-spacing: .1px;
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 8px; cursor: pointer;
+    transition: background var(--dur-short-2) var(--ease-emphasized);
+  }
+  .btn-pill.primary { background: var(--accent); color: var(--fg-on-accent); }
+  .btn-pill.primary:hover { background: var(--accent-pressed); }
+  .btn-pill.ghost { background: transparent; color: var(--fg-muted); }
+  .btn-pill.ghost:hover { color: var(--fg); }
+  .btn-pill .material-symbols-rounded { font-size: 18px; }
+
+  /* ========================================================================
+     CARD 3 — Home Today
+     ======================================================================== */
+  .frame-home { min-height: 680px; display: flex; flex-direction: column; }
+  .home-top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 14px 0;
+  }
+  .home-top .leaf {
+    width: 36px; height: 36px; border-radius: 999px;
+    background: var(--accent-alpha-12); color: var(--accent);
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .home-top .leaf .material-symbols-rounded {
+    font-size: 18px;
+    font-variation-settings: 'FILL' 1;
+  }
+  .home-top .right { display: inline-flex; gap: 4px; color: var(--fg-muted); }
+  .home-top .icon-btn {
+    width: 40px; height: 40px; border-radius: 999px;
+    border: 0; background: transparent; color: var(--fg-muted);
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .home-top .icon-btn .material-symbols-rounded { font-size: 22px; }
+  .home-greet { padding: 18px 20px 12px; }
+  .home-greet .hello {
+    color: var(--fg-subtle);
+    font: 500 12px/16px var(--font-sans); letter-spacing: .4px;
+    text-transform: uppercase;
+  }
+  .home-greet h1 {
+    font: 600 28px/34px var(--font-display);
+    color: var(--fg); letter-spacing: -.1px;
+    margin: 6px 0 0;
+  }
+
+  /* The narrative — single line, observational */
+  .home-bio {
+    margin: 6px 16px 16px;
+    background: var(--bg-elev-1);
+    border-radius: var(--radius-2xl);
+    padding: 18px;
+    border: 1px solid var(--divider);
+    cursor: pointer;
+    transition: background var(--dur-short-2) var(--ease-emphasized),
+                border-color var(--dur-short-2) var(--ease-emphasized);
+    position: relative;
+  }
+  .home-bio:hover { background: var(--bg-elev-2); border-color: var(--border); }
+  .home-bio:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .home-bio .narrative {
+    color: var(--fg);
+    font: 400 15px/22px var(--font-sans); letter-spacing: .1px;
+    text-wrap: pretty;
+  }
+  .home-bio .narrative b { font-weight: 600; }
+  .home-bio .chips {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    margin-top: 12px;
+  }
+  .home-bio .chips .chip {
+    height: 26px; padding: 0 10px;
+    border-radius: 999px;
+    background: var(--bg-elev-2);
+    color: var(--fg-muted);
+    font: 500 11px/14px var(--font-sans); letter-spacing: .25px;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .home-bio .chips .chip .material-symbols-rounded {
+    font-size: 13px;
+    color: var(--fg-subtle);
+  }
+  .home-bio .chips .chip.bio .material-symbols-rounded {
+    color: var(--accent);
+  }
+  .home-bio .arrow {
+    position: absolute; top: 18px; right: 18px;
+    color: var(--fg-subtle);
+  }
+  .home-bio .arrow .material-symbols-rounded { font-size: 18px; }
+
+  /* Faux home sections — give context without taking over */
+  .home-section {
+    padding: 6px 20px 10px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .home-section .h {
+    color: var(--fg);
+    font: 600 16px/22px var(--font-sans); letter-spacing: 0;
+  }
+  .home-section .more {
+    color: var(--fg-muted);
+    font: 500 12px/16px var(--font-sans); letter-spacing: .25px;
+  }
+  .home-tiles {
+    padding: 0 16px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  }
+  .home-tile {
+    background: var(--bg-elev-1);
+    border-radius: var(--radius-lg);
+    padding: 14px;
+    min-height: 96px;
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .home-tile .ic {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: var(--bg-elev-2);
+    color: var(--fg-muted);
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .home-tile .ic .material-symbols-rounded { font-size: 16px; }
+  .home-tile .t {
+    color: var(--fg);
+    font: 600 13px/16px var(--font-sans); letter-spacing: .1px;
+  }
+  .home-tile .s {
+    color: var(--fg-subtle);
+    font: 400 11px/14px var(--font-sans); letter-spacing: .25px;
+    margin-top: 2px;
+  }
+
+  /* Bottom nav (NOT a fitness tab — the bio surface lives behind context) */
+  .home-nav {
+    margin-top: auto;
+    border-top: 1px solid var(--divider);
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    background: var(--bg);
+  }
+  .home-nav .item {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 6px 4px;
+    color: var(--fg-subtle);
+    font: 500 10px/12px var(--font-sans); letter-spacing: .4px;
+  }
+  .home-nav .item .material-symbols-rounded { font-size: 22px; }
+  .home-nav .item.active { color: var(--fg); }
+  .home-nav .item.active .material-symbols-rounded {
+    color: var(--accent);
+    font-variation-settings: 'FILL' 1, 'wght' 500;
+  }
+
+  /* ========================================================================
+     CARD 4 — Insight cross-signal (PRO)
+     ======================================================================== */
+  .frame-insight { min-height: 680px; display: flex; flex-direction: column; }
+  .insight-top {
+    padding: 12px 20px 4px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .insight-top h2 {
+    font: 600 24px/30px var(--font-display);
+    color: var(--fg); margin: 0; letter-spacing: -.1px;
+  }
+  .insight-top .filter {
+    height: 32px; padding: 0 12px;
+    border-radius: 999px;
+    background: var(--bg-elev-2); color: var(--fg-muted);
+    border: 0;
+    font: 500 12px/16px var(--font-sans);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .insight-top .filter .material-symbols-rounded { font-size: 14px; }
+
+  .insight-tabs {
+    padding: 0 16px 4px;
+    display: flex; gap: 6px;
+    overflow-x: auto;
+  }
+  .insight-tabs .tab {
+    height: 30px; padding: 0 12px; border-radius: 999px;
+    background: var(--bg-elev-1); color: var(--fg-muted);
+    border: 0;
+    font: 500 12px/16px var(--font-sans); letter-spacing: .25px;
+    white-space: nowrap;
+  }
+  .insight-tabs .tab.active {
+    background: var(--accent-alpha-12); color: var(--fg);
+  }
+
+  /* Faux preceding card so the user sees the new card sits IN A LIST */
+  .insight-card-prev {
+    margin: 12px 16px 0;
+    padding: 16px;
+    background: var(--bg-elev-1);
+    border-radius: var(--radius-2xl);
+    border: 1px solid var(--divider);
+  }
+  .insight-card-prev .h {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  }
+  .insight-card-prev .h .ic {
+    width: 26px; height: 26px; border-radius: 8px;
+    background: var(--bg-elev-2); color: var(--fg-muted);
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .insight-card-prev .h .ic .material-symbols-rounded { font-size: 15px; }
+  .insight-card-prev .h .t {
+    color: var(--fg);
+    font: 600 13px/18px var(--font-sans); letter-spacing: .1px; flex: 1;
+  }
+  .insight-card-prev .h .when {
+    color: var(--fg-subtle);
+    font: 400 11px/14px var(--font-sans);
+  }
+  .insight-card-prev .body {
+    color: var(--fg-subtle);
+    font: 400 13px/20px var(--font-sans); letter-spacing: .1px;
+    text-wrap: pretty;
+  }
+  .insight-card-prev .body b { color: var(--fg); font-weight: 600; }
+
+  /* The cross-signal correlation card itself */
+  .corr {
+    margin: 12px 16px 16px;
+    background: var(--bg-elev-2);
+    border-radius: var(--radius-2xl);
+    border: 1px solid color-mix(in oklab, var(--accent) 18%, transparent);
+    padding: 16px;
+    box-shadow: var(--elev-1);
+    position: relative;
+  }
+  .corr .head {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .corr .head .glyph {
+    width: 32px; height: 32px; border-radius: 10px;
+    background: var(--accent-alpha-12); color: var(--accent);
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .corr .head .glyph .material-symbols-rounded {
+    font-size: 18px;
+    font-variation-settings: 'wght' 500;
+  }
+  .corr .head .titleblock { flex: 1; min-width: 0; }
+  .corr .head .row {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  }
+  .corr .head .ttl {
+    color: var(--fg);
+    font: 600 13px/18px var(--font-sans); letter-spacing: .1px;
+  }
+  .corr .head .pro {
+    color: var(--accent); background: var(--accent-alpha-12);
+    border-radius: 999px; padding: 3px 8px;
+    font: 600 10px/12px var(--font-sans); letter-spacing: .8px;
+    text-transform: uppercase;
+  }
+  .corr .head .when {
+    color: var(--fg-subtle);
+    font: 400 11px/14px var(--font-sans); letter-spacing: .25px;
+    margin-top: 2px; display: block;
+  }
+  .corr .dismiss {
+    width: 30px; height: 30px; border-radius: 999px;
+    background: transparent; color: var(--fg-subtle); border: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  .corr .dismiss:hover { background: var(--bg-elev-3); color: var(--fg); }
+  .corr .dismiss .material-symbols-rounded { font-size: 18px; }
+
+  .corr .pattern-label {
+    margin-top: 12px;
+    color: var(--accent);
+    font: 600 11px/14px var(--font-sans); letter-spacing: 1.2px;
+    text-transform: uppercase;
+  }
+  .corr .narrative {
+    color: var(--fg);
+    font: 400 14px/22px var(--font-sans); letter-spacing: .1px;
+    text-wrap: pretty;
+    margin: 4px 0 0;
+  }
+  .corr .narrative b { font-weight: 600; }
+
+  /* Tiny sparkline pair — meditation weeks vs HRV */
+  .corr-mini {
+    margin-top: 14px;
+    background: var(--bg-elev-1);
+    border-radius: var(--radius-lg);
+    padding: 12px 14px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .corr-mini .row {
+    display: grid; grid-template-columns: 86px 1fr 38px;
+    gap: 10px; align-items: center;
+  }
+  .corr-mini .row .lbl {
+    color: var(--fg-subtle);
+    font: 500 11px/14px var(--font-sans); letter-spacing: .25px;
+  }
+  .corr-mini .row .lbl .b {
+    display: block;
+    color: var(--fg); font-weight: 600;
+    font-size: 12px;
+  }
+  .corr-mini .bars {
+    display: flex; gap: 4px; height: 28px; align-items: end;
+  }
+  .corr-mini .bars .b {
+    flex: 1; background: var(--bg-elev-3);
+    border-radius: 3px;
+    min-width: 6px;
+  }
+  .corr-mini .bars.med .b { background: color-mix(in oklab, var(--accent) 36%, var(--bg-elev-3)); }
+  .corr-mini .bars.med .b.hi { background: var(--accent); }
+  .corr-mini .bars.hrv .b { background: var(--bg-elev-3); }
+  .corr-mini .bars.hrv .b.hi { background: color-mix(in oklab, var(--accent) 60%, var(--bg-elev-3)); }
+  .corr-mini .row .val {
+    text-align: right;
+    color: var(--fg);
+    font: 600 12px/14px var(--font-mono);
+  }
+  .corr-mini .row .val .d {
+    display: block;
+    color: var(--accent);
+    font: 500 10px/12px var(--font-sans);
+    margin-top: 1px;
+  }
+
+  /* Sources + footer */
+  .corr .sources {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-top: 12px;
+  }
+  .corr .sources .chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    height: 24px; padding: 0 10px 0 8px;
+    border-radius: 999px;
+    background: var(--bg-elev-3);
+    color: var(--fg-muted);
+    font: 500 11px/14px var(--font-sans); letter-spacing: .25px;
+  }
+  .corr .sources .chip .material-symbols-rounded { font-size: 13px; color: var(--fg-subtle); }
+
+  .corr .conf {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    margin-top: 12px; padding-top: 10px;
+    border-top: 1px solid var(--divider);
+    color: var(--fg-subtle);
+    font: 400 11px/14px var(--font-sans); letter-spacing: .4px;
+  }
+  .corr .conf .bars { display: inline-flex; gap: 2px; margin-right: 2px; }
+  .corr .conf .seg { width: 10px; height: 4px; border-radius: 999px; background: var(--fg-disabled); opacity: .45; }
+  .corr .conf.medium .seg:nth-child(-n+2) { background: var(--semantic-good); opacity: 1; }
+  .corr .conf .device { color: var(--fg-muted); }
+  .corr .conf .lvl { color: var(--fg); }
+  .corr .conf .dotp { width: 3px; height: 3px; border-radius: 999px; background: var(--fg-subtle); opacity: .55; }
+
+  .corr .cta-row {
+    display: flex; gap: 6px; align-items: center;
+    margin: 10px -8px -6px;
+    flex-wrap: wrap;
+  }
+  .corr .cta-row .ghost-btn {
+    background: transparent; border: 0;
+    color: var(--accent);
+    font: 600 12px/16px var(--font-sans); letter-spacing: .1px;
+    padding: 10px 10px; min-height: 44px;
+    border-radius: var(--radius-md);
+    display: inline-flex; align-items: center; gap: 6px;
+    cursor: pointer;
+  }
+  .corr .cta-row .ghost-btn:hover { background: var(--accent-alpha-08); }
+  .corr .cta-row .ghost-btn.muted { color: var(--fg-muted); }
+  .corr .cta-row .ghost-btn.muted:hover { background: var(--bg-elev-3); color: var(--fg); }
+  .corr .cta-row .ghost-btn .material-symbols-rounded { font-size: 16px; }
+  .corr .cta-row .sp { flex: 1; }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="gallery">
+  <div class="gallery-header">
+    <div>
+      <div class="crumbs">
+        Calmify <span class="sep">/</span> Bio-signal <span class="sep">/</span> Inline contextual cards
+      </div>
+      <h1>4 cards in 4 flows.</h1>
+      <p class="lede">
+        Bio data threaded into existing Calmify surfaces — journal, meditation,
+        home, insight — as small, observational, dismissable presences. No new
+        Fitness tab. No rings, no scores, no targets. The number is never naked;
+        the body is offered as context for what the mind is already doing.
+      </p>
+    </div>
+    <button class="theme-pill" id="theme-toggle" aria-label="Toggle theme">
+      <span class="material-symbols-rounded">light_mode</span>
+      <span class="lbl">Light</span>
+    </button>
+  </div>
+
+  <div class="variants">
+
+    <!-- =====================================================================
+         CARD 1 — Journal entry composer
+         ===================================================================== -->
+    <div class="variant">
+      <div class="variant-meta">
+        <span class="tag">1</span>
+        <div>
+          <div class="title">Journal · composer banner</div>
+          <div class="desc">Slim, dismissable, never modal · HRV nudge</div>
+        </div>
+      </div>
+
+      <div class="frame frame-journal" role="img" aria-label="Journal composer with a slim bio banner above the writing area">
+        <div class="status" aria-hidden="true">
+          <span>9:24</span>
+          <span class="glyphs">
+            <span class="material-symbols-rounded">signal_cellular_alt</span>
+            <span class="material-symbols-rounded">wifi</span>
+            <span class="material-symbols-rounded">battery_full</span>
+          </span>
+        </div>
+
+        <div class="journal-top">
+          <button class="icon-btn" aria-label="Close composer">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+          <div class="right">
+            <button class="icon-btn" aria-label="Attach photo">
+              <span class="material-symbols-rounded">image</span>
+            </button>
+            <button class="icon-btn" aria-label="Voice note">
+              <span class="material-symbols-rounded">mic</span>
+            </button>
+            <button class="save-pill" type="button">Save</button>
+          </div>
+        </div>
+
+        <div class="journal-date" aria-hidden="true">
+          <span>Tue · 11 May</span>
+          <span class="dot"></span>
+          <span>Morning</span>
+        </div>
+
+        <!-- The bio banner — appears above the composer, dismissable -->
+        <aside class="bio-banner" aria-live="polite" aria-label="Bio context for this entry">
+          <span class="heart" aria-hidden="true">
+            <span class="material-symbols-rounded">favorite</span>
+          </span>
+          <div class="copy">
+            This morning your <b>HRV was 32 ms</b> — a little below your
+            usual. Want to touch on how that feels?
+            <span class="src">From Mi Band 10 · medium confidence</span>
+          </div>
+          <button class="dismiss" type="button" aria-label="Dismiss bio context for this entry">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </aside>
+
+        <div class="mood-row" aria-hidden="true">
+          <span class="chip selected"><span class="dotpip" style="background:var(--mood-tense)"></span>Tense</span>
+          <span class="chip"><span class="dotpip" style="background:var(--mood-calm)"></span>Calm</span>
+          <span class="chip"><span class="dotpip" style="background:var(--mood-neutral)"></span>Neutral</span>
+          <span class="chip"><span class="dotpip" style="background:var(--mood-happy)"></span>Happy</span>
+        </div>
+
+        <div class="composer">
+          <h2>This morning…</h2>
+          <p class="caret">I slept fine but woke up with my jaw clenched. The deck<span></span></p>
+        </div>
+
+        <div class="composer-toolbar" aria-hidden="true">
+          <span class="material-symbols-rounded">format_bold</span>
+          <span class="material-symbols-rounded">format_italic</span>
+          <span class="material-symbols-rounded">format_list_bulleted</span>
+          <span class="sp"></span>
+          <span class="material-symbols-rounded">tag</span>
+        </div>
+      </div>
+
+      <p style="margin:0 4px; color:var(--fg-subtle); font:400 12px/18px var(--font-sans); letter-spacing:.25px;">
+        Once dismissed, the banner does not return for this entry. The composer
+        never blocks input; the bio reading is a question, not a prompt.
+      </p>
+    </div>
+
+    <!-- =====================================================================
+         CARD 2 — Meditation post-session
+         ===================================================================== -->
+    <div class="variant">
+      <div class="variant-meta">
+        <span class="tag">2</span>
+        <div>
+          <div class="title">Meditation · post-session</div>
+          <div class="desc">Mini HR chart · HRV gated for FREE</div>
+        </div>
+      </div>
+
+      <div class="frame frame-medi" role="img" aria-label="Meditation outro screen with a body-followed bio card">
+        <div class="status" aria-hidden="true">
+          <span>9:34</span>
+          <span class="glyphs">
+            <span class="material-symbols-rounded">signal_cellular_alt</span>
+            <span class="material-symbols-rounded">wifi</span>
+            <span class="material-symbols-rounded">battery_full</span>
+          </span>
+        </div>
+
+        <div class="medi-hero">
+          <div class="stamp" aria-hidden="true">
+            <span class="material-symbols-rounded">self_improvement</span>
+          </div>
+          <h2>You finished.</h2>
+          <p class="sub">10 minutes · Body Scan · Morning</p>
+          <div class="meta-row" aria-hidden="true">
+            <span><span class="b">10:02</span> minutes</span>
+            <span class="dotp"></span>
+            <span><span class="b">7</span> days streak</span>
+          </div>
+        </div>
+
+        <!-- The bio card embedded in the outro -->
+        <article class="bio-medi" aria-labelledby="medi-bio-ttl">
+          <header class="head">
+            <span class="glyph" aria-hidden="true">
+              <span class="material-symbols-rounded">monitor_heart</span>
+            </span>
+            <span class="ttl" id="medi-bio-ttl">Your body followed</span>
+            <span class="source">during this session</span>
+          </header>
+
+          <p class="narrative">
+            Heart rate eased from <b>78</b> down to <b>64 bpm</b>. The drop
+            mirrors the breath pacing — the meditation seems to have landed in
+            the body, not just the mind.
+          </p>
+
+          <div class="hr-chart" aria-label="Heart rate during this session">
+            <div class="axis" aria-hidden="true">
+              <span>80</span>
+              <span>72</span>
+              <span>64</span>
+            </div>
+            <div class="plot">
+              <svg viewBox="0 0 200 80" preserveAspectRatio="none" aria-hidden="true">
+                <!-- typical-range dotted band -->
+                <line x1="0" y1="32" x2="200" y2="32" stroke="currentColor" stroke-dasharray="2 4" stroke-opacity=".25" />
+                <line x1="0" y1="56" x2="200" y2="56" stroke="currentColor" stroke-dasharray="2 4" stroke-opacity=".25" />
+                <!-- fill under -->
+                <path d="M0,12 C20,16 36,22 50,28 C70,36 90,46 120,52 C150,58 170,62 200,60 L200,80 L0,80 Z"
+                      fill="var(--accent)" fill-opacity=".12" />
+                <!-- the line -->
+                <path d="M0,12 C20,16 36,22 50,28 C70,36 90,46 120,52 C150,58 170,62 200,60"
+                      fill="none" stroke="var(--accent)" stroke-width="2.5"
+                      stroke-linecap="round" stroke-linejoin="round" />
+                <!-- end dot -->
+                <circle cx="200" cy="60" r="3.5" fill="var(--accent)" />
+                <circle cx="0" cy="12" r="3" fill="var(--fg-subtle)" />
+              </svg>
+              <span class="startpoint">78</span>
+              <span class="endpoint">64</span>
+            </div>
+            <div class="xaxis" aria-hidden="true">
+              <span>0:00</span><span>5:00</span><span>10:00</span>
+            </div>
+          </div>
+
+          <!-- HRV detail — PRO gated for FREE viewers -->
+          <div class="hrv-gate" role="group" aria-label="HRV detail, PRO only">
+            <span class="lock" aria-hidden="true">
+              <span class="material-symbols-rounded">lock</span>
+            </span>
+            <div class="copy">
+              HRV improved during the session — <span class="b">see the detail with PRO</span>
+            </div>
+            <span class="pro" aria-label="PRO feature">PRO</span>
+          </div>
+
+          <footer class="conf high" aria-label="Data confidence">
+            <span class="bars" aria-hidden="true">
+              <span class="seg"></span><span class="seg"></span><span class="seg"></span>
+            </span>
+            <span class="device">From Mi Band 10</span>
+            <span class="dotp" aria-hidden="true"></span>
+            <span class="lvl">High confidence</span>
+          </footer>
+        </article>
+
+        <div class="medi-cta">
+          <button class="btn-pill primary" type="button">
+            <span class="material-symbols-rounded" aria-hidden="true">edit_note</span>
+            Save to journal
+          </button>
+          <button class="btn-pill ghost" type="button">Continue</button>
+        </div>
+      </div>
+
+      <p style="margin:0 4px; color:var(--fg-subtle); font:400 12px/18px var(--font-sans); letter-spacing:.25px;">
+        FREE sees the HR drop; the HRV layer sits behind a non-hostile lock.
+        "Continue" leaves with nothing saved — no penalty for ignoring.
+      </p>
+    </div>
+
+    <!-- =====================================================================
+         CARD 3 — Home Today narrative
+         ===================================================================== -->
+    <div class="variant">
+      <div class="variant-meta">
+        <span class="tag">3</span>
+        <div>
+          <div class="title">Home · Today narrative</div>
+          <div class="desc">Replaces the quick-stats row · no scores</div>
+        </div>
+      </div>
+
+      <div class="frame frame-home" role="img" aria-label="Home screen with a single-sentence bio narrative after the greeting">
+        <div class="status" aria-hidden="true">
+          <span>7:42</span>
+          <span class="glyphs">
+            <span class="material-symbols-rounded">signal_cellular_alt</span>
+            <span class="material-symbols-rounded">wifi</span>
+            <span class="material-symbols-rounded">battery_full</span>
+          </span>
+        </div>
+
+        <div class="home-top">
+          <span class="leaf" aria-hidden="true">
+            <span class="material-symbols-rounded">spa</span>
+          </span>
+          <div class="right">
+            <button class="icon-btn" aria-label="Search">
+              <span class="material-symbols-rounded">search</span>
+            </button>
+            <button class="icon-btn" aria-label="Notifications">
+              <span class="material-symbols-rounded">notifications_none</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="home-greet">
+          <div class="hello">Tuesday morning</div>
+          <h1>Good morning, Lea.</h1>
+        </div>
+
+        <!-- The narrative card — single sentence + mini chips -->
+        <button type="button" class="home-bio" aria-label="Open bio context. You slept 7 hours 24 minutes, close to your average. Heart rate this morning is 64 bpm — a good sign.">
+          <p class="narrative">
+            You slept <b>7h 24m</b>, close to your average. Heart rate this
+            morning is <b>64 bpm</b> — a good sign.
+          </p>
+          <div class="chips" aria-hidden="true">
+            <span class="chip bio">
+              <span class="material-symbols-rounded">bedtime</span>7h 24m
+            </span>
+            <span class="chip bio">
+              <span class="material-symbols-rounded">favorite</span>64 bpm
+            </span>
+            <span class="chip">
+              <span class="material-symbols-rounded">graphic_eq</span>medium confidence
+            </span>
+          </div>
+          <span class="arrow" aria-hidden="true">
+            <span class="material-symbols-rounded">chevron_right</span>
+          </span>
+        </button>
+
+        <div class="home-section">
+          <span class="h">For this morning</span>
+          <span class="more">See all</span>
+        </div>
+        <div class="home-tiles">
+          <div class="home-tile">
+            <span class="ic" aria-hidden="true"><span class="material-symbols-rounded">self_improvement</span></span>
+            <div>
+              <div class="t">Body Scan</div>
+              <div class="s">10 min · grounding</div>
+            </div>
+          </div>
+          <div class="home-tile">
+            <span class="ic" aria-hidden="true"><span class="material-symbols-rounded">edit_note</span></span>
+            <div>
+              <div class="t">Morning page</div>
+              <div class="s">3 prompts ready</div>
+            </div>
+          </div>
+        </div>
+
+        <nav class="home-nav" aria-label="Primary">
+          <div class="item active">
+            <span class="material-symbols-rounded">home</span>
+            <span>Today</span>
+          </div>
+          <div class="item">
+            <span class="material-symbols-rounded">self_improvement</span>
+            <span>Meditate</span>
+          </div>
+          <div class="item">
+            <span class="material-symbols-rounded">edit_note</span>
+            <span>Journal</span>
+          </div>
+          <div class="item">
+            <span class="material-symbols-rounded">lightbulb</span>
+            <span>Insight</span>
+          </div>
+        </nav>
+      </div>
+
+      <p style="margin:0 4px; color:var(--fg-subtle); font:400 12px/18px var(--font-sans); letter-spacing:.25px;">
+        No ring, no score, no goal. Tapping opens the Bio Context screen for
+        users who want more. Skippable for users who don't.
+      </p>
+    </div>
+
+    <!-- =====================================================================
+         CARD 4 — Insight · cross-signal correlation (PRO)
+         ===================================================================== -->
+    <div class="variant">
+      <div class="variant-meta">
+        <span class="tag">4</span>
+        <div>
+          <div class="title">Insight · cross-signal</div>
+          <div class="desc">PRO pattern card · sits inside the feed</div>
+        </div>
+      </div>
+
+      <div class="frame frame-insight" role="img" aria-label="Insight tab with a cross-signal correlation card alongside other pattern cards">
+        <div class="status" aria-hidden="true">
+          <span>21:08</span>
+          <span class="glyphs">
+            <span class="material-symbols-rounded">signal_cellular_alt</span>
+            <span class="material-symbols-rounded">wifi</span>
+            <span class="material-symbols-rounded">battery_full</span>
+          </span>
+        </div>
+
+        <div class="insight-top">
+          <h2>Insight</h2>
+          <button class="filter" type="button">
+            <span class="material-symbols-rounded" aria-hidden="true">tune</span>
+            6 weeks
+          </button>
+        </div>
+
+        <div class="insight-tabs" aria-hidden="true">
+          <button class="tab active">All</button>
+          <button class="tab">Mood</button>
+          <button class="tab">Sleep</button>
+          <button class="tab">Body</button>
+          <button class="tab">Practice</button>
+        </div>
+
+        <!-- A neighbouring (non-PRO) pattern card, dimmed-down so the
+             correlation card reads as the focus item. -->
+        <div class="insight-card-prev" aria-hidden="true">
+          <div class="h">
+            <span class="ic"><span class="material-symbols-rounded">edit_note</span></span>
+            <span class="t">Words you've returned to</span>
+            <span class="when">this week</span>
+          </div>
+          <p class="body">
+            "<b>tired</b>" appeared in <b>5 of 6</b> evening entries — most
+            often after work days that ended after 19:00.
+          </p>
+        </div>
+
+        <!-- THE card — cross-signal correlation, PRO -->
+        <article class="corr" aria-labelledby="corr-ttl">
+          <header class="head">
+            <span class="glyph" aria-hidden="true">
+              <span class="material-symbols-rounded">auto_awesome</span>
+            </span>
+            <div class="titleblock">
+              <div class="row">
+                <span class="ttl" id="corr-ttl">Cross-signal pattern</span>
+                <span class="pro" aria-label="PRO feature">PRO</span>
+              </div>
+              <span class="when">last 6 weeks · refreshed today</span>
+            </div>
+            <button class="dismiss" type="button" aria-label="Dismiss this pattern">
+              <span class="material-symbols-rounded">close</span>
+            </button>
+          </header>
+
+          <div class="pattern-label">Pattern detected</div>
+          <p class="narrative">
+            Weeks where you meditated <b>3 or more times</b> show an average
+            HRV roughly <b>15% higher</b> than weeks with fewer sessions.
+            Coincidence? Maybe — but the link has held for six weeks running.
+          </p>
+
+          <div class="corr-mini" aria-label="Meditation sessions per week and average HRV per week">
+            <div class="row">
+              <span class="lbl">Meditation<span class="b">sessions / week</span></span>
+              <div class="bars med" aria-hidden="true">
+                <span class="b" style="height:30%"></span>
+                <span class="b hi" style="height:75%"></span>
+                <span class="b" style="height:40%"></span>
+                <span class="b hi" style="height:90%"></span>
+                <span class="b hi" style="height:65%"></span>
+                <span class="b hi" style="height:85%"></span>
+              </div>
+              <span class="val">3.7<span class="d">avg</span></span>
+            </div>
+            <div class="row">
+              <span class="lbl">HRV<span class="b">avg ms / week</span></span>
+              <div class="bars hrv" aria-hidden="true">
+                <span class="b" style="height:38%"></span>
+                <span class="b hi" style="height:78%"></span>
+                <span class="b" style="height:48%"></span>
+                <span class="b hi" style="height:92%"></span>
+                <span class="b hi" style="height:70%"></span>
+                <span class="b hi" style="height:84%"></span>
+              </div>
+              <span class="val">41 ms<span class="d">+15%</span></span>
+            </div>
+          </div>
+
+          <div class="sources" aria-label="Sources used">
+            <span class="chip"><span class="material-symbols-rounded" aria-hidden="true">self_improvement</span>Meditation log</span>
+            <span class="chip"><span class="material-symbols-rounded" aria-hidden="true">graphic_eq</span>HRV</span>
+            <span class="chip"><span class="material-symbols-rounded" aria-hidden="true">calendar_month</span>6 weeks</span>
+          </div>
+
+          <footer class="conf medium" aria-label="Data confidence">
+            <span class="bars" aria-hidden="true">
+              <span class="seg"></span><span class="seg"></span><span class="seg"></span>
+            </span>
+            <span class="device">From Mi Band 10 + Calmify log</span>
+            <span class="dotp" aria-hidden="true"></span>
+            <span class="lvl">Medium confidence</span>
+          </footer>
+
+          <div class="cta-row">
+            <button type="button" class="ghost-btn">
+              <span class="material-symbols-rounded" aria-hidden="true">show_chart</span>
+              See extended chart
+            </button>
+            <span class="sp"></span>
+            <button type="button" class="ghost-btn muted" aria-label="How we got this">
+              <span class="material-symbols-rounded" aria-hidden="true">info</span>
+              How we got this
+            </button>
+          </div>
+        </article>
+
+      </div>
+
+      <p style="margin:0 4px; color:var(--fg-subtle); font:400 12px/18px var(--font-sans); letter-spacing:.25px;">
+        Dismissable in-place (×) without leaving the feed. The card never
+        claims causation — "Coincidence? Maybe" keeps the observation honest.
+      </p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // Theme toggle — matches BioNarrativeCard.html
+  (function () {
+    const btn = document.getElementById('theme-toggle');
+    const lbl = btn.querySelector('.lbl');
+    const icn = btn.querySelector('.material-symbols-rounded');
+    btn.addEventListener('click', () => {
+      const isLight = document.body.classList.toggle('light-theme');
+      lbl.textContent = isLight ? 'Dark' : 'Light';
+      icn.textContent = isLight ? 'dark_mode' : 'light_mode';
+    });
+  })();
+
+  // All × dismiss buttons — visually collapse their parent card
+  document.querySelectorAll('.bio-banner .dismiss, .corr .dismiss').forEach((b) => {
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const card = b.closest('.bio-banner, .corr');
+      if (!card) return;
+      card.style.transition = 'opacity 200ms, transform 200ms, max-height 240ms, margin 240ms, padding 240ms';
+      card.style.opacity = '0';
+      card.style.transform = 'translateY(-4px)';
+      card.style.maxHeight = card.offsetHeight + 'px';
+      requestAnimationFrame(() => {
+        card.style.maxHeight = '0px';
+        card.style.marginTop = '0px';
+        card.style.marginBottom = '0px';
+        card.style.paddingTop = '0px';
+        card.style.paddingBottom = '0px';
+        card.style.overflow = 'hidden';
+      });
+    });
+  });
+</script>
+</body>
+</html>

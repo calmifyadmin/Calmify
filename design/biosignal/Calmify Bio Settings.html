@@ -1,0 +1,1488 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Calmify — Settings · Bio-signals</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="calmify.css" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+<style>
+  /* ==========================================================================
+     Settings → Bio-signals — granular control surface
+     ----------------------------------------------------------------------
+     A single in-Settings screen where the user owns the entire bio integration:
+       1. Master toggle + connected status
+       2. Per-data-type permissions (7 toggles) with per-row data deletion
+       3. Connected sources
+       4. Privacy & data (export / wipe / cloud-upload tradeoff)
+       5. Insight & narrative surface toggles
+       6. Subscription tier reminder
+     Tone: maximum user control. Every toggle has a "why". Nothing is "always on".
+     ========================================================================== */
+
+  .material-symbols-rounded {
+    font-family: 'Material Symbols Rounded';
+    font-weight: normal; font-style: normal;
+    font-size: 24px; line-height: 1;
+    letter-spacing: normal; text-transform: none;
+    display: inline-block; white-space: nowrap;
+    word-wrap: normal; direction: ltr;
+    font-feature-settings: 'liga';
+    -webkit-font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :root {
+    --semantic-good:           var(--accent);
+    --semantic-good-soft:      var(--accent-alpha-12);
+    --semantic-attention:      #E0A93D;
+    --semantic-attention-soft: rgba(224, 169, 61, 0.14);
+    --destructive:             #E07A7A;
+    --destructive-soft:        rgba(224, 122, 122, 0.12);
+  }
+  .light-theme {
+    --semantic-attention:      #B5811E;
+    --semantic-attention-soft: rgba(181, 129, 30, 0.12);
+    --destructive:             #B53D3D;
+    --destructive-soft:        rgba(181, 61, 61, 0.10);
+  }
+
+  html, body { margin: 0; min-height: 100%; background: var(--bg); }
+
+  /* =========================== Gallery chrome =========================== */
+  .gallery { max-width: 1080px; margin: 0 auto; padding: 56px 24px 96px; }
+  .gallery-header {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 24px; flex-wrap: wrap; margin-bottom: 12px;
+  }
+  .crumbs {
+    color: var(--fg-subtle);
+    font: 500 11px/14px var(--font-sans);
+    letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 6px;
+  }
+  .crumbs .sep { opacity: .5; padding: 0 6px; }
+  .gallery-header h1 {
+    font: 600 30px/36px var(--font-display);
+    letter-spacing: -.2px; color: var(--fg); margin: 0;
+  }
+  .lede {
+    color: var(--fg-subtle);
+    font: 400 15px/22px var(--font-sans);
+    letter-spacing: .15px; max-width: 640px; margin-top: 12px;
+  }
+  .theme-pill {
+    height: 36px; padding: 0 14px; border-radius: 999px;
+    background: var(--bg-elev-2); color: var(--fg-muted);
+    border: 0; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    font: 500 12px/16px var(--font-sans); letter-spacing: .25px;
+  }
+  .theme-pill:hover { color: var(--fg); background: var(--bg-elev-3); }
+  .theme-pill .material-symbols-rounded { font-size: 16px; }
+
+  .stage {
+    display: grid; grid-template-columns: 1fr; gap: 40px;
+    margin-top: 40px;
+    align-items: start;
+    justify-items: center;
+  }
+  @media (min-width: 880px) {
+    .stage { grid-template-columns: 420px 1fr; justify-items: start; }
+  }
+  .stage .notes {
+    color: var(--fg-subtle);
+    font: 400 14px/22px var(--font-sans); letter-spacing: .15px;
+    max-width: 460px;
+    text-wrap: pretty;
+  }
+  .stage .notes h3 {
+    color: var(--fg);
+    font: 600 13px/18px var(--font-sans); letter-spacing: .8px;
+    text-transform: uppercase;
+    margin: 0 0 8px;
+  }
+  .stage .notes h3 + p { margin: 0 0 22px; }
+  .stage .notes .kbd {
+    display: inline-block;
+    padding: 1px 6px; border-radius: 4px;
+    background: var(--bg-elev-2);
+    color: var(--fg);
+    font: 500 12px/16px var(--font-mono);
+  }
+
+  /* =========================== Phone frame ============================== */
+  .frame {
+    width: 375px; max-width: 100%;
+    box-sizing: border-box;
+    margin: 0;
+    background: var(--bg);
+    border-radius: 32px;
+    border: 1px solid var(--divider);
+    overflow: hidden;
+    position: relative;
+    min-height: 1320px;
+    display: flex; flex-direction: column;
+  }
+  .light-theme .frame { box-shadow: var(--elev-2); }
+
+  /* Phone status bar */
+  .status {
+    height: 28px; padding: 0 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    color: var(--fg-muted);
+    font: 600 12px/16px var(--font-sans);
+    flex-shrink: 0;
+  }
+  .status .glyphs {
+    display: inline-flex; gap: 6px; align-items: center;
+    color: var(--fg-muted);
+  }
+  .status .glyphs .material-symbols-rounded { font-size: 14px; }
+
+  /* =========================== Sticky header =========================== */
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    background: color-mix(in oklab, var(--bg) 92%, transparent);
+    backdrop-filter: saturate(140%) blur(12px);
+    -webkit-backdrop-filter: saturate(140%) blur(12px);
+    padding: 6px 8px 8px;
+    display: grid;
+    grid-template-columns: 48px 1fr 48px;
+    align-items: center;
+    border-bottom: 1px solid transparent;
+    transition: border-color var(--dur-short-2) var(--ease-emphasized);
+  }
+  .topbar.elev { border-bottom-color: var(--divider); }
+  .icon-btn {
+    width: 44px; height: 44px; border-radius: 999px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: transparent; color: var(--fg); border: 0; cursor: pointer;
+    transition: background var(--dur-short-2) var(--ease-emphasized);
+  }
+  .icon-btn:hover { background: var(--bg-elev-2); }
+  .icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .icon-btn .material-symbols-rounded { font-size: 22px; }
+  .topbar .ttl {
+    color: var(--fg);
+    font: 600 16px/22px var(--font-sans); letter-spacing: .15px;
+    text-align: center;
+  }
+
+  /* =========================== Page body =========================== */
+  .page {
+    flex: 1;
+    overflow: auto;
+    padding: 4px 0 32px;
+  }
+  /* The user notes mention scroll; the gallery just shows everything. */
+
+  /* =========================== Section primitives =========================== */
+  .section {
+    padding: 28px 20px 8px;
+  }
+  .section + .section { border-top: 1px solid var(--divider); }
+  .section-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+  .section-eyebrow {
+    color: var(--fg-subtle);
+    font: 600 11px/14px var(--font-sans); letter-spacing: 1.2px;
+    text-transform: uppercase;
+  }
+  .section-help {
+    color: var(--fg-subtle);
+    font: 400 13px/20px var(--font-sans); letter-spacing: .15px;
+    margin: 4px 0 18px;
+    text-wrap: pretty;
+  }
+
+  /* Generic row */
+  .row {
+    min-height: 56px;
+    display: grid;
+    grid-template-columns: 36px 1fr auto;
+    gap: 14px;
+    align-items: center;
+    padding: 10px 0;
+  }
+  .row.tight { padding: 6px 0; min-height: 48px; }
+  .row .glyph {
+    width: 36px; height: 36px; border-radius: 12px;
+    background: var(--bg-elev-2); color: var(--fg);
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .row .glyph .material-symbols-rounded {
+    font-size: 18px;
+    font-variation-settings: 'wght' 400;
+  }
+  .row.tone-accent .glyph { background: var(--accent-alpha-12); color: var(--accent); }
+  .row.tone-attention .glyph {
+    background: var(--semantic-attention-soft);
+    color: var(--semantic-attention);
+  }
+  .row.tone-destructive .glyph {
+    background: var(--destructive-soft);
+    color: var(--destructive);
+  }
+  .row .body { min-width: 0; }
+  .row .body .t {
+    color: var(--fg);
+    font: 500 14px/20px var(--font-sans); letter-spacing: .1px;
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  }
+  .row .body .s {
+    color: var(--fg-subtle);
+    font: 400 12px/16px var(--font-sans); letter-spacing: .25px;
+    margin-top: 2px;
+    text-wrap: pretty;
+  }
+  .row .body .destruct-link {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: transparent; border: 0; cursor: pointer;
+    color: var(--destructive);
+    font: 500 12px/16px var(--font-sans); letter-spacing: .25px;
+    padding: 8px 0 0;
+    min-height: 32px;
+  }
+  .row .body .destruct-link:hover { text-decoration: underline; }
+  .row .body .destruct-link .material-symbols-rounded { font-size: 14px; }
+  .row .end { display: inline-flex; align-items: center; gap: 8px; color: var(--fg-subtle); }
+  .row .end .chev { font-size: 20px; color: var(--fg-subtle); }
+  .row[role="button"] { cursor: pointer; }
+  .row[role="button"]:hover { background:
+    linear-gradient(transparent, transparent),
+    color-mix(in oklab, var(--fg) 4%, transparent);
+    border-radius: var(--radius-md);
+    margin: 0 -8px; padding-left: 8px; padding-right: 8px;
+  }
+
+  /* =========================== Toggle switch =========================== */
+  .switch {
+    --w: 48px; --h: 28px; --pad: 3px;
+    position: relative;
+    width: var(--w); height: var(--h);
+    flex-shrink: 0;
+    display: inline-block;
+  }
+  .switch input {
+    position: absolute; inset: 0; opacity: 0;
+    width: 100%; height: 100%; margin: 0; cursor: pointer;
+    z-index: 1;
+  }
+  .switch .track {
+    position: absolute; inset: 0;
+    background: var(--bg-elev-3);
+    border-radius: 999px;
+    border: 2px solid var(--bg-elev-3);
+    box-sizing: border-box;
+    transition: background var(--dur-short-2) var(--ease-emphasized),
+                border-color var(--dur-short-2) var(--ease-emphasized);
+  }
+  .switch .thumb {
+    position: absolute;
+    top: 50%; left: var(--pad);
+    width: 16px; height: 16px;
+    border-radius: 999px;
+    background: var(--fg-muted);
+    transform: translate(0, -50%);
+    transition: transform var(--dur-short-2) var(--ease-emphasized),
+                background var(--dur-short-2) var(--ease-emphasized),
+                width var(--dur-short-2) var(--ease-emphasized),
+                height var(--dur-short-2) var(--ease-emphasized);
+  }
+  .switch input:checked ~ .track {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .switch input:checked ~ .thumb {
+    background: var(--fg-on-accent);
+    transform: translate(calc(var(--w) - 24px - var(--pad)*2 + var(--pad)), -50%);
+    width: 24px; height: 24px;
+  }
+  .switch input:focus-visible ~ .track {
+    outline: 2px solid var(--accent); outline-offset: 3px;
+  }
+  .switch.large { --w: 56px; --h: 32px; }
+  .switch.large .thumb { width: 18px; height: 18px; }
+  .switch.large input:checked ~ .thumb { width: 28px; height: 28px; }
+
+  /* =========================== Master card =========================== */
+  .master {
+    margin: 16px 20px 12px;
+    padding: 18px 18px 16px;
+    background: var(--bg-elev-1);
+    border: 1px solid color-mix(in oklab, var(--accent) 16%, transparent);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--elev-1);
+  }
+  .master.is-off {
+    border-color: var(--divider);
+    background: var(--bg-elev-1);
+    box-shadow: none;
+  }
+  .master .top {
+    display: grid; grid-template-columns: 44px 1fr auto;
+    gap: 12px; align-items: center;
+  }
+  .master .top .leaf {
+    width: 44px; height: 44px; border-radius: 14px;
+    background: var(--accent-alpha-12); color: var(--accent);
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .master.is-off .top .leaf {
+    background: var(--bg-elev-2); color: var(--fg-muted);
+  }
+  .master .top .leaf .material-symbols-rounded {
+    font-size: 22px;
+    font-variation-settings: 'wght' 500;
+  }
+  .master .top .body .ttl {
+    color: var(--fg);
+    font: 600 16px/22px var(--font-sans); letter-spacing: .15px;
+  }
+  .master .top .body .sub {
+    color: var(--fg-subtle);
+    font: 400 12px/16px var(--font-sans); letter-spacing: .25px;
+    margin-top: 2px;
+  }
+
+  .master .status-block {
+    display: flex; align-items: center; gap: 10px;
+    margin-top: 14px;
+    padding: 10px 12px;
+    background: var(--bg-elev-2);
+    border-radius: var(--radius-md);
+  }
+  .master.is-off .status-block { display: none; }
+  .master .status-block .pulse {
+    width: 8px; height: 8px; border-radius: 999px;
+    background: var(--accent);
+    flex-shrink: 0;
+    position: relative;
+  }
+  .master .status-block .pulse::after {
+    content: '';
+    position: absolute; inset: -4px;
+    border-radius: 999px;
+    background: var(--accent);
+    opacity: .35;
+    animation: pulse 2.4s var(--ease-standard) infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0; transform: scale(1); }
+    50% { opacity: .35; transform: scale(1.4); }
+  }
+  .master .status-block .info {
+    flex: 1; min-width: 0;
+    color: var(--fg);
+    font: 500 13px/18px var(--font-sans); letter-spacing: .1px;
+  }
+  .master .status-block .info .meta {
+    color: var(--fg-subtle); font-weight: 400;
+    font-size: 12px;
+  }
+  .master .status-block .sync-btn {
+    background: transparent; border: 0; cursor: pointer;
+    width: 36px; height: 36px; border-radius: 999px;
+    color: var(--fg-muted);
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .master .status-block .sync-btn:hover { background: var(--bg-elev-3); color: var(--fg); }
+  .master .status-block .sync-btn .material-symbols-rounded { font-size: 18px; }
+
+  /* When OFF: reactivate CTA */
+  .master .reactivate {
+    display: none;
+    margin-top: 14px;
+    padding: 14px;
+    background: var(--bg-elev-2);
+    border-radius: var(--radius-md);
+    color: var(--fg-subtle);
+    font: 400 13px/19px var(--font-sans); letter-spacing: .1px;
+    text-wrap: pretty;
+  }
+  .master.is-off .reactivate { display: block; }
+  .master .reactivate b { color: var(--fg); font-weight: 600; display: block; margin-bottom: 4px; }
+  .master .reactivate .cta {
+    margin-top: 10px;
+    height: 40px; padding: 0 16px; border-radius: 999px;
+    background: var(--accent); color: var(--fg-on-accent);
+    border: 0; cursor: pointer;
+    font: 600 13px/18px var(--font-sans); letter-spacing: .1px;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .master .reactivate .cta:hover { background: var(--accent-pressed); }
+
+  /* Collapsed body when master off */
+  .collapsible {
+    transition: opacity var(--dur-medium-1) var(--ease-emphasized),
+                filter var(--dur-medium-1) var(--ease-emphasized);
+  }
+  .page.master-off .collapsible {
+    opacity: .35;
+    filter: grayscale(.4);
+    pointer-events: none;
+  }
+  .page.master-off .collapsible .switch input { pointer-events: none; }
+
+  /* =========================== Permissions list =========================== */
+  .perm-list {
+    display: flex; flex-direction: column;
+  }
+  .perm-row {
+    padding: 12px 0;
+    display: grid;
+    grid-template-columns: 36px 1fr auto;
+    gap: 14px;
+    align-items: center;
+    min-height: 56px;
+  }
+  .perm-row + .perm-row { border-top: 1px solid var(--divider); }
+  .perm-row .ic {
+    width: 36px; height: 36px; border-radius: 12px;
+    background: var(--bg-elev-2);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--fg);
+    flex-shrink: 0;
+  }
+  .perm-row .ic .material-symbols-rounded {
+    font-size: 18px;
+    font-variation-settings: 'wght' 500;
+  }
+  .perm-row.is-on .ic {
+    background: var(--accent-alpha-12);
+    color: var(--accent);
+  }
+  .perm-row.is-on .ic .material-symbols-rounded {
+    font-variation-settings: 'FILL' 1, 'wght' 500;
+  }
+  .perm-row .body { min-width: 0; }
+  .perm-row .body .t {
+    color: var(--fg);
+    font: 500 14px/20px var(--font-sans); letter-spacing: .1px;
+  }
+  .perm-row .body .s {
+    color: var(--fg-subtle);
+    font: 400 12px/16px var(--font-sans); letter-spacing: .25px;
+    margin-top: 2px;
+    text-wrap: pretty;
+  }
+  .perm-row .body .delete-link {
+    display: none;
+    margin-top: 8px;
+  }
+  .perm-row:not(.is-on) .body .delete-link {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: transparent; border: 0; cursor: pointer;
+    color: var(--destructive);
+    font: 500 12px/16px var(--font-sans); letter-spacing: .25px;
+    padding: 6px 8px 6px 0;
+    min-height: 32px;
+  }
+  .perm-row:not(.is-on) .body .delete-link:hover { text-decoration: underline; }
+  .perm-row .body .delete-link .material-symbols-rounded { font-size: 14px; }
+
+  /* =========================== Sources =========================== */
+  .source-card {
+    margin-top: 6px;
+    padding: 14px;
+    background: var(--bg-elev-1);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--divider);
+    display: grid;
+    grid-template-columns: 44px 1fr auto;
+    gap: 12px; align-items: center;
+  }
+  .source-card .device-pic {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: var(--bg-elev-3);
+    color: var(--fg);
+    display: inline-flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .source-card .device-pic .material-symbols-rounded {
+    font-size: 22px;
+    font-variation-settings: 'wght' 400;
+  }
+  .source-card .device-pic .dot {
+    position: absolute;
+    bottom: -2px; right: -2px;
+    width: 12px; height: 12px; border-radius: 999px;
+    background: var(--accent);
+    border: 2px solid var(--bg);
+  }
+  .source-card .body .name {
+    color: var(--fg);
+    font: 600 14px/18px var(--font-sans); letter-spacing: .1px;
+  }
+  .source-card .body .via {
+    color: var(--fg-subtle);
+    font: 400 12px/16px var(--font-sans); letter-spacing: .25px;
+    margin-top: 2px;
+  }
+  .source-card .body .via .ok { color: var(--accent); font-weight: 500; }
+  .source-card .more-btn {
+    width: 36px; height: 36px; border-radius: 999px;
+    background: transparent; border: 0; cursor: pointer;
+    color: var(--fg-muted);
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .source-card .more-btn:hover { background: var(--bg-elev-2); color: var(--fg); }
+  .source-card .more-btn .material-symbols-rounded { font-size: 20px; }
+
+  .add-source {
+    margin-top: 10px;
+    width: 100%;
+    min-height: 48px;
+    padding: 12px 14px;
+    border-radius: var(--radius-lg);
+    background: transparent;
+    border: 1px dashed var(--border);
+    color: var(--accent);
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 10px;
+    font: 600 13px/18px var(--font-sans); letter-spacing: .1px;
+    transition: background var(--dur-short-2) var(--ease-emphasized),
+                border-color var(--dur-short-2) var(--ease-emphasized);
+  }
+  .add-source:hover {
+    background: var(--accent-alpha-08);
+    border-color: color-mix(in oklab, var(--accent) 40%, var(--border));
+  }
+  .add-source .material-symbols-rounded { font-size: 18px; }
+  .add-source .sub {
+    color: var(--fg-subtle); font-weight: 400;
+    font-size: 12px; letter-spacing: .25px;
+    margin-left: auto;
+  }
+
+  /* =========================== Privacy nav rows =========================== */
+  .nav-list { display: flex; flex-direction: column; }
+  .nav-row {
+    display: grid;
+    grid-template-columns: 36px 1fr auto;
+    gap: 14px;
+    align-items: center;
+    min-height: 56px;
+    padding: 12px 8px;
+    margin: 0 -8px;
+    border-radius: var(--radius-md);
+    background: transparent;
+    border: 0;
+    text-align: left;
+    cursor: pointer;
+    color: var(--fg);
+    transition: background var(--dur-short-2) var(--ease-emphasized);
+  }
+  .nav-row:hover { background: var(--bg-elev-1); }
+  .nav-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .nav-row + .nav-row { border-top: 1px solid var(--divider); border-radius: 0; }
+  /* keep the radius on first/last on hover */
+  .nav-row .ic {
+    width: 36px; height: 36px; border-radius: 12px;
+    background: var(--bg-elev-2); color: var(--fg);
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .nav-row.tone-destructive .ic {
+    background: var(--destructive-soft);
+    color: var(--destructive);
+  }
+  .nav-row .ic .material-symbols-rounded {
+    font-size: 18px;
+    font-variation-settings: 'wght' 500;
+  }
+  .nav-row .body .t {
+    color: var(--fg);
+    font: 500 14px/20px var(--font-sans); letter-spacing: .1px;
+  }
+  .nav-row.tone-destructive .body .t { color: var(--destructive); }
+  .nav-row .body .s {
+    color: var(--fg-subtle);
+    font: 400 12px/16px var(--font-sans); letter-spacing: .25px;
+    margin-top: 2px;
+    text-wrap: pretty;
+  }
+  .nav-row .chev {
+    color: var(--fg-subtle);
+  }
+  .nav-row .chev .material-symbols-rounded { font-size: 20px; }
+
+  /* =========================== Cloud-upload tradeoff row =========================== */
+  .tradeoff {
+    margin-top: 12px;
+    background: var(--bg-elev-1);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--divider);
+    padding: 14px 14px 6px;
+  }
+  .tradeoff .top {
+    display: grid; grid-template-columns: 36px 1fr auto;
+    gap: 14px; align-items: center;
+  }
+  .tradeoff .top .ic {
+    width: 36px; height: 36px; border-radius: 12px;
+    background: var(--bg-elev-2); color: var(--fg);
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .tradeoff .top .ic .material-symbols-rounded {
+    font-size: 18px;
+    font-variation-settings: 'wght' 500;
+  }
+  .tradeoff .top .t {
+    color: var(--fg);
+    font: 500 14px/20px var(--font-sans); letter-spacing: .1px;
+  }
+  .tradeoff .top .s {
+    color: var(--fg-subtle);
+    font: 400 12px/16px var(--font-sans); letter-spacing: .25px;
+    margin-top: 2px;
+  }
+  .tradeoff .expand {
+    background: transparent; border: 0; cursor: pointer;
+    color: var(--accent);
+    font: 600 12px/16px var(--font-sans); letter-spacing: .1px;
+    padding: 10px 0 12px;
+    display: inline-flex; align-items: center; gap: 4px;
+    min-height: 36px;
+  }
+  .tradeoff .expand .material-symbols-rounded {
+    font-size: 14px;
+    transition: transform var(--dur-short-2) var(--ease-emphasized);
+  }
+  .tradeoff.is-open .expand .material-symbols-rounded { transform: rotate(180deg); }
+  .tradeoff .detail {
+    display: none;
+    padding: 10px 0 12px;
+    border-top: 1px solid var(--divider);
+    margin-top: 4px;
+  }
+  .tradeoff.is-open .detail { display: block; }
+  .tradeoff .detail p {
+    color: var(--fg-subtle);
+    font: 400 12px/19px var(--font-sans); letter-spacing: .15px;
+    margin: 0 0 10px;
+    text-wrap: pretty;
+  }
+  .tradeoff .detail p:last-child { margin-bottom: 4px; }
+  .tradeoff .detail p b { color: var(--fg); font-weight: 600; }
+  .tradeoff .detail .compare {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    margin: 4px 0 10px;
+  }
+  .tradeoff .detail .compare .col {
+    padding: 10px;
+    background: var(--bg-elev-2);
+    border-radius: var(--radius-sm);
+  }
+  .tradeoff .detail .compare .col .lbl {
+    color: var(--fg-subtle);
+    font: 600 10px/14px var(--font-sans); letter-spacing: 1px;
+    text-transform: uppercase;
+    display: flex; align-items: center; gap: 4px;
+    margin-bottom: 6px;
+  }
+  .tradeoff .detail .compare .col .lbl .material-symbols-rounded {
+    font-size: 13px;
+  }
+  .tradeoff .detail .compare .on .lbl { color: var(--accent); }
+  .tradeoff .detail .compare .col p {
+    color: var(--fg);
+    font: 400 12px/17px var(--font-sans); letter-spacing: .1px;
+    margin: 0;
+  }
+
+  /* =========================== Pro reminder card =========================== */
+  .pro-card {
+    margin: 12px 20px 28px;
+    padding: 18px 18px 16px;
+    border-radius: var(--radius-2xl);
+    background:
+      radial-gradient(120% 80% at 0% 0%,
+        color-mix(in oklab, var(--accent) 16%, transparent) 0%,
+        transparent 60%),
+      var(--bg-elev-1);
+    border: 1px solid color-mix(in oklab, var(--accent) 18%, transparent);
+  }
+  .pro-card .row1 {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  }
+  .pro-card .tier {
+    height: 22px; padding: 0 8px; border-radius: 999px;
+    background: var(--bg-elev-3); color: var(--fg);
+    font: 600 10px/14px var(--font-sans); letter-spacing: .8px;
+    text-transform: uppercase;
+    display: inline-flex; align-items: center;
+  }
+  .pro-card .badge-pro {
+    height: 22px; padding: 0 8px; border-radius: 999px;
+    background: var(--accent-alpha-12); color: var(--accent);
+    font: 600 10px/14px var(--font-sans); letter-spacing: .8px;
+    text-transform: uppercase;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .pro-card .badge-pro .material-symbols-rounded { font-size: 12px; }
+  .pro-card h3 {
+    margin: 0;
+    color: var(--fg);
+    font: 600 16px/22px var(--font-sans); letter-spacing: .1px;
+  }
+  .pro-card .desc {
+    color: var(--fg-subtle);
+    font: 400 13px/20px var(--font-sans); letter-spacing: .1px;
+    margin: 4px 0 14px;
+    text-wrap: pretty;
+  }
+  .pro-card .perks {
+    display: flex; flex-direction: column; gap: 6px;
+    margin-bottom: 14px;
+  }
+  .pro-card .perks .perk {
+    display: flex; align-items: center; gap: 8px;
+    color: var(--fg);
+    font: 400 12px/18px var(--font-sans); letter-spacing: .1px;
+  }
+  .pro-card .perks .perk .material-symbols-rounded {
+    font-size: 14px;
+    color: var(--accent);
+  }
+  .pro-card .pro-cta {
+    width: 100%; min-height: 44px;
+    height: 44px;
+    padding: 0 16px;
+    border-radius: 999px;
+    background: transparent;
+    border: 1px solid color-mix(in oklab, var(--accent) 40%, var(--border));
+    color: var(--accent);
+    font: 600 13px/18px var(--font-sans); letter-spacing: .1px;
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    transition: background var(--dur-short-2) var(--ease-emphasized);
+  }
+  .pro-card .pro-cta:hover { background: var(--accent-alpha-08); }
+  .pro-card .pro-cta .material-symbols-rounded { font-size: 16px; }
+
+  /* =========================== Bottom save space =========================== */
+  .footnote {
+    padding: 4px 24px 28px;
+    color: var(--fg-subtle);
+    font: 400 11px/17px var(--font-sans); letter-spacing: .25px;
+    text-align: center;
+    text-wrap: pretty;
+  }
+
+  /* =========================== Modal (destructive confirm) =========================== */
+  .modal-mask {
+    position: absolute; inset: 0; z-index: 30;
+    background: color-mix(in oklab, var(--dark-scrim) 60%, transparent);
+    display: none; align-items: flex-end; justify-content: center;
+    backdrop-filter: blur(2px);
+  }
+  .modal-mask.open { display: flex; }
+  .modal-sheet {
+    width: 100%;
+    background: var(--bg-elev-2);
+    border-radius: 24px 24px 0 0;
+    padding: 8px 20px 28px;
+    box-shadow: var(--elev-4);
+    animation: slideUp var(--dur-medium-1) var(--ease-emphasized);
+  }
+  @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } }
+  .modal-sheet .grip {
+    width: 36px; height: 4px; border-radius: 999px;
+    background: var(--border);
+    margin: 0 auto 14px;
+  }
+  .modal-sheet h3 {
+    margin: 0;
+    color: var(--fg);
+    font: 600 18px/24px var(--font-sans); letter-spacing: 0;
+  }
+  .modal-sheet p {
+    color: var(--fg-subtle);
+    font: 400 13px/20px var(--font-sans); letter-spacing: .15px;
+    margin: 8px 0 18px;
+    text-wrap: pretty;
+  }
+  .modal-sheet p b { color: var(--fg); font-weight: 600; }
+  .modal-sheet .actions {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .modal-sheet .actions button {
+    height: 48px; border-radius: 999px;
+    border: 0; cursor: pointer;
+    font: 600 14px/18px var(--font-sans); letter-spacing: .1px;
+  }
+  .modal-sheet .actions .cancel {
+    background: var(--bg-elev-3); color: var(--fg);
+  }
+  .modal-sheet .actions .confirm {
+    background: var(--destructive); color: #fff;
+  }
+  .modal-sheet .actions .cancel:hover { background: var(--bg-elev-4); }
+  .modal-sheet .actions .confirm:hover { filter: brightness(.95); }
+
+  /* =========================== Reduced motion =========================== */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+    .master .status-block .pulse::after { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div class="gallery">
+  <div class="gallery-header">
+    <div>
+      <div class="crumbs">
+        Calmify <span class="sep">/</span> Settings <span class="sep">/</span> Bio-signals
+      </div>
+      <h1>Granular control. Every toggle has a why.</h1>
+      <p class="lede">
+        A single settings surface where the user owns every aspect of the
+        bio-signal integration — what's collected, where it goes, who sees the
+        narrative. No "always on" without an off switch. No coaching by default.
+      </p>
+    </div>
+    <button class="theme-pill" id="theme-toggle" aria-label="Toggle theme">
+      <span class="material-symbols-rounded">light_mode</span>
+      <span class="lbl">Light</span>
+    </button>
+  </div>
+
+  <div class="stage">
+
+    <!-- ============================================================
+         The phone frame
+         ============================================================ -->
+    <div class="frame" role="region" aria-label="Settings · Bio-signals">
+      <div class="status" aria-hidden="true">
+        <span>9:24</span>
+        <span class="glyphs">
+          <span class="material-symbols-rounded">signal_cellular_alt</span>
+          <span class="material-symbols-rounded">wifi</span>
+          <span class="material-symbols-rounded">battery_full</span>
+        </span>
+      </div>
+
+      <header class="topbar" id="topbar">
+        <button class="icon-btn" aria-label="Back to Settings" id="back-btn">
+          <span class="material-symbols-rounded">arrow_back</span>
+        </button>
+        <div class="ttl">Bio-signals</div>
+        <button class="icon-btn" aria-label="Help" id="help-btn">
+          <span class="material-symbols-rounded">help_outline</span>
+        </button>
+      </header>
+
+      <div class="page" id="page" aria-live="polite">
+
+        <!-- ========================================================
+             1. Master toggle
+             ======================================================== -->
+        <section class="master" id="master" aria-labelledby="master-ttl">
+          <div class="top">
+            <span class="leaf" aria-hidden="true">
+              <span class="material-symbols-rounded">favorite</span>
+            </span>
+            <div class="body">
+              <div class="ttl" id="master-ttl">Bio-signal integration</div>
+              <div class="sub">Body data threads quietly into your day</div>
+            </div>
+            <label class="switch large">
+              <input type="checkbox" id="master-toggle" checked
+                     aria-label="Bio-signal integration on or off" />
+              <span class="track" aria-hidden="true"></span>
+              <span class="thumb" aria-hidden="true"></span>
+            </label>
+          </div>
+
+          <div class="status-block" aria-live="polite">
+            <span class="pulse" aria-hidden="true"></span>
+            <div class="info">
+              Connected · Mi Band 10 via Mi Fitness
+              <div class="meta">Last sync 5 min ago · 2,481 samples today</div>
+            </div>
+            <button class="sync-btn" type="button" aria-label="Sync now">
+              <span class="material-symbols-rounded">sync</span>
+            </button>
+          </div>
+
+          <div class="reactivate">
+            <b>Bio-signal is off.</b>
+            Nothing is being read or stored. Your existing data is preserved
+            until you choose to delete it.
+            <div>
+              <button class="cta" type="button" id="reactivate-btn">
+                <span class="material-symbols-rounded">power_settings_new</span>
+                Reactivate
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- The rest of the page dims when master is off -->
+        <div class="collapsible" id="collapsible">
+
+          <!-- ========================================================
+               2. Permissions per data type
+               ======================================================== -->
+          <section class="section" aria-labelledby="perm-head">
+            <div class="section-head">
+              <span class="section-eyebrow" id="perm-head">What we read</span>
+            </div>
+            <p class="section-help">
+              Each signal is opt-in. Turning one off stops new readings
+              immediately — and you can delete what's already there.
+            </p>
+
+            <div class="perm-list" role="list">
+
+              <div class="perm-row is-on" role="listitem">
+                <span class="ic" aria-hidden="true">
+                  <span class="material-symbols-rounded">favorite</span>
+                </span>
+                <div class="body">
+                  <div class="t">Heart rate</div>
+                  <div class="s">Resting + during meditation. Used for the body-followed narrative.</div>
+                  <button class="delete-link" type="button">
+                    <span class="material-symbols-rounded">delete_outline</span>
+                    Delete collected data
+                  </button>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" checked aria-label="Heart rate on or off" />
+                  <span class="track" aria-hidden="true"></span>
+                  <span class="thumb" aria-hidden="true"></span>
+                </label>
+              </div>
+
+              <div class="perm-row is-on" role="listitem">
+                <span class="ic" aria-hidden="true">
+                  <span class="material-symbols-rounded">graphic_eq</span>
+                </span>
+                <div class="body">
+                  <div class="t">Heart rate variability (HRV)</div>
+                  <div class="s">Subtle nervous-system signal. Powers PRO correlation insight.</div>
+                  <button class="delete-link" type="button">
+                    <span class="material-symbols-rounded">delete_outline</span>
+                    Delete collected data
+                  </button>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" checked aria-label="HRV on or off" />
+                  <span class="track" aria-hidden="true"></span>
+                  <span class="thumb" aria-hidden="true"></span>
+                </label>
+              </div>
+
+              <div class="perm-row is-on" role="listitem">
+                <span class="ic" aria-hidden="true">
+                  <span class="material-symbols-rounded">bedtime</span>
+                </span>
+                <div class="body">
+                  <div class="t">Sleep</div>
+                  <div class="s">Duration and stages. Threads into the morning narrative.</div>
+                  <button class="delete-link" type="button">
+                    <span class="material-symbols-rounded">delete_outline</span>
+                    Delete collected data
+                  </button>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" checked aria-label="Sleep on or off" />
+                  <span class="track" aria-hidden="true"></span>
+                  <span class="thumb" aria-hidden="true"></span>
+                </label>
+              </div>
+
+              <div class="perm-row" role="listitem">
+                <span class="ic" aria-hidden="true">
+                  <span class="material-symbols-rounded">directions_walk</span>
+                </span>
+                <div class="body">
+                  <div class="t">Steps</div>
+                  <div class="s">Light activity context. Never shown as a goal.</div>
+                  <button class="delete-link" type="button">
+                    <span class="material-symbols-rounded">delete_outline</span>
+                    Delete collected data
+                  </button>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" aria-label="Steps on or off" />
+                  <span class="track" aria-hidden="true"></span>
+                  <span class="thumb" aria-hidden="true"></span>
+                </label>
+              </div>
+
+              <div class="perm-row is-on" role="listitem">
+                <span class="ic" aria-hidden="true">
+                  <span class="material-symbols-rounded">monitor_heart</span>
+                </span>
+                <div class="body">
+                  <div class="t">Resting heart rate</div>
+                  <div class="s">Trend baseline. Helps distinguish "off day" from "actually unusual".</div>
+                  <button class="delete-link" type="button">
+                    <span class="material-symbols-rounded">delete_outline</span>
+                    Delete collected data
+                  </button>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" checked aria-label="Resting heart rate on or off" />
+                  <span class="track" aria-hidden="true"></span>
+                  <span class="thumb" aria-hidden="true"></span>
+                </label>
+              </div>
+
+              <div class="perm-row" role="listitem">
+                <span class="ic" aria-hidden="true">
+                  <span class="material-symbols-rounded">air</span>
+                </span>
+                <div class="body">
+                  <div class="t">Blood oxygen (SpO₂)</div>
+                  <div class="s">Optional. Off by default — read only when you explicitly request it.</div>
+                  <button class="delete-link" type="button">
+                    <span class="material-symbols-rounded">delete_outline</span>
+                    Delete collected data
+                  </button>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" aria-label="Blood oxygen on or off" />
+                  <span class="track" aria-hidden="true"></span>
+                  <span class="thumb" aria-hidden="true"></span>
+                </label>
+              </div>
+
+              <div class="perm-row" role="listitem">
+                <span class="ic" aria-hidden="true">
+                  <span class="material-symbols-rounded">directions_run</span>
+                </span>
+                <div class="body">
+                  <div class="t">Activity</div>
+                  <div class="s">Workouts and movement bouts. Context only — never a target.</div>
+                  <button class="delete-link" type="button">
+                    <span class="material-symbols-rounded">delete_outline</span>
+                    Delete collected data
+                  </button>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" aria-label="Activity on or off" />
+                  <span class="track" aria-hidden="true"></span>
+                  <span class="thumb" aria-hidden="true"></span>
+                </label>
+              </div>
+
+            </div>
+          </section>
+
+          <!-- ========================================================
+               3. Connected sources
+               ======================================================== -->
+          <section class="section" aria-labelledby="src-head">
+            <div class="section-head">
+              <span class="section-eyebrow" id="src-head">Where it comes from</span>
+            </div>
+            <p class="section-help">
+              Devices and apps Calmify is reading from. Each one keeps its
+              own permissions in your OS health hub.
+            </p>
+
+            <div class="source-card" role="group" aria-label="Mi Band 10">
+              <span class="device-pic" aria-hidden="true">
+                <span class="material-symbols-rounded">watch</span>
+                <span class="dot" title="Connected"></span>
+              </span>
+              <div class="body">
+                <div class="name">Mi Band 10</div>
+                <div class="via">
+                  via Mi Fitness · <span class="ok">last sync 5 min ago</span>
+                </div>
+              </div>
+              <button class="more-btn" type="button" aria-label="Mi Band 10 options">
+                <span class="material-symbols-rounded">more_vert</span>
+              </button>
+            </div>
+
+            <button class="add-source" type="button">
+              <span class="material-symbols-rounded">add</span>
+              <span>Add another source</span>
+              <span class="sub">Health Connect</span>
+            </button>
+          </section>
+
+          <!-- ========================================================
+               4. Privacy & data
+               ======================================================== -->
+          <section class="section" aria-labelledby="priv-head">
+            <div class="section-head">
+              <span class="section-eyebrow" id="priv-head">Privacy &amp; data</span>
+            </div>
+            <p class="section-help">
+              Your body data is yours. Look at what we have, take it elsewhere,
+              or remove it entirely — without asking permission.
+            </p>
+
+            <div class="nav-list">
+
+              <button class="nav-row" type="button" aria-label="What we have, where it came from">
+                <span class="ic" aria-hidden="true">
+                  <span class="material-symbols-rounded">visibility</span>
+                </span>
+                <div class="body">
+                  <div class="t">What we have, where it came from</div>
+                  <div class="s">Per-signal log of every reading and its source</div>
+                </div>
+                <span class="chev" aria-hidden="true">
+                  <span class="material-symbols-rounded">chevron_right</span>
+                </span>
+              </button>
+
+              <button class="nav-row" type="button" aria-label="Export everything, GDPR Article 20">
+                <span class="ic" aria-hidden="true">
+                  <span class="material-symbols-rounded">file_download</span>
+                </span>
+                <div class="body">
+                  <div class="t">Export everything</div>
+                  <div class="s">Portable JSON archive · GDPR Art. 20</div>
+                </div>
+                <span class="chev" aria-hidden="true">
+                  <span class="material-symbols-rounded">chevron_right</span>
+                </span>
+              </button>
+
+              <button class="nav-row tone-destructive" type="button"
+                      id="delete-all-btn"
+                      aria-label="Delete all bio data, GDPR Article 17">
+                <span class="ic" aria-hidden="true">
+                  <span class="material-symbols-rounded">delete_forever</span>
+                </span>
+                <div class="body">
+                  <div class="t">Delete all bio data</div>
+                  <div class="s">Permanent · GDPR Art. 17 · cannot be undone</div>
+                </div>
+                <span class="chev" aria-hidden="true">
+                  <span class="material-symbols-rounded">chevron_right</span>
+                </span>
+              </button>
+
+            </div>
+
+            <div class="tradeoff" id="tradeoff">
+              <div class="top">
+                <span class="ic" aria-hidden="true">
+                  <span class="material-symbols-rounded">cloud_upload</span>
+                </span>
+                <div>
+                  <div class="t">Upload raw samples to Calmify</div>
+                  <div class="s">Required only for advanced PRO insights</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="cloud-toggle" aria-label="Upload raw samples on or off" />
+                  <span class="track" aria-hidden="true"></span>
+                  <span class="thumb" aria-hidden="true"></span>
+                </label>
+              </div>
+              <button class="expand" type="button" id="tradeoff-expand"
+                      aria-expanded="false" aria-controls="tradeoff-detail">
+                See the privacy &harr; quality tradeoff
+                <span class="material-symbols-rounded">expand_more</span>
+              </button>
+              <div class="detail" id="tradeoff-detail">
+                <p>
+                  By default Calmify computes narratives <b>on your phone</b>
+                  and only stores small daily summaries. Turning this on sends
+                  raw HRV and heart-rate samples (encrypted) to our servers
+                  so multi-week correlations can run server-side.
+                </p>
+                <div class="compare">
+                  <div class="col off">
+                    <div class="lbl">
+                      <span class="material-symbols-rounded">phone_iphone</span>
+                      Off · default
+                    </div>
+                    <p>On-device only. Daily summaries leave the phone — raw samples never do.</p>
+                  </div>
+                  <div class="col on">
+                    <div class="lbl">
+                      <span class="material-symbols-rounded">insights</span>
+                      On
+                    </div>
+                    <p>Encrypted raw samples on our servers. Unlocks 6-week correlations &amp; trends.</p>
+                  </div>
+                </div>
+                <p>
+                  You can turn this off and wipe the cloud copy at any time
+                  from "Delete all bio data". On-device narratives keep working
+                  either way.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <!-- ========================================================
+               5. Insight & narrative surfaces
+               ======================================================== -->
+          <section class="section" aria-labelledby="surf-head">
+            <div class="section-head">
+              <span class="section-eyebrow" id="surf-head">Where it shows up</span>
+            </div>
+            <p class="section-help">
+              Each surface is on by default — and each can be quieted without
+              touching the others.
+            </p>
+
+            <div class="perm-list" role="list">
+
+              <div class="perm-row is-on" role="listitem">
+                <span class="ic" aria-hidden="true">
+                  <span class="material-symbols-rounded">edit_note</span>
+                </span>
+                <div class="body">
+                  <div class="t">Narrative banner in Journal</div>
+                  <div class="s">A single observational line above the composer.</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" checked aria-label="Journal narrative banner on or off" />
+                  <span class="track" aria-hidden="true"></span>
+                  <span class="thumb" aria-hidden="true"></span>
+                </label>
+              </div>
+
+              <div class="perm-row is-on" role="listitem">
+                <span class="ic" aria-hidden="true">
+                  <span class="material-symbols-rounded">self_improvement</span>
+                </span>
+                <div class="body">
+                  <div class="t">Body-followed card after meditation</div>
+                  <div class="s">Mini HR chart with the session's pacing.</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" checked aria-label="Post-meditation body card on or off" />
+                  <span class="track" aria-hidden="true"></span>
+                  <span class="thumb" aria-hidden="true"></span>
+                </label>
+              </div>
+
+              <div class="perm-row is-on" role="listitem">
+                <span class="ic" aria-hidden="true">
+                  <span class="material-symbols-rounded">home</span>
+                </span>
+                <div class="body">
+                  <div class="t">Bio chips in Home Today</div>
+                  <div class="s">The morning narrative with mini-chips below.</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" checked aria-label="Home Today bio chips on or off" />
+                  <span class="track" aria-hidden="true"></span>
+                  <span class="thumb" aria-hidden="true"></span>
+                </label>
+              </div>
+
+              <div class="perm-row is-on" role="listitem">
+                <span class="ic" aria-hidden="true">
+                  <span class="material-symbols-rounded">auto_awesome</span>
+                </span>
+                <div class="body">
+                  <div class="t">Cross-signal patterns in Insight</div>
+                  <div class="s">PRO-only weekly correlations between bio and practice.</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" checked aria-label="Cross-signal patterns on or off" />
+                  <span class="track" aria-hidden="true"></span>
+                  <span class="thumb" aria-hidden="true"></span>
+                </label>
+              </div>
+
+            </div>
+          </section>
+
+          <!-- ========================================================
+               6. Subscription tier reminder
+               ======================================================== -->
+          <section class="pro-card" aria-labelledby="pro-ttl">
+            <div class="row1">
+              <span class="tier">Free</span>
+              <span class="badge-pro">
+                <span class="material-symbols-rounded">auto_awesome</span>
+                Pro
+              </span>
+            </div>
+            <h3 id="pro-ttl">You have everything you need.</h3>
+            <p class="desc">
+              Viewing, sovereignty and full GDPR are included in Free — and
+              always will be. Pro is for AI insight and multi-week correlations,
+              not for owning your data.
+            </p>
+            <div class="perks">
+              <div class="perk">
+                <span class="material-symbols-rounded">check</span>
+                Six-week cross-signal patterns
+              </div>
+              <div class="perk">
+                <span class="material-symbols-rounded">check</span>
+                Personalised AI narratives, longer context
+              </div>
+              <div class="perk">
+                <span class="material-symbols-rounded">check</span>
+                HRV detail in the post-meditation card
+              </div>
+            </div>
+            <button class="pro-cta" type="button">
+              See what's in Pro
+              <span class="material-symbols-rounded">arrow_forward</span>
+            </button>
+          </section>
+
+        </div><!-- /.collapsible -->
+
+        <p class="footnote">
+          Changes save automatically. Calmify never reads body data outside
+          the signals you've turned on above.
+        </p>
+      </div><!-- /.page -->
+    </div><!-- /.frame -->
+
+    <!-- ============================================================
+         Designer notes column (desktop only)
+         ============================================================ -->
+    <aside class="notes" aria-label="Designer notes">
+      <h3>The framing</h3>
+      <p>
+        This is the only screen in the bio integration that has any "controls"
+        in the traditional sense — every other surface (journal banner, medi
+        card, home narrative, insight card) is read-only context. Settings is
+        where the sovereignty contract lives, and it has to feel like a
+        contract: clear, granular, undramatic.
+      </p>
+
+      <h3>The order</h3>
+      <p>
+        Master &rarr; permissions &rarr; sources &rarr; privacy &rarr; surfaces
+        &rarr; tier. We go from "is this even on?" outward — broadest control
+        first, narrowest last. The Pro card sits at the bottom because anyone
+        who scrolled this far is engaged enough to consider it; we don't lead
+        with the upsell.
+      </p>
+
+      <h3>Try it</h3>
+      <p>
+        Flip the master toggle — the body dims, the connected status collapses,
+        and a reactivate CTA replaces it. Press the destructive row to see the
+        bottom-sheet confirm. Expand the cloud-upload tradeoff for the full
+        privacy &harr; quality explanation. Toggle <span class="kbd">Light</span>
+        in the gallery header for the light theme.
+      </p>
+
+      <h3>What's explicitly not here</h3>
+      <p>
+        No "Goals" subsection. No coaching toggles. No "always on" health
+        permissions buried behind a chevron. Each signal has its own
+        on/off and its own delete; each surface where data appears can be
+        silenced. Nothing is mandatory once the master is on.
+      </p>
+    </aside>
+
+  </div>
+
+  <!-- =====================================================================
+       Destructive confirmation sheet
+       ===================================================================== -->
+  <div class="modal-mask" id="modal" role="dialog" aria-modal="true"
+       aria-labelledby="modal-ttl" aria-hidden="true">
+    <div class="modal-sheet">
+      <div class="grip" aria-hidden="true"></div>
+      <h3 id="modal-ttl">Delete all bio data?</h3>
+      <p>
+        This removes <b>every reading</b> Calmify has stored — locally and on
+        our servers — across all seven signals. Your narratives will stop until
+        new data arrives. <b>This cannot be undone.</b>
+      </p>
+      <div class="actions">
+        <button class="cancel" type="button" id="modal-cancel">Cancel</button>
+        <button class="confirm" type="button" id="modal-confirm">Delete all</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ---------------- Theme toggle ----------------
+  const themeBtn = document.getElementById('theme-toggle');
+  const themeLbl = themeBtn.querySelector('.lbl');
+  const themeIcon = themeBtn.querySelector('.material-symbols-rounded');
+  themeBtn.addEventListener('click', () => {
+    const isLight = document.body.classList.toggle('light-theme');
+    themeLbl.textContent = isLight ? 'Dark' : 'Light';
+    themeIcon.textContent = isLight ? 'dark_mode' : 'light_mode';
+  });
+
+  // ---------------- Master toggle dims body ----------------
+  const master = document.getElementById('master');
+  const masterToggle = document.getElementById('master-toggle');
+  const page = document.getElementById('page');
+  const reactivateBtn = document.getElementById('reactivate-btn');
+
+  function syncMaster() {
+    const on = masterToggle.checked;
+    master.classList.toggle('is-off', !on);
+    page.classList.toggle('master-off', !on);
+  }
+  masterToggle.addEventListener('change', syncMaster);
+  reactivateBtn.addEventListener('click', () => {
+    masterToggle.checked = true; syncMaster();
+  });
+
+  // ---------------- Per-row "is-on" sync (icon fill) ----------------
+  document.querySelectorAll('.perm-row').forEach(row => {
+    const input = row.querySelector('input[type=checkbox]');
+    if (!input) return;
+    input.addEventListener('change', () => {
+      row.classList.toggle('is-on', input.checked);
+    });
+  });
+
+  // ---------------- Tradeoff expand ----------------
+  const tradeoff = document.getElementById('tradeoff');
+  const tradeoffExpand = document.getElementById('tradeoff-expand');
+  tradeoffExpand.addEventListener('click', () => {
+    const open = tradeoff.classList.toggle('is-open');
+    tradeoffExpand.setAttribute('aria-expanded', open ? 'true' : 'false');
+    tradeoffExpand.firstChild.textContent =
+      (open ? 'Hide ' : 'See ') + 'the privacy ↔ quality tradeoff';
+  });
+
+  // ---------------- Sticky topbar shadow on scroll ----------------
+  const topbar = document.getElementById('topbar');
+  page.addEventListener('scroll', () => {
+    topbar.classList.toggle('elev', page.scrollTop > 4);
+  });
+
+  // ---------------- Destructive modal ----------------
+  const modal = document.getElementById('modal');
+  const deleteAllBtn = document.getElementById('delete-all-btn');
+  const cancelBtn = document.getElementById('modal-cancel');
+  const confirmBtn = document.getElementById('modal-confirm');
+
+  function openModal() {
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+  function closeModal() {
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+  deleteAllBtn.addEventListener('click', openModal);
+  cancelBtn.addEventListener('click', closeModal);
+  confirmBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', e => {
+    if (e.target === modal) closeModal();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
+  });
+</script>
+</body>
+</html>

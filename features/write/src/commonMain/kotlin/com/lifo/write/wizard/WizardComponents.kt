@@ -49,6 +49,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifo.ui.i18n.Strings
+import com.lifo.ui.theme.CalmifyRadius
+import com.lifo.ui.theme.CalmifySpacing
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -70,7 +72,7 @@ fun WizardProgressIndicator(
             val isCurrent = index == currentStep
 
             val animatedSize by animateDpAsState(
-                targetValue = if (isCurrent) 12.dp else 8.dp,
+                targetValue = if (isCurrent) CalmifySpacing.md else CalmifySpacing.sm, // was 12/8 ✓
                 animationSpec = spring(dampingRatio = 0.6f),
                 label = "dotSize"
             )
@@ -92,7 +94,7 @@ fun WizardProgressIndicator(
             )
 
             if (index < totalSteps - 1) {
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(CalmifySpacing.sm)) // was 8.dp ✓
             }
         }
     }
@@ -193,18 +195,18 @@ fun SelectableMetricCard(
                 onClick()
             }
             .border(
-                width = if (isSelected) 2.dp else 1.dp,
+                width = if (isSelected) 2.dp else 1.dp,  // stroke widths, not spacing scale
                 color = borderColor,
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(CalmifyRadius.lg) // was 16.dp ✓
             ),
         colors = CardDefaults.cardColors(
             containerColor = backgroundColor
         ),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(CalmifyRadius.lg)         // was 16.dp ✓
     ) {
         Column(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(CalmifySpacing.lg)                   // was 16.dp ✓
                 .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -246,11 +248,11 @@ fun WizardNavigationButtons(
         FilledTonalButton(onClick = onNext) {
             Text(stringResource(if (isLastStep) Strings.WriteWizard.complete else Strings.Coach.buttonNext))
             if (!isLastStep) {
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(CalmifySpacing.xs))   // was 4.dp ✓
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(18.dp)                    // M3 small icon size
                 )
             }
         }
@@ -269,11 +271,11 @@ fun MetricValueBadge(
     Surface(
         modifier = modifier,
         color = accentColor.copy(alpha = 0.15f),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(CalmifyRadius.md)        // was 12.dp ✓
     ) {
         Text(
             text = value.toString(),
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = CalmifySpacing.lg, vertical = CalmifySpacing.sm), // was 16+8 ✓
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = accentColor
@@ -323,7 +325,7 @@ fun WizardStepTitle(
                 textAlign = TextAlign.Center
             )
         }
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(CalmifySpacing.sm)) // was 8.dp ✓
         Text(
             text = description,
             style = MaterialTheme.typography.bodyMedium,

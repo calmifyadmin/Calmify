@@ -1,0 +1,326 @@
+/* ==========================================================================
+   Calmify Design System — colors_and_type.css
+   "Obsidian Edition": pure neutral canvas, ONE accent (sage green).
+   Material 3 Expressive, Kotlin Multiplatform → ported to CSS variables.
+   Source of truth: core/ui/src/commonMain/kotlin/com/lifo/ui/theme/Color.kt
+   ========================================================================== */
+
+/* ---------- Fonts ---------- */
+@import url("https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600;8..144,700&family=Roboto+Mono:wght@400;500&display=swap");
+
+:root {
+  /* ====================================================================
+     ACCENT — the ONE color. The seed.
+     Used ONLY on: primary buttons, FAB, toggles ON, selected nav,
+     active chips, chart primary line, progress bar.
+     ==================================================================== */
+  --seed-sage: #4CAF7D;
+  --seed-sage-light: #6DCA9A;
+  --seed-sage-dark: #3D9268;
+  --accent-bright: #A8F0CB;     /* tone 90 — light tag fill */
+  --accent-default: #4CAF7D;    /* tone 55 — primary accent */
+  --accent-dim: #2E7D55;        /* tone 35 — pressed state */
+  --accent-subtle: #1A4A34;     /* tone 20 — tinted container (dark only) */
+  --accent-alpha-12: rgba(76, 175, 125, 0.12);  /* selected row tint, ripple */
+  --accent-alpha-08: rgba(76, 175, 125, 0.08);
+
+  /* ====================================================================
+     LIGHT THEME — crisp white / slate gray
+     ==================================================================== */
+  --light-primary: #2E7D55;
+  --light-on-primary: #FFFFFF;
+  --light-primary-container: #D6F5E5;
+  --light-on-primary-container: #00391E;
+
+  --light-secondary: #5C5C5C;
+  --light-on-secondary: #FFFFFF;
+  --light-secondary-container: #EBEBEB;
+  --light-on-secondary-container: #1A1A1A;
+
+  --light-tertiary: #5E6673;
+  --light-on-tertiary: #FFFFFF;
+  --light-tertiary-container: #E2E4EA;
+  --light-on-tertiary-container: #191D24;
+
+  --light-error: #BA1A1A;
+  --light-error-container: #FFDAD6;
+  --light-on-error: #FFFFFF;
+  --light-on-error-container: #410002;
+
+  --light-background: #FFFFFF;
+  --light-on-background: #111111;
+  --light-surface: #FFFFFF;
+  --light-on-surface: #111111;
+  --light-surface-variant: #E5E5E5;
+  --light-on-surface-variant: #444444;
+
+  --light-outline: #8A8A8A;
+  --light-outline-variant: #D0D0D0;
+  --light-scrim: #000000;
+
+  --light-surface-container-lowest: #FFFFFF;
+  --light-surface-container-low: #F7F7F7;
+  --light-surface-container: #F0F0F0;
+  --light-surface-container-high: #E8E8E8;
+  --light-surface-container-highest: #E0E0E0;
+
+  /* ====================================================================
+     DARK THEME — obsidian black / pure gray (default reference)
+     Threads / YouTube / Instagram dark-mode clarity
+     ==================================================================== */
+  --dark-primary: #4CAF7D;
+  --dark-on-primary: #00391E;
+  --dark-primary-container: #1A4A34;
+  --dark-on-primary-container: #A8F0CB;
+
+  --dark-secondary: #AAAAAA;
+  --dark-on-secondary: #1A1A1A;
+  --dark-secondary-container: #2E2E2E;
+  --dark-on-secondary-container: #DDDDDD;
+
+  --dark-tertiary: #8A96A6;
+  --dark-on-tertiary: #0D1520;
+  --dark-tertiary-container: #1E2A35;
+  --dark-on-tertiary-container: #BDCAD8;
+
+  --dark-error: #FFB4AB;
+  --dark-error-container: #93000A;
+  --dark-on-error: #690005;
+  --dark-on-error-container: #FFDAD6;
+
+  --dark-background: #0F0F0F;       /* obsidian — YouTube/Threads base */
+  --dark-on-background: #EEEEEE;
+  --dark-surface: #0F0F0F;
+  --dark-on-surface: #EEEEEE;
+  --dark-surface-variant: #2A2A2A;
+  --dark-on-surface-variant: #B0B0B0;
+
+  --dark-outline: #5C5C5C;
+  --dark-outline-variant: #383838;
+  --dark-scrim: #000000;
+
+  --dark-surface-container-lowest: #090909;
+  --dark-surface-container-low: #141414;
+  --dark-surface-container: #1A1A1A;     /* card base */
+  --dark-surface-container-high: #222222;
+  --dark-surface-container-highest: #2E2E2E;
+
+  /* ====================================================================
+     LEGACY MOOD COLORS — used by chips/pills in feed & write features
+     Don't extend; treat as a frozen palette. New emotional categories
+     should map to these values, not introduce new hues.
+     ==================================================================== */
+  --mood-neutral:      #78909C;
+  --mood-happy:        #FFEE58;
+  --mood-romantic:     #EC407A;
+  --mood-calm:         #42A5F5;
+  --mood-tense:        #FF7043;
+  --mood-lonely:       #8D6E63;
+  --mood-mysterious:   #26A69A;
+  --mood-angry:        #EF5350;
+  --mood-awful:        #66BB6A;
+  --mood-surprised:    #29B6F6;
+  --mood-depressed:    #BDBDBD;
+  --mood-disappointed: #AB47BC;
+  --mood-shameful:     #7E57C2;
+  --mood-humorous:     #FFCA28;
+  --mood-suspicious:   #D4E157;
+  --mood-bored:        #26C6DA;
+
+  /* ====================================================================
+     SEMANTIC TOKENS (default → DARK; the canonical Calmify look)
+     Use these in UI. Override --bg/--fg/etc inside .light-theme.
+     ==================================================================== */
+  --bg:                var(--dark-background);
+  --bg-elev-1:         var(--dark-surface-container-low);
+  --bg-elev-2:         var(--dark-surface-container);
+  --bg-elev-3:         var(--dark-surface-container-high);
+  --bg-elev-4:         var(--dark-surface-container-highest);
+
+  --fg:                var(--dark-on-background);     /* primary text */
+  --fg-muted:          var(--dark-secondary);          /* metadata, captions */
+  --fg-subtle:         var(--dark-on-surface-variant); /* tertiary text */
+  --fg-disabled:       #5C5C5C;
+  --fg-on-accent:      var(--dark-on-primary);
+
+  --accent:            var(--accent-default);
+  --accent-pressed:    var(--accent-dim);
+  --accent-container:  var(--dark-primary-container);
+  --on-accent-container:var(--dark-on-primary-container);
+
+  --border:            var(--dark-outline-variant);
+  --border-strong:     var(--dark-outline);
+  --divider:           #1F1F1F;
+
+  --danger:            var(--dark-error);
+  --danger-container:  var(--dark-error-container);
+
+  /* ====================================================================
+     SPACING — Calmify scale (from CalmifySpacing.kt)
+     ==================================================================== */
+  --space-xs:  4px;
+  --space-sm:  8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 48px;
+
+  /* ====================================================================
+     RADIUS — Calmify scale (from CalmifyRadius.kt)
+     Note: cards typically use 28dp (xxl) — the "Material 3 Expressive" look
+     ==================================================================== */
+  --radius-sm:   8px;
+  --radius-md:  12px;
+  --radius-lg:  16px;
+  --radius-xl:  20px;
+  --radius-2xl: 28px;
+  --radius-pill: 999px;
+
+  /* ====================================================================
+     ELEVATION — Material 3 levels (Elevation.kt)
+     M3 dark theme rarely uses shadows; surfaces tint upward instead.
+     ==================================================================== */
+  --elev-0: none;
+  --elev-1: 0 1px 2px rgba(0, 0, 0, 0.30);
+  --elev-2: 0 2px 6px rgba(0, 0, 0, 0.35);
+  --elev-3: 0 6px 12px rgba(0, 0, 0, 0.40);
+  --elev-4: 0 8px 20px rgba(0, 0, 0, 0.45);
+  --elev-5: 0 12px 28px rgba(0, 0, 0, 0.50);
+
+  /* Light theme uses softer shadows */
+  --elev-1-light: 0 1px 2px rgba(17, 17, 17, 0.06);
+  --elev-2-light: 0 2px 6px rgba(17, 17, 17, 0.08);
+  --elev-3-light: 0 6px 16px rgba(17, 17, 17, 0.10);
+
+  /* ====================================================================
+     MOTION — Material 3 standard easings & durations
+     ==================================================================== */
+  --ease-emphasized:        cubic-bezier(0.2, 0.0, 0, 1.0);
+  --ease-emphasized-decel:  cubic-bezier(0.05, 0.7, 0.1, 1.0);
+  --ease-emphasized-accel:  cubic-bezier(0.3, 0.0, 0.8, 0.15);
+  --ease-standard:          cubic-bezier(0.2, 0.0, 0, 1.0);
+  --ease-spring-bouncy:     cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --dur-short-1: 100ms;
+  --dur-short-2: 200ms;
+  --dur-medium-1: 300ms;
+  --dur-medium-2: 400ms;
+  --dur-long-1: 500ms;
+
+  /* ====================================================================
+     TYPOGRAPHY — Material 3 type scale
+     Native Android uses Roboto (system default). On web we substitute
+     Roboto Flex (variable) for parity with M3 Expressive.
+     Mono (rare): Roboto Mono.
+     ==================================================================== */
+  --font-sans: "Roboto Flex", "Roboto", -apple-system, BlinkMacSystemFont,
+               "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Roboto Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-display: var(--font-sans);  /* Calmify uses one family throughout */
+}
+
+/* ====================================================================
+   LIGHT THEME OVERRIDE — apply class to a parent element
+   ==================================================================== */
+.light-theme {
+  --bg:                var(--light-background);
+  --bg-elev-1:         var(--light-surface-container-low);
+  --bg-elev-2:         var(--light-surface-container);
+  --bg-elev-3:         var(--light-surface-container-high);
+  --bg-elev-4:         var(--light-surface-container-highest);
+
+  --fg:                var(--light-on-background);
+  --fg-muted:          var(--light-secondary);
+  --fg-subtle:         var(--light-on-surface-variant);
+  --fg-disabled:       #BFBFBF;
+  --fg-on-accent:      var(--light-on-primary);
+
+  --accent:            var(--light-primary);
+  --accent-pressed:    var(--accent-dim);
+  --accent-container:  var(--light-primary-container);
+  --on-accent-container:var(--light-on-primary-container);
+
+  --border:            var(--light-outline-variant);
+  --border-strong:     var(--light-outline);
+  --divider:           #EAEAEA;
+
+  --danger:            var(--light-error);
+  --danger-container:  var(--light-error-container);
+
+  --elev-1: var(--elev-1-light);
+  --elev-2: var(--elev-2-light);
+  --elev-3: var(--elev-3-light);
+}
+
+/* ==========================================================================
+   TYPE SYSTEM — Material 3 scale, mapped to semantic CSS classes
+   ========================================================================== */
+
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  /* Note: do NOT set font-feature-settings on body — it inherits onto
+     .material-symbols-rounded spans and breaks the "liga" feature the
+     icon font needs. Apply stylistic sets per-element if wanted. */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Display — splash, hero, big numbers */
+.display-large  { font: 400 57px/64px var(--font-display); letter-spacing: -0.25px; }
+.display-medium { font: 400 45px/52px var(--font-display); letter-spacing: 0;       }
+.display-small  { font: 400 36px/44px var(--font-display); letter-spacing: 0;       }
+
+/* Headline — section titles, top-of-card */
+.headline-large  { font: 600 32px/40px var(--font-display); letter-spacing: 0;     }
+.headline-medium { font: 600 28px/36px var(--font-display); letter-spacing: 0;     }
+.headline-small  { font: 600 24px/32px var(--font-display); letter-spacing: 0;     }
+
+/* Title — card / dialog titles */
+.title-large  { font: 500 22px/28px var(--font-sans); letter-spacing: 0;      }
+.title-medium { font: 500 16px/24px var(--font-sans); letter-spacing: 0.15px; }
+.title-small  { font: 500 14px/20px var(--font-sans); letter-spacing: 0.1px;  }
+
+/* Body — paragraphs, descriptions */
+.body-large   { font: 400 16px/24px var(--font-sans); letter-spacing: 0.5px;  }
+.body-medium  { font: 400 14px/20px var(--font-sans); letter-spacing: 0.25px; }
+.body-small   { font: 400 12px/16px var(--font-sans); letter-spacing: 0.4px;  }
+
+/* Label — buttons, chips, tabs */
+.label-large  { font: 500 14px/20px var(--font-sans); letter-spacing: 0.1px;  }
+.label-medium { font: 500 12px/16px var(--font-sans); letter-spacing: 0.5px;  }
+.label-small  { font: 500 11px/16px var(--font-sans); letter-spacing: 0.5px;  }
+
+/* Native HTML element defaults (so unstyled markup looks right) */
+h1 { font: 600 32px/40px var(--font-display); margin: 0; }
+h2 { font: 600 28px/36px var(--font-display); margin: 0; }
+h3 { font: 600 22px/28px var(--font-display); margin: 0; }
+h4 { font: 600 16px/24px var(--font-sans);   margin: 0; letter-spacing: 0.15px; }
+h5 { font: 600 14px/20px var(--font-sans);   margin: 0; letter-spacing: 0.1px; }
+p  { font: 400 14px/20px var(--font-sans);   margin: 0; letter-spacing: 0.25px; }
+small { font: 400 12px/16px var(--font-sans); letter-spacing: 0.4px; color: var(--fg-muted); }
+code, kbd, pre, samp { font-family: var(--font-mono); font-size: 13px; }
+
+/* The "wellbeing-is" hero ribbon — used in greetings, score pills, mood chips.
+   Pairs the seed accent at 15% alpha with onSurface text. */
+.hero-ribbon {
+  display: inline-block;
+  padding: 0 8px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-alpha-12);
+  color: var(--fg);
+  font-weight: 600;
+}
+
+/* "Pro" badge type — small, accent fg, no fill */
+.pro-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font: 600 10px/12px var(--font-sans);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
