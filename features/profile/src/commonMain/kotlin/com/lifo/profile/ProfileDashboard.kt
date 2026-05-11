@@ -42,6 +42,8 @@ import com.lifo.home.domain.model.WellbeingAggregationResult
 import com.lifo.home.domain.model.WellbeingTrend
 import com.lifo.ui.components.CalmifyTopBar
 import com.lifo.ui.i18n.Strings
+import com.lifo.ui.theme.CalmifyRadius
+import com.lifo.ui.theme.CalmifySpacing
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import com.lifo.util.model.PsychologicalProfile
@@ -108,7 +110,7 @@ private fun ErrorState(message: String, onRetry: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(32.dp),
+            .padding(CalmifySpacing.xxl), // was 32.dp ✓
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -126,23 +128,23 @@ private fun ErrorState(message: String, onRetry: () -> Unit) {
                 )
             }
         }
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(CalmifySpacing.xl)) // was 24.dp ✓
         Text(
             text = "Qualcosa e' andato storto",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(CalmifySpacing.sm)) // was 8.dp ✓
         Text(
             text = message,
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(CalmifySpacing.xl)) // was 24.dp ✓
         FilledTonalButton(onClick = onRetry) {
             Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(CalmifySpacing.sm)) // was 8.dp ✓
             Text("Riprova")
         }
     }
@@ -153,7 +155,7 @@ private fun EmptyState() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(32.dp),
+            .padding(CalmifySpacing.xxl), // was 32.dp ✓
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -178,7 +180,7 @@ private fun EmptyState() {
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(CalmifySpacing.md)) // was 12.dp ✓
         Text(
             text = "Scrivi almeno 3 diari questa settimana per sbloccare il tuo profilo psicologico",
             style = MaterialTheme.typography.bodyLarge,
@@ -205,8 +207,8 @@ private fun SuccessState(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(CalmifySpacing.lg),                                     // was 16.dp ✓
+        verticalArrangement = Arrangement.spacedBy(CalmifySpacing.lg)        // was 16.dp ✓
     ) {
         // 1. Hero Score Card
         HeroScoreCard(latestProfile)
@@ -259,7 +261,7 @@ private fun HeroScoreCard(profile: PsychologicalProfile) {
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(CalmifyRadius.xxl), // was 24.dp → xxl (28)
         color = colorScheme.surfaceContainerLow
     ) {
         Column(
@@ -273,9 +275,9 @@ private fun HeroScoreCard(profile: PsychologicalProfile) {
                         )
                     )
                 )
-                .padding(24.dp),
+                .padding(CalmifySpacing.xl), // was 24.dp ✓
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(CalmifySpacing.sm) // was 8.dp ✓
         ) {
             Text(
                 text = "Umore medio",
@@ -308,7 +310,7 @@ private fun HeroScoreCard(profile: PsychologicalProfile) {
 
             // Mood label + trend
             Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.md), // was 12.dp ✓
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val moodLabel = when {
@@ -319,7 +321,7 @@ private fun HeroScoreCard(profile: PsychologicalProfile) {
                     else -> "Difficile"
                 }
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(CalmifyRadius.sm), // was 8.dp ✓
                     color = moodColor.copy(alpha = 0.15f)
                 ) {
                     Text(
@@ -344,7 +346,7 @@ private fun HeroScoreCard(profile: PsychologicalProfile) {
                 }
 
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(CalmifyRadius.sm), // was 8.dp ✓
                     color = trendColor.copy(alpha = 0.12f)
                 ) {
                     Row(
@@ -374,7 +376,7 @@ private fun HeroScoreCard(profile: PsychologicalProfile) {
                 }
             }
 
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(CalmifySpacing.xs)) // was 4.dp ✓
 
             // Mood gradient bar
             MoodGradientBar(
@@ -441,16 +443,16 @@ private fun WeeklyReflectionCard(profile: PsychologicalProfile, chartData: Chart
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(CalmifyRadius.xl), // was 20.dp ✓
         color = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(CalmifySpacing.xl), // was 20.dp → xl (24)
+            verticalArrangement = Arrangement.spacedBy(CalmifySpacing.md) // was 12.dp ✓
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.sm) // was 8.dp ✓
             ) {
                 Surface(
                     shape = CircleShape,
@@ -539,12 +541,12 @@ private fun JourneyLineCard(chartData: ChartData) {
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(CalmifyRadius.xl), // was 20.dp ✓
         color = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(CalmifySpacing.xl), // was 20.dp → xl (24)
+            verticalArrangement = Arrangement.spacedBy(CalmifySpacing.md) // was 12.dp ✓
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -575,7 +577,7 @@ private fun JourneyLineCard(chartData: ChartData) {
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.sm) // was 8.dp ✓
             ) {
                 Column(
                     modifier = Modifier.height(140.dp),
@@ -689,13 +691,13 @@ private fun ResilienceGaugeCard(profile: PsychologicalProfile) {
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(CalmifyRadius.xl), // was 20.dp ✓
         color = colorScheme.surfaceContainerLow
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
+            modifier = Modifier.padding(CalmifySpacing.xl), // was 20.dp → xl (24)
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(CalmifySpacing.sm) // was 8.dp ✓
         ) {
             Text(
                 text = "Resilienza",
@@ -704,7 +706,7 @@ private fun ResilienceGaugeCard(profile: PsychologicalProfile) {
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(CalmifySpacing.xs)) // was 4.dp ✓
 
             // Semi-circle gauge
             val density = LocalDensity.current
@@ -764,7 +766,7 @@ private fun ResilienceGaugeCard(profile: PsychologicalProfile) {
 
             if (profile.recoverySpeed > 0) {
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(CalmifyRadius.sm), // was 8.dp ✓
                     color = colorScheme.surfaceContainerHigh
                 ) {
                     Row(
@@ -800,7 +802,7 @@ private fun StatsGrid(profile: PsychologicalProfile) {
 
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.md) // was 12.dp ✓
     ) {
         // Stress card
         StatCard(
@@ -858,12 +860,12 @@ private fun StatCard(
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(CalmifyRadius.lg), // was 16.dp ✓
         color = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(CalmifySpacing.lg), // was 16.dp ✓
+            verticalArrangement = Arrangement.spacedBy(CalmifySpacing.sm) // was 8.dp ✓
         ) {
             Surface(
                 shape = CircleShape,
@@ -917,7 +919,7 @@ private fun DataQualityFooter(profile: PsychologicalProfile) {
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(CalmifyRadius.md), // was 12.dp ✓
         color = colorScheme.surfaceContainerLow
     ) {
         Row(
@@ -928,7 +930,7 @@ private fun DataQualityFooter(profile: PsychologicalProfile) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.sm), // was 8.dp ✓
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
@@ -975,7 +977,7 @@ private fun CorrelationsSection(
 ) {
     if (sleepMood == null && activityImpact == null) return
 
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(CalmifySpacing.md)) { // was 12.dp ✓
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(horizontal = 4.dp),
@@ -1025,11 +1027,11 @@ private fun CorrelationCard(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(CalmifyRadius.xl), // was 20.dp ✓
         color = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(CalmifySpacing.lg), // was 16.dp ✓
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -1079,16 +1081,16 @@ private fun CorrelationCard(
 private fun GrowthSection(growth: GrowthProgress) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(CalmifyRadius.xl), // was 20.dp ✓
         color = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
+            modifier = Modifier.padding(CalmifySpacing.xl), // was 20.dp → xl (24)
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.sm) // was 8.dp ✓
             ) {
                 Surface(
                     shape = CircleShape,
@@ -1159,7 +1161,7 @@ private fun GrowthSection(growth: GrowthProgress) {
             // Quick stats
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.sm) // was 8.dp ✓
             ) {
                 GrowthChip(
                     modifier = Modifier.weight(1f),
@@ -1186,7 +1188,7 @@ private fun GrowthSection(growth: GrowthProgress) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     growth.strengths.take(3).forEach { strength ->
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.sm), // was 8.dp ✓
                             verticalAlignment = Alignment.Top
                         ) {
                             Icon(
@@ -1211,7 +1213,7 @@ private fun GrowthSection(growth: GrowthProgress) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     growth.suggestions.take(2).forEach { suggestion ->
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.sm), // was 8.dp ✓
                             verticalAlignment = Alignment.Top
                         ) {
                             Icon(
@@ -1242,7 +1244,7 @@ private fun GrowthChip(
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(CalmifyRadius.md), // was 12.dp ✓
         color = color.copy(alpha = 0.10f)
     ) {
         Column(
@@ -1284,12 +1286,12 @@ private fun WellbeingTrendSection(trend: WellbeingTrend) {
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(CalmifyRadius.xl), // was 20.dp ✓
         color = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(CalmifySpacing.xl), // was 20.dp → xl (24)
+            verticalArrangement = Arrangement.spacedBy(CalmifySpacing.md) // was 12.dp ✓
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1298,7 +1300,7 @@ private fun WellbeingTrendSection(trend: WellbeingTrend) {
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.sm) // was 8.dp ✓
                 ) {
                     Surface(
                         shape = CircleShape,
@@ -1328,7 +1330,7 @@ private fun WellbeingTrendSection(trend: WellbeingTrend) {
                 }
 
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(CalmifyRadius.sm), // was 8.dp ✓
                     color = trendColor.copy(alpha = 0.12f)
                 ) {
                     Row(
@@ -1397,11 +1399,11 @@ private fun WellbeingTrendSection(trend: WellbeingTrend) {
             // Strength / area chips
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.sm) // was 8.dp ✓
             ) {
                 Surface(
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(CalmifyRadius.md), // was 12.dp ✓
                     color = Color(0xFF4CAF50).copy(alpha = 0.10f)
                 ) {
                     Column(
@@ -1422,7 +1424,7 @@ private fun WellbeingTrendSection(trend: WellbeingTrend) {
                 }
                 Surface(
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(CalmifyRadius.md), // was 12.dp ✓
                     color = Color(0xFFFFCA28).copy(alpha = 0.10f)
                 ) {
                     Column(

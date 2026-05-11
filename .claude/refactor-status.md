@@ -23,7 +23,9 @@
 
 **Hard exclusion confermata**: `ExpressiveHero.kt` MAI toccato (user directive 2026-05-11).
 
-**R3.4 DONE 2026-05-11** (commit pending): 5 meditation screens refactorati 1:1 con CSS scale. Welcome/Screening/Configure/Session/Overview. `:features:meditation` compileDebugKotlinAndroid green 4s post-refactor. Snap pattern: 20→xl(24), 12→md, 16→lg, 8→sm, 4→xs, 14→lg snap, 999→pill, RoundedCornerShape(24)→xxl(28). Icon sizes (14/16/18/20/22/24/28/32 dp) lasciati custom con commento. 4-cycle cap pill + LockPill + AutoPill (Configure) tutti pill.
+**R3.5-7 DONE 2026-05-11** (commit pending): ProfileDashboard (1474 LOC), PaywallScreen (932 LOC), ComposerScreen (977 LOC), ChatBubble (284 LOC) refactorati 1:1 con CSS scale. Major user-visible surfaces ora tutti in scala canonical. **R3.8 tail DEFERRED**: i ~15-19 file minor restanti non-bloccanti per bio-signal Phase 0, possono procedere on-demand. R4 (theme README) come prossimo passo. Build verde: :features:profile (8s), :features:subscription (6s), :features:composer + :features:chat (18s).
+
+**R3.4 DONE 2026-05-11** (commit `376fb44`): 5 meditation screens refactorati 1:1 con CSS scale. Welcome/Screening/Configure/Session/Overview. `:features:meditation` compileDebugKotlinAndroid green 4s post-refactor. Snap pattern: 20→xl(24), 12→md, 16→lg, 8→sm, 4→xs, 14→lg snap, 999→pill, RoundedCornerShape(24)→xxl(28). Icon sizes (14/16/18/20/22/24/28/32 dp) lasciati custom con commento. 4-cycle cap pill + LockPill + AutoPill (Configure) tutti pill.
 
 **Prossimo**: R3.5+ ProfileDashboard/Paywall/Composer/ChatBubble, R4 theme README, POI bio-signal Phase 0.
 

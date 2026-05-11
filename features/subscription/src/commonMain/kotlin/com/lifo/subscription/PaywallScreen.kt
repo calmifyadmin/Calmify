@@ -74,6 +74,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifo.ui.resources.*
+import com.lifo.ui.theme.CalmifyRadius
+import com.lifo.ui.theme.CalmifySpacing
 import com.lifo.util.repository.SubscriptionRepository
 import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.stringResource
@@ -125,10 +127,10 @@ fun PaywallScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(scrollState)
-                    .padding(horizontal = 20.dp),
+                    .padding(horizontal = CalmifySpacing.xl), // was 20.dp → xl (24)
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(CalmifySpacing.sm)) // was 8.dp ✓
 
                 PaywallHeader()
 
@@ -159,7 +161,7 @@ fun PaywallScreen(
                         },
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(CalmifySpacing.lg)) // was 16.dp ✓
 
                     TextButton(
                         onClick = { onIntent(SubscriptionContract.Intent.RefreshSubscriptionState) },
@@ -173,11 +175,11 @@ fun PaywallScreen(
                 }
 
                 state.error?.let { errorMessage ->
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(CalmifySpacing.sm)) // was 8.dp ✓
                     ErrorCard(errorMessage)
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(CalmifySpacing.xl)) // was 24.dp ✓
             }
 
             // Loading overlay
@@ -203,18 +205,18 @@ fun PaywallScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     Card(
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(CalmifyRadius.lg), // was 16.dp ✓
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surface,
                         ),
                         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                     ) {
                         Column(
-                            modifier = Modifier.padding(32.dp),
+                            modifier = Modifier.padding(CalmifySpacing.xxl), // was 32.dp ✓
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             CircularProgressIndicator()
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(CalmifySpacing.lg)) // was 16.dp ✓
                             Text(
                                 text = stringResource(Res.string.loading),
                                 style = MaterialTheme.typography.bodyMedium,
@@ -300,7 +302,7 @@ private fun PaywallHeader() {
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(CalmifySpacing.lg)) // was 16.dp ✓
 
         Text(
             text = stringResource(Res.string.paywall_title),
@@ -311,7 +313,7 @@ private fun PaywallHeader() {
             color = MaterialTheme.colorScheme.primary,
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(CalmifySpacing.sm)) // was 8.dp ✓
 
         Text(
             text = stringResource(Res.string.paywall_subtitle),
@@ -330,14 +332,14 @@ private fun PaywallHeader() {
 private fun FeatureComparisonSection() {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(CalmifyRadius.lg), // was 16.dp ✓
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
+            modifier = Modifier.padding(CalmifySpacing.xl), // was 20.dp → xl (24)
         ) {
             Text(
                 text = stringResource(Res.string.paywall_compare_plans),
@@ -346,7 +348,7 @@ private fun FeatureComparisonSection() {
                 color = MaterialTheme.colorScheme.onSurface,
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(CalmifySpacing.lg)) // was 16.dp ✓
 
             // Column headers
             Row(
@@ -383,9 +385,9 @@ private fun FeatureComparisonSection() {
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(CalmifySpacing.md)) // was 12.dp ✓
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(CalmifySpacing.sm)) // was 8.dp ✓
 
             val features = listOf(
                 Triple(stringResource(Res.string.feature_diary), stringResource(Res.string.feature_diary_free), true),
@@ -599,9 +601,9 @@ private fun ProProductCard(
             .border(
                 width = 2.dp,
                 color = primaryColor.copy(alpha = glowAlpha),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(CalmifyRadius.lg), // was 16.dp ✓
             ),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(CalmifyRadius.lg), // was 16.dp ✓
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
         ),
@@ -610,7 +612,7 @@ private fun ProProductCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(CalmifySpacing.xl), // was 20.dp → xl (24)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -648,7 +650,7 @@ private fun ProProductCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(CalmifySpacing.lg)) // was 16.dp ✓
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -676,7 +678,7 @@ private fun ProProductCard(
                 Button(
                     onClick = onPurchase,
                     enabled = !isCurrentTier,
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(CalmifyRadius.md), // was 12.dp ✓
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (isWaitlistMode) MaterialTheme.colorScheme.secondary else primaryColor,
                     ),
@@ -743,9 +745,9 @@ private fun ManageSubscriptionCard(
             .border(
                 width = 2.dp,
                 color = primaryColor.copy(alpha = 0.6f),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(CalmifyRadius.lg), // was 16.dp ✓
             ),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(CalmifyRadius.lg), // was 16.dp ✓
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
         ),
@@ -754,7 +756,7 @@ private fun ManageSubscriptionCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(CalmifySpacing.xl), // was 20.dp → xl (24)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
@@ -787,9 +789,9 @@ private fun ManageSubscriptionCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(CalmifySpacing.lg)) // was 16.dp ✓
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(CalmifySpacing.md)) // was 12.dp ✓
 
             InfoRow(
                 label = if (isAutoRenewing) "Prossimo rinnovo" else "Scade il",
@@ -805,7 +807,7 @@ private fun ManageSubscriptionCard(
 
             Button(
                 onClick = onManage,
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(CalmifyRadius.md), // was 12.dp ✓
                 colors = ButtonDefaults.buttonColors(containerColor = primaryColor),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -824,7 +826,7 @@ private fun ManageSubscriptionCard(
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(CalmifySpacing.sm)) // was 8.dp ✓
 
             Text(
                 text = "Cancella, cambia piano, aggiorna il metodo di pagamento o scarica le fatture sul portale Stripe.",
@@ -906,13 +908,13 @@ private fun formatPrice(amountInCents: Long, currency: String, interval: String)
 private fun ErrorCard(message: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(CalmifyRadius.md), // was 12.dp ✓
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.errorContainer,
         ),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = CalmifySpacing.lg, vertical = CalmifySpacing.md), // was 16+12 ✓
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(

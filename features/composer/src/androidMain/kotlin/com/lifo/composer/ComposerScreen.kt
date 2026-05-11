@@ -84,6 +84,8 @@ import org.jetbrains.compose.resources.stringResource
 import com.lifo.ui.resources.Res
 import com.lifo.ui.resources.*
 import com.lifo.ui.i18n.Strings
+import com.lifo.ui.theme.CalmifyRadius
+import com.lifo.ui.theme.CalmifySpacing
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -155,13 +157,13 @@ fun ComposerScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
-                            shape = RoundedCornerShape(24.dp),
+                            shape = RoundedCornerShape(CalmifyRadius.xxl), // was 24.dp → xxl (28)
                             color = colorScheme.surfaceContainerLow,
                         ) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(16.dp)
+                                    .padding(CalmifySpacing.lg) // was 16.dp ✓
                                     .height(IntrinsicSize.Min),
                             ) {
                                 // LEFT: Avatar + thread line
@@ -226,12 +228,12 @@ fun ComposerScreen(
                                                     contentScale = ContentScale.Crop,
                                                     modifier = Modifier
                                                         .size(56.dp)
-                                                        .clip(RoundedCornerShape(12.dp)),
+                                                        .clip(RoundedCornerShape(CalmifyRadius.md)), // was 12.dp ✓
                                                 )
                                             }
                                             if (parentThread.mediaUrls.size > 3) {
                                                 Surface(
-                                                    shape = RoundedCornerShape(12.dp),
+                                                    shape = RoundedCornerShape(CalmifyRadius.md), // was 12.dp ✓
                                                     color = colorScheme.surfaceContainerHigh,
                                                     modifier = Modifier.size(56.dp),
                                                 ) {
@@ -253,14 +255,14 @@ fun ComposerScreen(
                     } else {
                         // Fallback chip while loading parent
                         Surface(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier.padding(horizontal = CalmifySpacing.lg, vertical = CalmifySpacing.sm), // was 16+8 ✓
+                            shape = RoundedCornerShape(CalmifyRadius.xl), // was 20.dp ✓
                             color = colorScheme.secondaryContainer,
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                modifier = Modifier.padding(horizontal = CalmifySpacing.lg, vertical = CalmifySpacing.sm), // was 14+8 → lg(16)+sm(8)
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.sm), // was 8.dp ✓
                             ) {
                                 Text(
                                     text = stringResource(Res.string.composer_reply_to, state.replyToAuthorName ?: ""),
@@ -405,12 +407,12 @@ fun ComposerScreen(
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 2.dp),
                         color = colorScheme.surfaceContainerLowest,
-                        shape = RoundedCornerShape(20.dp),
+                        shape = RoundedCornerShape(CalmifyRadius.xl), // was 20.dp ✓
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(12.dp)
+                                .padding(CalmifySpacing.md) // was 12.dp ✓
                                 .height(IntrinsicSize.Min),
                         ) {
                             Column(
@@ -488,11 +490,11 @@ fun ComposerScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp),
-                        shape = RoundedCornerShape(20.dp),
+                        shape = RoundedCornerShape(CalmifyRadius.xl), // was 20.dp ✓
                         color = colorScheme.surfaceContainerLow,
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            modifier = Modifier.padding(horizontal = CalmifySpacing.lg, vertical = CalmifySpacing.md), // was 16+12 ✓
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
@@ -526,17 +528,17 @@ fun ComposerScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
-                    shape = RoundedCornerShape(24.dp),
+                    shape = RoundedCornerShape(CalmifyRadius.xxl), // was 24.dp → xxl (28)
                     color = colorScheme.surfaceContainerLow,
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier.padding(CalmifySpacing.lg), // was 16.dp ✓
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         // Category selector
                         if (state.parentThreadId == null) {
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.sm), // was 8.dp ✓
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(
@@ -564,7 +566,7 @@ fun ComposerScreen(
                                                 )
                                             }
                                         } else null,
-                                        shape = RoundedCornerShape(20.dp),
+                                        shape = RoundedCornerShape(CalmifyRadius.xl), // was 20.dp ✓
                                         modifier = Modifier.height(32.dp),
                                         colors = FilterChipDefaults.filterChipColors(
                                             selectedContainerColor = colorScheme.tertiaryContainer,
@@ -608,7 +610,7 @@ fun ComposerScreen(
                                             )
                                         }
                                     } else null,
-                                    shape = RoundedCornerShape(20.dp),
+                                    shape = RoundedCornerShape(CalmifyRadius.xl), // was 20.dp ✓
                                     modifier = Modifier.height(32.dp),
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = colorScheme.primaryContainer,
@@ -628,7 +630,7 @@ fun ComposerScreen(
                             // Selected mood badge
                             if (state.moodTag != null) {
                                 Surface(
-                                    shape = RoundedCornerShape(20.dp),
+                                    shape = RoundedCornerShape(CalmifyRadius.xl), // was 20.dp ✓
                                     color = colorScheme.secondaryContainer,
                                 ) {
                                     Text(
@@ -690,7 +692,7 @@ fun ComposerScreen(
                             }
                             onIntent(ComposerContract.Intent.ChangeReplyPermission(next))
                         },
-                        shape = RoundedCornerShape(20.dp),
+                        shape = RoundedCornerShape(CalmifyRadius.xl), // was 20.dp ✓
                         color = colorScheme.surfaceContainerLow,
                     ) {
                         Text(
@@ -698,14 +700,14 @@ fun ComposerScreen(
                             style = MaterialTheme.typography.labelMedium,
                             color = colorScheme.primary,
                             fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                            modifier = Modifier.padding(horizontal = CalmifySpacing.lg, vertical = CalmifySpacing.sm), // was 14+8 → lg(16)+sm(8)
                         )
                     }
 
                     Button(
                         onClick = { onIntent(ComposerContract.Intent.Submit) },
                         enabled = canSubmit,
-                        shape = RoundedCornerShape(20.dp),
+                        shape = RoundedCornerShape(CalmifyRadius.xl), // was 20.dp ✓
                         modifier = Modifier.height(44.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = colorScheme.primary,
@@ -752,7 +754,7 @@ fun ComposerScreen(
                         Column(
                             modifier = Modifier.padding(32.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(CalmifySpacing.md), // was 12.dp ✓
                         ) {
                             CircularProgressIndicator()
                             if (state.isUploading) {
@@ -898,7 +900,7 @@ private fun VisibilitySelector(
     Box {
         Surface(
             onClick = { expanded = true },
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(CalmifyRadius.xl), // was 20.dp ✓
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
         ) {
             Row(

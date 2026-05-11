@@ -35,6 +35,7 @@ import org.jetbrains.compose.resources.stringResource
 import com.lifo.ui.resources.Res
 import com.lifo.ui.resources.*
 import com.lifo.ui.i18n.Strings
+import com.lifo.ui.theme.CalmifySpacing
 
 /**
  * Simplified chat bubble with integrated natural voice indicators
@@ -103,7 +104,7 @@ fun ChatBubble(
                     } else {
                         MaterialTheme.colorScheme.onPrimary
                     },
-                    modifier = Modifier.padding(12.dp)
+                    modifier = Modifier.padding(CalmifySpacing.md) // was 12.dp ✓
                 )
             }
 
@@ -257,11 +258,11 @@ private fun CompactVoiceIndicator(
         VoiceWaveform(
             audioLevel = 0.8f,
             isActive = true,
-            modifier = Modifier.height(16.dp)
+            modifier = Modifier.height(CalmifySpacing.lg) // was 16.dp ✓
         )
 
         if (latency < 50) {
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(CalmifySpacing.sm)) // was 8.dp ✓
             Text(
                 text = "${latency}ms",
                 style = MaterialTheme.typography.labelSmall,

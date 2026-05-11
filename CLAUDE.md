@@ -126,12 +126,16 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
 4. `Color(0xFF...)` in screen Kotlin → `MaterialTheme.colorScheme.X` se semantico; lascia se decorativo
 5. Custom (icon sizes 18/24/48, hero card 280, button vertical 14) → keep + `// custom — <reason>` comment
 
-**Fase R3 surgical refactor** (in corso, ~30 file candidate dall'audit):
+**Fase R3 surgical refactor** (~30 file candidate dall'audit, 11 done):
 - ✅ R3.1 `HomeContent.kt` (excl. ExpressiveHero subtree)
 - ✅ R3.2 `WizardComponents.kt` (single-file refactor → propaga a 16 wellness wizards)
 - ✅ R3.3 `AuthenticationContent.kt` (first-impression surface)
 - ✅ R3.4 Meditation screens (5 files: Welcome/Screening/Configure/Session/Overview)
-- ⬜ R3.5+ ProfileDashboard / PaywallScreen / ComposerScreen / ChatBubble / tail
+- ✅ R3.5 `ProfileDashboard.kt`
+- ✅ R3.6 `PaywallScreen.kt`
+- ✅ R3.7 `ComposerScreen.kt` + `ChatBubble.kt`
+- ⬜ R3.8 tail (~15-19 minor files) — DEFERRED: major user-visible surfaces all covered, tail può procedere on-demand
+- ⬜ R4 Theme README — NEXT
 
 **Tracker files (READ FIRST before any design refactor work)**:
 - `memory/project_design_system_refactor.md` — workstream state + refactor rules + file inventory
