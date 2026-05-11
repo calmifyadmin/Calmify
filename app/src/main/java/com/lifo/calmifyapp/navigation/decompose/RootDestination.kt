@@ -53,6 +53,8 @@ sealed interface RootDestination {
     // === Avatar System (Wave 10) ===
     @Serializable data object AvatarCreator : RootDestination
     @Serializable data object AvatarList : RootDestination
+    // === Bio-Signal Integration (Phase 2.UI, 2026-05-11) ===
+    @Serializable data object BioContext : RootDestination
     // === Holistic Growth (Sprint 1+2) ===
     @Serializable data object Habits : RootDestination
     @Serializable data object Meditation : RootDestination

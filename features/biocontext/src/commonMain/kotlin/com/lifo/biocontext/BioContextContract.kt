@@ -1,0 +1,84 @@
+package com.lifo.biocontext
+
+import com.lifo.util.model.BioSignalDataType
+import com.lifo.util.mvi.MviContract
+import com.lifo.util.repository.ProviderStatus
+
+/**
+ * MVI contract for [BioContextScreen] — the transparency dashboard.
+ *
+ * **Ethical positioning** (per `memory/feedback_calmify_values.md`):
+ * - Show the user EVERYTHING we have, exactly. No paternalism.
+ * - Every metric has a source + confidence + count.
+ * - Delete is one tap away. Export is one tap away.
+ * - No score, no goal, no comparison anxiety.
+ */
+object BioContextContract {
+
+    sealed interface Intent : MviContract.Intent {
+        /** Re-pull provider status + local counts (foreground refresh). */
+        data object Refresh : Intent
+
+        /** Trigger an immediate ingestion from the connected provider. */
+        data object IngestNow : Intent
+
+        /** GDPR Art.20 — show export sheet / share JSON. */
+        data object ExportRequested : Intent
+
+        /** GDPR Art.17 — user confirmed delete-all in the confirmation dialog. */
+        data object DeleteAllConfirmed : Intent
+
+        /** User toggled per-type integration in Settings → Bio-signals — refresh inventory. */
+        data class TypeRevokeRequested(val type: BioSignalDataType) : Intent
+    }
+
+    sealed interface Effect : MviContract.Effect {
+        /** UI should open the OS share sheet with the given JSON payload. */
+        data class ShareExport(val jsonPayload: String) : Effect
+
+        /** Show a toast/snackbar (typically after delete or export success). */
+        data class Toast(val messageKey: String) : Effect
+
+        /** Health Connect deep-link request — UI opens the platform-level permissions screen. */
+        data object OpenHealthConnectSettings : Effect
+    }
+
+    /**
+     * Single inventory row — per data type tally for the UI.
+     */
+    data class TypeInventory(
+        val type: BioSignalDataType,
+        val sampleCount: Int,
+        val uniqueSourceDevices: List<String>,
+        val lastTimestampMillis: Long?,
+        val isEnabled: Boolean,           // user has granted permission for this type
+    )
+
+    /**
+     * Single source row for the "Connected sources" section.
+     */
+    data class ConnectedSource(
+        val deviceName: String,
+        val appName: String,
+        val sampleCount: Int,
+        val lastSeenMillis: Long?,
+    )
+
+    data class State(
+        val isLoading: Boolean = true,
+        val isRefreshing: Boolean = false,
+        val isIngesting: Boolean = false,
+        val isDeleting: Boolean = false,
+        val providerStatus: ProviderStatus = ProviderStatus.NotInstalled,
+        val typeInventory: List<TypeInventory> = emptyList(),
+        val connectedSources: List<ConnectedSource> = emptyList(),
+        val lastSyncMillis: Long? = null,
+        val totalSamplesLocal: Int = 0,
+        val totalAggregatesLocal: Int = 0,
+        val totalAggregatesPending: Int = 0,   // is_dirty=1 awaiting Phase 4 server push
+        val errorMessage: String? = null,
+    ) : MviContract.State {
+        val isReady: Boolean get() = providerStatus is ProviderStatus.Ready
+        val isEmpty: Boolean get() = totalSamplesLocal == 0
+    }
+}

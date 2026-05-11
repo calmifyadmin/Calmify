@@ -1615,4 +1615,52 @@
     <string name="meditation_time_min_sec">%1$d min %2$ds</string>
     <string name="meditation_time_seconds_only">%1$ds</string>
 
+    <!-- Bio-Signal Transparency Dashboard (Phase 2.UI) — 36 keys -->
+    <string name="bio_context_topbar">Your bio-signals</string>
+    <string name="bio_context_subtitle">What we have, where from, and what\'s been sent.</string>
+
+    <string name="bio_provider_not_installed">Health Connect isn\'t installed yet</string>
+    <string name="bio_provider_not_supported">Health Connect isn\'t supported on this device</string>
+    <string name="bio_provider_needs_permission">Some permissions are missing</string>
+    <string name="bio_provider_ready">Connected</string>
+    <string name="bio_provider_install_cta">Install Health Connect</string>
+
+    <string name="bio_inventory_title">Your data, locally</string>
+    <string name="bio_inventory_empty">No data yet — connect a device to start</string>
+    <string name="bio_total_samples">%1$d samples</string>
+
+    <string name="bio_sources_title">Connected sources</string>
+    <string name="bio_sources_empty">No connected sources detected</string>
+    <string name="bio_source_via_app">via %1$s</string>
+
+    <string name="bio_last_sync">Last sync: %1$s</string>
+
+    <string name="bio_server_title">What\'s on our servers</string>
+    <string name="bio_server_pending">%1$d aggregates pending sync</string>
+    <string name="bio_server_never_raw">We never send raw data points to our servers. Only aggregated statistics.</string>
+
+    <string name="bio_type_heart_rate">Heart rate</string>
+    <string name="bio_type_hrv">Heart-rate variability</string>
+    <string name="bio_type_sleep">Sleep</string>
+    <string name="bio_type_steps">Steps</string>
+    <string name="bio_type_resting_heart_rate">Resting heart rate</string>
+    <string name="bio_type_oxygen_saturation">Blood oxygen (SpO2)</string>
+    <string name="bio_type_activity">Activity</string>
+
+    <string name="bio_action_refresh">Refresh</string>
+    <string name="bio_action_ingest">Sync now</string>
+    <string name="bio_action_export">Export everything</string>
+    <string name="bio_action_delete">Delete everything</string>
+
+    <string name="bio_delete_dialog_title">Delete all bio-signal data?</string>
+    <string name="bio_delete_dialog_body">Every sample, aggregate, and consent record will be removed from this device and our servers. This can\'t be undone. Health Connect itself is not affected — your data stays with your wearable.</string>
+    <string name="bio_delete_dialog_confirm">Delete</string>
+
+    <string name="bio_toast_synced">Synced</string>
+    <string name="bio_toast_partial">Some data types failed — see logs</string>
+    <string name="bio_toast_deleted">All bio-signal data deleted</string>
+
+    <string name="bio_statement_title">Our promises</string>
+    <string name="bio_statement_no_sell_ads">We don\'t sell your data. We don\'t use it for advertising. We don\'t share it with third parties without your explicit consent.</string>
+
 </resources>

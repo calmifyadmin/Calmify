@@ -107,6 +107,8 @@ class RootComponent(
         // Avatar System (Wave 10)
         is RootDestination.AvatarCreator -> Child.AvatarCreator(context)
         is RootDestination.AvatarList -> Child.AvatarList(context)
+        // Bio-Signal Integration (Phase 2.UI, 2026-05-11)
+        is RootDestination.BioContext -> Child.BioContext(context)
         // Holistic Growth (Sprint 1+2)
         is RootDestination.Habits -> Child.Habits(context)
         is RootDestination.Meditation -> Child.Meditation(context)
@@ -368,6 +370,11 @@ class RootComponent(
     }
 
     @OptIn(DelicateDecomposeApi::class)
+    fun navigateToBioContext() {
+        navigation.push(RootDestination.BioContext)
+    }
+
+    @OptIn(DelicateDecomposeApi::class)
     fun navigateToEnvironment() {
         navigation.push(RootDestination.Environment)
     }
@@ -482,6 +489,8 @@ class RootComponent(
         // Avatar System (Wave 10)
         data class AvatarCreator(override val componentContext: ComponentContext) : Child
         data class AvatarList(override val componentContext: ComponentContext) : Child
+        // Bio-Signal Integration (Phase 2.UI, 2026-05-11)
+        data class BioContext(override val componentContext: ComponentContext) : Child
         // Holistic Growth (Sprint 1+2)
         data class Habits(override val componentContext: ComponentContext) : Child
         data class Meditation(override val componentContext: ComponentContext) : Child

@@ -2,7 +2,7 @@
 
 > **Plan**: `.claude/BIOSIGNAL_INTEGRATION_PLAN.md`
 > **Started**: 2026-05-11
-> **Current phase**: **Phase 0+1+2 DONE 2026-05-11** (Phase 2 data layer; UI deferred to 2.UI follow-up)
+> **Current phase**: **Phase 0+1+2+2.UI DONE 2026-05-11**, Phase 3 NEXT (Onboarding 5-step pager)
 > **Branch**: `design-system-refactor` (Phase 0+1 commits live here; bio-signal Phase 2+ will continue or branch)
 > **Last update**: 2026-05-11 — design-system-refactor COMPLETE (4 commits) + Bio-Signal Phase 0+1 DONE same day.
 
@@ -88,12 +88,20 @@ Data layer (this commit):
 - [x] Local consent audit log (`bio_consent_log` table) — server push deferred to Phase 4
 - [x] `:app:assembleDebug` verde 17s
 
-UI (deferred to 2.UI follow-up commit):
-- [ ] `BioContextScreen.kt` — transparency dashboard (data inventory + sources + last sync + CTA)
-- [ ] Settings → Bio-signals section (granular per-type toggles)
-- [ ] Revoke flow UI: per-type permission + local data wipe (default) / preserve-readonly (toggle)
-- [ ] New `:features:biocontext` Gradle module + Decompose destination
-- [ ] `Strings.BioContext` i18n facade (~30 keys × 12 langs)
+UI (DONE 2026-05-11):
+- [x] `BioContextScreen.kt` — transparency dashboard (6 cards: ProviderStatus + Inventory + Sources + ServerNeverRaw + PrivacyActions + Statement); design-token 1:1
+- [x] New `:features:biocontext` Gradle module + Decompose destination (`RootDestination.BioContext`, `Child.BioContext`, `navigateToBioContext()`)
+- [x] `Strings.BioContext` i18n facade (36 typed getters)
+- [x] 36 EN + 36 IT i18n keys; 10 other locales fall through to EN per existing pattern
+- [x] `BioContextEntryPoint.kt` (androidMain) — Effect handler: ShareExport via FileProvider, Toast, OpenHealthConnectSettings deep-link
+- [x] `bioContextKoinModule` registered in `allKoinModules`
+- [x] `:app:assembleDebug` verde 2m 54s
+
+Polish deferrals (small follow-ups):
+- [ ] Settings → "Bio-signals" entry that navigates to this screen (rootComponent.navigateToBioContext())
+- [ ] Drawer entry for direct user access
+- [ ] Translations for ES/FR/DE/PT (currently inherit EN; on-demand per market)
+- [ ] Per-type granular toggle UI on the screen itself (revoke deep-links to Health Connect settings for now)
 
 Deferred to Phase 4 (server-side):
 - [ ] Server-side `bio_consent_log/{userId}/{timestamp}` audit trail (Ktor endpoint + Firestore)

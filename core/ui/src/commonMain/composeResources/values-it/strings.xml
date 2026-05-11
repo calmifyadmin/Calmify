@@ -1611,4 +1611,52 @@
     <string name="meditation_time_minutes_only">%1$d min</string>
     <string name="meditation_time_min_sec">%1$d min %2$ds</string>
     <string name="meditation_time_seconds_only">%1$ds</string>
+
+    <!-- Bio-Signal Transparency Dashboard (Phase 2.UI) — 36 keys -->
+    <string name="bio_context_topbar">I tuoi dati biologici</string>
+    <string name="bio_context_subtitle">Cosa abbiamo, da dove, e cosa è stato inviato.</string>
+
+    <string name="bio_provider_not_installed">Health Connect non è ancora installato</string>
+    <string name="bio_provider_not_supported">Health Connect non è supportato su questo dispositivo</string>
+    <string name="bio_provider_needs_permission">Mancano alcuni permessi</string>
+    <string name="bio_provider_ready">Connesso</string>
+    <string name="bio_provider_install_cta">Installa Health Connect</string>
+
+    <string name="bio_inventory_title">I tuoi dati, in locale</string>
+    <string name="bio_inventory_empty">Ancora nessun dato — connetti un dispositivo per iniziare</string>
+    <string name="bio_total_samples">%1$d campioni</string>
+
+    <string name="bio_sources_title">Fonti connesse</string>
+    <string name="bio_sources_empty">Nessuna fonte connessa rilevata</string>
+    <string name="bio_source_via_app">via %1$s</string>
+
+    <string name="bio_last_sync">Ultima sincronizzazione: %1$s</string>
+
+    <string name="bio_server_title">Cosa è sui nostri server</string>
+    <string name="bio_server_pending">%1$d aggregati in attesa di sync</string>
+    <string name="bio_server_never_raw">Non inviamo mai punti dati grezzi ai nostri server. Solo statistiche aggregate.</string>
+
+    <string name="bio_type_heart_rate">Frequenza cardiaca</string>
+    <string name="bio_type_hrv">Variabilità cardiaca</string>
+    <string name="bio_type_sleep">Sonno</string>
+    <string name="bio_type_steps">Passi</string>
+    <string name="bio_type_resting_heart_rate">Battito a riposo</string>
+    <string name="bio_type_oxygen_saturation">Ossigenazione (SpO2)</string>
+    <string name="bio_type_activity">Attività</string>
+
+    <string name="bio_action_refresh">Aggiorna</string>
+    <string name="bio_action_ingest">Sincronizza ora</string>
+    <string name="bio_action_export">Esporta tutto</string>
+    <string name="bio_action_delete">Cancella tutto</string>
+
+    <string name="bio_delete_dialog_title">Cancellare tutti i dati biologici?</string>
+    <string name="bio_delete_dialog_body">Ogni campione, aggregato e registro di consenso verrà rimosso da questo dispositivo e dai nostri server. L\'operazione è irreversibile. Health Connect non è interessato — i tuoi dati restano nel tuo wearable.</string>
+    <string name="bio_delete_dialog_confirm">Cancella</string>
+
+    <string name="bio_toast_synced">Sincronizzato</string>
+    <string name="bio_toast_partial">Alcuni tipi di dato non sono stati sincronizzati</string>
+    <string name="bio_toast_deleted">Tutti i dati biologici cancellati</string>
+
+    <string name="bio_statement_title">Le nostre promesse</string>
+    <string name="bio_statement_no_sell_ads">Non vendiamo i tuoi dati. Non li usiamo per pubblicità. Non li condividiamo con terze parti senza il tuo consenso esplicito.</string>
 </resources>

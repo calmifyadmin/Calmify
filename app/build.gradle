@@ -219,6 +219,8 @@ dependencies {
     // Holistic Growth (Sprint 1+2)
     implementation(project(":features:habits"))
     implementation(project(":features:meditation"))
+    // Bio-Signal Integration (Phase 2.UI, 2026-05-11)
+    implementation(project(":features:biocontext"))
 
     // Decompose Navigation (KMP lifecycle-aware) — Shell for future migration
     implementation libs.decompose

@@ -36,6 +36,7 @@ import com.lifo.messaging.di.messagingKoinModule
 import com.lifo.subscription.di.subscriptionKoinModule
 import com.lifo.threaddetail.di.threadDetailKoinModule
 import com.lifo.avatarcreator.di.avatarCreatorKoinModule
+import com.lifo.biocontext.di.bioContextKoinModule
 import com.lifo.habits.di.habitKoinModule
 import com.lifo.meditation.di.meditationKoinModule
 import com.lifo.ui.onboarding.OnboardingManager
@@ -248,4 +249,6 @@ val allKoinModules = listOf(
     // Holistic Growth (Sprint 1+2)
     habitKoinModule,
     meditationKoinModule,
+    // Bio-Signal Integration (Phase 2.UI, 2026-05-11)
+    bioContextKoinModule,
 )

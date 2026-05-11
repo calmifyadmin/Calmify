@@ -1,0 +1,38 @@
+plugins {
+    id 'calmify.kmp.compose'
+}
+
+android {
+    namespace 'com.lifo.biocontext'
+}
+
+configurations.configureEach {
+    resolutionStrategy {
+        force "org.jetbrains.kotlin:kotlin-stdlib:2.1.0"
+        force "org.jetbrains.kotlin:kotlin-stdlib-common:2.1.0"
+    }
+}
+
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation project(':core:util')
+            implementation project(':core:ui')
+
+            implementation compose.materialIconsExtended
+
+            implementation libs.koin.core
+            implementation libs.koin.compose
+            implementation libs.koin.compose.viewmodel
+        }
+
+        androidMain.dependencies {
+            implementation libs.core.ktx
+            implementation libs.coroutines.android
+        }
+
+        commonTest.dependencies {
+            implementation kotlin('test')
+        }
+    }
+}

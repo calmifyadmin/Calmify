@@ -739,6 +739,13 @@ fun DecomposeApp(
                         )
                     }
 
+                    // === Bio-Signal Integration (Phase 2.UI, 2026-05-11) ===
+                    is RootComponent.Child.BioContext -> {
+                        com.lifo.biocontext.BioContextRouteContent(
+                            navigateBack = { rootComponent.navigateBack() },
+                        )
+                    }
+
                     is RootComponent.Child.Environment -> {
                         com.lifo.settings.navigation.EnvironmentRouteContent(
                             navigateBack = { rootComponent.navigateBack() },

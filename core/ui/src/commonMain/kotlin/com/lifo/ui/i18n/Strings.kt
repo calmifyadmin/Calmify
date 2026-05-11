@@ -1293,4 +1293,68 @@ object Strings {
         val appLogo: StringResource get() = Res.string.a11y_app_logo
         val image: StringResource get() = Res.string.a11y_image_generic
     }
+
+    /**
+     * Bio-Signal transparency dashboard (Phase 2.UI, 2026-05-11).
+     * Surfaces what the app has stored locally + what's been pushed to the
+     * server, with one-tap export (GDPR Art.20) + delete-all (Art.17).
+     */
+    object BioContext {
+        val topbar: StringResource get() = Res.string.bio_context_topbar
+        val subtitle: StringResource get() = Res.string.bio_context_subtitle
+
+        // Provider status
+        val providerNotInstalled: StringResource get() = Res.string.bio_provider_not_installed
+        val providerNotSupported: StringResource get() = Res.string.bio_provider_not_supported
+        val providerNeedsPermission: StringResource get() = Res.string.bio_provider_needs_permission
+        val providerReady: StringResource get() = Res.string.bio_provider_ready
+        val providerInstallCta: StringResource get() = Res.string.bio_provider_install_cta
+
+        // Inventory
+        val inventoryTitle: StringResource get() = Res.string.bio_inventory_title
+        val inventoryEmpty: StringResource get() = Res.string.bio_inventory_empty
+        val totalSamples: StringResource get() = Res.string.bio_total_samples
+
+        // Sources
+        val sourcesTitle: StringResource get() = Res.string.bio_sources_title
+        val sourcesEmpty: StringResource get() = Res.string.bio_sources_empty
+        val sourceViaApp: StringResource get() = Res.string.bio_source_via_app
+
+        // Sync state
+        val lastSync: StringResource get() = Res.string.bio_last_sync
+
+        // Server section
+        val serverTitle: StringResource get() = Res.string.bio_server_title
+        val serverPending: StringResource get() = Res.string.bio_server_pending
+        val serverNeverRaw: StringResource get() = Res.string.bio_server_never_raw
+
+        // Data type labels — used inline by type chip rendering
+        val typeHeartRate: StringResource get() = Res.string.bio_type_heart_rate
+        val typeHrv: StringResource get() = Res.string.bio_type_hrv
+        val typeSleep: StringResource get() = Res.string.bio_type_sleep
+        val typeSteps: StringResource get() = Res.string.bio_type_steps
+        val typeRestingHeartRate: StringResource get() = Res.string.bio_type_resting_heart_rate
+        val typeOxygenSaturation: StringResource get() = Res.string.bio_type_oxygen_saturation
+        val typeActivity: StringResource get() = Res.string.bio_type_activity
+
+        // Privacy actions
+        val actionRefresh: StringResource get() = Res.string.bio_action_refresh
+        val actionIngest: StringResource get() = Res.string.bio_action_ingest
+        val actionExport: StringResource get() = Res.string.bio_action_export
+        val actionDelete: StringResource get() = Res.string.bio_action_delete
+
+        // Delete confirmation dialog
+        val deleteDialogTitle: StringResource get() = Res.string.bio_delete_dialog_title
+        val deleteDialogBody: StringResource get() = Res.string.bio_delete_dialog_body
+        val deleteDialogConfirm: StringResource get() = Res.string.bio_delete_dialog_confirm
+
+        // Toasts
+        val toastSynced: StringResource get() = Res.string.bio_toast_synced
+        val toastPartial: StringResource get() = Res.string.bio_toast_partial
+        val toastDeleted: StringResource get() = Res.string.bio_toast_deleted
+
+        // Privacy statement
+        val statementTitle: StringResource get() = Res.string.bio_statement_title
+        val statementNoSellAds: StringResource get() = Res.string.bio_statement_no_sell_ads
+    }
 }
