@@ -20,6 +20,21 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!--
+        Bio-Signal Integration (Phase 4 polish 2026-05-12).
+        Health Connect <uses-permission> declarations — REQUIRED. Without these,
+        the permission request contract returns silently with 0 granted.
+        These map 1:1 to BioSignalDataType in core/util domain.
+        Calmify reads (never writes).
+    -->
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE_VARIABILITY" />
+    <uses-permission android:name="android.permission.health.READ_SLEEP" />
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
+    <uses-permission android:name="android.permission.health.READ_RESTING_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.READ_OXYGEN_SATURATION" />
+    <uses-permission android:name="android.permission.health.READ_EXERCISE" />
+
+    <!--
         Bio-Signal Integration (Phase 1, 2026-05-11)
         Health Connect SDK requires `<queries>` to resolve the Health Connect
         provider package on Android 11+ (package visibility restrictions).
@@ -82,6 +97,16 @@
                 <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
                 <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
             </intent-filter>
+
+            <!--
+                Health Connect REQUIRES this meta-data to map our app to the
+                health_permissions.xml resource. Without it, HC silently
+                aborts the permission contract (the actual blocker behind
+                the 56ms "fake" permission flow logged 2026-05-12 23:28).
+            -->
+            <meta-data
+                android:name="health_permissions"
+                android:resource="@xml/health_permissions" />
 
             <meta-data
                 android:name="android.app.lib_name"

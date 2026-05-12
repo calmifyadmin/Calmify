@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Health Connect permission declaration (Bio-Signal Integration Phase 4 polish 2026-05-12).
+
+    Pairs with <meta-data android:name="health_permissions"
+    android:resource="@xml/health_permissions"/> on MainActivity.
+
+    On Android 14+ the actual SOURCE-OF-TRUTH for HC permission listing is the
+    <uses-permission> declarations in AndroidManifest.xml. This XML resource is
+    a fallback for older Android (HC standalone app installations 13-) and is
+    also used by some HC tooling for permission inspection.
+
+    Calmify reads (never writes) the following data types from Health Connect.
+    Each entry mirrors a `BioSignalDataType` from core/util domain.
+-->
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+    <permission android:name="android.permission.health.READ_HEART_RATE" />
+    <permission android:name="android.permission.health.READ_HEART_RATE_VARIABILITY" />
+    <permission android:name="android.permission.health.READ_SLEEP" />
+    <permission android:name="android.permission.health.READ_STEPS" />
+    <permission android:name="android.permission.health.READ_RESTING_HEART_RATE" />
+    <permission android:name="android.permission.health.READ_OXYGEN_SATURATION" />
+    <permission android:name="android.permission.health.READ_EXERCISE" />
+</resources>

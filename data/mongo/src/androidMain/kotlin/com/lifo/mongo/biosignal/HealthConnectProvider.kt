@@ -1,6 +1,8 @@
 package com.lifo.mongo.biosignal
 
 import android.content.Context
+import android.os.Build
+import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
@@ -53,18 +55,33 @@ class HealthConnectProvider(
     // ──────────────────────────────────────────────────────────────────────
 
     override suspend fun checkAvailability(): ProviderStatus = withContext(Dispatchers.IO) {
-        when (HealthConnectClient.getSdkStatus(context)) {
+        val sdkStatus = HealthConnectClient.getSdkStatus(context)
+        Log.i(
+            TAG,
+            "checkAvailability — Android API ${Build.VERSION.SDK_INT}, manufacturer=${Build.MANUFACTURER}, model=${Build.MODEL}, HC SDK status=$sdkStatus " +
+                    "(SDK_AVAILABLE=${HealthConnectClient.SDK_AVAILABLE}, SDK_UNAVAILABLE=${HealthConnectClient.SDK_UNAVAILABLE}, " +
+                    "SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED=${HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED})",
+        )
+        when (sdkStatus) {
             HealthConnectClient.SDK_UNAVAILABLE -> ProviderStatus.NotSupported
             HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED -> ProviderStatus.NotInstalled
             HealthConnectClient.SDK_AVAILABLE -> {
-                val c = client ?: return@withContext ProviderStatus.NotInstalled
+                val c = client ?: run {
+                    Log.w(TAG, "SDK_AVAILABLE but HealthConnectClient.getOrCreate returned null — treating as NotInstalled")
+                    return@withContext ProviderStatus.NotInstalled
+                }
                 val allTypes = BioSignalDataType.entries.toSet()
                 val requested = HealthConnectPermissions.permissionsFor(allTypes)
-                val granted = c.permissionController.getGrantedPermissions()
+                val granted = runCatching { c.permissionController.getGrantedPermissions() }
+                    .onFailure { Log.e(TAG, "getGrantedPermissions threw", it) }
+                    .getOrDefault(emptySet())
                 val missingHc = requested - granted
+                Log.i(
+                    TAG,
+                    "permissions — requested=${requested.size}, granted=${granted.size} (${granted.joinToString().take(200)}), missing=${missingHc.size}",
+                )
                 val missingTypes = HealthConnectPermissions.grantedDataTypes(missingHc.toSet())
                     .ifEmpty {
-                        // No mapping success — derive missing types by symmetric difference.
                         allTypes - HealthConnectPermissions.grantedDataTypes(granted)
                     }
                 if (missingHc.isEmpty()) ProviderStatus.Ready
@@ -72,6 +89,10 @@ class HealthConnectProvider(
             }
             else -> ProviderStatus.NotSupported
         }
+    }
+
+    private companion object {
+        private const val TAG = "HealthConnectProvider"
     }
 
     override suspend fun requestPermissions(requested: Set<BioSignalDataType>): Set<BioSignalDataType> =
