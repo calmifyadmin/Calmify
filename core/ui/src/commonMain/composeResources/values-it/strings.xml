@@ -1705,4 +1705,11 @@
     <string name="bio_onb_confirm_skipped_title">Va benissimo.</string>
     <string name="bio_onb_confirm_skipped_body">Calmify funziona benissimo anche senza bio-segnali. Puoi connetterti più tardi da Impostazioni → Bio-segnali in qualsiasi momento.</string>
     <string name="bio_onb_confirm_cta">Portami all\'app</string>
+
+    <!-- Bio-Signal Settings entry (Phase 4 polish — Settings → Bio-signals) -->
+    <string name="settings_bio_section">Bio-segnali</string>
+    <string name="settings_bio_data_title">I tuoi dati biologici</string>
+    <string name="settings_bio_data_subtitle">Cosa abbiamo, da dove, e cosa è stato inviato</string>
+    <string name="settings_bio_connect_title">Connetti un wearable</string>
+    <string name="settings_bio_connect_subtitle">Collega il tuo dispositivo via Health Connect — solo lettura</string>
 </resources>

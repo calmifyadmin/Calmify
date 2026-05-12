@@ -51,6 +51,8 @@ fun SettingsScreen(
     onNavigateToAiPreferences: () -> Unit = {},
     onNavigateToEnvironment: () -> Unit = {},
     onNavigateToAvatarDebug: () -> Unit = {},
+    onNavigateToBioContext: () -> Unit = {},
+    onNavigateToBioOnboarding: () -> Unit = {},
     onLogout: () -> Unit,
     currentLanguageCode: String = "",
     onLanguageSelected: (String) -> Unit = {},
@@ -151,6 +153,21 @@ fun SettingsScreen(
                     subtitle = stringResource(Res.string.settings_environment_item_subtitle),
                     icon = Icons.Default.Spa,
                     onClick = onNavigateToEnvironment,
+                )
+
+                // Bio-Signal Section (Phase 4 polish 2026-05-12)
+                SettingsSectionHeader(title = stringResource(Res.string.settings_bio_section))
+                SettingsNavigationItem(
+                    title = stringResource(Res.string.settings_bio_connect_title),
+                    subtitle = stringResource(Res.string.settings_bio_connect_subtitle),
+                    icon = Icons.Outlined.MonitorHeart,
+                    onClick = onNavigateToBioOnboarding,
+                )
+                SettingsNavigationItem(
+                    title = stringResource(Res.string.settings_bio_data_title),
+                    subtitle = stringResource(Res.string.settings_bio_data_subtitle),
+                    icon = Icons.Outlined.HealthAndSafety,
+                    onClick = onNavigateToBioContext,
                 )
 
                 // Language Section

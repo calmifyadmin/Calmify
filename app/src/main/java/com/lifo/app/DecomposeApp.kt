@@ -420,6 +420,8 @@ fun DecomposeApp(
                             onNavigateToAiPreferences = { rootComponent.navigateToSettingsAiPreferences() },
                             onNavigateToEnvironment = { rootComponent.navigateToEnvironment() },
                             onNavigateToAvatarDebug = { rootComponent.navigateToAvatarDebug() },
+                            onNavigateToBioContext = { rootComponent.navigateToBioContext() },
+                            onNavigateToBioOnboarding = { rootComponent.navigateToBioOnboarding() },
                             onLogout = { rootComponent.navigateToAuth() }
                         )
                     }

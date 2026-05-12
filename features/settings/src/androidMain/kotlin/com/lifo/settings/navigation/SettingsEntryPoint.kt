@@ -69,6 +69,8 @@ fun SettingsMainRouteContent(
     onNavigateToAiPreferences: () -> Unit = {},
     onNavigateToEnvironment: () -> Unit = {},
     onNavigateToAvatarDebug: () -> Unit = {},
+    onNavigateToBioContext: () -> Unit = {},
+    onNavigateToBioOnboarding: () -> Unit = {},
     onLogout: () -> Unit
 ) {
     val viewModel: SettingsViewModel = koinViewModel(key = SETTINGS_VM_KEY)
@@ -116,6 +118,8 @@ fun SettingsMainRouteContent(
         onNavigateToAiPreferences = onNavigateToAiPreferences,
         onNavigateToEnvironment = onNavigateToEnvironment,
         onNavigateToAvatarDebug = onNavigateToAvatarDebug,
+        onNavigateToBioContext = onNavigateToBioContext,
+        onNavigateToBioOnboarding = onNavigateToBioOnboarding,
         onLogout = onLogout,
         currentLanguageCode = currentLanguageCode,
         onLanguageSelected = { code ->
