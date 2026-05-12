@@ -95,8 +95,10 @@ object BackendConfig {
 
     /** Bio-Signal aggregates (Phase 4 — 2026-05-11). When OFF, the local
      *  SQLDelight is the only store; dirty aggregates accumulate. When ON,
-     *  syncPendingAggregates() pushes them to the server. */
-    const val BIO_REST = false
+     *  syncPendingAggregates() pushes them to the server. Activated 2026-05-12
+     *  after Cloud Run build ce63ee0a + Firestore indexes deploy + smoke test
+     *  (4/4 endpoints return 401 without Bearer token, routes verified). */
+    const val BIO_REST = true
 
     /** SocialGraph — follow/block + public profile (Phase 5) */
     const val SOCIAL_GRAPH_REST = true
