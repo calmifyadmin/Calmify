@@ -204,6 +204,10 @@
     { "collectionGroup": "psychological_profiles","queryScope": "COLLECTION","fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "year", "order": "DESCENDING" }, { "fieldPath": "weekNumber", "order": "DESCENDING" } ] },
     { "collectionGroup": "psychological_profiles","queryScope": "COLLECTION","fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "computedAtMillis", "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] },
 
+    { "collectionGroup": "diary",                "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "dateMillis",      "order": "DESCENDING" } ] },
+    { "collectionGroup": "diary_insights",       "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "generatedAt",     "order": "DESCENDING" } ] },
+    { "collectionGroup": "wellbeing_snapshots",  "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "timestamp",       "order": "ASCENDING"  } ] },
+
     { "collectionGroup": "bio_aggregates",       "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "periodKey",       "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] },
     { "collectionGroup": "bio_aggregates",       "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "type", "order": "ASCENDING" }, { "fieldPath": "periodKey", "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] },
     { "collectionGroup": "bio_aggregates",       "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "period", "order": "ASCENDING" }, { "fieldPath": "periodKey", "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] },
