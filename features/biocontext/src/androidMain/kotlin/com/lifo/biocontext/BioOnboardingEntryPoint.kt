@@ -2,6 +2,7 @@ package com.lifo.biocontext
 
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -48,6 +49,10 @@ fun BioOnboardingRouteContent(
         contract = HealthConnectPermissions.createRequestPermissionResultContract(),
     ) { grantedHc: Set<String> ->
         val grantedTypes = HealthConnectPermissions.grantedDataTypes(grantedHc)
+        Log.i(
+            "BioOnboarding",
+            "permission result — granted HC strings: ${grantedHc.size}, mapped to BioSignalDataType: ${grantedTypes.size} (${grantedTypes.joinToString()})",
+        )
         viewModel.onIntent(BioOnboardingContract.Intent.PermissionResult(grantedTypes))
     }
 
@@ -56,6 +61,14 @@ fun BioOnboardingRouteContent(
             when (effect) {
                 is BioOnboardingContract.Effect.LaunchPermissionRequest -> {
                     val hcPermissions = HealthConnectPermissions.permissionsFor(effect.types)
+                    Log.i(
+                        "BioOnboarding",
+                        "launching permission request — ${effect.types.size} BioSignalDataTypes → ${hcPermissions.size} HC permission strings",
+                    )
+                    if (hcPermissions.isEmpty()) {
+                        Log.w("BioOnboarding", "permission set is EMPTY — cannot launch contract")
+                        return@collect
+                    }
                     permissionLauncher.launch(hcPermissions)
                 }
                 BioOnboardingContract.Effect.OpenHealthConnectInstall -> {

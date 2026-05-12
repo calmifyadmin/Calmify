@@ -61,6 +61,28 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!--
+                Bio-Signal Integration (Phase 4 polish 2026-05-12)
+                Health Connect REQUIRES this intent-filter on at least one
+                exported Activity. Without it, permission-request flow
+                silently fails (app backgrounds for ~30ms then refocuses
+                with empty granted set). Hosting it on MainActivity is
+                acceptable; a dedicated PrivacyRationaleActivity is the
+                cleaner long-term home (Play Store ship requirement).
+
+                The Activity should display the app's privacy explanation
+                when launched via this intent — for now MainActivity will
+                bring the user back to the app, which is also acceptable
+                until a dedicated screen exists.
+            -->
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+
             <meta-data
                 android:name="android.app.lib_name"
                 android:value="" />
