@@ -2,7 +2,7 @@
 
 > **Plan**: `.claude/BIOSIGNAL_INTEGRATION_PLAN.md`
 > **Started**: 2026-05-11
-> **Current phase**: **Phase 0+1+2+2.UI+3 DONE 2026-05-11**, Phase 4 NEXT (Server-side aggregates)
+> **Current phase**: **Phase 0+1+2+2.UI+3+4 (code) DONE 2026-05-11**, deploy + E2E deferred; Phase 5 NEXT (Wellness integration)
 > **Branch**: `design-system-refactor` (Phase 0+1 commits live here; bio-signal Phase 2+ will continue or branch)
 > **Last update**: 2026-05-11 — design-system-refactor COMPLETE (4 commits) + Bio-Signal Phase 0+1 DONE same day.
 
@@ -136,29 +136,38 @@ Polish deferrals (small, non-blocking):
 
 ---
 
-## Phase 4 — Server-Side Aggregates
-**Goal**: 4 REST endpoints live + Firestore schema + indexes.
-**Est**: 4-6 days
-**Status**: ⬜ NOT STARTED
+## Phase 4 — Server-Side Aggregates ✅ DONE 2026-05-11 (code) / DEFERRED (deploy + E2E)
+**Goal**: 4 REST endpoints live + Firestore schema + indexes + client wiring.
+**Est**: 4-6 days. **Actual code: same day**. Deploy + E2E test deferred.
+**Status**: ✅ CODE DONE / ⬜ DEPLOY PENDING
 
-- [ ] `calmify-server/service/BioSignalService.kt`
-- [ ] `calmify-server/routes/BioSignalRoutes.kt`
-  - [ ] `POST /api/v1/bio/ingest` (Protobuf CN + JSON fallback)
-  - [ ] `GET /api/v1/bio/aggregate?range=&types=`
-  - [ ] `DELETE /api/v1/bio/all` (Art.17)
-  - [ ] `GET /api/v1/bio/export` (Art.20)
-- [ ] Firestore schema: `bio_aggregates/{userId}/{daily|weekly|monthly}/{period}`
-- [ ] Composite indexes in `firestore.indexes.json` (PRE-DEPLOY — lezione Phase 5)
-  - [ ] `bio_aggregates/{userId}/daily` ORDER BY date DESC, type ASC, __name__ DESC
-  - [ ] `bio_aggregates/{userId}/weekly` ORDER BY week DESC, __name__ DESC
-  - [ ] `bio_consent_log/{userId}` ORDER BY timestamp DESC, __name__ DESC
-- [ ] Rate limit applied (60 req/min/user on `/ingest`)
-- [ ] Audit log on every mutation
-- [ ] `BackendConfig.BIO_REST=false` flag (default off) — flip via Remote Config
-- [ ] `KtorBioSignalRepository.kt` (data/network) client impl
-- [ ] Koin module registration
-- [ ] **Deploy**: commit+push → Cloud Build → smoke test new endpoints (NOT just /health)
-- [ ] **Audit trail**: verify endpoints return 401 without token (smoke test pattern)
+Code (this commit):
+- [x] `calmify-server/.../service/BioSignalService.kt` — 4 ops: ingestAggregates (chunked 500 + deterministic doc IDs for idempotent upsert) / getAggregates (composite-index query) / deleteAll Art.17 atomic chunked-delete + final REVOKE audit / exportAll Art.20 + ingestConsentBatch + logConsentEvent
+- [x] `calmify-server/.../routing/BioSignalRoutes.kt` — POST `/api/v1/bio/ingest` + GET `/api/v1/bio/aggregate` + DELETE `/api/v1/bio/all` + GET `/api/v1/bio/export` all under `authenticate("firebase")` + IDOR-guard (overrides client ownerId with `principal.uid`)
+- [x] Flat Firestore layout `bio_aggregates/{deterministic-id}` (chose flat over nested for query simplicity; ID encodes userId|type|period|periodKey for idempotency)
+- [x] 5 composite indexes pre-deployed in `firestore.indexes.json`:
+  - bio_aggregates ownerId ASC + periodKey DESC + __name__ DESC
+  - bio_aggregates ownerId ASC + type ASC + periodKey DESC + __name__ DESC
+  - bio_aggregates ownerId ASC + period ASC + periodKey DESC + __name__ DESC
+  - bio_aggregates ownerId ASC + type ASC + period ASC + periodKey DESC + __name__ DESC
+  - bio_consent_log ownerId ASC + timestampMillis DESC + __name__ DESC
+- [x] Rate limit covered by existing `RateLimit.application` plugin (60 req/min/user default)
+- [x] Audit log on every mutation (consent_log table + chained REVOKE on deleteAll)
+- [x] `BackendConfig.BIO_REST = false` flag wired in KoinModules.kt; restOverrideModule swaps NoopBioSignalNetworkClient → KtorBioSignalNetworkClient when flipped true
+- [x] `data/network/.../KtorBioSignalNetworkClient.kt` client impl (resilient, swallows network failures)
+- [x] `core/util/.../BioSignalNetworkClient.kt` interface + `NoopBioSignalNetworkClient` default
+- [x] `bioSignalModule` (data/mongo) registers NoopBioSignalNetworkClient by default + injects into BioSignalRepositoryImpl
+- [x] `BioSignalRepositoryImpl.syncPendingAggregates()` real impl (reads dirty → POST → marks first acceptedCount rows clean)
+- [x] `BioSignalRepositoryImpl.deleteAll()` server fan-out best-effort
+- [x] `:calmify-server:compileKotlin` verde 31s
+- [x] `:app:assembleDebug` verde 45s
+
+Deploy (deferred — separate session/CI):
+- [ ] Server: `gcloud builds submit --config=calmify-server/cloudbuild.yaml --project=calmify-388723`
+- [ ] Indexes: `firebase deploy --only firestore:indexes --project=calmify-388723`
+- [ ] Flip `BackendConfig.BIO_REST` true after successful deploy
+- [ ] **Smoke test**: POST /ingest + GET /aggregate + DELETE /all + GET /export with real JWT (NOT just /health per CLAUDE.md regola 13)
+- [ ] **Auth audit**: verify all 4 endpoints return 401 without Bearer token
 
 ---
 

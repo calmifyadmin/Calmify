@@ -2,15 +2,19 @@ package com.lifo.mongo.biosignal
 
 import android.util.Log
 import com.lifo.mongo.database.CalmifyDatabase
+import com.lifo.shared.model.BioAggregateBatchProto
+import com.lifo.shared.model.BioAggregateProto
 import com.lifo.util.auth.AuthProvider
 import com.lifo.util.model.AggregatePeriod
 import com.lifo.util.model.BioAggregate
 import com.lifo.util.model.BioSignal
 import com.lifo.util.model.BioSignalDataType
 import com.lifo.util.model.ConfidenceLevel
+import com.lifo.util.repository.BioSignalNetworkClient
 import com.lifo.util.repository.BioSignalRepository
 import com.lifo.util.repository.HealthDataProvider
 import com.lifo.util.repository.IngestionResult
+import com.lifo.util.repository.NoopBioSignalNetworkClient
 import com.lifo.util.repository.ProviderStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -49,6 +53,7 @@ import app.cash.sqldelight.coroutines.mapToOneOrNull
 class BioSignalRepositoryImpl(
     private val database: CalmifyDatabase,
     private val authProvider: AuthProvider,
+    private val networkClient: BioSignalNetworkClient = NoopBioSignalNetworkClient(),
     private val json: Json = DefaultJson,
     private val ttlMillis: Long = DEFAULT_TTL_MILLIS,
 ) : BioSignalRepository {
@@ -215,10 +220,50 @@ class BioSignalRepositoryImpl(
     }
 
     override suspend fun syncPendingAggregates(): Int = withContext(Dispatchers.IO) {
-        // Phase 4 will replace this with a Ktor POST to /api/v1/bio/ingest.
-        // Until then aggregates accumulate locally with is_dirty=1 — guaranteed
-        // to flush once the server endpoint is wired (offline-first contract).
-        0
+        // Read all dirty aggregates, push them to the server via the network
+        // client, mark them clean. If the network client is the no-op
+        // (BackendConfig.BIO_REST=false), this returns 0 — aggregates remain
+        // dirty and accumulate, guaranteed to flush when the flag flips.
+        val dirty = aggQueries.getAllDirty().executeAsList()
+        if (dirty.isEmpty()) return@withContext 0
+
+        val batch = BioAggregateBatchProto(
+            aggregates = dirty.map { row ->
+                BioAggregateProto(
+                    ownerId = row.owner_id,
+                    type = row.data_type,
+                    period = row.period,
+                    periodKey = row.period_key,
+                    mean = row.mean,
+                    p10 = row.p10,
+                    p90 = row.p90,
+                    count = row.sample_count.toInt(),
+                    confidenceWeightedMean = row.confidence_weighted_mean,
+                    sourceMix = runCatching {
+                        json.decodeFromString<Map<String, Int>>(row.source_mix_json)
+                    }.getOrDefault(emptyMap()),
+                    computedAtMillis = row.computed_at,
+                )
+            },
+            clientTimezone = TimeZone.currentSystemDefault().id,
+        )
+
+        val result = networkClient.ingest(batch)
+        if (result.acceptedCount == 0) {
+            Log.i(TAG, "syncPendingAggregates: 0 accepted (errors=${result.errors.size})")
+            return@withContext 0
+        }
+
+        // Mark clean ONLY the rows the server accepted. The server can reject
+        // (returning rejectedCount > 0) — those stay dirty and retry next sync.
+        // We don't know per-row which were accepted; the simplest contract is:
+        // server returns acceptedCount monotonically (it processes in order).
+        // We mark the first `acceptedCount` rows clean.
+        dirty.take(result.acceptedCount).forEach { row ->
+            aggQueries.markClean(row.id)
+        }
+        Log.i(TAG, "syncPendingAggregates: accepted=${result.acceptedCount} rejected=${result.rejectedCount}")
+        result.acceptedCount
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -261,11 +306,20 @@ class BioSignalRepositoryImpl(
 
     override suspend fun deleteAll() = withContext(Dispatchers.IO) {
         val userId = ownerIdOrEmpty()
+        // Step 1: local atomic wipe (always succeeds — SQLDelight is local-only).
         rawQueries.deleteAllByOwner(userId)
         aggQueries.deleteAllByOwner(userId)
         consentQueries.deleteAllByOwner(userId)
-        // Audit the bulk revoke (will be pushed to server when Phase 4 endpoint exists)
+        // Step 2: audit the bulk revoke (will be pushed to server next sync).
         logConsentEvent(userId, action = "REVOKE", dataType = "*")
+        // Step 3: server-side fan-out (Phase 4). Best-effort — if the network
+        // client is the No-op or the request fails, the server data lingers
+        // until the next manual delete or the user closes their account
+        // (GDPR full deletion path). The local delete is unconditional.
+        val serverDeleted = runCatching { networkClient.deleteAll() }.getOrDefault(false)
+        if (!serverDeleted) {
+            Log.w(TAG, "deleteAll: server fan-out failed or no-op — local cleared, server may retain data")
+        }
     }
 
     // ──────────────────────────────────────────────────────────────────────

@@ -61,6 +61,9 @@ fun Application.configureRouting() {
         gardenRoutes()
         ikigaiRoutes()
 
+        // Bio-Signal Integration (Phase 4) — aggregates ingest/query + GDPR
+        bioSignalRoutes()
+
         // SocialGraph — follow/block + public profile CRUD
         socialGraphRoutes()
 

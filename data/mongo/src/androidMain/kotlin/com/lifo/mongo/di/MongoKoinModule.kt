@@ -185,10 +185,16 @@ val bioSignalModule = module {
     single<com.lifo.util.repository.HealthDataProvider> {
         com.lifo.mongo.biosignal.HealthConnectProvider(androidContext())
     }
+    // Default network client is the No-op. KoinModules.kt restOverrideModule
+    // replaces it with KtorBioSignalNetworkClient when BackendConfig.BIO_REST=true.
+    single<com.lifo.util.repository.BioSignalNetworkClient> {
+        com.lifo.util.repository.NoopBioSignalNetworkClient()
+    }
     single<com.lifo.util.repository.BioSignalRepository> {
         com.lifo.mongo.biosignal.BioSignalRepositoryImpl(
             database = get(),
             authProvider = get(),
+            networkClient = get(),
         )
     }
 }

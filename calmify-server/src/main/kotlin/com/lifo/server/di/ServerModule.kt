@@ -57,6 +57,9 @@ val serverModule = module {
     single { IkigaiService(get()) }
     single { SocialGraphService(get()) }
 
+    // Bio-Signal Integration (Phase 4, 2026-05-11) — server-side aggregates
+    single { com.lifo.server.service.BioSignalService(get()) }
+
     // Sync
     single { com.lifo.server.service.SyncService(get()) }
 

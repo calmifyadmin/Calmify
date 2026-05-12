@@ -202,7 +202,13 @@
 
     { "collectionGroup": "diary_insights",       "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "generatedAtMillis","order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] },
     { "collectionGroup": "psychological_profiles","queryScope": "COLLECTION","fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "year", "order": "DESCENDING" }, { "fieldPath": "weekNumber", "order": "DESCENDING" } ] },
-    { "collectionGroup": "psychological_profiles","queryScope": "COLLECTION","fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "computedAtMillis", "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] }
+    { "collectionGroup": "psychological_profiles","queryScope": "COLLECTION","fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "computedAtMillis", "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] },
+
+    { "collectionGroup": "bio_aggregates",       "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "periodKey",       "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] },
+    { "collectionGroup": "bio_aggregates",       "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "type", "order": "ASCENDING" }, { "fieldPath": "periodKey", "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] },
+    { "collectionGroup": "bio_aggregates",       "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "period", "order": "ASCENDING" }, { "fieldPath": "periodKey", "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] },
+    { "collectionGroup": "bio_aggregates",       "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "type", "order": "ASCENDING" }, { "fieldPath": "period", "order": "ASCENDING" }, { "fieldPath": "periodKey", "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] },
+    { "collectionGroup": "bio_consent_log",      "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "timestampMillis", "order": "DESCENDING" }, { "fieldPath": "__name__", "order": "DESCENDING" } ] }
   ],
   "fieldOverrides": []
 }

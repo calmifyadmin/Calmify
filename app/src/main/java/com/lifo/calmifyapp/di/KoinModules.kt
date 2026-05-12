@@ -93,6 +93,11 @@ object BackendConfig {
     /** Holistic growth — Environment / Garden / Ikigai (Phase 5) */
     const val HOLISTIC_REST = true
 
+    /** Bio-Signal aggregates (Phase 4 — 2026-05-11). When OFF, the local
+     *  SQLDelight is the only store; dirty aggregates accumulate. When ON,
+     *  syncPendingAggregates() pushes them to the server. */
+    const val BIO_REST = false
+
     /** SocialGraph — follow/block + public profile (Phase 5) */
     const val SOCIAL_GRAPH_REST = true
 }
@@ -192,6 +197,14 @@ val restOverrideModule = module {
     }
     if (BackendConfig.SOCIAL_GRAPH_REST) {
         single<SocialGraphRepository> { KtorSocialGraphRepository(get()) }
+    }
+    // Bio-Signal Integration (Phase 4, 2026-05-11) — network client for the
+    // local SQLDelight repository. When OFF, NoopBioSignalNetworkClient is the
+    // default (bioSignalModule in data/mongo registers the Noop).
+    if (BackendConfig.BIO_REST) {
+        single<com.lifo.util.repository.BioSignalNetworkClient> {
+            com.lifo.network.repository.KtorBioSignalNetworkClient(get())
+        }
     }
 
     // Stripe subscription: runtime-gated by Remote Config `premium_enabled`.
