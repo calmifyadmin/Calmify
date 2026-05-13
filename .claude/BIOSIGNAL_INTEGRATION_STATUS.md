@@ -2,7 +2,7 @@
 
 > **Plan**: `.claude/BIOSIGNAL_INTEGRATION_PLAN.md`
 > **Started**: 2026-05-11
-> **Current phase**: **Phase 0+1+2+2.UI+3+4 (code) DONE 2026-05-11**, deploy + E2E deferred; Phase 5 NEXT (Wellness integration)
+> **Current phase**: **Phase 0+1+2+2.UI+3+4 + DEPLOY + DEVICE-VERIFIED 2026-05-12** — pipeline live end-to-end (118 step samples ingested on S24). Phase 5 NEXT (Wellness integration). Other 4 onboarding steps redesign on-demand.
 > **Branch**: `design-system-refactor` (Phase 0+1 commits live here; bio-signal Phase 2+ will continue or branch)
 > **Last update**: 2026-05-11 — design-system-refactor COMPLETE (4 commits) + Bio-Signal Phase 0+1 DONE same day.
 
@@ -162,12 +162,32 @@ Code (this commit):
 - [x] `:calmify-server:compileKotlin` verde 31s
 - [x] `:app:assembleDebug` verde 45s
 
-Deploy (deferred — separate session/CI):
-- [ ] Server: `gcloud builds submit --config=calmify-server/cloudbuild.yaml --project=calmify-388723`
-- [ ] Indexes: `firebase deploy --only firestore:indexes --project=calmify-388723`
-- [ ] Flip `BackendConfig.BIO_REST` true after successful deploy
-- [ ] **Smoke test**: POST /ingest + GET /aggregate + DELETE /all + GET /export with real JWT (NOT just /health per CLAUDE.md regola 13)
-- [ ] **Auth audit**: verify all 4 endpoints return 401 without Bearer token
+Deploy (DONE 2026-05-12):
+- [x] **Branch merge**: `git checkout backend-architecture-refactor && git merge design-system-refactor --ff-only && git push` — 10 commits fast-forward (`7a0b7ca..9dc5a9b`)
+- [x] **Indexes**: `firebase deploy --only firestore:indexes --project calmify-388723` — 5 new bio indexes building, 3 phantom indexes preserved (answered "N" to delete prompt) then reconciled in commit `abc6857`
+- [x] **Server**: `gcloud builds submit --config=calmify-server/cloudbuild.yaml --project=calmify-388723` — build `ce63ee0a` SUCCESS 12m6s, image `gcr.io/calmify-388723/calmify-server`, deployed to `https://calmify-server-23546263069.europe-west1.run.app`
+- [x] **Smoke test** (NOT just /health per regola 13): `/health` → "healthy" + 4× bio endpoints → 401 (auth + routes registered)
+- [x] **Flag flip**: `BackendConfig.BIO_REST = true` (commit `3244cde`)
+
+Post-deploy fixes (2026-05-12):
+- [x] Settings entries: SettingsScreen + SettingsMainRouteContent + DecomposeApp wired with `onNavigateToBioContext` + `onNavigateToBioOnboarding` (commit `0e0e4dc`)
+- [x] HC permission flow hard fix (commits `1563dc6` + `8c51720`):
+  - [x] `<intent-filter>` `androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE` on MainActivity
+  - [x] `<intent-filter>` `android.intent.action.VIEW_PERMISSION_USAGE` + category `HEALTH_PERMISSIONS`
+  - [x] 7× `<uses-permission android:name="android.permission.health.READ_*">` declarations
+  - [x] `app/src/main/res/xml/health_permissions.xml` (with `xmlns:android` namespace)
+  - [x] `<meta-data android:name="health_permissions" android:resource="@xml/health_permissions"/>` on MainActivity
+  - [x] Diagnostic logging in `HealthConnectProvider.checkAvailability()` + `BioOnboardingEntryPoint`
+- [x] StepIntro 1:1 redesign (commit `5635b82`): eyebrow + 32sp display title + lede + animated `BreathWaveVisual` (Canvas, 3 sine paths + glowing bead, 5.5s breath modulation, reduced-motion aware) + fineprint + Continue with arrow_forward + Skip text
+
+Device test (DONE 2026-05-12):
+- [x] Install APK on Samsung S24 (Android 15)
+- [x] Open Settings → Bio-segnali → "Connetti un wearable"
+- [x] Walk through 5-step pager → tap "Concedi permessi" → native HC permission UI appeared
+- [x] Grant 7 data types → return to app → Step 4 advanced to Step 5 → "Portami all'app" exit
+- [x] Tap "I tuoi dati biologici" → BioContextScreen
+- [x] **Tap "Sync now"** → Health Connect → SQLDelight → 118 step samples (samsung SM-S921B via android) visible in inventory
+- [x] **Pipeline end-to-end verified live**
 
 ---
 

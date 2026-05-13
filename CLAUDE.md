@@ -140,7 +140,7 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
 
 **Stima rimanente post-checkpoint R0+R1+R3.1-3**: ~9-13 giorni per chiudere R3+R4. Poi sblocca bio-signal Phase 0.
 
-### Active Workstream — Bio-Signal Integration (Health Connect / HealthKit) (started 2026-05-11, Phase 0+1+2+2.UI+3+4 DONE — server deploy deferred)
+### Active Workstream — Bio-Signal Integration (Health Connect / HealthKit) (started 2026-05-11, Phase 0+1+2+2.UI+3+4 DONE + DEPLOYED + DEVICE-VERIFIED 2026-05-12)
 
 **Planning closed, code phase 0 NOT STARTED.** Integrazione wearable (HR/HRV/Sleep/Steps/RestingHR/SpO2/Activity) come **contesto** per mental-wellness flow esistenti (journal/meditation/insight/home), NOT come nuovo "Fitness" tab. Posizionamento esplicitamente non-competitivo vs Google Health / Fitbit Premium / Apple Health: la grammatica visiva è adottata (in-range bands, narrative cards, AI coach micro-summaries, banda dotted del typical-range), il framing è invertito (no scores, no targets, no "out of range" anxiety, no paywall su dati vitali).
 
@@ -163,6 +163,17 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
 - `.claude/BIOSIGNAL_INTEGRATION_STATUS.md` — live checklist with checkbox per task
 
 **Quality gates per commit**: build green + zero hardcoded strings + all 12 langs in sync + tracker updated BEFORE commit + audit trail (smoke test specifico, non solo `/health`).
+
+**Deploy live 2026-05-12** (Phase 4 server-side):
+- Cloud Build `ce63ee0a` SUCCESS 12m6s → revision live su `https://calmify-server-23546263069.europe-west1.run.app`
+- Firestore indexes deployati (5 nuovi bio + 3 phantom preserved e poi reconciled in commit `abc6857`)
+- Smoke test 4/4 endpoint → 401 senza Bearer token (auth + routes registrate)
+- Flag `BackendConfig.BIO_REST = true` flippato (commit `3244cde`)
+- HC manifest runtime fix shipped (commits `1563dc6` + `8c51720`): `<uses-permission>` × 7 + `xml/health_permissions.xml` + `<meta-data>` su MainActivity + `<intent-filter>` ACTION_SHOW_PERMISSIONS_RATIONALE + VIEW_PERMISSION_USAGE. Lezione critica salvata in `memory/feedback_health_connect_runtime_requirements.md` — questi NON sono solo Play Store ship requirements, sono runtime blockers per il permission flow.
+- StepIntro 1:1 con Claude Design (commit `5635b82`): eyebrow tag + 32sp display title + animated `BreathWaveVisual` Compose Canvas + fineprint + Skip footer
+- Settings → "Bio-segnali" entries (commit `0e0e4dc`): "Connetti un wearable" + "I tuoi dati biologici" navigabili da Settings
+- **Device-verified su Samsung S24 + Android 15**: 118 step samples ingestionati end-to-end (Health Connect → SQLDelight → BioContextScreen "I tuoi dati, in locale")
+- 16 commit sul branch da `7a0b7ca` (base) → HEAD `5635b82` (mergeable a master quando pronto)
 
 ### Active Workstream — Meditation Feature Redesign (started 2026-05-02)
 
