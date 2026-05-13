@@ -1,9 +1,16 @@
 package com.lifo.biocontext
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,12 +29,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.DirectionsRun
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.MyLocation
+import androidx.compose.material.icons.outlined.Sensors
 import androidx.compose.material.icons.outlined.Spa
 import androidx.compose.material.icons.outlined.Waves
 import androidx.compose.material3.Button
@@ -43,11 +52,20 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.lifo.ui.accessibility.isReducedMotionEnabled
 import com.lifo.ui.i18n.Strings
 import com.lifo.ui.theme.CalmifyRadius
 import com.lifo.ui.theme.CalmifySpacing
@@ -55,6 +73,8 @@ import com.lifo.util.model.BioSignalDataType
 import com.lifo.util.repository.ProviderStatus
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
+import kotlin.math.PI
+import kotlin.math.sin
 
 /**
  * 5-step Bio-Signal onboarding pager.
@@ -179,47 +199,190 @@ private fun PagerTop(
 @Composable
 private fun StepIntro(onIntent: (BioOnboardingContract.Intent) -> Unit) {
     val colorScheme = MaterialTheme.colorScheme
-    Column(verticalArrangement = Arrangement.spacedBy(CalmifySpacing.lg)) {
-        // Hero decorative waveform
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp),                          // hero decorative section
-            contentAlignment = Alignment.Center,
+    Column(verticalArrangement = Arrangement.spacedBy(CalmifySpacing.md)) {
+        // Eyebrow tag — uppercase, accent, with sensor icon (1:1 with HTML .eyebrow class)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),                        // 6dp gap matches HTML
         ) {
-            Surface(
-                modifier = Modifier.size(160.dp),
-                shape = CircleShape,
-                color = colorScheme.primaryContainer.copy(alpha = 0.4f),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Outlined.Waves,
-                        contentDescription = null,
-                        modifier = Modifier.size(80.dp),  // hero icon
-                        tint = colorScheme.primary,
-                    )
-                }
-            }
+            Icon(
+                imageVector = Icons.Outlined.Sensors,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),                                       // 14sp icon per HTML
+                tint = colorScheme.primary,
+            )
+            Text(
+                text = stringResource(Strings.BioOnboarding.introEyebrow).uppercase(),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 1.2.sp,                                            // matches HTML letter-spacing
+                ),
+                color = colorScheme.primary,
+            )
         }
 
+        Spacer(Modifier.height(CalmifySpacing.md))                                     // ~12dp margin-top per HTML
+
+        // Display title — 32sp/40sp SemiBold, letter-spacing -0.3
         Text(
             text = stringResource(Strings.BioOnboarding.introTitle),
-            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.SemiBold),
+            style = MaterialTheme.typography.headlineLarge.copy(
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = (-0.3).sp,
+            ),
             color = colorScheme.onSurface,
         )
+
+        // Lede — 16sp/26sp regular, fg-subtle
         Text(
             text = stringResource(Strings.BioOnboarding.introBody),
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyLarge.copy(
+                lineHeight = 26.sp,                                                    // matches HTML 16/26
+                letterSpacing = 0.15.sp,
+            ),
             color = colorScheme.onSurfaceVariant,
         )
 
-        Spacer(Modifier.height(CalmifySpacing.sm))
+        Spacer(Modifier.height(CalmifySpacing.md))
 
+        // Hero animated breath-wave visual — 220dp, radial gradient, rounded-2xl
+        BreathWaveVisual(modifier = Modifier.fillMaxWidth())
+
+        // Fineprint — 12sp/18sp, fg-subtle, margin-top 20dp
+        Spacer(Modifier.height(CalmifySpacing.md))                                     // gap before fineprint
+        Text(
+            text = stringResource(Strings.BioOnboarding.introFineprint),
+            style = MaterialTheme.typography.bodySmall.copy(
+                lineHeight = 18.sp,
+                letterSpacing = 0.25.sp,
+            ),
+            color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+        )
+
+        Spacer(Modifier.height(CalmifySpacing.xl))
+
+        // Footer: Continue primary + Skip text (matches HTML footer)
         PrimaryCta(
             label = stringResource(Strings.BioOnboarding.introCta),
             onClick = { onIntent(BioOnboardingContract.Intent.Next) },
+            trailingIcon = Icons.AutoMirrored.Filled.ArrowForward,
         )
+        TextButton(
+            onClick = { onIntent(BioOnboardingContract.Intent.Skip) },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                text = stringResource(Strings.BioOnboarding.skip),
+                style = MaterialTheme.typography.labelLarge,
+                color = colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/**
+ * Animated breath-waveform visual (1:1 port of HTML mockup's `BreathWaveVisual`).
+ *
+ * Renders 3 sine-wave paths (2 faint background + 1 main accent line) animated
+ * with a slow 5.5s breath modulation + a small glowing bead traveling along the
+ * main wave. Inside a radial-gradient rounded-2xl container, 220dp tall.
+ *
+ * Respects `prefers-reduced-motion` — falls back to a static rendering with
+ * t = 0 to preserve the visual but stop the animation.
+ */
+@Composable
+private fun BreathWaveVisual(modifier: Modifier = Modifier) {
+    val accent = MaterialTheme.colorScheme.primary
+    val reducedMotion = isReducedMotionEnabled()
+
+    val t: Float = if (reducedMotion) {
+        0f
+    } else {
+        val transition = rememberInfiniteTransition(label = "breathWave")
+        val animated by transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 11f,                          // 2 breath cycles before loop
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 11000, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart,
+            ),
+            label = "breathT",
+        )
+        animated
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(220.dp)
+            .clip(RoundedCornerShape(CalmifyRadius.xxl))
+            .background(
+                Brush.radialGradient(
+                    colors = listOf(
+                        accent.copy(alpha = 0.10f),
+                        Color.Transparent,
+                    ),
+                ),
+            ),
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val w = size.width
+            val h = size.height
+            val midY = h / 2f
+
+            fun buildPath(phase: Float, amp: Float): Path {
+                val path = Path()
+                val breath = sin((t + phase).toDouble() * (PI / 5.5)).toFloat()
+                val ampMod = amp * (0.5f + 0.5f * breath)
+                var x = 0f
+                while (x <= w) {
+                    val k = x / w
+                    val y = midY +
+                        (sin((k * PI * 4 + t * 1.2 + phase).toDouble()).toFloat()) * ampMod
+                    if (x == 0f) path.moveTo(x, y) else path.lineTo(x, y)
+                    x += 6f
+                }
+                return path
+            }
+
+            // 2 faint waves behind
+            drawPath(
+                path = buildPath(phase = 2.2f, amp = h * 0.20f),
+                color = accent.copy(alpha = 0.25f),
+                style = Stroke(width = 1f),
+            )
+            drawPath(
+                path = buildPath(phase = 1.0f, amp = h * 0.18f),
+                color = accent.copy(alpha = 0.25f),
+                style = Stroke(width = 1f),
+            )
+            // Main wave on top
+            drawPath(
+                path = buildPath(phase = 0f, amp = h * 0.14f),
+                color = accent.copy(alpha = 0.85f),
+                style = Stroke(width = 1.5.dp.toPx()),
+            )
+
+            // Glowing bead traveling along the main wave
+            val beadX = ((t * 60f) % (w + 40f)) - 20f
+            val beadK = beadX / w
+            val beadBreath = sin(t.toDouble() * (PI / 5.5)).toFloat()
+            val beadY = midY +
+                (sin((beadK * PI * 4 + t * 1.2).toDouble()).toFloat()) *
+                    (h * 0.14f * (0.5f + 0.5f * beadBreath))
+            // Soft halo
+            drawCircle(
+                color = accent.copy(alpha = 0.30f),
+                radius = 12f,
+                center = Offset(beadX, beadY),
+            )
+            // Bright center
+            drawCircle(
+                color = Color(0xFFA8F0CB),                   // accent-bright tone 90 from theme
+                radius = 4.5.dp.toPx(),
+                center = Offset(beadX, beadY),
+            )
+        }
     }
 }
 
@@ -547,6 +710,7 @@ private fun PrimaryCta(
     onClick: () -> Unit,
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
+    trailingIcon: ImageVector? = null,
 ) {
     Button(
         onClick = onClick,
@@ -560,6 +724,14 @@ private fun PrimaryCta(
         ),
     ) {
         Text(label, style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold))
+        if (trailingIcon != null) {
+            Spacer(Modifier.size(CalmifySpacing.sm))
+            Icon(
+                imageVector = trailingIcon,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),                            // 18sp icon per HTML
+            )
+        }
     }
 }
 

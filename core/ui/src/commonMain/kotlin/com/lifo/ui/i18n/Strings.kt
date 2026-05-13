@@ -1370,8 +1370,10 @@ object Strings {
         val stepLabel: StringResource get() = Res.string.bio_onb_step_label
 
         // Step 1 — Intro
+        val introEyebrow: StringResource get() = Res.string.bio_onb_intro_eyebrow
         val introTitle: StringResource get() = Res.string.bio_onb_intro_title
         val introBody: StringResource get() = Res.string.bio_onb_intro_body
+        val introFineprint: StringResource get() = Res.string.bio_onb_intro_fineprint
         val introCta: StringResource get() = Res.string.bio_onb_intro_cta
 
         // Step 2 — DataTypes

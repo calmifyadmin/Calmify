@@ -1670,9 +1670,11 @@
     <string name="bio_onb_step_label">Step %1$d of %2$d</string>
 
     <!-- Step 1 — Intro -->
-    <string name="bio_onb_intro_title">Your body knows things before your mind does.</string>
-    <string name="bio_onb_intro_body">Calmify can read patterns from your wearable — heart, sleep, stress signals — and quietly mirror them back when they\'re relevant. No score, no goal. Just context.</string>
-    <string name="bio_onb_intro_cta">Let\'s set it up</string>
+    <string name="bio_onb_intro_eyebrow">Bio context · optional</string>
+    <string name="bio_onb_intro_title">Want your body to talk to you?</string>
+    <string name="bio_onb_intro_body">Sometimes the body knows before the mind does. With your permission, Calmify can quietly listen to your wearable — not to score you, but to help you notice patterns you might miss.</string>
+    <string name="bio_onb_intro_fineprint">Nothing changes about how Calmify works without this. You can turn it on, off, or piece-by-piece, anytime, from Settings.</string>
+    <string name="bio_onb_intro_cta">Continue</string>
 
     <!-- Step 2 — DataTypes -->
     <string name="bio_onb_types_title">What can we read?</string>
