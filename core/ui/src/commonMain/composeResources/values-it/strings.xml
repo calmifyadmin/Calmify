@@ -1733,4 +1733,10 @@
     <string name="bio_card_home_chip_steps">%1$d passi</string>
     <string name="bio_card_home_open_a11y">Apri il contesto bio</string>
     <string name="bio_card_home_open_trailing">Apri</string>
+
+    <!-- Bio-Signal contextual cards (Phase 5.2) — Card 1: Journal composer banner -->
+    <string name="bio_banner_dismiss_a11y">Chiudi</string>
+    <string name="bio_card_journal_short_night">Stanotte hai dormito poco — solo %1$s. Sii gentile con te stesso oggi.</string>
+    <string name="bio_card_journal_solid_rest">Hai riposato bene stanotte — %1$s. La riflessione potrebbe venirti facile oggi.</string>
+    <string name="bio_card_journal_sleep_duration_inline">%1$dh %2$02dm</string>
 </resources>

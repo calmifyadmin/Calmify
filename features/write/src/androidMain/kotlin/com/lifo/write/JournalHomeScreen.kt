@@ -37,12 +37,15 @@ import com.lifo.util.repository.MediaUploadRepository
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.lifo.ui.components.CalmifyTopBar
+import com.lifo.ui.components.biosignal.BioBanner
 import com.lifo.ui.emotion.MiniMoodShape
 import com.lifo.util.auth.UserIdentityResolver
 import com.lifo.util.model.Diary
 import com.lifo.util.model.Mood
 import com.lifo.util.model.RequestState
 import com.lifo.util.repository.MongoRepository
+import com.lifo.write.domain.GetSleepNudgeUseCase
+import com.lifo.write.domain.SleepNudge
 import org.koin.compose.koinInject
 import java.time.Instant
 import java.time.LocalDate
@@ -98,6 +101,14 @@ fun JournalHomeScreen(
 
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
+    // Phase 5.2 — sleep-aware Journal banner. Silence-by-default: null = no card.
+    val sleepNudgeUseCase: GetSleepNudgeUseCase = koinInject()
+    val sleepNudge by produceState<SleepNudge?>(initialValue = null, sleepNudgeUseCase) {
+        value = runCatching { sleepNudgeUseCase() }.getOrNull()
+    }
+    var sleepNudgeDismissed by rememberSaveable { mutableStateOf(false) }
+    val visibleSleepNudge = sleepNudge?.takeUnless { sleepNudgeDismissed }
+
     Box(modifier = Modifier.fillMaxSize()) {
 
     Scaffold(
@@ -114,6 +125,18 @@ fun JournalHomeScreen(
             contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
+            // Phase 5.2 — Sleep-aware bio banner (Card 1). Renders only when last
+            // night was meaningfully short or solidly restful; absent otherwise.
+            visibleSleepNudge?.let { nudge ->
+                item(key = "bio-sleep-banner") {
+                    JournalSleepBanner(
+                        nudge = nudge,
+                        onDismiss = { sleepNudgeDismissed = true },
+                        modifier = Modifier.padding(horizontal = 24.dp)
+                    )
+                }
+            }
+
             // Daily Prompt
             item(key = "prompt") {
                 DailyPromptCard(
@@ -758,4 +781,33 @@ private fun formatDiaryTimestamp(timestampMillis: Long): String {
             stringResource(Strings.JournalPrompt.timestampYesterday, time)
         else -> zonedDateTime.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
     }
+}
+
+// ==================== BIO · SLEEP BANNER (Phase 5.2 Card 1) ====================
+
+@Composable
+private fun JournalSleepBanner(
+    nudge: SleepNudge,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val hours = nudge.durationMinutes / 60
+    val rest = nudge.durationMinutes % 60
+    val durationInline = stringResource(Strings.BioCard.journalSleepDurationInline, hours, rest)
+    val copy = when (nudge) {
+        is SleepNudge.ShortNight -> stringResource(Strings.BioCard.journalShortNight, durationInline)
+        is SleepNudge.SolidRest -> stringResource(Strings.BioCard.journalSolidRest, durationInline)
+    }
+    val icon = when (nudge) {
+        is SleepNudge.ShortNight -> Icons.Outlined.Bedtime
+        is SleepNudge.SolidRest -> Icons.Outlined.WbSunny
+    }
+    BioBanner(
+        icon = icon,
+        copy = copy,
+        confidenceLevel = nudge.confidence,
+        source = nudge.source,
+        onDismiss = onDismiss,
+        modifier = modifier,
+    )
 }

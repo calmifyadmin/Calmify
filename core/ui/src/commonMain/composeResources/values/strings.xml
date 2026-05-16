@@ -1737,4 +1737,10 @@
     <string name="bio_card_home_open_a11y">Open bio context</string>
     <string name="bio_card_home_open_trailing">Open</string>
 
+    <!-- Bio-Signal contextual cards (Phase 5.2) — Card 1: Journal composer banner -->
+    <string name="bio_banner_dismiss_a11y">Dismiss</string>
+    <string name="bio_card_journal_short_night">Last night was short — only %1$s. Be gentle with yourself today.</string>
+    <string name="bio_card_journal_solid_rest">You rested well last night — %1$s. Reflection might come easily today.</string>
+    <string name="bio_card_journal_sleep_duration_inline">%1$dh %2$02dm</string>
+
 </resources>

@@ -1450,5 +1450,15 @@ object Strings {
         val homeChipSteps: StringResource get() = Res.string.bio_card_home_chip_steps
         val homeOpenA11y: StringResource get() = Res.string.bio_card_home_open_a11y
         val homeOpenTrailing: StringResource get() = Res.string.bio_card_home_open_trailing
+
+        // Card 1 — Journal composer banner (Phase 5.2)
+        val journalShortNight: StringResource get() = Res.string.bio_card_journal_short_night
+        val journalSolidRest: StringResource get() = Res.string.bio_card_journal_solid_rest
+        val journalSleepDurationInline: StringResource get() = Res.string.bio_card_journal_sleep_duration_inline
+    }
+
+    /** Shared atom for any slim contextual bio banner — dismiss a11y label. */
+    object BioBanner {
+        val dismissA11y: StringResource get() = Res.string.bio_banner_dismiss_a11y
     }
 }
