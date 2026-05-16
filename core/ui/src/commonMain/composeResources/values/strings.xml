@@ -1743,4 +1743,14 @@
     <string name="bio_card_journal_solid_rest">You rested well last night — %1$s. Reflection might come easily today.</string>
     <string name="bio_card_journal_sleep_duration_inline">%1$dh %2$02dm</string>
 
+    <!-- Bio-Signal contextual cards (Phase 5.3) — Card 2: Meditation outro + PRO gate atom -->
+    <string name="bio_pro_chip">PRO</string>
+    <string name="bio_medi_card_title">Your body followed</string>
+    <string name="bio_medi_card_scope">during this session</string>
+    <string name="bio_medi_narrative_drop">Heart rate eased from %1$d down to %2$d bpm. The drop mirrors the breath pacing — the meditation seems to have landed in the body, not just the mind.</string>
+    <string name="bio_medi_narrative_stable">Heart rate stayed around %1$d bpm throughout. The body held its rhythm — a gentle, even session.</string>
+    <string name="bio_medi_chart_a11y">Heart rate during this session, from %1$d to %2$d bpm</string>
+    <string name="bio_medi_hrv_gate_copy">HRV improved during the session — see the detail with PRO</string>
+    <string name="bio_medi_clock_min_sec">%1$d:%2$02d</string>
+
 </resources>

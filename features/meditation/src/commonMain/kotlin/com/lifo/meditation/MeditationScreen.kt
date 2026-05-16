@@ -42,6 +42,7 @@ fun MeditationScreen(
     onIntent: (MeditationContract.Intent) -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
+    onUpgrade: () -> Unit = {},
 ) {
     AnimatedContent(
         targetState = state.phase,
@@ -112,6 +113,7 @@ fun MeditationScreen(
                         runtime = runtime,
                         onDifferent = { onIntent(MeditationContract.Intent.NavigateDifferentFromOverview) },
                         onRedo = { onIntent(MeditationContract.Intent.NavigateRedoFromOverview) },
+                        onUpgrade = onUpgrade,
                     )
                 }
             }

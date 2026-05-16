@@ -38,6 +38,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,13 +48,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifo.meditation.MeditationContract
+import com.lifo.meditation.domain.GetSessionHrSummaryUseCase
+import com.lifo.meditation.domain.SessionHrSummary
 import com.lifo.ui.i18n.Strings
 import com.lifo.ui.i18n.mechanismRes
 import com.lifo.ui.i18n.nameRes
 import com.lifo.ui.theme.CalmifyRadius
 import com.lifo.ui.theme.CalmifySpacing
+import com.lifo.util.repository.SubscriptionRepository
+import kotlinx.coroutines.flow.map
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.koinInject
 
 /**
  * Phase 1 Overview screen — post-session reflection.
@@ -78,6 +85,7 @@ internal fun MeditationOverviewScreen(
     onDifferent: () -> Unit,
     onRedo: () -> Unit,
     modifier: Modifier = Modifier,
+    onUpgrade: () -> Unit = {},
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val techniqueName = stringResource(runtime.technique.nameRes)
@@ -85,6 +93,19 @@ internal fun MeditationOverviewScreen(
         Strings.Meditation.Overview.titleStopped
     } else {
         Strings.Meditation.Overview.titleDone
+    }
+
+    // Phase 5.3 — outro bio card (Card 2). Reads HR samples in the session
+    // window from local SQLDelight; silence-by-default if <3 samples.
+    val hrUseCase: GetSessionHrSummaryUseCase = koinInject()
+    val subscriptionRepository: SubscriptionRepository = koinInject()
+    val isPro by produceState(initialValue = false, subscriptionRepository) {
+        subscriptionRepository.observeSubscription()
+            .map { it.tier == SubscriptionRepository.SubscriptionTier.PRO }
+            .collect { value = it }
+    }
+    val hrSummary by produceState<SessionHrSummary?>(initialValue = null, hrUseCase, runtime.elapsedMillis) {
+        value = runCatching { hrUseCase(runtime.elapsedMillis) }.getOrNull()
     }
 
     Scaffold(
@@ -189,6 +210,16 @@ internal fun MeditationOverviewScreen(
             )
 
             Spacer(Modifier.height(8.dp))
+
+            // ── Bio card (Phase 5.3, Card 2) ───────────────────────────
+            // Silence-by-default: nothing rendered when there's no signal.
+            hrSummary?.let { summary ->
+                MeditationBioCard(
+                    summary = summary,
+                    isPro = isPro,
+                    onUpgrade = onUpgrade,
+                )
+            }
 
             // ── Card 1: Mechanism ──────────────────────────────────────
             OverviewCard(

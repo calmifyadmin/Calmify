@@ -1739,4 +1739,14 @@
     <string name="bio_card_journal_short_night">Stanotte hai dormito poco — solo %1$s. Sii gentile con te stesso oggi.</string>
     <string name="bio_card_journal_solid_rest">Hai riposato bene stanotte — %1$s. La riflessione potrebbe venirti facile oggi.</string>
     <string name="bio_card_journal_sleep_duration_inline">%1$dh %2$02dm</string>
+
+    <!-- Bio-Signal contextual cards (Phase 5.3) — Card 2: Meditation outro + PRO gate atom -->
+    <string name="bio_pro_chip">PRO</string>
+    <string name="bio_medi_card_title">Il tuo corpo ha seguito</string>
+    <string name="bio_medi_card_scope">durante questa sessione</string>
+    <string name="bio_medi_narrative_drop">Il battito è sceso da %1$d a %2$d bpm. Il calo rispecchia il ritmo del respiro — la meditazione sembra essere atterrata nel corpo, non solo nella mente.</string>
+    <string name="bio_medi_narrative_stable">Il battito è rimasto intorno a %1$d bpm. Il corpo ha tenuto il suo ritmo — una sessione gentile e regolare.</string>
+    <string name="bio_medi_chart_a11y">Battito cardiaco durante la sessione, da %1$d a %2$d bpm</string>
+    <string name="bio_medi_hrv_gate_copy">L\'HRV è migliorata durante la sessione — vedi il dettaglio con PRO</string>
+    <string name="bio_medi_clock_min_sec">%1$d:%2$02d</string>
 </resources>

@@ -739,6 +739,7 @@ fun DecomposeApp(
                     is RootComponent.Child.Meditation -> {
                         com.lifo.meditation.MeditationRouteContent(
                             navigateBack = { rootComponent.navigateBack() },
+                            navigateToSubscription = { rootComponent.navigateToSubscription() },
                         )
                     }
 

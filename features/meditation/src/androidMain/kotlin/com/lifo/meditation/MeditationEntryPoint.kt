@@ -36,6 +36,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun MeditationRouteContent(
     navigateBack: () -> Unit,
+    navigateToSubscription: () -> Unit = {},
 ) {
     val viewModel: MeditationViewModel = koinViewModel(key = "meditation_vm")
     val state by viewModel.state.collectAsState()
@@ -73,6 +74,7 @@ fun MeditationRouteContent(
         state = state,
         onIntent = viewModel::onIntent,
         onExit = navigateBack,
+        onUpgrade = navigateToSubscription,
     )
 }
 

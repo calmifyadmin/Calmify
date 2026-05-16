@@ -1461,4 +1461,23 @@ object Strings {
     object BioBanner {
         val dismissA11y: StringResource get() = Res.string.bio_banner_dismiss_a11y
     }
+
+    /** PRO gate atom — non-hostile lock used inline beneath FREE bio cards. */
+    object BioProLock {
+        val proChip: StringResource get() = Res.string.bio_pro_chip
+    }
+
+    /**
+     * Meditation outro bio card (Phase 5.3, Card 2). Lives in `:features:meditation`
+     * but the keys live here for facade consistency.
+     */
+    object BioMeditation {
+        val cardTitle: StringResource get() = Res.string.bio_medi_card_title
+        val cardScope: StringResource get() = Res.string.bio_medi_card_scope
+        val narrativeDrop: StringResource get() = Res.string.bio_medi_narrative_drop
+        val narrativeStable: StringResource get() = Res.string.bio_medi_narrative_stable
+        val chartA11y: StringResource get() = Res.string.bio_medi_chart_a11y
+        val hrvGateCopy: StringResource get() = Res.string.bio_medi_hrv_gate_copy
+        val clockMinSec: StringResource get() = Res.string.bio_medi_clock_min_sec
+    }
 }
