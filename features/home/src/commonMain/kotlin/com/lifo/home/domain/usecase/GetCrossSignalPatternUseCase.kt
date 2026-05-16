@@ -84,12 +84,23 @@ class GetCrossSignalPatternUseCase(
         val populatedWeeks = weeklyHrvAvg.count { it != null }
         if (populatedWeeks < MIN_POPULATED_WEEKS) return null
 
-        // ── Compare "high-meditation" weeks (≥HIGH_SESSIONS) vs the rest ────
+        // ── Phase 6.4 — personalize "high-meditation" threshold ─────────────
+        // Old: hardcoded ≥3 sessions/week. New: > the user's own weekly median.
+        // Floor at HIGH_THRESHOLD_MIN so a user who hasn't started meditating
+        // (median 0) still gets a meaningful split as they ramp up.
+        val sortedWeekly = sessionsByWeek.toList().sorted()
+        val medianSessions = if (sortedWeekly.isEmpty()) 0.0
+        else if (sortedWeekly.size % 2 == 0)
+            (sortedWeekly[sortedWeekly.size / 2 - 1] + sortedWeekly[sortedWeekly.size / 2]) / 2.0
+        else sortedWeekly[sortedWeekly.size / 2].toDouble()
+        val highThreshold = maxOf(HIGH_THRESHOLD_MIN, kotlin.math.ceil(medianSessions).toInt() + 1)
+
+        // ── Compare "high-meditation" weeks vs the rest ─────────────────────
         val highIndices = (0 until WINDOW_WEEKS).filter {
-            sessionsByWeek[it] >= HIGH_SESSIONS_PER_WEEK && weeklyHrvAvg[it] != null
+            sessionsByWeek[it] >= highThreshold && weeklyHrvAvg[it] != null
         }
         val lowIndices = (0 until WINDOW_WEEKS).filter {
-            sessionsByWeek[it] < HIGH_SESSIONS_PER_WEEK && weeklyHrvAvg[it] != null
+            sessionsByWeek[it] < highThreshold && weeklyHrvAvg[it] != null
         }
         if (highIndices.size < MIN_BUCKET_WEEKS || lowIndices.size < MIN_BUCKET_WEEKS) return null
 
@@ -104,12 +115,12 @@ class GetCrossSignalPatternUseCase(
 
         // ── Build bar pairs (6 weeks of meditation count + HRV avg) ─────────
         val medBars = sessionsByWeek.map {
-            BarPoint(value = it.toFloat(), isHi = it >= HIGH_SESSIONS_PER_WEEK)
+            BarPoint(value = it.toFloat(), isHi = it >= highThreshold)
         }
         val hrvBars = weeklyHrvAvg.mapIndexed { idx, hrv ->
             BarPoint(
                 value = (hrv ?: 0.0).toFloat(),
-                isHi = (hrv ?: 0.0) >= (overallHrvAvg) && sessionsByWeek[idx] >= HIGH_SESSIONS_PER_WEEK,
+                isHi = (hrv ?: 0.0) >= (overallHrvAvg) && sessionsByWeek[idx] >= highThreshold,
             )
         }
 
@@ -130,7 +141,7 @@ class GetCrossSignalPatternUseCase(
             sessionsPerWeekAvg = sessionAvg,
             hrvAvgMillis = overallHrvAvg,
             liftPercent = liftPercent,
-            highMeditationThreshold = HIGH_SESSIONS_PER_WEEK,
+            highMeditationThreshold = highThreshold,
             medBars = medBars,
             hrvBars = hrvBars,
             confidence = confidence,
@@ -155,7 +166,12 @@ class GetCrossSignalPatternUseCase(
         private const val WINDOW_WEEKS = 6
         private const val MIN_POPULATED_WEEKS = 4   // need ≥4 of 6 weeks with HRV data to compare honestly
         private const val MIN_BUCKET_WEEKS = 2      // need ≥2 high-med + ≥2 low-med weeks
-        private const val HIGH_SESSIONS_PER_WEEK = 3
+        /**
+         * Phase 6.4 floor for the personalized HIGH threshold. Even if user's
+         * weekly median is 0 (just starting out), "high" still means at least
+         * 2 sessions — below this the high/low buckets degenerate into 1 vs many.
+         */
+        private const val HIGH_THRESHOLD_MIN = 2
         private const val MEANINGFUL_LIFT_PERCENT = 10
     }
 }
