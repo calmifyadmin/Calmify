@@ -1480,4 +1480,25 @@ object Strings {
         val hrvGateCopy: StringResource get() = Res.string.bio_medi_hrv_gate_copy
         val clockMinSec: StringResource get() = Res.string.bio_medi_clock_min_sec
     }
+
+    /**
+     * Cross-signal correlation card (Phase 5.4, Card 4). PRO-only, currently
+     * surfaces in Home below Community until an Insight pattern feed exists.
+     */
+    object BioCrossSignal {
+        val cardTitle: StringResource get() = Res.string.bio_xs_card_title
+        val cardMeta: StringResource get() = Res.string.bio_xs_card_meta
+        val patternLabel: StringResource get() = Res.string.bio_xs_pattern_label
+        val narrative: StringResource get() = Res.string.bio_xs_narrative
+        val rowMedLabel: StringResource get() = Res.string.bio_xs_row_med_label
+        val rowMedSublabel: StringResource get() = Res.string.bio_xs_row_med_sublabel
+        val rowMedValue: StringResource get() = Res.string.bio_xs_row_med_value
+        val rowMedDelta: StringResource get() = Res.string.bio_xs_row_med_delta
+        val rowHrvLabel: StringResource get() = Res.string.bio_xs_row_hrv_label
+        val rowHrvSublabel: StringResource get() = Res.string.bio_xs_row_hrv_sublabel
+        val rowHrvValue: StringResource get() = Res.string.bio_xs_row_hrv_value
+        val rowHrvDelta: StringResource get() = Res.string.bio_xs_row_hrv_delta
+        val barsA11y: StringResource get() = Res.string.bio_xs_bars_a11y
+        val dismissA11y: StringResource get() = Res.string.bio_xs_dismiss_a11y
+    }
 }

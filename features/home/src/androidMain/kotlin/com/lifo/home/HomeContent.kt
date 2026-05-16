@@ -41,6 +41,8 @@ import com.lifo.ui.onboarding.OnboardingManager
 import com.lifo.ui.theme.CalmifyRadius
 import com.lifo.ui.theme.CalmifySpacing
 import com.lifo.util.model.Diary
+import com.lifo.util.repository.SubscriptionRepository
+import kotlinx.coroutines.flow.map
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
@@ -134,6 +136,13 @@ internal fun HomeContent(
     val communityThreads by viewModel.communityThreads.collectAsState()
     val socialAvatarUrl by viewModel.socialAvatarUrl.collectAsState()
     val bioContext by viewModel.bioContext.collectAsState()
+    val crossSignalPattern by viewModel.crossSignalPattern.collectAsState()
+    val subscriptionRepository: SubscriptionRepository = koinInject()
+    val isPro by remember(subscriptionRepository) {
+        subscriptionRepository.observeSubscription().map {
+            it.tier == SubscriptionRepository.SubscriptionTier.PRO
+        }
+    }.collectAsState(initial = false)
     val onRefresh: () -> Unit = {
         isRefreshing = true
         coroutineScope.launch {
@@ -357,6 +366,23 @@ internal fun HomeContent(
                                         .fillMaxWidth()
                                         .staggeredEntrance(index = 7, baseDelayMs = 80)
                                 )
+                            }
+                        }
+
+                        // 9. Bio · Cross-signal pattern (Phase 5.4, PRO-only).
+                        // Renders only when use case detected meaningful lift + user is PRO.
+                        // Will move to a dedicated Insight pattern feed when that surface exists.
+                        if (isPro) {
+                            crossSignalPattern?.let { pattern ->
+                                item(key = "bio_cross_signal") {
+                                    ExpressiveCrossSignal(
+                                        pattern = pattern,
+                                        onDismiss = { viewModel.dismissCrossSignal() },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .staggeredEntrance(index = 8, baseDelayMs = 80)
+                                    )
+                                }
                             }
                         }
                         }

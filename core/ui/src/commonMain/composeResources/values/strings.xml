@@ -1753,4 +1753,20 @@
     <string name="bio_medi_hrv_gate_copy">HRV improved during the session — see the detail with PRO</string>
     <string name="bio_medi_clock_min_sec">%1$d:%2$02d</string>
 
+    <!-- Bio-Signal contextual cards (Phase 5.4) — Card 4: Cross-signal pattern (PRO) -->
+    <string name="bio_xs_card_title">Cross-signal pattern</string>
+    <string name="bio_xs_card_meta">last %1$d weeks · refreshed today</string>
+    <string name="bio_xs_pattern_label">PATTERN DETECTED</string>
+    <string name="bio_xs_narrative">Weeks where you meditated %1$d or more times show an average HRV roughly %2$d%% higher than weeks with fewer sessions. Coincidence? Maybe — but the link has held for %3$d weeks running.</string>
+    <string name="bio_xs_row_med_label">Meditation</string>
+    <string name="bio_xs_row_med_sublabel">sessions / week</string>
+    <string name="bio_xs_row_med_value">%1$s</string>
+    <string name="bio_xs_row_med_delta">avg</string>
+    <string name="bio_xs_row_hrv_label">HRV</string>
+    <string name="bio_xs_row_hrv_sublabel">avg ms / week</string>
+    <string name="bio_xs_row_hrv_value">%1$d ms</string>
+    <string name="bio_xs_row_hrv_delta">+%1$d%%</string>
+    <string name="bio_xs_bars_a11y">Meditation sessions per week and average HRV per week, over the last %1$d weeks</string>
+    <string name="bio_xs_dismiss_a11y">Dismiss this pattern</string>
+
 </resources>

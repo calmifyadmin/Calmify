@@ -1749,4 +1749,20 @@
     <string name="bio_medi_chart_a11y">Battito cardiaco durante la sessione, da %1$d a %2$d bpm</string>
     <string name="bio_medi_hrv_gate_copy">L\'HRV è migliorata durante la sessione — vedi il dettaglio con PRO</string>
     <string name="bio_medi_clock_min_sec">%1$d:%2$02d</string>
+
+    <!-- Bio-Signal contextual cards (Phase 5.4) — Card 4: Cross-signal pattern (PRO) -->
+    <string name="bio_xs_card_title">Pattern cross-segnale</string>
+    <string name="bio_xs_card_meta">ultime %1$d settimane · aggiornato oggi</string>
+    <string name="bio_xs_pattern_label">PATTERN RILEVATO</string>
+    <string name="bio_xs_narrative">Nelle settimane in cui hai meditato %1$d o più volte, l\'HRV media risulta circa il %2$d%% più alta rispetto alle settimane con meno sessioni. Coincidenza? Forse — ma il legame regge da %3$d settimane.</string>
+    <string name="bio_xs_row_med_label">Meditazione</string>
+    <string name="bio_xs_row_med_sublabel">sessioni / settimana</string>
+    <string name="bio_xs_row_med_value">%1$s</string>
+    <string name="bio_xs_row_med_delta">media</string>
+    <string name="bio_xs_row_hrv_label">HRV</string>
+    <string name="bio_xs_row_hrv_sublabel">ms medi / settimana</string>
+    <string name="bio_xs_row_hrv_value">%1$d ms</string>
+    <string name="bio_xs_row_hrv_delta">+%1$d%%</string>
+    <string name="bio_xs_bars_a11y">Sessioni di meditazione per settimana e HRV media per settimana, nelle ultime %1$d settimane</string>
+    <string name="bio_xs_dismiss_a11y">Chiudi questo pattern</string>
 </resources>
