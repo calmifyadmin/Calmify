@@ -7,6 +7,7 @@ import com.lifo.shared.model.BioAggregateProto
 import com.lifo.util.auth.AuthProvider
 import com.lifo.util.model.AggregatePeriod
 import com.lifo.util.model.BioAggregate
+import com.lifo.util.model.BioBaseline
 import com.lifo.util.model.BioSignal
 import com.lifo.util.model.BioSignalDataType
 import com.lifo.util.model.ConfidenceLevel
@@ -61,6 +62,7 @@ class BioSignalRepositoryImpl(
     private val rawQueries get() = database.bioSignalQueries
     private val aggQueries get() = database.bioAggregateQueries
     private val consentQueries get() = database.bioConsentQueries
+    private val baselineQueries get() = database.bioBaselineQueries
 
     private fun ownerIdOrEmpty(): String = authProvider.currentUserId.orEmpty()
 
@@ -211,6 +213,11 @@ class BioSignalRepositoryImpl(
             }
         }
 
+        // 3) Refresh per-user baselines (Phase 6, 2026-05-17).
+        // Best-effort — baseline failures never abort ingestion.
+        runCatching { recomputeBaselines() }
+            .onFailure { Log.w(TAG, "Baseline recompute failed: ${it.message}") }
+
         IngestionResult(
             rawSamplesIngested = rawCount,
             aggregatesComputed = aggregatesComputed,
@@ -310,6 +317,7 @@ class BioSignalRepositoryImpl(
         rawQueries.deleteAllByOwner(userId)
         aggQueries.deleteAllByOwner(userId)
         consentQueries.deleteAllByOwner(userId)
+        baselineQueries.deleteAllByOwner(userId)
         // Step 2: audit the bulk revoke (will be pushed to server next sync).
         logConsentEvent(userId, action = "REVOKE", dataType = "*")
         // Step 3: server-side fan-out (Phase 4). Best-effort — if the network
@@ -320,6 +328,108 @@ class BioSignalRepositoryImpl(
         if (!serverDeleted) {
             Log.w(TAG, "deleteAll: server fan-out failed or no-op — local cleared, server may retain data")
         }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Baselines (Phase 6) — per-user rolling distribution
+    // ──────────────────────────────────────────────────────────────────────
+
+    override suspend fun getBaseline(
+        type: BioSignalDataType,
+        periodDays: Int,
+        minSamples: Int,
+    ): BioBaseline? = withContext(Dispatchers.IO) {
+        val userId = ownerIdOrEmpty()
+        if (userId.isBlank()) return@withContext null
+        val row = baselineQueries.getByOwnerTypePeriod(
+            userId = userId,
+            dataType = type.name,
+            periodDays = periodDays.toLong(),
+        ).executeAsOneOrNull() ?: return@withContext null
+        if (row.sample_count < minSamples.toLong()) return@withContext null
+        BioBaseline(
+            type = type,
+            periodDays = row.period_days.toInt(),
+            p10 = row.p10,
+            p25 = row.p25,
+            p50 = row.p50,
+            p75 = row.p75,
+            p90 = row.p90,
+            sampleCount = row.sample_count.toInt(),
+            computedAtMillis = row.computed_at,
+        )
+    }
+
+    override suspend fun recomputeBaselines(periodDays: Int): Int = withContext(Dispatchers.IO) {
+        val userId = ownerIdOrEmpty()
+        if (userId.isBlank()) return@withContext 0
+        val now = Clock.System.now()
+        val windowStart = Instant.fromEpochMilliseconds(
+            now.toEpochMilliseconds() - periodDays.toLong() * 86_400_000L,
+        )
+        var written = 0
+
+        for (type in BioSignalDataType.entries) {
+            val samples = getRawSamples(type, windowStart, now)
+            val values = extractValuesFor(type, samples)
+            // Below floor → skip. Better no baseline than a noisy one
+            // (per Decision 2 + dogma #4).
+            if (values.size < BASELINE_MIN_SAMPLES) continue
+            val sorted = values.sorted()
+            val p10 = quantile(sorted, 0.10)
+            val p25 = quantile(sorted, 0.25)
+            val p50 = quantile(sorted, 0.50)
+            val p75 = quantile(sorted, 0.75)
+            val p90 = quantile(sorted, 0.90)
+            baselineQueries.upsert(
+                id = "$userId|${type.name}|$periodDays",
+                owner_id = userId,
+                data_type = type.name,
+                period_days = periodDays.toLong(),
+                p10 = p10,
+                p25 = p25,
+                p50 = p50,
+                p75 = p75,
+                p90 = p90,
+                sample_count = values.size.toLong(),
+                computed_at = now.toEpochMilliseconds(),
+            )
+            written++
+        }
+        written
+    }
+
+    /**
+     * Project each BioSignal into the scalar that matters for its baseline.
+     * - Duration-based signals (SLEEP, ACTIVITY) → minutes
+     * - Continuous samples (HR, HRV, SpO2) → the natural value
+     * - Daily totals (STEPS) → daily count
+     * - Daily averages (RESTING_HEART_RATE) → bpm
+     */
+    private fun extractValuesFor(type: BioSignalDataType, samples: List<BioSignal>): List<Double> =
+        when (type) {
+            BioSignalDataType.HEART_RATE -> samples.filterIsInstance<BioSignal.HeartRateSample>().map { it.bpm.toDouble() }
+            BioSignalDataType.HRV -> samples.filterIsInstance<BioSignal.HrvSample>().map { it.rmssdMillis }
+            BioSignalDataType.SLEEP -> samples.filterIsInstance<BioSignal.SleepSession>()
+                .map { (it.durationSeconds / 60.0) }
+                .filter { it > 0.0 }
+            BioSignalDataType.STEPS -> samples.filterIsInstance<BioSignal.StepCount>().map { it.count.toDouble() }
+            BioSignalDataType.RESTING_HEART_RATE -> samples.filterIsInstance<BioSignal.RestingHeartRate>().map { it.bpm.toDouble() }
+            BioSignalDataType.OXYGEN_SATURATION -> samples.filterIsInstance<BioSignal.OxygenSaturationSample>().map { it.percent }
+            BioSignalDataType.ACTIVITY -> samples.filterIsInstance<BioSignal.ActivitySession>()
+                .map { (it.durationSeconds / 60.0) }
+                .filter { it > 0.0 }
+        }
+
+    /** Linear-interpolation quantile (R type-7 method, matches numpy/pandas defaults). */
+    private fun quantile(sorted: List<Double>, q: Double): Double {
+        if (sorted.isEmpty()) return 0.0
+        if (sorted.size == 1) return sorted[0]
+        val pos = q * (sorted.size - 1)
+        val lo = pos.toInt()
+        val hi = (lo + 1).coerceAtMost(sorted.size - 1)
+        val frac = pos - lo
+        return sorted[lo] * (1 - frac) + sorted[hi] * frac
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -521,6 +631,13 @@ class BioSignalRepositoryImpl(
     companion object {
         private const val TAG = "BioSignalRepo"
         private const val DEFAULT_TTL_MILLIS = 30L * 24L * 3600L * 1000L  // 30 days
+
+        /**
+         * Minimum samples required before we'll write a baseline for a type.
+         * Below this floor we'd be inventing personalization — better to fall
+         * back to universal thresholds per Decision 2 + dogma #4.
+         */
+        private const val BASELINE_MIN_SAMPLES = 7
 
         val DefaultJson: Json = Json {
             ignoreUnknownKeys = true

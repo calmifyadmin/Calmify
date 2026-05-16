@@ -212,3 +212,41 @@ enum class AggregatePeriod {
     WEEKLY,
     MONTHLY,
 }
+
+// ──────────────────────────────────────────────────────────────────────────
+// Per-user baseline (Phase 6, 2026-05-17)
+// ──────────────────────────────────────────────────────────────────────────
+
+/**
+ * Rolling per-user baseline distribution for a single [BioSignalDataType].
+ *
+ * Replaces universal thresholds in Phase 5 cards with the user's own
+ * distribution — turns "be gentle when sleep < 6h" into "be gentle when
+ * sleep is in your bottom-25% range." Returned by
+ * [com.lifo.util.repository.BioSignalRepository.getBaseline].
+ *
+ * Per `.claude/BIOSIGNAL_INTEGRATION_PLAN.md` Decision 2 (DataConfidence) and
+ * `memory/feedback_calmify_values.md` dogma #4: callers MUST fall back to
+ * universal thresholds when this returns `null` or [sampleCount] is too low.
+ * We never invent personalization we can't back up.
+ *
+ * @property periodDays            window the baseline was computed over (typically 30)
+ * @property p10..p90              percentile breakpoints (units match the underlying signal —
+ *                                 bpm for HR, ms for HRV, minutes for SLEEP duration,
+ *                                 count for STEPS, etc.)
+ * @property sampleCount           number of source samples behind the distribution —
+ *                                 callers compare to their own MIN_SAMPLES floor
+ * @property computedAtMillis      epoch ms — used to invalidate stale baselines
+ */
+@Serializable
+data class BioBaseline(
+    val type: BioSignalDataType,
+    val periodDays: Int,
+    val p10: Double,
+    val p25: Double,
+    val p50: Double,
+    val p75: Double,
+    val p90: Double,
+    val sampleCount: Int,
+    val computedAtMillis: Long,
+)

@@ -14,14 +14,16 @@ import kotlin.time.Duration.Companion.hours
  * Reads the user's last completed sleep session (≤24h window) from the local
  * SQLDelight store and classifies it into one of three buckets:
  *
- * - [SleepNudge.ShortNight]  — duration < 6h ⇒ gentle "be kind to yourself" copy
- * - [SleepNudge.SolidRest]   — duration ≥ 7h 30m AND efficiency ≥ 85% ⇒ soft celebration
+ * - [SleepNudge.ShortNight]  — duration in the user's bottom-25% range ⇒ gentle copy
+ * - [SleepNudge.SolidRest]   — duration in the user's top-25% range AND efficiency ≥ 85% ⇒ soft celebration
  * - `null`                   — anything in between, no session, or no data ⇒ silence
  *
- * **Thresholds**: chosen as universal-enough for MVP. Per-user baselines come
- * with Phase 6 (cross-signal correlation). Per the bussola
- * (`memory/feedback_biosignal_plan_as_compass.md`), we never frame the result
- * as a score or target — both buckets are observational.
+ * **Thresholds (Phase 6, 2026-05-17)**: tries the user's own baseline first
+ * via [BioSignalRepository.getBaseline] — p25 of trailing-30d sleep duration
+ * for ShortNight, p75 for SolidRest. Falls back to universal thresholds (6h
+ * and 7h30m) when no baseline exists yet (cold start). Per
+ * `memory/feedback_biosignal_plan_as_compass.md`, both buckets stay
+ * observational — never framed as a score or target.
  *
  * Returns the [ConfidenceLevel] + [BioSignalSource] of the source sleep sample
  * so the banner footer can display "From {device} · {level} confidence" (Decision 2
@@ -43,13 +45,18 @@ class GetSleepNudgeUseCase(
         val durationMinutes = (lastSleep.durationSeconds / 60L).toInt()
         if (durationMinutes <= 0) return null
 
+        // Per-user baseline (Phase 6) → fall back to universal thresholds when cold.
+        val baseline = repository.getBaseline(BioSignalDataType.SLEEP, periodDays = 30)
+        val shortThreshold = baseline?.p25?.toInt() ?: UNIVERSAL_SHORT_NIGHT_MIN
+        val solidThreshold = baseline?.p75?.toInt() ?: UNIVERSAL_SOLID_REST_MIN
+
         return when {
-            durationMinutes < SHORT_NIGHT_THRESHOLD_MINUTES -> SleepNudge.ShortNight(
+            durationMinutes < shortThreshold -> SleepNudge.ShortNight(
                 durationMinutes = durationMinutes,
                 confidence = lastSleep.confidence.level,
                 source = lastSleep.source,
             )
-            durationMinutes >= SOLID_REST_THRESHOLD_MINUTES &&
+            durationMinutes >= solidThreshold &&
                 (lastSleep.efficiencyPercent ?: 100.0) >= SOLID_REST_EFFICIENCY_PERCENT -> SleepNudge.SolidRest(
                 durationMinutes = durationMinutes,
                 confidence = lastSleep.confidence.level,
@@ -61,8 +68,10 @@ class GetSleepNudgeUseCase(
 
     companion object {
         private const val LOOKBACK_HOURS = 24L
-        private const val SHORT_NIGHT_THRESHOLD_MINUTES = 360   // 6h 00m
-        private const val SOLID_REST_THRESHOLD_MINUTES = 450    // 7h 30m
+        /** Universal floor for ShortNight when the user has no baseline yet. */
+        private const val UNIVERSAL_SHORT_NIGHT_MIN = 360       // 6h 00m
+        /** Universal ceiling for SolidRest when the user has no baseline yet. */
+        private const val UNIVERSAL_SOLID_REST_MIN = 450        // 7h 30m
         private const val SOLID_REST_EFFICIENCY_PERCENT = 85.0
     }
 }

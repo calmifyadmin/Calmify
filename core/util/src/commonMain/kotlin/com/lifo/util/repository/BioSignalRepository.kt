@@ -2,6 +2,7 @@ package com.lifo.util.repository
 
 import com.lifo.util.model.AggregatePeriod
 import com.lifo.util.model.BioAggregate
+import com.lifo.util.model.BioBaseline
 import com.lifo.util.model.BioSignal
 import com.lifo.util.model.BioSignalDataType
 import kotlinx.coroutines.flow.Flow
@@ -71,6 +72,38 @@ interface BioSignalRepository {
         type: BioSignalDataType,
         period: AggregatePeriod,
     ): Flow<BioAggregate?>
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Baselines (Phase 6, 2026-05-17) — per-user rolling distribution
+    // ──────────────────────────────────────────────────────────────────────
+
+    /**
+     * Get the user's rolling baseline for a data type. Used by Phase 5+ cards
+     * to personalize thresholds (e.g. Card 1 sleep-banner thresholds become
+     * `p25` / `p75` of the user's last 30d of sleep instead of universal 6h / 7h30m).
+     *
+     * Returns `null` when:
+     *   - no baseline has been computed yet (cold start), OR
+     *   - the underlying sample count is below the caller's `minSamples` floor
+     *
+     * Callers MUST fall back to universal thresholds when `null` — per
+     * Decision 2 + dogma #4 we never claim personalization we can't back.
+     */
+    suspend fun getBaseline(
+        type: BioSignalDataType,
+        periodDays: Int = 30,
+        minSamples: Int = 7,
+    ): BioBaseline?
+
+    /**
+     * Recompute baselines for every [BioSignalDataType] from the local store
+     * and upsert. Idempotent. Called at the end of [ingestFromProvider] and
+     * (Android) by the daily WorkManager cron as a fallback.
+     *
+     * Skips a type when its sample count is below the use case's MIN_SAMPLES
+     * floor — better no baseline than a noisy one.
+     */
+    suspend fun recomputeBaselines(periodDays: Int = 30): Int   // returns count of baselines written
 
     // ──────────────────────────────────────────────────────────────────────
     // Write / sync

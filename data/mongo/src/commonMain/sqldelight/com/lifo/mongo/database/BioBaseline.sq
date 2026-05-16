@@ -1,0 +1,52 @@
+-- Bio-Signal per-user baseline cache.
+-- Phase 6 (2026-05-17) — replaces universal thresholds in Phase 5 cards with
+-- the user's own rolling distribution.
+--
+-- For each (data type, period_days) we cache the user's p10/p25/p50/p75/p90
+-- computed from the last N days of local samples. Refreshed:
+--   - At the end of every BioSignalRepository.ingestFromProvider call
+--   - By a daily cron (BioSignalSyncWorker) as a fallback
+--
+-- Caller contract: BioSignalRepository.getBaseline(type, periodDays) returns null
+-- when sample_count < MIN_SAMPLES (use case decides; today 7). Null = fall back
+-- to universal thresholds. Per Decision 2 + dogma #4: never claim personalization
+-- we don't have enough data to support.
+
+CREATE TABLE bio_baselines (
+    -- Synthesized id: "{owner_id}|{data_type}|{period_days}"
+    id TEXT NOT NULL PRIMARY KEY,
+    owner_id TEXT NOT NULL,
+    data_type TEXT NOT NULL,                -- BioSignalDataType.name
+    period_days INTEGER NOT NULL,           -- typically 30
+    p10 REAL NOT NULL DEFAULT 0.0,
+    p25 REAL NOT NULL DEFAULT 0.0,
+    p50 REAL NOT NULL DEFAULT 0.0,
+    p75 REAL NOT NULL DEFAULT 0.0,
+    p90 REAL NOT NULL DEFAULT 0.0,
+    sample_count INTEGER NOT NULL DEFAULT 0,
+    computed_at INTEGER NOT NULL
+);
+
+CREATE INDEX idx_baseline_owner_type ON bio_baselines(owner_id, data_type, period_days);
+
+-- ─────────────────────────────────────────────────────────────────────
+-- Queries
+-- ─────────────────────────────────────────────────────────────────────
+
+getByOwnerTypePeriod:
+SELECT * FROM bio_baselines
+WHERE owner_id = :userId AND data_type = :dataType AND period_days = :periodDays
+LIMIT 1;
+
+upsert:
+INSERT OR REPLACE INTO bio_baselines(
+    id, owner_id, data_type, period_days,
+    p10, p25, p50, p75, p90,
+    sample_count, computed_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+deleteAllByOwner:
+DELETE FROM bio_baselines WHERE owner_id = :userId;
+
+countByOwner:
+SELECT COUNT(*) FROM bio_baselines WHERE owner_id = :userId;
