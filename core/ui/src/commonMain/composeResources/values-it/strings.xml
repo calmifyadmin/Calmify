@@ -1714,4 +1714,23 @@
     <string name="settings_bio_data_subtitle">Cosa abbiamo, da dove, e cosa è stato inviato</string>
     <string name="settings_bio_connect_title">Connetti un wearable</string>
     <string name="settings_bio_connect_subtitle">Collega il tuo dispositivo via Health Connect — solo lettura</string>
+
+    <!-- Bio-Signal Confidence atoms (Phase 5) -->
+    <string name="bio_conf_chip_a11y">affidabilità %1$s</string>
+    <string name="bio_conf_footer_template">Da %1$s · affidabilità %2$s</string>
+    <string name="bio_conf_unknown_device">il tuo dispositivo</string>
+    <string name="bio_conf_level_high">alta</string>
+    <string name="bio_conf_level_medium">media</string>
+    <string name="bio_conf_level_low">bassa</string>
+
+    <!-- Bio-Signal contextual cards (Phase 5) — Card 3: Home Today narrative -->
+    <string name="bio_card_home_narrative_sleep_hr">Hai dormito %1$s. Il battito cardiaco stamattina è %2$s.</string>
+    <string name="bio_card_home_narrative_sleep_only">Hai dormito %1$s questa notte.</string>
+    <string name="bio_card_home_narrative_hr_only">Il battito cardiaco stamattina è %1$s.</string>
+    <string name="bio_card_home_narrative_steps_only">Hai fatto %1$s finora oggi.</string>
+    <string name="bio_card_home_chip_sleep_duration">%1$dh %2$02dm</string>
+    <string name="bio_card_home_chip_hr_bpm">%1$d bpm</string>
+    <string name="bio_card_home_chip_steps">%1$d passi</string>
+    <string name="bio_card_home_open_a11y">Apri il contesto bio</string>
+    <string name="bio_card_home_open_trailing">Apri</string>
 </resources>

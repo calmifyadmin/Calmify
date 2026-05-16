@@ -1411,4 +1411,44 @@ object Strings {
         val confirmSkippedBody: StringResource get() = Res.string.bio_onb_confirm_skipped_body
         val confirmCta: StringResource get() = Res.string.bio_onb_confirm_cta
     }
+
+    /**
+     * Bio-Signal Confidence atoms (Phase 5, 2026-05-16) — chip + footer used by
+     * every contextual bio card to surface source + reliability. Per
+     * `.claude/BIOSIGNAL_INTEGRATION_PLAN.md` Decision 2: DataConfidence
+     * always visible.
+     */
+    object BioConfidence {
+        val chipA11y: StringResource get() = Res.string.bio_conf_chip_a11y
+        val footerTemplate: StringResource get() = Res.string.bio_conf_footer_template
+        val unknownDevice: StringResource get() = Res.string.bio_conf_unknown_device
+        val levelHigh: StringResource get() = Res.string.bio_conf_level_high
+        val levelMedium: StringResource get() = Res.string.bio_conf_level_medium
+        val levelLow: StringResource get() = Res.string.bio_conf_level_low
+
+        fun levelLabel(level: com.lifo.util.model.ConfidenceLevel): StringResource = when (level) {
+            com.lifo.util.model.ConfidenceLevel.HIGH -> levelHigh
+            com.lifo.util.model.ConfidenceLevel.MEDIUM -> levelMedium
+            com.lifo.util.model.ConfidenceLevel.LOW -> levelLow
+        }
+    }
+
+    /**
+     * Bio-Signal contextual cards inside host features (Phase 5, 2026-05-16).
+     * These keys live in `:core:ui` so all hosts (home/journal/meditation/insight)
+     * draw from the same vocabulary. Grammar from
+     * `design/biosignal/Calmify BioContextual Cards.html`.
+     */
+    object BioCard {
+        // Card 3 — Home Today narrative
+        val homeNarrativeSleepHr: StringResource get() = Res.string.bio_card_home_narrative_sleep_hr
+        val homeNarrativeSleepOnly: StringResource get() = Res.string.bio_card_home_narrative_sleep_only
+        val homeNarrativeHrOnly: StringResource get() = Res.string.bio_card_home_narrative_hr_only
+        val homeNarrativeStepsOnly: StringResource get() = Res.string.bio_card_home_narrative_steps_only
+        val homeChipSleepDuration: StringResource get() = Res.string.bio_card_home_chip_sleep_duration
+        val homeChipHrBpm: StringResource get() = Res.string.bio_card_home_chip_hr_bpm
+        val homeChipSteps: StringResource get() = Res.string.bio_card_home_chip_steps
+        val homeOpenA11y: StringResource get() = Res.string.bio_card_home_open_a11y
+        val homeOpenTrailing: StringResource get() = Res.string.bio_card_home_open_trailing
+    }
 }

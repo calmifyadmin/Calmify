@@ -68,6 +68,7 @@ internal fun HomeContent(
     navigateToFeed: () -> Unit = {},
     navigateToThreadDetail: (String) -> Unit = {},
     navigateToSocialProfile: () -> Unit = {},
+    navigateToBioContext: () -> Unit = {},
     // Daily quick actions
     onGratitudeClick: () -> Unit = {},
     onEnergyCheckInClick: () -> Unit = {},
@@ -132,6 +133,7 @@ internal fun HomeContent(
     val quickActionState by viewModel.quickActionState.collectAsState()
     val communityThreads by viewModel.communityThreads.collectAsState()
     val socialAvatarUrl by viewModel.socialAvatarUrl.collectAsState()
+    val bioContext by viewModel.bioContext.collectAsState()
     val onRefresh: () -> Unit = {
         isRefreshing = true
         coroutineScope.launch {
@@ -203,6 +205,20 @@ internal fun HomeContent(
                                     .staggeredEntrance(index = 0, baseDelayMs = 80)
                                     .coachMarkTarget(coachState, CoachMarkKeys.HOME_GREETING)
                             )
+                        }
+
+                        // 1.5 Bio · Today narrative (Phase 5, surgical insert post-Hero).
+                        // Silence-by-default: only renders when the user has bio data.
+                        bioContext?.takeIf { it.hasSignal }?.let { bio ->
+                            item(key = "bio_today") {
+                                ExpressiveBioToday(
+                                    bio = bio,
+                                    onOpen = navigateToBioContext,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .staggeredEntrance(index = 1, baseDelayMs = 80)
+                                )
+                            }
                         }
 
                         // 2. Quick Actions (hero card + pills)

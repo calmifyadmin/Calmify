@@ -116,6 +116,10 @@ object HomeContract {
         // Social profile avatar
         val socialAvatarUrl: String? = null,
 
+        // Bio-signal Today narrative (Phase 5) — null when user has no bio data
+        // or hasn't connected a wearable; absence = silence, not error.
+        val bioContext: com.lifo.home.domain.model.HomeBioContext? = null,
+
         // Network
         val networkStatus: ConnectivityObserver.Status = ConnectivityObserver.Status.Unavailable,
 
@@ -149,7 +153,8 @@ internal class HomeViewModel constructor(
     private val feedRepository: FeedRepository,
     private val threadHydrator: ThreadHydrator,
     private val socialGraphRepository: SocialGraphRepository,
-    private val profileSettingsRepository: ProfileSettingsRepository
+    private val profileSettingsRepository: ProfileSettingsRepository,
+    private val getHomeBioContextUseCase: com.lifo.home.domain.usecase.GetHomeBioContextUseCase,
 ) : MviViewModel<HomeContract.Intent, HomeContract.State, HomeContract.Effect>(
     initialState = HomeContract.State()
 ) {
@@ -255,6 +260,9 @@ internal class HomeViewModel constructor(
 
     val socialAvatarUrl: StateFlow<String?> = state.map { it.socialAvatarUrl }
         .stateIn(scope, SharingStarted.Eagerly, null)
+
+    val bioContext: StateFlow<com.lifo.home.domain.model.HomeBioContext?> =
+        state.map { it.bioContext }.stateIn(scope, SharingStarted.Eagerly, null)
 
     // ══════════════════════════════════════════════════════════════════════
     // Init
@@ -875,10 +883,13 @@ internal class HomeViewModel constructor(
                 val insightsDeferred = async { loadInsightsForRedesign() }
                 val diariesDeferred = async { loadDiariesForRedesign() }
                 val communityDeferred = async { loadCommunityThreads() }
+                val bioDeferred = async { runCatching { getHomeBioContextUseCase() }.getOrNull() }
 
                 cachedInsights = insightsDeferred.await()
                 cachedDiaries = diariesDeferred.await()
                 communityDeferred.await()
+                val bio = bioDeferred.await()
+                updateState { copy(bioContext = bio) }
 
                 calculateTodayPulse()
                 calculateMoodDistribution()

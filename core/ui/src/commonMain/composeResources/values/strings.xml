@@ -1718,4 +1718,23 @@
     <string name="settings_bio_connect_title">Connect a wearable</string>
     <string name="settings_bio_connect_subtitle">Pair your device via Health Connect — read-only</string>
 
+    <!-- Bio-Signal Confidence atoms (Phase 5) — reusable across all contextual cards -->
+    <string name="bio_conf_chip_a11y">%1$s confidence</string>
+    <string name="bio_conf_footer_template">From %1$s · %2$s confidence</string>
+    <string name="bio_conf_unknown_device">your device</string>
+    <string name="bio_conf_level_high">high</string>
+    <string name="bio_conf_level_medium">medium</string>
+    <string name="bio_conf_level_low">low</string>
+
+    <!-- Bio-Signal contextual cards (Phase 5) — Card 3: Home Today narrative -->
+    <string name="bio_card_home_narrative_sleep_hr">You slept %1$s. Heart rate this morning is %2$s.</string>
+    <string name="bio_card_home_narrative_sleep_only">You slept %1$s last night.</string>
+    <string name="bio_card_home_narrative_hr_only">Heart rate this morning is %1$s.</string>
+    <string name="bio_card_home_narrative_steps_only">You\'ve taken %1$s so far today.</string>
+    <string name="bio_card_home_chip_sleep_duration">%1$dh %2$02dm</string>
+    <string name="bio_card_home_chip_hr_bpm">%1$d bpm</string>
+    <string name="bio_card_home_chip_steps">%1$d steps</string>
+    <string name="bio_card_home_open_a11y">Open bio context</string>
+    <string name="bio_card_home_open_trailing">Open</string>
+
 </resources>

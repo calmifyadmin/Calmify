@@ -380,6 +380,7 @@ fun DecomposeApp(
                             onSleepLogClick = { rootComponent.navigateToSleepLog() },
                             onHabitsClick = { rootComponent.navigateToHabits() },
                             onMeditationClick = { rootComponent.navigateToMeditation() },
+                            navigateToBioContext = { rootComponent.navigateToBioContext() },
                             onDataLoaded = onDataLoaded,
                             drawerState = drawerState
                         )

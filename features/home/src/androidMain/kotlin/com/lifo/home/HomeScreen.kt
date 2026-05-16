@@ -75,6 +75,7 @@ internal fun HomeScreen(
     onSleepLogClick: () -> Unit = {},
     onHabitsClick: () -> Unit = {},
     onMeditationClick: () -> Unit = {},
+    navigateToBioContext: () -> Unit = {},
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
@@ -140,6 +141,7 @@ internal fun HomeScreen(
                         navigateToFeed = navigateToFeed,
                         navigateToThreadDetail = navigateToThreadDetail,
                         navigateToSocialProfile = navigateToSocialProfile,
+                        navigateToBioContext = navigateToBioContext,
                         onGratitudeClick = onGratitudeClick,
                         onEnergyCheckInClick = onEnergyCheckInClick,
                         onSleepLogClick = onSleepLogClick,

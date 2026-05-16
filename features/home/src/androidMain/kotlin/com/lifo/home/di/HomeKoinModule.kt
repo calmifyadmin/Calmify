@@ -11,6 +11,7 @@ import com.lifo.home.domain.usecase.CalculateTopicsFrequencyUseCase
 import com.lifo.home.domain.usecase.GetAchievementsUseCase
 import com.lifo.home.domain.usecase.GetActivityImpactUseCase
 import com.lifo.home.domain.usecase.GetGrowthProgressUseCase
+import com.lifo.home.domain.usecase.GetHomeBioContextUseCase
 import com.lifo.home.domain.usecase.GetSleepMoodCorrelationUseCase
 import com.lifo.home.domain.usecase.GetWellbeingTrendUseCase
 import org.koin.core.module.dsl.viewModel
@@ -28,6 +29,7 @@ val homeKoinModule = module {
     factory { GetActivityImpactUseCase() }
     factory { GetGrowthProgressUseCase() }
     factory { GetWellbeingTrendUseCase() }
+    factory { GetHomeBioContextUseCase(get()) }
 
     // WellbeingAggregator — single (stateless, safe to share across VMs)
     single {
@@ -58,7 +60,7 @@ val homeKoinModule = module {
     //   calculateMoodDistributionUseCase, aggregateCognitivePatternsUseCase,
     //   calculateTopicsFrequencyUseCase, calculateTodayPulseUseCase, getAchievementsUseCase,
     //   feedRepository, threadHydrator, socialGraphRepository, profileSettingsRepository)
-    viewModel { HomeViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { HomeViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
 
     // SnapshotViewModel(wellbeingRepository, auth)
     viewModel { SnapshotViewModel(get(), get()) }

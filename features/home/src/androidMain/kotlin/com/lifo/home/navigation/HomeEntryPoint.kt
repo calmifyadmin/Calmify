@@ -44,6 +44,7 @@ fun HomeRouteContent(
     onSleepLogClick: () -> Unit = {},
     onHabitsClick: () -> Unit = {},
     onMeditationClick: () -> Unit = {},
+    navigateToBioContext: () -> Unit = {},
     onDataLoaded: () -> Unit,
     drawerState: DrawerState
 ) {
@@ -120,6 +121,7 @@ fun HomeRouteContent(
         navigateToFeed = navigateToFeed,
         navigateToThreadDetail = navigateToThreadDetail,
         navigateToSocialProfile = navigateToSocialProfile,
+        navigateToBioContext = navigateToBioContext,
         onGratitudeClick = onGratitudeClick,
         onEnergyCheckInClick = onEnergyCheckInClick,
         onSleepLogClick = onSleepLogClick,
