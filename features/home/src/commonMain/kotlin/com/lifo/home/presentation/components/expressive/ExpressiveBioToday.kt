@@ -29,8 +29,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -80,7 +82,12 @@ internal fun ExpressiveBioToday(
                 color = MaterialTheme.colorScheme.outlineVariant,
                 shape = RoundedCornerShape(CalmifyRadius.xxl),
             )
-            .semantics { contentDescription = "$openLabel: $narrative" },
+            // Phase 7.1 — single curated TalkBack announcement instead of
+            // duplicate readout of every nested chip + text.
+            .clearAndSetSemantics {
+                contentDescription = "$openLabel: $narrative"
+                role = Role.Button
+            },
     ) {
         Box(modifier = Modifier.padding(CalmifySpacing.lg + 2.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(CalmifySpacing.md)) {

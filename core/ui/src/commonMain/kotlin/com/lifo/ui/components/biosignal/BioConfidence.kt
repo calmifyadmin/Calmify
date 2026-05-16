@@ -17,8 +17,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lifo.ui.i18n.Strings
@@ -60,7 +60,7 @@ fun BioConfidenceChip(
             .clip(RoundedCornerShape(CalmifyRadius.pill))
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(horizontal = 10.dp, vertical = 4.dp)
-            .semantics { contentDescription = a11y },
+            .clearAndSetSemantics { contentDescription = a11y },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(5.dp),
     ) {
@@ -91,7 +91,7 @@ fun BioConfidenceFooter(
     val levelLabel = stringResource(Strings.BioConfidence.levelLabel(level))
     val text = stringResource(Strings.BioConfidence.footerTemplate, deviceLabel, levelLabel)
     Row(
-        modifier = modifier.semantics { contentDescription = text },
+        modifier = modifier.clearAndSetSemantics { contentDescription = text },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(CalmifySpacing.sm),
     ) {

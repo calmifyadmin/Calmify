@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -143,7 +144,7 @@ internal fun ExpressiveCrossSignal(
                     modifier = Modifier
                         .size(30.dp)
                         .clip(RoundedCornerShape(CalmifyRadius.pill))
-                        .clickable(onClick = onDismiss)
+                        .clickable(role = Role.Button, onClickLabel = dismissA11y, onClick = onDismiss)
                         .semantics { contentDescription = dismissA11y },
                     contentAlignment = Alignment.Center,
                 ) {

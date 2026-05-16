@@ -24,6 +24,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -55,6 +59,8 @@ fun BioProLock(
 ) {
     val accent = MaterialTheme.colorScheme.primary
     val proLabel = stringResource(Strings.BioProLock.proChip)
+    val aggregateA11y = stringResource(Strings.BioProLock.a11yTemplate, copy)
+    val upgradeAction = stringResource(Strings.BioProLock.actionUpgrade)
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -64,8 +70,14 @@ fun BioProLock(
                 color = accent.copy(alpha = 0.36f),
                 cornerRadius = CalmifyRadius.md,
             )
-            .clickable(role = Role.Button, onClick = onUpgrade)
-            .padding(12.dp),
+            .clickable(role = Role.Button, onClickLabel = upgradeAction, onClick = onUpgrade)
+            .padding(12.dp)
+            // Phase 7.1 — one curated TalkBack readout for the whole gate.
+            .clearAndSetSemantics {
+                contentDescription = aggregateA11y
+                role = Role.Button
+                onClick(label = upgradeAction) { onUpgrade(); true }
+            },
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

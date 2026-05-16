@@ -203,7 +203,13 @@ fun animatedIntCounter(
 }
 
 /**
- * Staggered entrance modifier
+ * Staggered entrance modifier.
+ *
+ * Phase 7.1 (2026-05-17) — when the platform reports reduced-motion preference
+ * (Android `ANIMATOR_DURATION_SCALE == 0` / iOS `UIAccessibilityIsReduceMotionEnabled`)
+ * we snap to the end state immediately. The cards still appear (the layout doesn't
+ * change), they just don't slide+fade in. Affects every Home item that uses this
+ * modifier (10+ surfaces including the 4 Phase 5/6 bio cards).
  */
 @Composable
 fun Modifier.staggeredEntrance(
@@ -211,6 +217,8 @@ fun Modifier.staggeredEntrance(
     baseDelayMs: Int = 50,
     durationMs: Int = 300
 ): Modifier {
+    val reducedMotion = com.lifo.ui.accessibility.isReducedMotionEnabled()
+    if (reducedMotion) return this
     val animatable = remember { Animatable(0f) }
 
     LaunchedEffect(Unit) {

@@ -1476,6 +1476,8 @@ object Strings {
     /** PRO gate atom — non-hostile lock used inline beneath FREE bio cards. */
     object BioProLock {
         val proChip: StringResource get() = Res.string.bio_pro_chip
+        val a11yTemplate: StringResource get() = Res.string.bio_pro_lock_a11y_template
+        val actionUpgrade: StringResource get() = Res.string.bio_pro_lock_action_upgrade
     }
 
     /**

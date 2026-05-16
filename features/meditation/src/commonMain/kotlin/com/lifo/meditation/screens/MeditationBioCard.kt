@@ -64,7 +64,10 @@ internal fun MeditationBioCard(
     } else {
         stringResource(Strings.BioMeditation.narrativeStable, (summary.startBpm + summary.endBpm) / 2)
     }
-    val chartA11y = stringResource(Strings.BioMeditation.chartA11y, summary.startBpm, summary.endBpm)
+    val chartA11y = stringResource(
+        Strings.BioMeditation.chartA11y,
+        summary.startBpm, summary.endBpm, summary.minBpm, summary.maxBpm,
+    )
     val hrvGateCopy = stringResource(Strings.BioMeditation.hrvGateCopy)
 
     Box(
