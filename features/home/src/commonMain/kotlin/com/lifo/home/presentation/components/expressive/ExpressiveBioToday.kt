@@ -183,12 +183,24 @@ private fun composeNarrative(bio: HomeBioContext): String {
         stringResource(Strings.BioCard.homeChipSteps, it)
     }
 
-    return when {
+    val base = when {
         hasSleep && hasHr -> stringResource(Strings.BioCard.homeNarrativeSleepHr, sleepText!!, hrText!!)
         hasSleep -> stringResource(Strings.BioCard.homeNarrativeSleepOnly, sleepText!!)
         hasHr -> stringResource(Strings.BioCard.homeNarrativeHrOnly, hrText!!)
         hasSteps -> stringResource(Strings.BioCard.homeNarrativeStepsOnly, stepsText!!)
         else -> "" // unreachable — hasSignal gate above guarantees one of the four branches
     }
+
+    // Phase 6.2 — append the personalized range hint from the metric that's
+    // anchoring the narrative. Hint is null when no baseline exists yet
+    // (cold start); narrative stays at universal copy in that case.
+    val hint = when {
+        hasSleep && hasHr -> bio.sleepHint ?: bio.heartRateHint
+        hasSleep -> bio.sleepHint
+        hasHr -> bio.heartRateHint
+        hasSteps -> bio.stepsHint
+        else -> null
+    } ?: return base
+    return base + stringResource(Strings.BioCard.homeHintFor(hint))
 }
 

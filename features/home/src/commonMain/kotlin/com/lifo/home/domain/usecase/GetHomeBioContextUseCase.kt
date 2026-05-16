@@ -90,12 +90,24 @@ class GetHomeBioContextUseCase(
             .maxByOrNull { it.value }
             ?.key
 
+        val sleepDurationMinutes = lastSleep?.let { (it.durationSeconds / 60L).toInt() }
+
+        // ── Phase 6.2 — personalized range hints (null when no baseline yet) ──
+        val sleepBaseline = repository.getBaseline(BioSignalDataType.SLEEP)
+        val hrBaselineType = if (freshRestingHr != null) BioSignalDataType.RESTING_HEART_RATE
+                             else BioSignalDataType.HEART_RATE
+        val hrBaseline = repository.getBaseline(hrBaselineType)
+        val stepsBaseline = repository.getBaseline(BioSignalDataType.STEPS)
+
         return HomeBioContext(
-            sleepDurationMinutes = lastSleep?.let { (it.durationSeconds / 60L).toInt() },
+            sleepDurationMinutes = sleepDurationMinutes,
             heartRateBpm = heartRateBpm,
             stepsToday = stepsToday,
             confidenceFloor = confidenceFloor,
             primarySource = primarySource,
+            sleepHint = sleepDurationMinutes?.let { sleepBaseline?.hintFor(it.toDouble()) },
+            heartRateHint = heartRateBpm?.let { hrBaseline?.hintFor(it.toDouble()) },
+            stepsHint = stepsToday?.let { stepsBaseline?.hintFor(it.toDouble()) },
         )
     }
 

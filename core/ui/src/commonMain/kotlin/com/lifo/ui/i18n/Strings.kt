@@ -1451,6 +1451,17 @@ object Strings {
         val homeOpenA11y: StringResource get() = Res.string.bio_card_home_open_a11y
         val homeOpenTrailing: StringResource get() = Res.string.bio_card_home_open_trailing
 
+        // Phase 6.2 — personalized range-hint suffix appended to the narrative
+        val homeHintWithin: StringResource get() = Res.string.bio_card_home_hint_within
+        val homeHintBelow: StringResource get() = Res.string.bio_card_home_hint_below
+        val homeHintAbove: StringResource get() = Res.string.bio_card_home_hint_above
+
+        fun homeHintFor(hint: com.lifo.util.model.BioRangeHint): StringResource = when (hint) {
+            com.lifo.util.model.BioRangeHint.WITHIN -> homeHintWithin
+            com.lifo.util.model.BioRangeHint.BELOW -> homeHintBelow
+            com.lifo.util.model.BioRangeHint.ABOVE -> homeHintAbove
+        }
+
         // Card 1 — Journal composer banner (Phase 5.2)
         val journalShortNight: StringResource get() = Res.string.bio_card_journal_short_night
         val journalSolidRest: StringResource get() = Res.string.bio_card_journal_solid_rest

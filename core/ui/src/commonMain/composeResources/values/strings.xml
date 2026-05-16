@@ -1737,6 +1737,12 @@
     <string name="bio_card_home_open_a11y">Open bio context</string>
     <string name="bio_card_home_open_trailing">Open</string>
 
+    <!-- Phase 6.2 — personalized range-hint suffix for the Home narrative.
+         %1$s is the original narrative (already terminated with a period). -->
+    <string name="bio_card_home_hint_within"> Close to your usual.</string>
+    <string name="bio_card_home_hint_below"> A bit below your usual.</string>
+    <string name="bio_card_home_hint_above"> A bit above your usual.</string>
+
     <!-- Bio-Signal contextual cards (Phase 5.2) — Card 1: Journal composer banner -->
     <string name="bio_banner_dismiss_a11y">Dismiss</string>
     <string name="bio_card_journal_short_night">Last night was short — only %1$s. Be gentle with yourself today.</string>

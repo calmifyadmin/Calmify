@@ -1,6 +1,7 @@
 package com.lifo.home.domain.model
 
 import androidx.compose.runtime.Immutable
+import com.lifo.util.model.BioRangeHint
 import com.lifo.util.model.BioSignalSource
 import com.lifo.util.model.ConfidenceLevel
 
@@ -37,6 +38,17 @@ data class HomeBioContext(
 
     /** Most-frequent source device across the materials presented. */
     val primarySource: BioSignalSource? = null,
+
+    // ── Phase 6.2 — personalized framing (null = no baseline yet, cold start) ──
+
+    /** Where today's sleep sits in the user's own trailing-30d distribution. */
+    val sleepHint: BioRangeHint? = null,
+
+    /** Where this morning's HR sits in the user's own trailing-30d distribution. */
+    val heartRateHint: BioRangeHint? = null,
+
+    /** Where today's steps sit in the user's own trailing-30d distribution. */
+    val stepsHint: BioRangeHint? = null,
 ) {
     /** At least one metric is present — the card has something to say. */
     val hasSignal: Boolean

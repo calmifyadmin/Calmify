@@ -249,4 +249,27 @@ data class BioBaseline(
     val p90: Double,
     val sampleCount: Int,
     val computedAtMillis: Long,
-)
+) {
+    /**
+     * Locate a single value in this baseline's distribution. Returns:
+     * - [BioRangeHint.BELOW] if value < p25 (in the user's bottom quartile)
+     * - [BioRangeHint.ABOVE] if value > p75 (in the user's top quartile)
+     * - [BioRangeHint.WITHIN] otherwise (the interquartile range — typical)
+     *
+     * Per dogma #3 (helpful, not optimizing) the hint is observational, never
+     * judgmental. Callers add the verbal framing ("close to your usual" etc.).
+     */
+    fun hintFor(value: Double): BioRangeHint = when {
+        value < p25 -> BioRangeHint.BELOW
+        value > p75 -> BioRangeHint.ABOVE
+        else -> BioRangeHint.WITHIN
+    }
+}
+
+/**
+ * Where a single measurement sits in the user's own rolling distribution.
+ *
+ * Used by Phase 5+ cards to add personalized framing like "above your usual"
+ * without ever resorting to "good/bad" or "in/out of range" anxiety language.
+ */
+enum class BioRangeHint { BELOW, WITHIN, ABOVE }

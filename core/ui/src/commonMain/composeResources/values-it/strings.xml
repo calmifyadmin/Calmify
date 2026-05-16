@@ -1734,6 +1734,11 @@
     <string name="bio_card_home_open_a11y">Apri il contesto bio</string>
     <string name="bio_card_home_open_trailing">Apri</string>
 
+    <!-- Phase 6.2 — suffisso personalizzato per la narrativa Home -->
+    <string name="bio_card_home_hint_within"> Nella tua media.</string>
+    <string name="bio_card_home_hint_below"> Un po\' sotto la tua media.</string>
+    <string name="bio_card_home_hint_above"> Un po\' sopra la tua media.</string>
+
     <!-- Bio-Signal contextual cards (Phase 5.2) — Card 1: Journal composer banner -->
     <string name="bio_banner_dismiss_a11y">Chiudi</string>
     <string name="bio_card_journal_short_night">Stanotte hai dormito poco — solo %1$s. Sii gentile con te stesso oggi.</string>
