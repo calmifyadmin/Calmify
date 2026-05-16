@@ -2,9 +2,9 @@
 
 > **Plan**: `.claude/BIOSIGNAL_INTEGRATION_PLAN.md`
 > **Started**: 2026-05-11
-> **Current phase**: **Phase 0+1+2+2.UI+3+4 + DEPLOY + DEVICE-VERIFIED 2026-05-12** — pipeline live end-to-end (118 step samples ingested on S24). Phase 5 NEXT (Wellness integration). Other 4 onboarding steps redesign on-demand.
-> **Branch**: `design-system-refactor` (Phase 0+1 commits live here; bio-signal Phase 2+ will continue or branch)
-> **Last update**: 2026-05-11 — design-system-refactor COMPLETE (4 commits) + Bio-Signal Phase 0+1 DONE same day.
+> **Current phase**: **Phases 0→7.1 COMPLETE 2026-05-17** — pipeline live + 4 contextual cards shipped + per-user baselines + a11y pass + reduced-motion. Phase 8 (PRO AI narrative) next.
+> **Branch**: `backend-architecture-refactor` (post-merge of `design-system-refactor`)
+> **Last update**: 2026-05-17 — Phases 5.1→5.4 + 6.1→6.4 + 7.1 shipped (9 commits since 2026-05-12 deploy).
 
 ## Dependency on design-system-refactor
 
@@ -207,33 +207,82 @@ Device test (DONE 2026-05-12):
 
 ---
 
-## Phase 6 — UI Calmify Design Language
-**Goal**: Reusable components + visual review.
-**Est**: 5-7 days
-**Status**: ⬜ NOT STARTED
+## Phase 5 — Wellness Integration (4 contextual cards) ✅ DONE 2026-05-17
+**Goal**: Surgical insertion of bio cards into existing host features (NOT new "Fitness" tab).
+**Status**: ✅ DONE — 4 commits on `backend-architecture-refactor`.
 
-- [ ] `BioMetricCard` composable (in-range band + dotted typical-range overlay + emotion-aware copy)
-- [ ] `BioNarrativeCard` composable (AI-generated, PRO gated)
-- [ ] `ConfidenceFooter` composable (source + confidence chip)
-- [ ] `BioOnboardingStepCard` composable
-- [ ] Color-blind safe palette verified (simulator test)
-- [ ] Reduced-motion support (charts fall back to static views)
-- [ ] Visual review vs Calmify Design source (TBD: dedicated Figma/HTML mockup or iterate in-app)
+Atom inventory in `:core:ui/components/biosignal/` (reusable across cards, KMP commonMain):
+- `BioConfidenceChip` — compact pill (icon + level word)
+- `BioConfidenceFooter` — full "From {device} · {level} confidence" + 3-segment bar
+- `BioBanner` — slim dismissable card (5.2)
+- `BioMiniHrChart` — Compose Canvas line + fill + dotted bands (5.3)
+- `BioProLock` — non-hostile PRO gate (5.3)
+- `BioCorrelationBars` — 2-row weekly bar chart (5.4)
+
+Card ledger:
+- [x] **5.1 (d74dcfd)** — Card 3 Home Today narrative (FREE) in `:features:home` post-hero (ExpressiveHero untouched per standing exclusion)
+- [x] **5.2 (5a2f34a)** — Card 1 Journal sleep banner (FREE) in `:features:write` `JournalHomeScreen` above DailyPromptCard
+- [x] **5.3 (c1a5e31)** — Card 2 Meditation outro HR + HRV-PRO gate in `:features:meditation` `MeditationOverviewScreen`
+- [x] **5.4 (1f27882)** — Card 4 Cross-signal pattern (PRO-only) in `:features:home` post-community (will move to Insight pattern feed when that surface exists)
+
+Pattern proven for every card:
+- Domain use case in host module → reads `BioSignalRepository` (no HC reads triggered)
+- Returns sealed/data class state OR `null` (silence-by-default)
+- PRO gating via `SubscriptionRepository.observeSubscription()`
+- Confidence floor + primary source always carried through to UI
 
 ---
 
-## Phase 7 — Accessibility + i18n
-**Goal**: A11y from day 1 + 12 langs.
-**Est**: 3-4 days
+## Phase 6 — UI Calmify Design Language (per-user baselines + atoms) ✅ DONE 2026-05-17
+**Goal**: Reusable components + personalize Phase 5 cards with user's own distribution.
+**Status**: ✅ DONE — atoms shipped under Phase 5, baselines + retrofits land here.
+
+- [x] **6.1 (29d5ef3)** — `BioBaseline` domain + `BioBaseline.sq` SQLDelight table + `BioSignalRepositoryImpl.getBaseline()` + `recomputeBaselines()` (R-type-7 linear quantile, BASELINE_MIN_SAMPLES=7 floor) + auto-recompute at tail of `ingestFromProvider` + Card 1 sleep banner retrofit (p25/p75 thresholds, universal fallback)
+- [x] **6.2 (d767829)** — Card 3 Home narrative personalized: `BioRangeHint` enum (BELOW/WITHIN/ABOVE) + `BioBaseline.hintFor(value)` + narrative suffix "Close to / a bit below / a bit above your usual" (3 keys EN+IT)
+- [x] **6.3 (a201133)** — Card 2 meditation chart typical-range bands: `SessionHrSummary.typicalLowBpm/typicalHighBpm` pulled from HR baseline p10/p90 → `BioMiniHrChart.bandLow/bandHigh` (atom already supported the params; cold-start falls back to hardcoded 40%/70%)
+- [x] **6.4 (1424096)** — Card 4 cross-signal personalized HIGH threshold: `max(2, ceil(weekly_median) + 1)` instead of hardcoded 3; power-meditators (5+/wk every week) now see the card with "weeks where you meditated 6+ times" instead of always-null
+- [x] `BioConfidenceFooter` composable shipped under Phase 5.1 (reusable atom)
+- [x] Reduced-motion support — landed under Phase 7.1 (chart atoms verified animation-free)
+- [ ] `BioMetricCard` standalone composable for `BioContextScreen` dashboard tiles — DEFERRED (current dashboard tiles work; revisit if explicit per-metric drill-down screens added)
+- [ ] `BioNarrativeCard` for AI-generated narrative — DEFERRED to Phase 8 (needs Gemini integration)
+- [ ] `BioOnboardingStepCard` polish (4 of 5 steps still generic Compose; only StepIntro is 1:1 with HTML mockup) — DEFERRED on-demand
+- [ ] Color-blind safe palette verified — DEFERRED to Phase 7.2
+
+---
+
+## Phase 7.1 — A11y pass + reduced-motion ✅ DONE 2026-05-17
+**Goal**: TalkBack reads each card as one curated announcement + reduced-motion preference honored.
+**Status**: ✅ DONE — commit `2290356`.
+
+- [x] `BioConfidenceChip` + `BioConfidenceFooter`: switched to `clearAndSetSemantics` (eliminates duplicate readout of nested Text/Icon)
+- [x] `BioBanner` dismiss: `Role.Button` + `onClickLabel`
+- [x] `BioProLock`: aggregate `clearAndSetSemantics` template + `onClick(label = "Learn more about PRO")` — eliminates double-PRO readout
+- [x] Card 3 `ExpressiveBioToday`: `clearAndSetSemantics` with rich aggregate ("{openLabel}: {narrative}") + `Role.Button`
+- [x] Card 4 dismiss: `Role.Button` + `onClickLabel`
+- [x] Card 2 chart description enriched: start/end/min/max trajectory shape (was just start→end)
+- [x] `Modifier.staggeredEntrance` reads `isReducedMotionEnabled()` and snaps to end state when set (affects ALL 10+ Home items, not just bio cards — pre-existing concern fixed)
+- [x] Chart atoms (BioMiniHrChart, BioCorrelationBars) verified animation-free
+
+---
+
+## Phase 7.2 — i18n non-Latin pack (deferred for native review)
+**Goal**: Translate ~45 Phase 5/6/7.1 keys for AR/ZH/JA/KO/HI/TH (Latin partial: ES/FR/DE/PT also pending).
+**Est**: 1-2 days mechanical + 3-5 days native review.
+**Status**: ⬜ DEFERRED — recommend service-driven workflow (Lokalise/Crowdin) where native reviewers see strings in context. Wellness copy degrades fast under machine translation; missing translations are less harmful than wrong ones.
+
+- [ ] ES/FR/DE/PT translation of Phase 5/6/7.1 keys (~45 × 4 = 180 strings)
+- [ ] AR/ZH/JA/KO/HI/TH translation via service + native review
+- [ ] AR RTL spot-check on key surfaces after translation lands
+- [ ] Color contrast WCAG AA verified (deferrable to 7.3 device pass)
+
+## Phase 7.3 — Color contrast + on-device verification
+**Goal**: WCAG AA on every bio surface across light + dark + high-contrast themes.
+**Est**: 1-2 days
 **Status**: ⬜ NOT STARTED
 
-- [ ] TalkBack: every metric narrated semantically (no raw number reading)
-- [ ] `liveRegion = Polite` on narrative cards
-- [ ] Keyboard shortcuts in `BioContextScreen` (ESC=close, TAB nav)
-- [ ] ~100 keys × 12 langs (Phase J pattern)
-- [ ] AR RTL verified via screenshot
-- [ ] Color contrast WCAG AA verified
-- [ ] **Strings facade groups**: `BioOnboarding` / `BioContext` / `BioMetric` / `BioNarrative` / `BioSettings`
+- [ ] WCAG AA contrast on every Phase 5+ surface (light + dark + high-contrast variants)
+- [ ] Color-blind safe palette verified (simulator test)
+- [ ] On-device TalkBack walkthrough of all 4 cards
 
 ---
 

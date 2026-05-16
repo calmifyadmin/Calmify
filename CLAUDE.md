@@ -140,9 +140,9 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
 
 **Stima rimanente post-checkpoint R0+R1+R3.1-3**: ~9-13 giorni per chiudere R3+R4. Poi sblocca bio-signal Phase 0.
 
-### Active Workstream — Bio-Signal Integration (Health Connect / HealthKit) (started 2026-05-11, Phase 0+1+2+2.UI+3+4 DONE + DEPLOYED + DEVICE-VERIFIED 2026-05-12)
+### Active Workstream — Bio-Signal Integration (Health Connect / HealthKit) (started 2026-05-11, Phases 0→7.1 COMPLETE 2026-05-17)
 
-**Planning closed, code phase 0 NOT STARTED.** Integrazione wearable (HR/HRV/Sleep/Steps/RestingHR/SpO2/Activity) come **contesto** per mental-wellness flow esistenti (journal/meditation/insight/home), NOT come nuovo "Fitness" tab. Posizionamento esplicitamente non-competitivo vs Google Health / Fitbit Premium / Apple Health: la grammatica visiva è adottata (in-range bands, narrative cards, AI coach micro-summaries, banda dotted del typical-range), il framing è invertito (no scores, no targets, no "out of range" anxiety, no paywall su dati vitali).
+**Status**: Pipeline live end-to-end + 4 contextual cards shipped + per-user baselines + a11y/reduced-motion. Phase 8 (PRO AI narrative) next. Integrazione wearable (HR/HRV/Sleep/Steps/RestingHR/SpO2/Activity) come **contesto** per mental-wellness flow esistenti (journal/meditation/insight/home), NOT come nuovo "Fitness" tab. Posizionamento esplicitamente non-competitivo vs Google Health / Fitbit Premium / Apple Health: la grammatica visiva è adottata (in-range bands, narrative cards, AI coach micro-summaries, banda dotted del typical-range), il framing è invertito (no scores, no targets, no "out of range" anxiety, no paywall su dati vitali).
 
 **4 decisioni fondative (baked in 2026-05-11)**:
 1. **Aggregates server + raw locale** — raw stays on device (SQLDelight + TTL 30d), server riceve solo 7/30/90d rolling stats. Raw upload opt-in solo per PRO advanced correlations.
@@ -174,6 +174,21 @@ Un audit completo del backend refactor ha rivelato **30+ problemi critici** caus
 - Settings → "Bio-segnali" entries (commit `0e0e4dc`): "Connetti un wearable" + "I tuoi dati biologici" navigabili da Settings
 - **Device-verified su Samsung S24 + Android 15**: 118 step samples ingestionati end-to-end (Health Connect → SQLDelight → BioContextScreen "I tuoi dati, in locale")
 - 16 commit sul branch da `7a0b7ca` (base) → HEAD `5635b82` (mergeable a master quando pronto)
+
+**Phase 5 — Wellness integration (4 contextual cards) DONE 2026-05-17**:
+- Atoms in `:core:ui/components/biosignal/`: `BioConfidenceChip`, `BioConfidenceFooter`, `BioBanner`, `BioMiniHrChart`, `BioProLock`, `BioCorrelationBars` — all commonMain, KMP-ready for iOS Phase 9
+- Card 3 Home Today narrative FREE (`d74dcfd`) post-hero in `:features:home` (ExpressiveHero untouched per standing user exclusion)
+- Card 1 Journal sleep banner FREE (`5a2f34a`) above DailyPromptCard in `:features:write` JournalHomeScreen
+- Card 2 Meditation outro HR + HRV-PRO gate (`c1a5e31`) in `:features:meditation` MeditationOverviewScreen — onUpgrade lambda threaded through to `rootComponent.navigateToSubscription()`
+- Card 4 Cross-signal pattern PRO-only (`1f27882`) in `:features:home` post-community (will move to Insight pattern feed when that surface exists)
+
+**Phase 6 — Per-user baselines DONE 2026-05-17**: replaces universal thresholds with user's own rolling distribution. `BioBaseline` domain (commonMain) + `BioBaseline.sq` SQLDelight table + `getBaseline()` + `recomputeBaselines()` with R-type-7 linear-interpolation quantile, BASELINE_MIN_SAMPLES=7 floor — better silence than noisy personalization (Decision 2 + dogma #4). Auto-recompute at tail of every `ingestFromProvider`. Card retrofits: 6.1 (`29d5ef3`) Card 1 sleep p25/p75 / 6.2 (`d767829`) Card 3 hint suffix via `BioRangeHint` enum / 6.3 (`a201133`) Card 2 chart bands from HR p10/p90 / 6.4 (`1424096`) Card 4 HIGH threshold from weekly meditation median+1. Cold-start fallback preserved everywhere.
+
+**Phase 7.1 — A11y pass + reduced-motion DONE 2026-05-17** (`2290356`): `clearAndSetSemantics` on every aggregate card (Card 3 + BioConfidence atoms + BioProLock) eliminates duplicate TalkBack readout. `Role.Button` + `onClickLabel` on every dismiss/PRO-gate clickable. Card 2 chart description enriched (start/end/min/max trajectory shape). `Modifier.staggeredEntrance` reads `isReducedMotionEnabled()` and snaps to end state (affects ALL 10+ Home items, not just bio). Chart atoms verified animation-free.
+
+**Phase 7.2 (non-Latin translations) DEFERRED** — wellness copy degrades fast under machine translation; recommend service-driven workflow (Lokalise/Crowdin) with native review. EN + IT shipped for ~45 Phase 5/6/7.1 keys; other 10 locales fall through to EN.
+
+**Phase 8 (PRO AI narrative) NEXT** — leverages baselines we just shipped. Gemini server-side prompt + `BioNarrativeCard` atom + caching + cost-rate-limiting.
 
 ### Active Workstream — Meditation Feature Redesign (started 2026-05-02)
 
