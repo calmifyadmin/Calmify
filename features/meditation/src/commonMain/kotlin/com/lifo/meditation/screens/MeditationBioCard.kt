@@ -134,10 +134,15 @@ internal fun MeditationBioCard(
             )
 
             // ── Mini HR chart ─────────────────────────────────────────────
+            // Phase 6.3 — typical-range bands come from the user's own p10/p90
+            // HR baseline when available. Null bands fall back to the chart's
+            // hardcoded 40%/70% defaults (cold start preserved).
             Spacer(Modifier.height(12.dp))
             BioMiniHrChart(
                 points = summary.points.toChartPoints(),
                 a11yLabel = chartA11y,
+                bandLow = summary.typicalLowBpm,
+                bandHigh = summary.typicalHighBpm,
             )
 
             // ── PRO gate (FREE only) ──────────────────────────────────────

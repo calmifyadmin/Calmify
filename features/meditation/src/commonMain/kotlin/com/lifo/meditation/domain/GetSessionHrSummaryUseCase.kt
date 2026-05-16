@@ -63,6 +63,11 @@ class GetSessionHrSummaryUseCase(
             ?.key
             ?: start.source
 
+        // Phase 6.3 — pull user's HR baseline for typical-range chart bands.
+        // Null when sample count below the floor; chart falls back to its
+        // hardcoded 40%/70% bands in that case (handled inside the atom).
+        val baseline = repository.getBaseline(BioSignalDataType.HEART_RATE)
+
         return SessionHrSummary(
             startBpm = start.bpm,
             endBpm = end.bpm,
@@ -71,6 +76,8 @@ class GetSessionHrSummaryUseCase(
             points = plottable,
             confidence = confidence,
             source = primarySource,
+            typicalLowBpm = baseline?.p10?.toInt(),
+            typicalHighBpm = baseline?.p90?.toInt(),
         )
     }
 
@@ -109,6 +116,15 @@ data class SessionHrSummary(
     val points: List<HrPoint>,
     val confidence: ConfidenceLevel,
     val source: BioSignalSource,
+    /**
+     * User's typical HR floor (p10 of trailing 30d), null when no baseline yet.
+     * Surfaces as a dotted horizontal band in the chart.
+     */
+    val typicalLowBpm: Int? = null,
+    /**
+     * User's typical HR ceiling (p90 of trailing 30d), null when no baseline yet.
+     */
+    val typicalHighBpm: Int? = null,
 ) {
     /** Bpm delta from start → end (negative = the session "lowered" HR). */
     val drop: Int get() = startBpm - endBpm
