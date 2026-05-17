@@ -26,7 +26,9 @@ internal fun ExpressiveWeeklyNarrative(
     modifier: Modifier = Modifier,
 ) {
     val absDelta = if (narrative.deltaPercent < 0) -narrative.deltaPercent else narrative.deltaPercent
-    val narrativeText = when (narrative.flavor) {
+    // Phase 8.4 — prefer Gemini-generated narrative when present (BIO_NARRATIVE_REST on
+    // + server returned a non-blank response). Local template is the safety net.
+    val narrativeText = narrative.aiNarrative ?: when (narrative.flavor) {
         NarrativeFlavor.HIGHER -> stringResource(
             Strings.BioNarrative.higher,
             narrative.weekAvgMs, absDelta, narrative.baselineMedianMs,

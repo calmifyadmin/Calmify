@@ -190,6 +190,11 @@ val bioSignalModule = module {
     single<com.lifo.util.repository.BioSignalNetworkClient> {
         com.lifo.util.repository.NoopBioSignalNetworkClient()
     }
+    // Phase 8.4 — narrative client default is also Noop; replaced by
+    // KtorBioNarrativeNetworkClient when BackendConfig.BIO_NARRATIVE_REST=true.
+    single<com.lifo.util.repository.BioNarrativeNetworkClient> {
+        com.lifo.util.repository.NoopBioNarrativeNetworkClient()
+    }
     single<com.lifo.util.repository.BioSignalRepository> {
         com.lifo.mongo.biosignal.BioSignalRepositoryImpl(
             database = get(),

@@ -100,6 +100,15 @@ object BackendConfig {
      *  (4/4 endpoints return 401 without Bearer token, routes verified). */
     const val BIO_REST = true
 
+    /** Bio-Signal AI narrative (Phase 8.4 — 2026-05-17). When OFF, the local
+     *  templated narrative from `GetWeeklyBioNarrativeUseCase` is the only
+     *  source. When ON, the use case tries `POST /api/v1/bio/narrative`
+     *  (Gemini + 24h Firestore cache) first and falls back to the template
+     *  on any failure. Activated 2026-05-17 after Cloud Build 3c6ec8ef +
+     *  smoke test (POST /api/v1/bio/narrative → 401 without Bearer token,
+     *  route verified). */
+    const val BIO_NARRATIVE_REST = true
+
     /** SocialGraph — follow/block + public profile (Phase 5) */
     const val SOCIAL_GRAPH_REST = true
 }
@@ -206,6 +215,13 @@ val restOverrideModule = module {
     if (BackendConfig.BIO_REST) {
         single<com.lifo.util.repository.BioSignalNetworkClient> {
             com.lifo.network.repository.KtorBioSignalNetworkClient(get())
+        }
+    }
+    // Phase 8.4 — narrative network client. Falls back to local template on
+    // any failure path (see BioNarrativeNetworkClient.generate contract).
+    if (BackendConfig.BIO_NARRATIVE_REST) {
+        single<com.lifo.util.repository.BioNarrativeNetworkClient> {
+            com.lifo.network.repository.KtorBioNarrativeNetworkClient(get())
         }
     }
 

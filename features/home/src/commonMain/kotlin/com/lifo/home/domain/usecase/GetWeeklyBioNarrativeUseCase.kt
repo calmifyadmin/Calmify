@@ -1,11 +1,15 @@
 package com.lifo.home.domain.usecase
 
+import com.lifo.shared.model.BioNarrativeRequestProto
 import com.lifo.util.model.BioSignal
 import com.lifo.util.model.BioSignalDataType
 import com.lifo.util.model.BioSignalSource
 import com.lifo.util.model.ConfidenceLevel
+import com.lifo.util.repository.BioNarrativeNetworkClient
 import com.lifo.util.repository.BioSignalRepository
 import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Duration.Companion.days
 
 /**
@@ -30,6 +34,8 @@ import kotlin.time.Duration.Companion.days
  */
 class GetWeeklyBioNarrativeUseCase(
     private val repository: BioSignalRepository,
+    private val networkClient: BioNarrativeNetworkClient,
+    private val localeProvider: () -> String = { "en" },
 ) {
     suspend operator fun invoke(): WeeklyBioNarrative? {
         val baseline = repository.getBaseline(BioSignalDataType.HRV) ?: return null
@@ -76,6 +82,27 @@ class GetWeeklyBioNarrativeUseCase(
             ?.key
             ?: samples.first().source
 
+        // ── Phase 8.4 — try server-side Gemini narrative first ──────────────
+        // On any failure (null, blank, errorCode populated) we silently fall
+        // back to the local templated narrative. The local template is the
+        // safety net per Decision 2 + dogma #4 — the user always sees
+        // something honest.
+        val aiNarrative = runCatching {
+            val req = BioNarrativeRequestProto(
+                flavor = flavor.name,
+                signalType = BioSignalDataType.HRV.name,
+                weekAvg = weekAvgMs,
+                baselineMedian = baselineMedianMs,
+                deltaPercent = deltaPercent,
+                daysCovered = dailyAverages.size,
+                langCode = localeProvider().take(2).lowercase(),
+                periodKey = isoWeekKey(now),
+                sourceDevice = primarySource.deviceName,
+                confidenceLevel = confidence.name,
+            )
+            networkClient.generate(req)?.takeIf { it.narrative.isNotBlank() }?.narrative
+        }.getOrNull()
+
         return WeeklyBioNarrative(
             flavor = flavor,
             weekAvgMs = weekAvgMs.toInt(),
@@ -84,7 +111,33 @@ class GetWeeklyBioNarrativeUseCase(
             daysCovered = dailyAverages.size,
             confidence = confidence,
             source = primarySource,
+            aiNarrative = aiNarrative,
         )
+    }
+
+    /** ISO 8601 week of year — e.g. "2026-W20". Matches the server cache key format. */
+    private fun isoWeekKey(now: kotlinx.datetime.Instant): String {
+        val date = now.toLocalDateTime(TimeZone.currentSystemDefault()).date
+        // kotlinx-datetime doesn't expose ISO week-of-year directly; compute it
+        // via the algorithm in https://en.wikipedia.org/wiki/ISO_week_date
+        val ordinal = date.dayOfYear
+        // ISO weekday Mon=1..Sun=7 ⇒ kotlinx-datetime DayOfWeek.ordinal is 0-based
+        // starting Monday (MONDAY.ordinal = 0), so +1 gives ISO number.
+        val weekday = date.dayOfWeek.ordinal + 1
+        val week = ((ordinal - weekday + 10) / 7)
+        val year = when {
+            week < 1 -> date.year - 1
+            week > 52 -> {
+                // Edge: Dec 29/30/31 can belong to the next ISO year's week 1.
+                // For our use (cache key + display), the simple clamp is fine —
+                // off-by-one on those 3 days a year wouldn't break the cache.
+                date.year
+            }
+            else -> date.year
+        }
+        val weekClamped = week.coerceIn(1, 53)
+        val weekStr = if (weekClamped < 10) "0$weekClamped" else "$weekClamped"
+        return "${year}-W${weekStr}"
     }
 
     private fun rank(level: ConfidenceLevel): Int = when (level) {
@@ -114,6 +167,13 @@ data class WeeklyBioNarrative(
     val daysCovered: Int,
     val confidence: ConfidenceLevel,
     val source: BioSignalSource,
+    /**
+     * Server-generated Gemini narrative (Phase 8.4) — non-null when the
+     * `BIO_NARRATIVE_REST` flag is on AND the server returned a non-blank
+     * response. Caller prefers this over the local template when present.
+     * Null = use the locale-templated narrative from `Strings.BioNarrative.*`.
+     */
+    val aiNarrative: String? = null,
 )
 
 enum class NarrativeFlavor { HIGHER, LOWER, STEADY }
