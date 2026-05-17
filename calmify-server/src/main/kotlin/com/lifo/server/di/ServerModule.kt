@@ -60,6 +60,9 @@ val serverModule = module {
     // Bio-Signal Integration (Phase 4, 2026-05-11) — server-side aggregates
     single { com.lifo.server.service.BioSignalService(get()) }
 
+    // Bio-Signal AI narrative (Phase 8.3, 2026-05-17) — Gemini-backed weekly insight, 24h Firestore cache
+    single { com.lifo.server.service.BioNarrativeService(db = get(), gemini = get()) }
+
     // Sync
     single { com.lifo.server.service.SyncService(get()) }
 

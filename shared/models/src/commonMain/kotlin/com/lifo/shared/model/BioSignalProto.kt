@@ -133,6 +133,68 @@ data class BioAggregateResponseProto(
 )
 
 // ──────────────────────────────────────────────────────────────────────────
+// AI Narrative — Phase 8.3 (Gemini-backed weekly insight, PRO-only)
+// ──────────────────────────────────────────────────────────────────────────
+
+/**
+ * Request body for `POST /api/v1/bio/narrative`.
+ *
+ * Client sends its locally-computed weekly aggregate (the same numbers that
+ * power the local fallback template in
+ * `GetWeeklyBioNarrativeUseCase`). Server passes them straight to Gemini —
+ * no Firestore lookup needed, no compute divergence between client+server.
+ *
+ * The `flavor` hint biases the prompt's tone: HIGHER → curious framing,
+ * LOWER → gentle/protective framing, STEADY → quiet acknowledgement. Server
+ * keeps the hint advisory and trusts Gemini to ground the narrative in the
+ * numeric values.
+ */
+@Serializable
+data class BioNarrativeRequestProto(
+    /** "HIGHER" | "LOWER" | "STEADY" */
+    @ProtoNumber(1) val flavor: String = "STEADY",
+    /** "HRV" | "SLEEP" | "STEPS" | ... (BioSignalDataType.name) */
+    @ProtoNumber(2) val signalType: String = "HRV",
+    /** This-week average value (units depend on signalType: ms for HRV, etc.) */
+    @ProtoNumber(3) val weekAvg: Double = 0.0,
+    /** User's 30-day baseline median for that signal. */
+    @ProtoNumber(4) val baselineMedian: Double = 0.0,
+    /** Signed delta percent. Positive = above baseline. */
+    @ProtoNumber(5) val deltaPercent: Int = 0,
+    /** Number of distinct days in the trailing 7 with data. */
+    @ProtoNumber(6) val daysCovered: Int = 0,
+    /** ISO 639-1 lang code the prompt should generate in (en/it/es/...). */
+    @ProtoNumber(7) val langCode: String = "en",
+    /** Stable ISO week key for caching (e.g. "2026-W20"). */
+    @ProtoNumber(8) val periodKey: String = "",
+    /** Honest source provenance used in the prompt as part of the grounding. */
+    @ProtoNumber(9) val sourceDevice: String = "",
+    /** "HIGH" | "MEDIUM" | "LOW" (ConfidenceLevel.name) */
+    @ProtoNumber(10) val confidenceLevel: String = "LOW",
+)
+
+/**
+ * Response body for `POST /api/v1/bio/narrative`.
+ *
+ * `cached = true` when the server served from the 24h Firestore cache; useful
+ * for client telemetry on cache-hit ratio + as a signal that the user pulled
+ * up the same week multiple times.
+ */
+@Serializable
+data class BioNarrativeResponseProto(
+    /** The locale-resolved narrative paragraph (4-6 sentences). Empty string ⇒ Gemini blocked/failed. */
+    @ProtoNumber(1) val narrative: String = "",
+    /** Whether this response came from the 24h Firestore cache. */
+    @ProtoNumber(2) val cached: Boolean = false,
+    /** Tokens consumed (0 when cached). */
+    @ProtoNumber(3) val tokensUsed: Int = 0,
+    /** When this narrative was generated (NOT when it was served). */
+    @ProtoNumber(4) val generatedAtMillis: Long = 0L,
+    /** Error key when narrative empty: "blocked" | "rate_limited" | "internal" | "". */
+    @ProtoNumber(5) val errorCode: String = "",
+)
+
+// ──────────────────────────────────────────────────────────────────────────
 // Supporting Proto types
 // ──────────────────────────────────────────────────────────────────────────
 

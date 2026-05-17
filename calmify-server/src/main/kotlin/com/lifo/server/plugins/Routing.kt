@@ -64,6 +64,9 @@ fun Application.configureRouting() {
         // Bio-Signal Integration (Phase 4) — aggregates ingest/query + GDPR
         bioSignalRoutes()
 
+        // Bio-Signal AI narrative (Phase 8.3) — Gemini-backed weekly insight, 24h cache
+        bioNarrativeRoutes()
+
         // SocialGraph — follow/block + public profile CRUD
         socialGraphRoutes()
 

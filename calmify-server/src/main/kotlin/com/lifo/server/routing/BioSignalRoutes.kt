@@ -1,6 +1,7 @@
 package com.lifo.server.routing
 
 import com.lifo.server.security.UserPrincipal
+import com.lifo.server.service.BioNarrativeService
 import com.lifo.server.service.BioSignalService
 import com.lifo.shared.model.BioAggregateBatchProto
 import io.ktor.http.*
@@ -31,6 +32,7 @@ import org.koin.ktor.ext.inject
  */
 fun Route.bioSignalRoutes() {
     val service by inject<BioSignalService>()
+    val narrativeService by inject<BioNarrativeService>()
 
     authenticate("firebase") {
         route("/api/v1/bio") {
@@ -56,6 +58,11 @@ fun Route.bioSignalRoutes() {
             delete("/all") {
                 val user = call.principal<UserPrincipal>()!!
                 val result = service.deleteAll(user.uid)
+                // Phase 8.3 — fan out the Art.17 wipe to the narrative cache too.
+                // Best-effort: if the narrative cleanup fails, the aggregates
+                // delete has already succeeded and the user's main response is
+                // unchanged.
+                runCatching { narrativeService.deleteAllForUser(user.uid) }
                 call.respond(result)
             }
 
