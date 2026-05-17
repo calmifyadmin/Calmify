@@ -749,6 +749,7 @@ fun DecomposeApp(
                     is RootComponent.Child.BioContext -> {
                         com.lifo.biocontext.BioContextRouteContent(
                             navigateBack = { rootComponent.navigateBack() },
+                            navigateToPatternFeed = { rootComponent.navigateToBioPatternFeed() },
                         )
                     }
                     is RootComponent.Child.BioOnboarding -> {

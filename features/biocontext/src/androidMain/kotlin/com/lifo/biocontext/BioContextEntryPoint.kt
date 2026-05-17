@@ -31,6 +31,7 @@ import java.io.File
 @Composable
 fun BioContextRouteContent(
     navigateBack: () -> Unit,
+    navigateToPatternFeed: () -> Unit = {},
 ) {
     val viewModel: BioContextViewModel = koinViewModel(key = "biocontext_vm")
     val state by viewModel.state.collectAsState()
@@ -87,5 +88,6 @@ fun BioContextRouteContent(
         state = state,
         onIntent = viewModel::onIntent,
         onBack = navigateBack,
+        onOpenPatternFeed = navigateToPatternFeed,
     )
 }

@@ -485,32 +485,11 @@ private fun LoadingBlock() {
 
 @Composable
 private fun EmptyBlock(signal: BioSignalDataType) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(CalmifyRadius.lg))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
-            .padding(CalmifySpacing.xl),
-        verticalArrangement = Arrangement.spacedBy(CalmifySpacing.sm),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Icon(
-            imageVector = signalIcon(signal),
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(48.dp),
-        )
-        Text(
-            text = stringResource(Strings.BioTimeline.emptyTitle),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Text(
-            text = stringResource(Strings.BioTimeline.emptyBody),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
+    com.lifo.ui.components.biosignal.BioEmptyState(
+        icon = signalIcon(signal),
+        title = stringResource(Strings.BioTimeline.emptyTitle),
+        body = stringResource(Strings.BioTimeline.emptyBody),
+    )
 }
 
 // ──────────────────────────────────────────────────────────────────────────

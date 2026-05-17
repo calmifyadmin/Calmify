@@ -68,6 +68,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -118,6 +119,7 @@ fun BioContextScreen(
     state: BioContextContract.State,
     onIntent: (BioContextContract.Intent) -> Unit,
     onBack: () -> Unit,
+    onOpenPatternFeed: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -191,6 +193,10 @@ fun BioContextScreen(
                 onWindowChange = { onIntent(BioContextContract.Intent.SetWindow(it)) },
                 isEmpty = state.isEmpty,
             )
+
+            // Phase 9.3 — Pattern Feed entry (re-engineering: surfaces what the
+            // raw inventory actually MEANS, sitting between inventory & audit log)
+            PatternFeedTile(onClick = onOpenPatternFeed)
 
             // 04 — Sent to server (placeholder for audit log)
             SectionEyebrow(num = 3, label = stringResource(Strings.BioContext.sectionSent))
@@ -892,6 +898,62 @@ private fun PromisesCard() {
 // ═════════════════════════════════════════════════════════════════════════
 // ATOMS
 // ═════════════════════════════════════════════════════════════════════════
+
+/**
+ * Phase 9.3 — PatternFeed discovery tile. Sits in BioContext between section
+ * 03 (inventory) and section 04 (sent-to-server) so the user can move from
+ * "what data exists?" → "what does it mean?" naturally.
+ */
+@Composable
+private fun PatternFeedTile(onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val accent = cs.primary
+    val ctaLabel = stringResource(Strings.BioPatternFeed.topbarTitle)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp)
+            .clip(RoundedCornerShape(CalmifyRadius.lg))
+            .background(cs.surfaceContainerLow)
+            .border(
+                width = 1.dp,
+                color = accent.copy(alpha = 0.14f),
+                shape = RoundedCornerShape(CalmifyRadius.lg),
+            )
+            .clickable(role = Role.Button, onClickLabel = ctaLabel, onClick = onClick)
+            .padding(CalmifySpacing.lg),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(accent.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Campaign,
+                contentDescription = null,
+                tint = accent,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = ctaLabel,
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                color = cs.onSurface,
+            )
+            Text(
+                text = stringResource(Strings.BioPatternFeed.lede),
+                style = MaterialTheme.typography.bodySmall,
+                color = cs.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        }
+    }
+}
 
 @Composable
 private fun SectionEyebrow(num: Int, label: String) {
