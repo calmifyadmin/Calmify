@@ -1770,4 +1770,18 @@ object Strings {
         val hintBelow: StringResource get() = Res.string.bio_day_hint_below
         val hintAbove: StringResource get() = Res.string.bio_day_hint_above
     }
+
+    /** Predictive baseline drift card (Phase 9.2.5). */
+    object BioBaselineDrift {
+        val eyebrow: StringResource get() = Res.string.bio_drift_eyebrow
+        val currentValue: StringResource get() = Res.string.bio_drift_current_value
+        val deltaTemplate: StringResource get() = Res.string.bio_drift_delta_template
+        val fineprint: StringResource get() = Res.string.bio_drift_fineprint
+        val labelHrv: StringResource get() = Res.string.bio_drift_label_hrv
+        val labelRestingHr: StringResource get() = Res.string.bio_drift_label_resting_hr
+        val labelSleep: StringResource get() = Res.string.bio_drift_label_sleep
+        val labelSteps: StringResource get() = Res.string.bio_drift_label_steps
+        val labelSpo2: StringResource get() = Res.string.bio_drift_label_spo2
+        val labelActivity: StringResource get() = Res.string.bio_drift_label_activity
+    }
 }

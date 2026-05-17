@@ -89,6 +89,8 @@ object BioSettingsContract {
         val cloudUploadEnabled: Boolean = false,
         val enabledSurfaces: Set<BioSurface> = BioSurface.entries.toSet(),
         val isPro: Boolean = false,
+        /** Phase 9.2.5 — non-empty when baseline drift detected vs ~60d ago. */
+        val baselineDrifts: List<com.lifo.ui.components.biosignal.BioBaselineDrift> = emptyList(),
     ) : MviContract.State
 
     /**

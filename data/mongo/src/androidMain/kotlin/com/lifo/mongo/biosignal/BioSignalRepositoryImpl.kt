@@ -28,6 +28,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlin.time.Duration.Companion.days
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
 import app.cash.sqldelight.coroutines.mapToOneOrNull
@@ -63,6 +64,7 @@ class BioSignalRepositoryImpl(
     private val aggQueries get() = database.bioAggregateQueries
     private val consentQueries get() = database.bioConsentQueries
     private val baselineQueries get() = database.bioBaselineQueries
+    private val baselineHistoryQueries get() = database.bioBaselineHistoryQueries
 
     private fun ownerIdOrEmpty(): String = authProvider.currentUserId.orEmpty()
 
@@ -318,6 +320,7 @@ class BioSignalRepositoryImpl(
         aggQueries.deleteAllByOwner(userId)
         consentQueries.deleteAllByOwner(userId)
         baselineQueries.deleteAllByOwner(userId)
+        baselineHistoryQueries.deleteAllByOwner(userId)
         // Step 2: audit the bulk revoke (will be pushed to server next sync).
         logConsentEvent(userId, action = "REVOKE", dataType = "*")
         // Step 3: server-side fan-out (Phase 4). Best-effort — if the network
@@ -394,9 +397,54 @@ class BioSignalRepositoryImpl(
                 sample_count = values.size.toLong(),
                 computed_at = now.toEpochMilliseconds(),
             )
+            // Phase 9.2.5 — also write a history snapshot for drift detection.
+            // Idempotent: one row per (owner, type, day) due to the PK shape.
+            val dayKey = now.toLocalDateTime(TimeZone.currentSystemDefault()).date.toString()
+            baselineHistoryQueries.upsert(
+                id = "$userId|${type.name}|$dayKey",
+                owner_id = userId,
+                data_type = type.name,
+                day_key = dayKey,
+                p10 = p10,
+                p25 = p25,
+                p50 = p50,
+                p75 = p75,
+                p90 = p90,
+                sample_count = values.size.toLong(),
+                computed_at = now.toEpochMilliseconds(),
+            )
             written++
         }
         written
+    }
+
+    override suspend fun getBaselineDaysAgo(
+        type: BioSignalDataType,
+        daysAgo: Int,
+    ): BioBaseline? = withContext(Dispatchers.IO) {
+        val userId = ownerIdOrEmpty()
+        if (userId.isBlank()) return@withContext null
+        val tz = TimeZone.currentSystemDefault()
+        val targetDate = Clock.System.now()
+            .minus(daysAgo.toLong().days)
+            .toLocalDateTime(tz).date
+            .toString()
+        val row = baselineHistoryQueries.getMostRecentByDay(
+            userId = userId,
+            dataType = type.name,
+            dayKey = targetDate,
+        ).executeAsOneOrNull() ?: return@withContext null
+        BioBaseline(
+            type = type,
+            periodDays = 30,
+            p10 = row.p10,
+            p25 = row.p25,
+            p50 = row.p50,
+            p75 = row.p75,
+            p90 = row.p90,
+            sampleCount = row.sample_count.toInt(),
+            computedAtMillis = row.computed_at,
+        )
     }
 
     /**

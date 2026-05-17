@@ -27,6 +27,7 @@ class BioSettingsViewModel(
     private val provider: HealthDataProvider,
     private val authProvider: AuthProvider,
     private val subscriptionRepository: SubscriptionRepository,
+    private val getBaselineDrift: com.lifo.biocontext.domain.GetBaselineDriftUseCase,
 ) : MviViewModel<BioSettingsContract.Intent, BioSettingsContract.State, BioSettingsContract.Effect>(
     BioSettingsContract.State()
 ) {
@@ -107,6 +108,9 @@ class BioSettingsViewModel(
                 emptySet()
             }
 
+            // Phase 9.2.5 — compute drift (silence when no historical snapshot)
+            val drifts = runCatching { getBaselineDrift() }.getOrDefault(emptyList())
+
             updateState {
                 copy(
                     isRefreshing = false,
@@ -116,6 +120,7 @@ class BioSettingsViewModel(
                     samplesToday = samplesToday,
                     enabledTypes = enabled,
                     isPro = pro,
+                    baselineDrifts = drifts,
                 )
             }
         }

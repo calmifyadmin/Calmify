@@ -152,6 +152,15 @@ fun BioSettingsScreen(
                 onReactivate = { onIntent(BioSettingsContract.Intent.SetMasterEnabled(true)) },
             )
 
+            // Phase 9.2.5 — baseline drift cards (if any). Silence by default
+            // when no historical snapshot is old enough to compare against.
+            if (state.baselineDrifts.isNotEmpty()) {
+                state.baselineDrifts.forEach { drift ->
+                    Spacer(Modifier.height(12.dp))
+                    com.lifo.ui.components.biosignal.BioBaselineDriftCard(data = drift)
+                }
+            }
+
             // Sections 2-6 dim when master is off
             val collapsibleAlpha = if (state.masterEnabled) 1f else 0.4f
             Box(modifier = Modifier.alpha(collapsibleAlpha)) {

@@ -105,6 +105,16 @@ interface BioSignalRepository {
      */
     suspend fun recomputeBaselines(periodDays: Int = 30): Int   // returns count of baselines written
 
+    /**
+     * Phase 9.2.5 — get a baseline snapshot at or before `daysAgo` days ago.
+     * Used to compute drift ("your HRV median is +12% vs 60 days ago"). Returns
+     * `null` if no snapshot is old enough — drift is silent rather than guessed.
+     *
+     * Snapshots are auto-written by [recomputeBaselines] (one per type per day),
+     * see `bio_baseline_history.sq` in `:data:mongo`.
+     */
+    suspend fun getBaselineDaysAgo(type: BioSignalDataType, daysAgo: Int): BioBaseline?
+
     // ──────────────────────────────────────────────────────────────────────
     // Write / sync
     // ──────────────────────────────────────────────────────────────────────

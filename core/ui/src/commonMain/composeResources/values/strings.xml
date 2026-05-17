@@ -2022,4 +2022,16 @@
     <string name="bio_day_hint_below">below usual</string>
     <string name="bio_day_hint_above">above usual</string>
 
+    <!-- Bio-Signal Phase 9.2.5 — predictive baseline drift card -->
+    <string name="bio_drift_eyebrow">Your typical range is shifting</string>
+    <string name="bio_drift_current_value">%1$s %2$s</string>
+    <string name="bio_drift_delta_template">%1$s%2$d%% vs %3$d days ago</string>
+    <string name="bio_drift_fineprint">Slow shifts often mean more than any single day. Worth noticing, not chasing.</string>
+    <string name="bio_drift_label_hrv">HRV median</string>
+    <string name="bio_drift_label_resting_hr">Resting HR median</string>
+    <string name="bio_drift_label_sleep">Sleep median</string>
+    <string name="bio_drift_label_steps">Steps median</string>
+    <string name="bio_drift_label_spo2">SpO2 median</string>
+    <string name="bio_drift_label_activity">Activity median</string>
+
 </resources>

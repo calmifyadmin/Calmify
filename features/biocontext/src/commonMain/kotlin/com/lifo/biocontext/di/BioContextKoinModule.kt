@@ -10,5 +10,6 @@ import org.koin.dsl.module
 val bioContextKoinModule = module {
     viewModel { BioContextViewModel(get(), get(), get()) }
     viewModel { BioOnboardingViewModel(get()) }
-    viewModel { BioSettingsViewModel(get(), get(), get(), get()) }
+    factory { com.lifo.biocontext.domain.GetBaselineDriftUseCase(get(), get()) }
+    viewModel { BioSettingsViewModel(get(), get(), get(), get(), get()) }
 }

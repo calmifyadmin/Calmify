@@ -1,0 +1,63 @@
+-- Bio-Signal baseline history snapshot — Phase 9.2.5 (2026-05-17).
+--
+-- Records a snapshot of every baseline computation so we can detect drift
+-- over time. Without this, `bio_baselines` is overwritten on every recompute
+-- and the slow-drift signal (which is the most honest predictive cue per the
+-- compass doc) becomes invisible.
+--
+-- Auto-populated by `BioSignalRepositoryImpl.recomputeBaselines()` at the
+-- tail (Phase 9.2.5 hook) — same atomic call that already runs at the end
+-- of every ingestFromProvider.
+--
+-- Retention: capped to ~365 days via TTL prune. Older snapshots compressed
+-- by daily-most-recent dedup at write time (we never write more than one
+-- snapshot per type per day per user).
+
+CREATE TABLE bio_baseline_history (
+    -- Synthesized id: "{owner_id}|{data_type}|{day_key}"
+    -- day_key = YYYY-MM-DD in user's local timezone — ensures one row per day.
+    id TEXT NOT NULL PRIMARY KEY,
+    owner_id TEXT NOT NULL,
+    data_type TEXT NOT NULL,                -- BioSignalDataType.name
+    day_key TEXT NOT NULL,                  -- YYYY-MM-DD
+    p10 REAL NOT NULL DEFAULT 0.0,
+    p25 REAL NOT NULL DEFAULT 0.0,
+    p50 REAL NOT NULL DEFAULT 0.0,
+    p75 REAL NOT NULL DEFAULT 0.0,
+    p90 REAL NOT NULL DEFAULT 0.0,
+    sample_count INTEGER NOT NULL DEFAULT 0,
+    computed_at INTEGER NOT NULL
+);
+
+CREATE INDEX idx_baseline_history_owner_type_day ON bio_baseline_history(owner_id, data_type, day_key DESC);
+
+-- ─────────────────────────────────────────────────────────────────────
+-- Queries
+-- ─────────────────────────────────────────────────────────────────────
+
+upsert:
+INSERT OR REPLACE INTO bio_baseline_history(
+    id, owner_id, data_type, day_key,
+    p10, p25, p50, p75, p90,
+    sample_count, computed_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+/** Single snapshot at or before `dayKey` — used for `now vs N-days-ago`. */
+getMostRecentByDay:
+SELECT * FROM bio_baseline_history
+WHERE owner_id = :userId AND data_type = :dataType AND day_key <= :dayKey
+ORDER BY day_key DESC
+LIMIT 1;
+
+/** All snapshots in a window — used for trend chart. */
+getRange:
+SELECT * FROM bio_baseline_history
+WHERE owner_id = :userId AND data_type = :dataType
+  AND day_key >= :fromDay AND day_key <= :untilDay
+ORDER BY day_key ASC;
+
+pruneOlderThan:
+DELETE FROM bio_baseline_history WHERE computed_at < :threshold;
+
+deleteAllByOwner:
+DELETE FROM bio_baseline_history WHERE owner_id = :userId;

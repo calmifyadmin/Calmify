@@ -2007,4 +2007,16 @@
     <string name="bio_day_hint_within">nella tua media</string>
     <string name="bio_day_hint_below">sotto la media</string>
     <string name="bio_day_hint_above">sopra la media</string>
+
+    <!-- Bio-Signal Phase 9.2.5 — predictive baseline drift card -->
+    <string name="bio_drift_eyebrow">Il tuo range tipico si sta spostando</string>
+    <string name="bio_drift_current_value">%1$s %2$s</string>
+    <string name="bio_drift_delta_template">%1$s%2$d%% vs %3$d giorni fa</string>
+    <string name="bio_drift_fineprint">Le derive lente spesso significano più di qualsiasi giorno singolo. Da notare, non da inseguire.</string>
+    <string name="bio_drift_label_hrv">HRV mediana</string>
+    <string name="bio_drift_label_resting_hr">HR a riposo mediana</string>
+    <string name="bio_drift_label_sleep">Sonno mediano</string>
+    <string name="bio_drift_label_steps">Passi mediani</string>
+    <string name="bio_drift_label_spo2">SpO2 mediana</string>
+    <string name="bio_drift_label_activity">Attività mediana</string>
 </resources>
