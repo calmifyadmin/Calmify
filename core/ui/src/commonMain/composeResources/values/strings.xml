@@ -1769,8 +1769,8 @@
     <string name="bio_onb_intro_cta">Continue</string>
 
     <!-- Step 2 — DataTypes -->
-    <string name="bio_onb_types_title">What can we read?</string>
-    <string name="bio_onb_types_subtitle">Toggle anything off. Decisions are reversible.</string>
+    <string name="bio_onb_types_title">Pick what your body shares.</string>
+    <string name="bio_onb_types_subtitle">Each signal is its own switch. Tap the icon to see what it actually is.</string>
     <string name="bio_onb_type_hr_explain">Beats per minute. Reflects how aroused or calm you are right now.</string>
     <string name="bio_onb_type_hrv_explain">Variability between beats. Often the earliest signal of stress — sometimes before you feel it.</string>
     <string name="bio_onb_type_sleep_explain">Stages, duration, awakenings. Sleep is the foundation everything else rests on.</string>
@@ -1780,7 +1780,7 @@
     <string name="bio_onb_type_activity_explain">Workouts your watch picks up automatically. We never set targets.</string>
 
     <!-- Step 3 — Why -->
-    <string name="bio_onb_why_title">What does it actually help with?</string>
+    <string name="bio_onb_why_title">Bio is context, not a score.</string>
     <string name="bio_onb_why_card1_title">Journal that notices when you didn\'t sleep</string>
     <string name="bio_onb_why_card1_body">A bad night nudges tomorrow\'s prompt toward gentleness instead of optimization.</string>
     <string name="bio_onb_why_card2_title">Meditation that confirms what you felt</string>
@@ -1789,19 +1789,79 @@
     <string name="bio_onb_why_card3_body">Weeks where you walked more had calmer evenings. Patterns, gently surfaced.</string>
 
     <!-- Step 4 — Permission -->
-    <string name="bio_onb_perm_title">Connect via Health Connect</string>
-    <string name="bio_onb_perm_body">Health Connect is Android\'s shared hub for health data. Calmify only reads — we never write back. Your wearable\'s own app stays the source of truth.</string>
+    <string name="bio_onb_perm_title">One last permission.</string>
+    <string name="bio_onb_perm_body">Calmify reads from your phone\'s health hub — Health Connect on Android, HealthKit on iOS. We never write to it, and we never share what we read.</string>
     <string name="bio_onb_perm_install_needed">Health Connect isn\'t installed. Tap below to get it from the Play Store.</string>
     <string name="bio_onb_perm_install_cta">Install Health Connect</string>
     <string name="bio_onb_perm_grant_cta">Grant permissions</string>
     <string name="bio_onb_perm_granted_summary">%1$d data types granted</string>
 
     <!-- Step 5 — Confirm -->
-    <string name="bio_onb_confirm_title">You\'re set.</string>
-    <string name="bio_onb_confirm_body">We\'ll quietly start collecting signals over the next day or two. You can change anything in Settings → Bio-signals — including deleting everything in one tap.</string>
-    <string name="bio_onb_confirm_skipped_title">All good.</string>
-    <string name="bio_onb_confirm_skipped_body">Calmify works just as well without bio-signals. You can connect later from Settings → Bio-signals any time.</string>
+    <string name="bio_onb_confirm_title">You\'re set. We\'ll listen quietly.</string>
+    <string name="bio_onb_confirm_body">Over the next few days, we\'ll begin to notice the small ways your body shows up in how you feel. No scores, no targets — just gentle context.</string>
+    <string name="bio_onb_confirm_skipped_title">That\'s a fine place to start.</string>
+    <string name="bio_onb_confirm_skipped_body">Calmify works beautifully without any of this. You can turn on bio signals from Settings whenever — or never — you like.</string>
     <string name="bio_onb_confirm_cta">Take me to the app</string>
+
+    <!-- Bio-Signal Phase 9.1.2 — 4 missing onboarding steps 1:1 with mockup. -->
+
+    <!-- Step 2 — Data Types eyebrow + quick toggle + info-row + fineprint -->
+    <string name="bio_onb_types_eyebrow">What you\'ll share</string>
+    <string name="bio_onb_types_quick_all_on">All signals on</string>
+    <string name="bio_onb_types_quick_some_on">%1$d of %2$d on</string>
+    <string name="bio_onb_types_quick_all_off">All signals off</string>
+    <string name="bio_onb_types_quick_sub">Granular by default — turn just what you want.</string>
+    <string name="bio_onb_types_info_a11y">More about this signal</string>
+    <string name="bio_onb_types_fineprint">Calmify reads these from your phone\'s health hub — never directly from the cloud, never written back. Read our data principles.</string>
+
+    <!-- Per-type "why" short copy (rendered inline on each row) -->
+    <string name="bio_onb_type_hr_why">Arousal · calm right now</string>
+    <string name="bio_onb_type_hrv_why">Earliest stress signal</string>
+    <string name="bio_onb_type_sleep_why">The foundation under everything</string>
+    <string name="bio_onb_type_steps_why">One input, no goal attached</string>
+    <string name="bio_onb_type_resting_hr_why">Slow drift across weeks</string>
+    <string name="bio_onb_type_spo2_why">Breathing context at night</string>
+    <string name="bio_onb_type_activity_why">Auto-detected workouts</string>
+
+    <!-- Step 3 — Why eyebrow + lede + 3 use-case cards + fineprint -->
+    <string name="bio_onb_why_eyebrow">What it\'s for</string>
+    <string name="bio_onb_why_lede">We\'ll never hand you a number to chase. Instead, your body\'s signals quietly add depth to what Calmify already does.</string>
+    <string name="bio_onb_why_card1_meta">NARRATIVE CARD · MEDIUM CONFIDENCE</string>
+    <string name="bio_onb_why_card2_meta">POST-SESSION CARD · HIGH CONFIDENCE</string>
+    <string name="bio_onb_why_card3_meta">WEEKLY PATTERN · LOW CONFIDENCE — keep listening</string>
+    <string name="bio_onb_why_fineprint">Patterns are suggestions, not verdicts. You always tell us if they match how you feel.</string>
+
+    <!-- Step 4 — Permission eyebrow + flow diagram + promises + install card + grant state + fineprint -->
+    <string name="bio_onb_perm_eyebrow">Read-only, on your phone</string>
+    <string name="bio_onb_flow_wearable">Your wearable</string>
+    <string name="bio_onb_flow_source">Source</string>
+    <string name="bio_onb_flow_health_hub">Health hub</string>
+    <string name="bio_onb_flow_on_device">On device</string>
+    <string name="bio_onb_flow_calmify">Calmify</string>
+    <string name="bio_onb_flow_reads_only">Reads only</string>
+    <string name="bio_onb_flow_caption">One-way · read-only</string>
+    <string name="bio_onb_perm_promise1_main">We never write to your health hub.</string>
+    <string name="bio_onb_perm_promise1_sub">Nothing Calmify does shows up in your other health apps.</string>
+    <string name="bio_onb_perm_promise2_main">Signals stay on your device by default.</string>
+    <string name="bio_onb_perm_promise2_sub">Only your private journal text and reflections sync with your account.</string>
+    <string name="bio_onb_perm_promise3_main">Revoke any signal, any time.</string>
+    <string name="bio_onb_perm_promise3_sub">Settings → Bio signals. We forget within 24 hours.</string>
+    <string name="bio_onb_perm_install_card_title">Install Health Connect</string>
+    <string name="bio_onb_perm_install_card_sub">Not detected on this device. Free, from Google.</string>
+    <string name="bio_onb_perm_install_card_cta">Open store</string>
+    <string name="bio_onb_perm_granted_state">Permission granted. We\'ll start gently and learn your patterns over the next few days.</string>
+    <string name="bio_onb_perm_fineprint">Calmify is a wellness tool, not medical care. Bio signals add context to your reflections — they never replace a clinician.</string>
+    <string name="bio_onb_perm_skip_cta">Not now</string>
+
+    <!-- Step 5 — Confirm summary cards + attribution fineprint -->
+    <string name="bio_onb_confirm_summary_title">You shared with us</string>
+    <string name="bio_onb_confirm_summary_sub">Granular as you set them. Change any of these anytime.</string>
+    <string name="bio_onb_confirm_summary_skipped_title">Skipped — that\'s okay</string>
+    <string name="bio_onb_confirm_summary_skipped_sub">No signals are being read. Nothing has changed about your experience.</string>
+    <string name="bio_onb_confirm_chip_no_signals">No bio signals</string>
+    <string name="bio_onb_confirm_where_title">Where to find this again</string>
+    <string name="bio_onb_confirm_where_sub">Settings → Bio signals. Every switch from this flow lives there, plus the option to forget everything we\'ve ever read.</string>
+    <string name="bio_onb_confirm_attribution">A small footer will appear under any insight that uses bio data — "From {device} · medium confidence" — so you always know where a number came from.</string>
 
     <!-- Bio-Signal Settings entry (Phase 4 polish — Settings → Bio-signals) -->
     <string name="settings_bio_section">Bio-signals</string>

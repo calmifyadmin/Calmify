@@ -1499,6 +1499,66 @@ object Strings {
         val confirmSkippedTitle: StringResource get() = Res.string.bio_onb_confirm_skipped_title
         val confirmSkippedBody: StringResource get() = Res.string.bio_onb_confirm_skipped_body
         val confirmCta: StringResource get() = Res.string.bio_onb_confirm_cta
+
+        // ── Phase 9.1.2 — 4 missing steps 1:1 with mockup ──────────────────
+
+        // Step 2 — Data Types
+        val typesEyebrow: StringResource get() = Res.string.bio_onb_types_eyebrow
+        val typesQuickAllOn: StringResource get() = Res.string.bio_onb_types_quick_all_on
+        val typesQuickSomeOn: StringResource get() = Res.string.bio_onb_types_quick_some_on
+        val typesQuickAllOff: StringResource get() = Res.string.bio_onb_types_quick_all_off
+        val typesQuickSub: StringResource get() = Res.string.bio_onb_types_quick_sub
+        val typesInfoA11y: StringResource get() = Res.string.bio_onb_types_info_a11y
+        val typesFineprint: StringResource get() = Res.string.bio_onb_types_fineprint
+
+        // Per-type short "why" copy
+        val typeHrWhy: StringResource get() = Res.string.bio_onb_type_hr_why
+        val typeHrvWhy: StringResource get() = Res.string.bio_onb_type_hrv_why
+        val typeSleepWhy: StringResource get() = Res.string.bio_onb_type_sleep_why
+        val typeStepsWhy: StringResource get() = Res.string.bio_onb_type_steps_why
+        val typeRestingHrWhy: StringResource get() = Res.string.bio_onb_type_resting_hr_why
+        val typeSpo2Why: StringResource get() = Res.string.bio_onb_type_spo2_why
+        val typeActivityWhy: StringResource get() = Res.string.bio_onb_type_activity_why
+
+        // Step 3 — Why
+        val whyEyebrow: StringResource get() = Res.string.bio_onb_why_eyebrow
+        val whyLede: StringResource get() = Res.string.bio_onb_why_lede
+        val whyCard1Meta: StringResource get() = Res.string.bio_onb_why_card1_meta
+        val whyCard2Meta: StringResource get() = Res.string.bio_onb_why_card2_meta
+        val whyCard3Meta: StringResource get() = Res.string.bio_onb_why_card3_meta
+        val whyFineprint: StringResource get() = Res.string.bio_onb_why_fineprint
+
+        // Step 4 — Permission
+        val permEyebrow: StringResource get() = Res.string.bio_onb_perm_eyebrow
+        val flowWearable: StringResource get() = Res.string.bio_onb_flow_wearable
+        val flowSource: StringResource get() = Res.string.bio_onb_flow_source
+        val flowHealthHub: StringResource get() = Res.string.bio_onb_flow_health_hub
+        val flowOnDevice: StringResource get() = Res.string.bio_onb_flow_on_device
+        val flowCalmify: StringResource get() = Res.string.bio_onb_flow_calmify
+        val flowReadsOnly: StringResource get() = Res.string.bio_onb_flow_reads_only
+        val flowCaption: StringResource get() = Res.string.bio_onb_flow_caption
+        val permPromise1Main: StringResource get() = Res.string.bio_onb_perm_promise1_main
+        val permPromise1Sub: StringResource get() = Res.string.bio_onb_perm_promise1_sub
+        val permPromise2Main: StringResource get() = Res.string.bio_onb_perm_promise2_main
+        val permPromise2Sub: StringResource get() = Res.string.bio_onb_perm_promise2_sub
+        val permPromise3Main: StringResource get() = Res.string.bio_onb_perm_promise3_main
+        val permPromise3Sub: StringResource get() = Res.string.bio_onb_perm_promise3_sub
+        val permInstallCardTitle: StringResource get() = Res.string.bio_onb_perm_install_card_title
+        val permInstallCardSub: StringResource get() = Res.string.bio_onb_perm_install_card_sub
+        val permInstallCardCta: StringResource get() = Res.string.bio_onb_perm_install_card_cta
+        val permGrantedState: StringResource get() = Res.string.bio_onb_perm_granted_state
+        val permFineprint: StringResource get() = Res.string.bio_onb_perm_fineprint
+        val permSkipCta: StringResource get() = Res.string.bio_onb_perm_skip_cta
+
+        // Step 5 — Confirm summaries
+        val confirmSummaryTitle: StringResource get() = Res.string.bio_onb_confirm_summary_title
+        val confirmSummarySub: StringResource get() = Res.string.bio_onb_confirm_summary_sub
+        val confirmSummarySkippedTitle: StringResource get() = Res.string.bio_onb_confirm_summary_skipped_title
+        val confirmSummarySkippedSub: StringResource get() = Res.string.bio_onb_confirm_summary_skipped_sub
+        val confirmChipNoSignals: StringResource get() = Res.string.bio_onb_confirm_chip_no_signals
+        val confirmWhereTitle: StringResource get() = Res.string.bio_onb_confirm_where_title
+        val confirmWhereSub: StringResource get() = Res.string.bio_onb_confirm_where_sub
+        val confirmAttribution: StringResource get() = Res.string.bio_onb_confirm_attribution
     }
 
     /**
