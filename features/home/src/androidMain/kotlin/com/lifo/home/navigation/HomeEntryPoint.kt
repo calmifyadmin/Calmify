@@ -45,6 +45,7 @@ fun HomeRouteContent(
     onHabitsClick: () -> Unit = {},
     onMeditationClick: () -> Unit = {},
     navigateToBioContext: () -> Unit = {},
+    navigateToBioTimeline: (com.lifo.util.model.BioSignalDataType) -> Unit = {},
     onDataLoaded: () -> Unit,
     drawerState: DrawerState
 ) {
@@ -122,6 +123,7 @@ fun HomeRouteContent(
         navigateToThreadDetail = navigateToThreadDetail,
         navigateToSocialProfile = navigateToSocialProfile,
         navigateToBioContext = navigateToBioContext,
+        navigateToBioTimeline = navigateToBioTimeline,
         onGratitudeClick = onGratitudeClick,
         onEnergyCheckInClick = onEnergyCheckInClick,
         onSleepLogClick = onSleepLogClick,

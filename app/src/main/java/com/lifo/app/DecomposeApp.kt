@@ -381,6 +381,7 @@ fun DecomposeApp(
                             onHabitsClick = { rootComponent.navigateToHabits() },
                             onMeditationClick = { rootComponent.navigateToMeditation() },
                             navigateToBioContext = { rootComponent.navigateToBioContext() },
+                            navigateToBioTimeline = { signal -> rootComponent.navigateToBioTimeline(signal.name) },
                             onDataLoaded = onDataLoaded,
                             drawerState = drawerState
                         )
@@ -761,6 +762,12 @@ fun DecomposeApp(
                             navigateToBioContext = { rootComponent.navigateToBioContext() },
                             navigateToBioOnboarding = { rootComponent.navigateToBioOnboarding() },
                             navigateToSubscription = { rootComponent.navigateToSubscription() },
+                        )
+                    }
+                    is RootComponent.Child.BioTimeline -> {
+                        com.lifo.biocontext.BioTimelineRouteContent(
+                            signal = instance.signal,
+                            navigateBack = { rootComponent.navigateBack() },
                         )
                     }
 

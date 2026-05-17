@@ -41,6 +41,7 @@ import com.lifo.ui.components.biosignal.BioConfidenceChip
 import com.lifo.ui.i18n.Strings
 import com.lifo.ui.theme.CalmifyRadius
 import com.lifo.ui.theme.CalmifySpacing
+import com.lifo.util.model.BioSignalDataType
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -59,16 +60,17 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 internal fun ExpressiveBioToday(
     bio: HomeBioContext,
-    onOpen: () -> Unit,
+    onOpenTimeline: (BioSignalDataType) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (!bio.hasSignal) return
 
     val narrative = composeNarrative(bio)
     val openLabel = stringResource(Strings.BioCard.homeOpenA11y)
+    val primarySignal = primarySignalOf(bio)
 
     Card(
-        onClick = onOpen,
+        onClick = { onOpenTimeline(primarySignal) },
         shape = RoundedCornerShape(CalmifyRadius.xxl),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface,
@@ -209,5 +211,17 @@ private fun composeNarrative(bio: HomeBioContext): String {
         else -> null
     } ?: return base
     return base + stringResource(Strings.BioCard.homeHintFor(hint))
+}
+
+/**
+ * Pick the signal type that anchors the narrative — same priority that
+ * [composeNarrative] uses for its base branch. Drives the deep-link
+ * destination when the card is tapped (Phase 9.2.1).
+ */
+private fun primarySignalOf(bio: HomeBioContext): BioSignalDataType = when {
+    bio.sleepDurationMinutes != null -> BioSignalDataType.SLEEP
+    bio.heartRateBpm != null -> BioSignalDataType.HEART_RATE
+    bio.stepsToday != null -> BioSignalDataType.STEPS
+    else -> BioSignalDataType.HEART_RATE
 }
 

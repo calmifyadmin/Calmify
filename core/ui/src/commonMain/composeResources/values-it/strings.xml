@@ -2019,4 +2019,26 @@
     <string name="bio_drift_label_steps">Passi mediani</string>
     <string name="bio_drift_label_spo2">SpO2 mediana</string>
     <string name="bio_drift_label_activity">Attività mediana</string>
+
+    <!-- Bio-Signal Phase 9.2.1 — full-screen Timeline drill-down -->
+    <string name="bio_tl_signal_heart_rate">Battito cardiaco</string>
+    <string name="bio_tl_signal_hrv">Variabilità del battito</string>
+    <string name="bio_tl_signal_sleep">Sonno</string>
+    <string name="bio_tl_signal_steps">Passi</string>
+    <string name="bio_tl_signal_resting_heart_rate">Battito a riposo</string>
+    <string name="bio_tl_signal_spo2">Ossigeno nel sangue</string>
+    <string name="bio_tl_signal_activity">Attività</string>
+    <string name="bio_tl_window_7d">7 giorni</string>
+    <string name="bio_tl_window_30d">30 giorni</string>
+    <string name="bio_tl_window_90d">90 giorni</string>
+    <string name="bio_tl_stat_avg">media</string>
+    <string name="bio_tl_stat_min">min</string>
+    <string name="bio_tl_stat_max">max</string>
+    <string name="bio_tl_legend_journal">%1$d note nel diario</string>
+    <string name="bio_tl_legend_meditation">%1$d sessioni di meditazione</string>
+    <string name="bio_tl_days_tracked">%1$d giorni su %2$d con dati</string>
+    <string name="bio_tl_empty_title">Non ci sono ancora abbastanza dati</string>
+    <string name="bio_tl_empty_body">Quando il tuo wearable invierà qualche campione in più, il grafico si riempirà.</string>
+    <string name="bio_tl_chart_a11y">Andamento di %1$s. Intervallo da %2$s a %3$s. Le linee verticali indicano note del diario e sessioni di meditazione.</string>
+
 </resources>

@@ -1771,6 +1771,32 @@ object Strings {
         val hintAbove: StringResource get() = Res.string.bio_day_hint_above
     }
 
+    /**
+     * Bio-Signal Timeline drill-down (Phase 9.2.1) — the full-screen per-signal
+     * surface that opens when the user taps any contextual bio card.
+     */
+    object BioTimeline {
+        val signalHeartRate: StringResource get() = Res.string.bio_tl_signal_heart_rate
+        val signalHrv: StringResource get() = Res.string.bio_tl_signal_hrv
+        val signalSleep: StringResource get() = Res.string.bio_tl_signal_sleep
+        val signalSteps: StringResource get() = Res.string.bio_tl_signal_steps
+        val signalRestingHeartRate: StringResource get() = Res.string.bio_tl_signal_resting_heart_rate
+        val signalSpo2: StringResource get() = Res.string.bio_tl_signal_spo2
+        val signalActivity: StringResource get() = Res.string.bio_tl_signal_activity
+        val window7d: StringResource get() = Res.string.bio_tl_window_7d
+        val window30d: StringResource get() = Res.string.bio_tl_window_30d
+        val window90d: StringResource get() = Res.string.bio_tl_window_90d
+        val statAvg: StringResource get() = Res.string.bio_tl_stat_avg
+        val statMin: StringResource get() = Res.string.bio_tl_stat_min
+        val statMax: StringResource get() = Res.string.bio_tl_stat_max
+        val legendJournal: StringResource get() = Res.string.bio_tl_legend_journal
+        val legendMeditation: StringResource get() = Res.string.bio_tl_legend_meditation
+        val daysTracked: StringResource get() = Res.string.bio_tl_days_tracked
+        val emptyTitle: StringResource get() = Res.string.bio_tl_empty_title
+        val emptyBody: StringResource get() = Res.string.bio_tl_empty_body
+        val chartA11y: StringResource get() = Res.string.bio_tl_chart_a11y
+    }
+
     /** Predictive baseline drift card (Phase 9.2.5). */
     object BioBaselineDrift {
         val eyebrow: StringResource get() = Res.string.bio_drift_eyebrow

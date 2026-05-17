@@ -2034,4 +2034,25 @@
     <string name="bio_drift_label_spo2">SpO2 median</string>
     <string name="bio_drift_label_activity">Activity median</string>
 
+    <!-- Bio-Signal Phase 9.2.1 — full-screen Timeline drill-down -->
+    <string name="bio_tl_signal_heart_rate">Heart rate</string>
+    <string name="bio_tl_signal_hrv">Heart-rate variability</string>
+    <string name="bio_tl_signal_sleep">Sleep</string>
+    <string name="bio_tl_signal_steps">Steps</string>
+    <string name="bio_tl_signal_resting_heart_rate">Resting heart rate</string>
+    <string name="bio_tl_signal_spo2">Blood oxygen</string>
+    <string name="bio_tl_signal_activity">Activity</string>
+    <string name="bio_tl_window_7d">7 days</string>
+    <string name="bio_tl_window_30d">30 days</string>
+    <string name="bio_tl_window_90d">90 days</string>
+    <string name="bio_tl_stat_avg">avg</string>
+    <string name="bio_tl_stat_min">min</string>
+    <string name="bio_tl_stat_max">max</string>
+    <string name="bio_tl_legend_journal">%1$d journal entries</string>
+    <string name="bio_tl_legend_meditation">%1$d meditation sessions</string>
+    <string name="bio_tl_days_tracked">%1$d of %2$d days with data</string>
+    <string name="bio_tl_empty_title">Not enough data here yet</string>
+    <string name="bio_tl_empty_body">Once your wearable sends a few more samples, the chart will fill in here.</string>
+    <string name="bio_tl_chart_a11y">%1$s timeline. Range %2$s to %3$s. Vertical markers show journal entries and meditation sessions.</string>
+
 </resources>

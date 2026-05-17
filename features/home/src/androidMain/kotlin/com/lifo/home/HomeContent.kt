@@ -71,6 +71,7 @@ internal fun HomeContent(
     navigateToThreadDetail: (String) -> Unit = {},
     navigateToSocialProfile: () -> Unit = {},
     navigateToBioContext: () -> Unit = {},
+    navigateToBioTimeline: (com.lifo.util.model.BioSignalDataType) -> Unit = {},
     // Daily quick actions
     onGratitudeClick: () -> Unit = {},
     onEnergyCheckInClick: () -> Unit = {},
@@ -227,7 +228,7 @@ internal fun HomeContent(
                             item(key = "bio_today") {
                                 ExpressiveBioToday(
                                     bio = bio,
-                                    onOpen = navigateToBioContext,
+                                    onOpenTimeline = navigateToBioTimeline,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .staggeredEntrance(index = 1, baseDelayMs = 80)

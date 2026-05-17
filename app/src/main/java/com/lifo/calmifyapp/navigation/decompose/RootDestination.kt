@@ -58,6 +58,8 @@ sealed interface RootDestination {
     @Serializable data object BioOnboarding : RootDestination
     /** Phase 9.1.3 — master Bio-Signal settings panel. */
     @Serializable data object BioSettings : RootDestination
+    /** Phase 9.2.1 — per-signal full-screen timeline drill-down. Signal carried as canonical enum name (e.g. "HEART_RATE"). */
+    @Serializable data class BioTimeline(val signal: String) : RootDestination
     // === Holistic Growth (Sprint 1+2) ===
     @Serializable data object Habits : RootDestination
     @Serializable data object Meditation : RootDestination
