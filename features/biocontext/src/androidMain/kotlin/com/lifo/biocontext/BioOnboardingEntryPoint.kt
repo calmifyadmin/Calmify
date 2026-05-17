@@ -96,5 +96,15 @@ fun BioOnboardingRouteContent(
     BioOnboardingScreen(
         state = state,
         onIntent = viewModel::onIntent,
+        onOpenPlayStore = { packageId ->
+            val market = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageId"))
+                .apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
+            val webFallback = Intent(
+                Intent.ACTION_VIEW,
+                Uri.parse("https://play.google.com/store/apps/details?id=$packageId"),
+            ).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
+            runCatching { context.startActivity(market) }
+                .onFailure { runCatching { context.startActivity(webFallback) } }
+        },
     )
 }

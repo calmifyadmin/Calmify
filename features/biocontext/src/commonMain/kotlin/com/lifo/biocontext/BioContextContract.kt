@@ -69,12 +69,18 @@ object BioContextContract {
 
     /**
      * Single source row for the "Connected sources" section.
+     *
+     * `kind` (added 2026-05-17) lets the UI distinguish phone-only data (Samsung
+     * Health on Galaxy, Pixel Health on Pixel) from real wearable streams
+     * (Mi Fitness, Fitbit, Garmin, etc.) — drives the "Non vedi il tuo wearable?"
+     * hint banner in BioContextScreen.
      */
     data class ConnectedSource(
         val deviceName: String,
         val appName: String,
         val sampleCount: Int,
         val lastSeenMillis: Long?,
+        val kind: com.lifo.util.model.SourceKind = com.lifo.util.model.SourceKind.WEARABLE,
     )
 
     data class State(

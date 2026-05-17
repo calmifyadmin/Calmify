@@ -2074,6 +2074,25 @@
     <string name="bio_pf_sleep_drift_down">Stai dormendo circa il %1$d%% in meno rispetto a %2$d giorni fa.</string>
     <string name="bio_pf_sleep_drift_bars_a11y">Andamento durata del sonno. Mediana attuale %1$s rispetto a passata %2$s.</string>
     <string name="bio_set_nav_pattern_feed_title">Pattern</string>
-    <string name="bio_set_nav_pattern_feed_sub">Correlazioni cross-signal rilevate dall'app</string>
+    <string name="bio_set_nav_pattern_feed_sub">Correlazioni cross-signal rilevate dall\'app</string>
+
+    <!-- Phase 9.4 (2026-05-17) — fix gap onboarding wearable -->
+    <string name="bio_wear_tip_title">Hai un wearable non-Samsung?</string>
+    <string name="bio_wear_tip_body">Calmify legge da Health Connect, non direttamente dal tuo wearable. Apri prima l\'app del tuo wearable e attiva la sync con Health Connect — altrimenti Calmify vedrà solo i dati raccolti dal telefono.</string>
+    <string name="bio_wear_tip_step1">1. Installa l\'app del tuo wearable dal Play Store</string>
+    <string name="bio_wear_tip_step2">2. Nell\'app cerca Privacy o Servizi collegati e abilita Health Connect</string>
+    <string name="bio_wear_tip_step3">3. Torna qui e Calmify caricherà i tuoi dati alla prossima sync</string>
+    <string name="bio_wear_chip_mi">Mi Fitness</string>
+    <string name="bio_wear_chip_fitbit">Fitbit</string>
+    <string name="bio_wear_chip_garmin">Garmin Connect</string>
+    <string name="bio_wear_chip_a11y">Apri %1$s su Google Play</string>
+
+    <string name="bio_set_nav_troubleshoot_title">Non vedi il tuo wearable?</string>
+    <string name="bio_set_nav_troubleshoot_sub">Passi rapidi per far arrivare i dati di Mi Band, Fitbit, Garmin ecc. via Health Connect</string>
+    <string name="bio_troubleshoot_sheet_title">Wearable non visibile?</string>
+    <string name="bio_troubleshoot_close">Chiudi</string>
+
+    <string name="bio_ctx_phone_only_banner_title">Per ora solo dati dal telefono</string>
+    <string name="bio_ctx_phone_only_banner_body">Vediamo dati dal telefono ma niente da un wearable. Se ne hai uno, apri la sua app e abilita la sync con Health Connect.</string>
 
 </resources>

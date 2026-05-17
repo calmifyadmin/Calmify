@@ -93,10 +93,12 @@ fun BioSettingsScreen(
     onIntent: (BioSettingsContract.Intent) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onOpenPlayStore: (packageId: String) -> Unit = {},
 ) {
     val cs = MaterialTheme.colorScheme
     var showDeleteSheet by remember { mutableStateOf(false) }
     var showTradeoffDetail by remember { mutableStateOf(false) }
+    var showTroubleshootSheet by remember { mutableStateOf(false) }
 
     Scaffold(
         modifier = modifier,
@@ -189,6 +191,14 @@ fun BioSettingsScreen(
                     }
                     if (state.connectedSources.isNotEmpty()) Spacer(Modifier.height(10.dp))
                     AddSourceButton(onClick = { onIntent(BioSettingsContract.Intent.OpenAddSource) })
+                    // Phase 9.4 — wearable troubleshooting entry (sheet, no nav)
+                    Spacer(Modifier.height(8.dp))
+                    NavRow(
+                        icon = Icons.Outlined.HelpOutline,
+                        title = stringResource(Strings.BioSettings.navTroubleshootTitle),
+                        sub = stringResource(Strings.BioSettings.navTroubleshootSub),
+                        onClick = { showTroubleshootSheet = true },
+                    )
 
                     // 4. Privacy & data
                     SectionEyebrow(label = stringResource(Strings.BioSettings.sectionPrivacy))
@@ -276,6 +286,106 @@ fun BioSettingsScreen(
                 showDeleteSheet = false
                 onIntent(BioSettingsContract.Intent.ConfirmDeleteAll)
             },
+        )
+    }
+
+    if (showTroubleshootSheet) {
+        WearableTroubleshootSheet(
+            onDismiss = { showTroubleshootSheet = false },
+            onOpenPlayStore = onOpenPlayStore,
+        )
+    }
+}
+
+/**
+ * Phase 9.4 — bottom sheet shown from BioSettings when the user taps
+ * "Not seeing your wearable?". Same 3-step guidance as the
+ * [com.lifo.biocontext.WearableSyncTipCard] in BioOnboarding, plus a Close CTA.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WearableTroubleshootSheet(
+    onDismiss: () -> Unit,
+    onOpenPlayStore: (packageId: String) -> Unit,
+) {
+    val cs = MaterialTheme.colorScheme
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = cs.surface,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = CalmifySpacing.xl, vertical = CalmifySpacing.lg),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = stringResource(Strings.BioSettings.troubleshootSheetTitle),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = cs.onSurface,
+            )
+            Text(
+                text = stringResource(Strings.BioWearable.tipBody),
+                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp),
+                color = cs.onSurfaceVariant,
+            )
+            Text(
+                text = stringResource(Strings.BioWearable.tipStep1),
+                style = MaterialTheme.typography.bodySmall,
+                color = cs.onSurfaceVariant,
+            )
+            Text(
+                text = stringResource(Strings.BioWearable.tipStep2),
+                style = MaterialTheme.typography.bodySmall,
+                color = cs.onSurfaceVariant,
+            )
+            Text(
+                text = stringResource(Strings.BioWearable.tipStep3),
+                style = MaterialTheme.typography.bodySmall,
+                color = cs.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TroubleshootChip(label = stringResource(Strings.BioWearable.chipMi), packageId = "com.mi.health", onOpen = onOpenPlayStore)
+                TroubleshootChip(label = stringResource(Strings.BioWearable.chipFitbit), packageId = "com.fitbit.FitbitMobile", onOpen = onOpenPlayStore)
+                TroubleshootChip(label = stringResource(Strings.BioWearable.chipGarmin), packageId = "com.garmin.android.apps.connectmobile", onOpen = onOpenPlayStore)
+            }
+            Spacer(Modifier.height(8.dp))
+            androidx.compose.material3.TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.align(Alignment.End),
+            ) {
+                Text(stringResource(Strings.BioSettings.troubleshootClose))
+            }
+            Spacer(Modifier.height(CalmifySpacing.md))
+        }
+    }
+}
+
+@Composable
+private fun TroubleshootChip(
+    label: String,
+    packageId: String,
+    onOpen: (packageId: String) -> Unit,
+) {
+    val cs = MaterialTheme.colorScheme
+    val a11y = stringResource(Strings.BioWearable.chipA11y, label)
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(CalmifyRadius.pill))
+            .background(cs.primary.copy(alpha = 0.12f))
+            .clickable(
+                role = androidx.compose.ui.semantics.Role.Button,
+                onClickLabel = a11y,
+            ) { onOpen(packageId) }
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = cs.primary,
         )
     }
 }

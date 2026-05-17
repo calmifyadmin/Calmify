@@ -12,6 +12,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -109,6 +110,7 @@ fun BioOnboardingScreen(
     state: BioOnboardingContract.State,
     onIntent: (BioOnboardingContract.Intent) -> Unit,
     modifier: Modifier = Modifier,
+    onOpenPlayStore: (packageId: String) -> Unit = {},
 ) {
     val colorScheme = MaterialTheme.colorScheme
     Scaffold(
@@ -144,7 +146,7 @@ fun BioOnboardingScreen(
                     BioOnboardingContract.Step.Intro -> StepIntro(onIntent)
                     BioOnboardingContract.Step.DataTypes -> StepDataTypes(state, onIntent)
                     BioOnboardingContract.Step.Why -> StepWhy(onIntent)
-                    BioOnboardingContract.Step.Permission -> StepPermission(state, onIntent)
+                    BioOnboardingContract.Step.Permission -> StepPermission(state, onIntent, onOpenPlayStore)
                     BioOnboardingContract.Step.Confirm -> StepConfirm(state, onIntent)
                 }
                 Spacer(Modifier.height(CalmifySpacing.xxxl))
@@ -802,6 +804,7 @@ private fun UseCaseCard(uc: UseCaseMockup) {
 private fun StepPermission(
     state: BioOnboardingContract.State,
     onIntent: (BioOnboardingContract.Intent) -> Unit,
+    onOpenPlayStore: (packageId: String) -> Unit = {},
 ) {
     val cs = MaterialTheme.colorScheme
     val status = state.providerStatus
@@ -832,6 +835,14 @@ private fun StepPermission(
         // ── Flow diagram: Wearable → Health hub → Calmify ──────────────────
         Spacer(Modifier.height(CalmifySpacing.xl))
         FlowDiagram()
+
+        // ── Phase 9.4 — wearable sync tip card ─────────────────────────────
+        // The flow diagram above shows the indirect chain (Wearable → HC → Calmify)
+        // visually. Users with non-Samsung wearables still routinely miss that the
+        // FIRST step (enable HC sync in the vendor app) must happen in their wearable
+        // app — not here. Surface it explicitly + give them Play Store shortcuts.
+        Spacer(Modifier.height(CalmifySpacing.lg))
+        WearableSyncTipCard(onOpenPlayStore = onOpenPlayStore)
 
         // ── 3 promise rows ─────────────────────────────────────────────────
         Spacer(Modifier.height(CalmifySpacing.xl))
@@ -1114,6 +1125,104 @@ private fun FlowNode(icon: ImageVector, label: String, sub: String, accent: Bool
             ),
             color = cs.onSurfaceVariant,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
+    }
+}
+
+/**
+ * Phase 9.4 — wearable sync tip card shown in StepPermission. Tells users with
+ * non-Samsung wearables (Mi Band, Fitbit, Garmin, …) that they need to enable
+ * Health Connect sync inside the wearable's vendor app FIRST, then come back.
+ * 3 quick-link chips deep-link to Play Store via [onOpenPlayStore].
+ */
+@Composable
+private fun WearableSyncTipCard(onOpenPlayStore: (packageId: String) -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val accent = cs.primary
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(CalmifyRadius.lg))
+            .background(cs.surfaceContainerLow)
+            .padding(CalmifySpacing.lg),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(RoundedCornerShape(CalmifyRadius.md))
+                    .background(accent.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Watch,
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+            Text(
+                text = stringResource(Strings.BioWearable.tipTitle),
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                color = cs.onSurface,
+            )
+        }
+        Text(
+            text = stringResource(Strings.BioWearable.tipBody),
+            style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp),
+            color = cs.onSurfaceVariant,
+        )
+        Text(
+            text = stringResource(Strings.BioWearable.tipStep1),
+            style = MaterialTheme.typography.bodySmall,
+            color = cs.onSurfaceVariant,
+        )
+        Text(
+            text = stringResource(Strings.BioWearable.tipStep2),
+            style = MaterialTheme.typography.bodySmall,
+            color = cs.onSurfaceVariant,
+        )
+        Text(
+            text = stringResource(Strings.BioWearable.tipStep3),
+            style = MaterialTheme.typography.bodySmall,
+            color = cs.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(4.dp))
+        // 3 quick-link chips — Mi Fitness, Fitbit, Garmin. Add more brands later if data shows demand.
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            WearableChip(label = stringResource(Strings.BioWearable.chipMi), packageId = "com.mi.health", onOpen = onOpenPlayStore)
+            WearableChip(label = stringResource(Strings.BioWearable.chipFitbit), packageId = "com.fitbit.FitbitMobile", onOpen = onOpenPlayStore)
+            WearableChip(label = stringResource(Strings.BioWearable.chipGarmin), packageId = "com.garmin.android.apps.connectmobile", onOpen = onOpenPlayStore)
+        }
+    }
+}
+
+@Composable
+private fun WearableChip(
+    label: String,
+    packageId: String,
+    onOpen: (packageId: String) -> Unit,
+) {
+    val cs = MaterialTheme.colorScheme
+    val a11y = stringResource(Strings.BioWearable.chipA11y, label)
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(CalmifyRadius.pill))
+            .background(cs.primary.copy(alpha = 0.12f))
+            .clickable(
+                role = androidx.compose.ui.semantics.Role.Button,
+                onClickLabel = a11y,
+            ) { onOpen(packageId) }
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = cs.primary,
         )
     }
 }

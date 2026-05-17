@@ -185,6 +185,17 @@ fun BioContextScreen(
                 onIngest = { onIntent(BioContextContract.Intent.IngestNow) },
             )
 
+            // Phase 9.4 — phone-only hint banner. Renders only when we have
+            // sources but none from a wearable (kind == PHONE on every entry).
+            // Tells the user explicitly why their Mi Band / Fitbit data isn't
+            // showing up: they need to enable HC sync inside the vendor app.
+            if (state.connectedSources.isNotEmpty() &&
+                state.connectedSources.all { it.kind == com.lifo.util.model.SourceKind.PHONE }
+            ) {
+                Spacer(Modifier.height(CalmifySpacing.md))
+                PhoneOnlyHintBanner()
+            }
+
             // 03 — On this device (inventory + window picker)
             SectionEyebrow(num = 2, label = stringResource(Strings.BioContext.sectionInventory))
             InventoryCard(
@@ -898,6 +909,61 @@ private fun PromisesCard() {
 // ═════════════════════════════════════════════════════════════════════════
 // ATOMS
 // ═════════════════════════════════════════════════════════════════════════
+
+/**
+ * Phase 9.4 — phone-only sources hint banner. Renders inside section 02 when
+ * every connected source is `SourceKind.PHONE`, telling the user the wearable
+ * data they expected requires enabling Health Connect sync inside the vendor
+ * app (Mi Fitness / Fitbit / Garmin / …). The same guidance lives in the
+ * BioSettings "Not seeing your wearable?" sheet + the BioOnboarding tip card.
+ */
+@Composable
+private fun PhoneOnlyHintBanner() {
+    val cs = MaterialTheme.colorScheme
+    val accent = cs.primary
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(CalmifyRadius.lg))
+            .background(cs.surfaceContainerLow)
+            .border(
+                width = 1.dp,
+                color = accent.copy(alpha = 0.14f),
+                shape = RoundedCornerShape(CalmifyRadius.lg),
+            )
+            .padding(CalmifySpacing.lg),
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(accent.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Smartphone,
+                contentDescription = null,
+                tint = accent,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(Strings.BioContext.phoneOnlyBannerTitle),
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                color = cs.onSurface,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = stringResource(Strings.BioContext.phoneOnlyBannerBody),
+                style = MaterialTheme.typography.bodySmall,
+                color = cs.onSurfaceVariant,
+            )
+        }
+    }
+}
 
 /**
  * Phase 9.3 — PatternFeed discovery tile. Sits in BioContext between section

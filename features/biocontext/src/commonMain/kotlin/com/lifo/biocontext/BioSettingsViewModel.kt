@@ -79,6 +79,7 @@ class BioSettingsViewModel(
                             appName = key.second,
                             sampleCount = 1,
                             lastSeenMillis = ts,
+                            kind = sample.source.kind,
                         )
                     } else {
                         sourceTallies[key] = existing.copy(

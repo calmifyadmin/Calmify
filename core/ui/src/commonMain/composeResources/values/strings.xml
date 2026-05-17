@@ -2090,4 +2090,23 @@
     <string name="bio_set_nav_pattern_feed_title">Patterns</string>
     <string name="bio_set_nav_pattern_feed_sub">Cross-signal correlations the app has detected</string>
 
+    <!-- Phase 9.4 (2026-05-17) — wearable onboarding gap fix -->
+    <string name="bio_wear_tip_title">Got a non-Samsung wearable?</string>
+    <string name="bio_wear_tip_body">Calmify reads from Health Connect, not from your wearable directly. Open your wearable\'s app first and turn on Health Connect sync — otherwise Calmify will only see what your phone tracks.</string>
+    <string name="bio_wear_tip_step1">1. Install your wearable\'s app from the Play Store</string>
+    <string name="bio_wear_tip_step2">2. In that app, find Privacy or Connected services and enable Health Connect</string>
+    <string name="bio_wear_tip_step3">3. Come back here and Calmify will pull your data on the next sync</string>
+    <string name="bio_wear_chip_mi">Mi Fitness</string>
+    <string name="bio_wear_chip_fitbit">Fitbit</string>
+    <string name="bio_wear_chip_garmin">Garmin Connect</string>
+    <string name="bio_wear_chip_a11y">Open %1$s on Google Play</string>
+
+    <string name="bio_set_nav_troubleshoot_title">Not seeing your wearable?</string>
+    <string name="bio_set_nav_troubleshoot_sub">Quick steps to get Mi Band, Fitbit, Garmin etc. through Health Connect</string>
+    <string name="bio_troubleshoot_sheet_title">Wearable not appearing?</string>
+    <string name="bio_troubleshoot_close">Close</string>
+
+    <string name="bio_ctx_phone_only_banner_title">Only phone data so far</string>
+    <string name="bio_ctx_phone_only_banner_body">We see data from your phone but nothing from a wearable. If you have one, open its app and enable Health Connect sync.</string>
+
 </resources>

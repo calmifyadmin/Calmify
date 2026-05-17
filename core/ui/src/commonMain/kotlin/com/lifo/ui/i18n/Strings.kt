@@ -1378,6 +1378,10 @@ object Strings {
         val connectionsEmptyTitle: StringResource get() = Res.string.bio_ctx_connections_empty_title
         val connectionsEmptyBody: StringResource get() = Res.string.bio_ctx_connections_empty_body
 
+        // Phase 9.4 — phone-only sources hint
+        val phoneOnlyBannerTitle: StringResource get() = Res.string.bio_ctx_phone_only_banner_title
+        val phoneOnlyBannerBody: StringResource get() = Res.string.bio_ctx_phone_only_banner_body
+
         // Inventory
         val inventorySub: StringResource get() = Res.string.bio_ctx_inventory_sub
 
@@ -1722,6 +1726,11 @@ object Strings {
         val navInventorySub: StringResource get() = Res.string.bio_set_nav_inventory_sub
         val navPatternFeedTitle: StringResource get() = Res.string.bio_set_nav_pattern_feed_title
         val navPatternFeedSub: StringResource get() = Res.string.bio_set_nav_pattern_feed_sub
+        // Phase 9.4 — wearable troubleshooting nav row + sheet
+        val navTroubleshootTitle: StringResource get() = Res.string.bio_set_nav_troubleshoot_title
+        val navTroubleshootSub: StringResource get() = Res.string.bio_set_nav_troubleshoot_sub
+        val troubleshootSheetTitle: StringResource get() = Res.string.bio_troubleshoot_sheet_title
+        val troubleshootClose: StringResource get() = Res.string.bio_troubleshoot_close
         val navExportTitle: StringResource get() = Res.string.bio_set_nav_export_title
         val navExportSub: StringResource get() = Res.string.bio_set_nav_export_sub
         val navDeleteTitle: StringResource get() = Res.string.bio_set_nav_delete_title
@@ -1771,6 +1780,24 @@ object Strings {
         val hintWithin: StringResource get() = Res.string.bio_day_hint_within
         val hintBelow: StringResource get() = Res.string.bio_day_hint_below
         val hintAbove: StringResource get() = Res.string.bio_day_hint_above
+    }
+
+    /**
+     * Phase 9.4 — wearable troubleshooting copy + Play Store quick-links.
+     * Shared between BioOnboarding StepPermission's tip card AND BioSettings'
+     * "Not seeing your wearable?" bottom sheet (DRY: one body of copy, two
+     * surfaces).
+     */
+    object BioWearable {
+        val tipTitle: StringResource get() = Res.string.bio_wear_tip_title
+        val tipBody: StringResource get() = Res.string.bio_wear_tip_body
+        val tipStep1: StringResource get() = Res.string.bio_wear_tip_step1
+        val tipStep2: StringResource get() = Res.string.bio_wear_tip_step2
+        val tipStep3: StringResource get() = Res.string.bio_wear_tip_step3
+        val chipMi: StringResource get() = Res.string.bio_wear_chip_mi
+        val chipFitbit: StringResource get() = Res.string.bio_wear_chip_fitbit
+        val chipGarmin: StringResource get() = Res.string.bio_wear_chip_garmin
+        val chipA11y: StringResource get() = Res.string.bio_wear_chip_a11y
     }
 
     /**

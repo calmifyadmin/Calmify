@@ -90,6 +90,7 @@ class BioContextViewModel(
                             appName = key.second,
                             sampleCount = 1,
                             lastSeenMillis = s.timestamp.toEpochMilliseconds(),
+                            kind = s.source.kind,
                         )
                     } else {
                         sourceTallies[key] = existing.copy(
