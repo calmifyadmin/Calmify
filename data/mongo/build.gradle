@@ -40,6 +40,13 @@ kotlin {
             implementation libs.ktor.serialization.kotlinx.json
         }
 
+        iosMain {
+            // Phase 10.0 (2026-05-17) — iOS source set declared so HealthKitProvider
+            // actual impl can live here. No SQLDelight native driver pulled in yet
+            // (sample read path is a NotInstalled stub until Phase 10.1). Adding the
+            // driver before there's an iOS app shell would only inflate build time.
+        }
+
         androidMain {
             dependencies {
                 // SQLDelight Android driver
