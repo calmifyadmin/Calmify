@@ -1753,4 +1753,21 @@ object Strings {
 
         val footnote: StringResource get() = Res.string.bio_set_footnote
     }
+
+    /**
+     * Journal × Bio overlay (Phase 9.2.3) — atom used inside DiaryDetailScreen
+     * to surface the bio context of the day the diary was written.
+     */
+    object BioDayOverlay {
+        val eyebrow: StringResource get() = Res.string.bio_day_eyebrow
+        val labelSleep: StringResource get() = Res.string.bio_day_label_sleep
+        val labelHr: StringResource get() = Res.string.bio_day_label_hr
+        val labelSteps: StringResource get() = Res.string.bio_day_label_steps
+        val valueSleep: StringResource get() = Res.string.bio_day_value_sleep
+        val valueHr: StringResource get() = Res.string.bio_day_value_hr
+        val valueSteps: StringResource get() = Res.string.bio_day_value_steps
+        val hintWithin: StringResource get() = Res.string.bio_day_hint_within
+        val hintBelow: StringResource get() = Res.string.bio_day_hint_below
+        val hintAbove: StringResource get() = Res.string.bio_day_hint_above
+    }
 }

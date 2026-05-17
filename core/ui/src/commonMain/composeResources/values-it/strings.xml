@@ -1995,4 +1995,16 @@
     <string name="bio_set_pro_cta">Vedi cosa c\'è in Pro</string>
 
     <string name="bio_set_footnote">Le modifiche si salvano automaticamente. Calmify non legge mai dati corporei al di fuori dei segnali che hai attivato sopra.</string>
+
+    <!-- Bio-Signal Phase 9.2.3 — Journal × Bio overlay -->
+    <string name="bio_day_eyebrow">Quel giorno, nel tuo corpo</string>
+    <string name="bio_day_label_sleep">Sonno</string>
+    <string name="bio_day_label_hr">HR mattutina</string>
+    <string name="bio_day_label_steps">Passi</string>
+    <string name="bio_day_value_sleep">%1$dh %2$02dm</string>
+    <string name="bio_day_value_hr">%1$d bpm</string>
+    <string name="bio_day_value_steps">%1$d</string>
+    <string name="bio_day_hint_within">nella tua media</string>
+    <string name="bio_day_hint_below">sotto la media</string>
+    <string name="bio_day_hint_above">sopra la media</string>
 </resources>

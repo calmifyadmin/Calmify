@@ -219,6 +219,14 @@ internal fun DiaryDetailScreen(
                 MetricsDashboard(diary = diary)
                 Spacer(Modifier.height(20.dp))
 
+                // Phase 9.2.3 — Journal × Bio overlay. Surfaces sleep + morning HR
+                // + steps of THAT day so the user can see body context next to the
+                // reflection. Silence-by-default when no bio data was captured.
+                DiaryBioOverlaySection(
+                    diaryDateMillis = diary.dateMillis,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+
                 ContextChipsRow(diary = diary)
 
                 if (diary.images.isNotEmpty()) {
@@ -958,4 +966,29 @@ private fun BodySensation.icon(): ImageVector = when (this) {
     BodySensation.AGITATION   -> Icons.Outlined.SentimentNeutral
     BodySensation.RELAXATION  -> Icons.Outlined.FavoriteBorder
     BodySensation.NONE        -> Icons.Outlined.HelpOutline
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+// Phase 9.2.3 — Journal × Bio overlay section
+// ═════════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun DiaryBioOverlaySection(
+    diaryDateMillis: Long,
+    modifier: Modifier = Modifier,
+) {
+    val useCase: com.lifo.write.domain.GetDiaryDayBioOverlayUseCase = org.koin.compose.koinInject()
+    val overlay by androidx.compose.runtime.produceState<com.lifo.ui.components.biosignal.BioDayOverlay?>(
+        initialValue = null,
+        key1 = diaryDateMillis,
+    ) {
+        value = runCatching { useCase(diaryDateMillis) }.getOrNull()
+    }
+    val current = overlay
+    if (current != null && current.hasAny) {
+        Column(modifier = modifier.fillMaxWidth()) {
+            com.lifo.ui.components.biosignal.BioDayOverlayCard(data = current)
+            Spacer(Modifier.height(20.dp))
+        }
+    }
 }

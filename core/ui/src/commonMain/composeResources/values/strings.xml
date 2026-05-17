@@ -2010,4 +2010,16 @@
 
     <string name="bio_set_footnote">Changes save automatically. Calmify never reads body data outside the signals you\'ve turned on above.</string>
 
+    <!-- Bio-Signal Phase 9.2.3 — Journal × Bio overlay card (in DiaryDetailScreen) -->
+    <string name="bio_day_eyebrow">That day, in your body</string>
+    <string name="bio_day_label_sleep">Sleep</string>
+    <string name="bio_day_label_hr">Morning HR</string>
+    <string name="bio_day_label_steps">Steps</string>
+    <string name="bio_day_value_sleep">%1$dh %2$02dm</string>
+    <string name="bio_day_value_hr">%1$d bpm</string>
+    <string name="bio_day_value_steps">%1$d</string>
+    <string name="bio_day_hint_within">your usual</string>
+    <string name="bio_day_hint_below">below usual</string>
+    <string name="bio_day_hint_above">above usual</string>
+
 </resources>
