@@ -68,8 +68,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifo.biocontext.BioContextContract.InventoryWindow
@@ -825,6 +828,20 @@ private fun PromisesCard() {
             Spacer(Modifier.height(CalmifySpacing.md))
             items.forEachIndexed { idx, (icon, strongRes, restRes) ->
                 if (idx > 0) Spacer(Modifier.height(10.dp))
+                val strongText = stringResource(strongRes)
+                val restText = stringResource(restRes)
+                // Single AnnotatedString — keeps "bold prefix + rest" as ONE flowing
+                // sentence so it wraps on word boundaries (the old two-Text Row
+                // wrapped character-by-character on the right edge — screenshot bug).
+                val sentence = remember(strongText, restText) {
+                    buildAnnotatedString {
+                        withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) {
+                            append(strongText)
+                        }
+                        append(' ')
+                        append(restText)
+                    }
+                }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -848,25 +865,15 @@ private fun PromisesCard() {
                             modifier = Modifier.size(14.dp),
                         )
                     }
-                    Row(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(strongRes),
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 14.sp,
-                                lineHeight = 20.sp,
-                            ),
-                            color = cs.onSurface,
-                        )
-                        Text(
-                            text = " " + stringResource(restRes),
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = 14.sp,
-                                lineHeight = 20.sp,
-                            ),
-                            color = cs.onSurface,
-                        )
-                    }
+                    Text(
+                        text = sentence,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = 14.sp,
+                            lineHeight = 20.sp,
+                        ),
+                        color = cs.onSurface,
+                        modifier = Modifier.weight(1f),
+                    )
                 }
             }
             Spacer(Modifier.height(14.dp))
@@ -1221,17 +1228,24 @@ private fun BioStickyActionBar(onExport: () -> Unit, onHow: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            BioSecondaryButton(
-                label = stringResource(Strings.BioContext.actionExportShort),
-                icon = Icons.Outlined.Download,
-                onClick = onExport,
-            )
-            BioPrimaryButton(
-                label = stringResource(Strings.BioContext.actionHowShort),
-                icon = Icons.Outlined.Help,
-                onClick = onHow,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            // weight(1f) on each so they split 50/50. The atoms internally
+            // call fillMaxWidth() which made the primary collapse the
+            // secondary entirely before — sticky-bar bug from screenshot.
+            Box(modifier = Modifier.weight(1f)) {
+                BioSecondaryButton(
+                    label = stringResource(Strings.BioContext.actionExportShort),
+                    icon = Icons.Outlined.Download,
+                    onClick = onExport,
+                )
+            }
+            Box(modifier = Modifier.weight(1f)) {
+                BioPrimaryButton(
+                    label = stringResource(Strings.BioContext.actionHowShort),
+                    icon = Icons.Outlined.Help,
+                    onClick = onHow,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         }
     }
 }
