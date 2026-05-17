@@ -1772,4 +1772,13 @@
     <string name="bio_xs_row_hrv_delta">+%1$d%%</string>
     <string name="bio_xs_bars_a11y">Sessioni di meditazione per settimana e HRV media per settimana, nelle ultime %1$d settimane</string>
     <string name="bio_xs_dismiss_a11y">Chiudi questo pattern</string>
+
+    <!-- Bio-Signal Narrative card (Phase 8.2) — PRO weekly insight surface -->
+    <string name="bio_narrative_card_title">Questa settimana, nel tuo corpo</string>
+    <string name="bio_narrative_freshness">basato sugli ultimi %1$d giorni · aggiornato oggi</string>
+    <string name="bio_narrative_higher">L\'HRV media questa settimana è di circa %1$d ms — circa il %2$d%% sopra il tuo valore tipico di %3$d ms. Spesso emerge dopo un periodo di sonno migliore o giornate più leggere. Il pattern non è un verdetto — solo un\'osservazione da tenere accanto a tutto il resto che hai notato.</string>
+    <string name="bio_narrative_lower">L\'HRV media questa settimana è di circa %1$d ms — circa il %2$d%% sotto il tuo valore tipico di %3$d ms. I corpi calano per molti motivi (stress, viaggi, un virus in arrivo, meno sonno). Il pattern non è una diagnosi — se senti il calo anche altrove, potrebbe essere uno spunto utile per essere un po\' più gentile.</string>
+    <string name="bio_narrative_steady">La tua HRV è rimasta vicina alla tua media questa settimana — circa %1$d ms rispetto al tuo tipico di %3$d ms. Le settimane stabili passano spesso inosservate, ma sono frequentemente la base su cui poggia tutto il resto.</string>
+    <string name="bio_narrative_source_hrv">HRV</string>
+    <string name="bio_narrative_source_baseline">Baseline 30 giorni</string>
 </resources>

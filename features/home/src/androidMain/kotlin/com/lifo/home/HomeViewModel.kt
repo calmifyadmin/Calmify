@@ -125,6 +125,10 @@ object HomeContract {
         val crossSignalPattern: com.lifo.home.domain.usecase.CrossSignalPattern? = null,
         val crossSignalDismissed: Boolean = false,
 
+        // Weekly bio narrative (Phase 8.2) — PRO-only, null when <3 days HRV
+        // in last 7 or no meaningful delta vs baseline.
+        val weeklyBioNarrative: com.lifo.home.domain.usecase.WeeklyBioNarrative? = null,
+
         // Network
         val networkStatus: ConnectivityObserver.Status = ConnectivityObserver.Status.Unavailable,
 
@@ -161,6 +165,7 @@ internal class HomeViewModel constructor(
     private val profileSettingsRepository: ProfileSettingsRepository,
     private val getHomeBioContextUseCase: com.lifo.home.domain.usecase.GetHomeBioContextUseCase,
     private val getCrossSignalPatternUseCase: com.lifo.home.domain.usecase.GetCrossSignalPatternUseCase,
+    private val getWeeklyBioNarrativeUseCase: com.lifo.home.domain.usecase.GetWeeklyBioNarrativeUseCase,
 ) : MviViewModel<HomeContract.Intent, HomeContract.State, HomeContract.Effect>(
     initialState = HomeContract.State()
 ) {
@@ -277,6 +282,9 @@ internal class HomeViewModel constructor(
     fun dismissCrossSignal() {
         updateState { copy(crossSignalDismissed = true) }
     }
+
+    val weeklyBioNarrative: StateFlow<com.lifo.home.domain.usecase.WeeklyBioNarrative?> =
+        state.map { it.weeklyBioNarrative }.stateIn(scope, SharingStarted.Eagerly, null)
 
     // ══════════════════════════════════════════════════════════════════════
     // Init
@@ -899,13 +907,15 @@ internal class HomeViewModel constructor(
                 val communityDeferred = async { loadCommunityThreads() }
                 val bioDeferred = async { runCatching { getHomeBioContextUseCase() }.getOrNull() }
                 val crossSignalDeferred = async { runCatching { getCrossSignalPatternUseCase() }.getOrNull() }
+                val narrativeDeferred = async { runCatching { getWeeklyBioNarrativeUseCase() }.getOrNull() }
 
                 cachedInsights = insightsDeferred.await()
                 cachedDiaries = diariesDeferred.await()
                 communityDeferred.await()
                 val bio = bioDeferred.await()
                 val pattern = crossSignalDeferred.await()
-                updateState { copy(bioContext = bio, crossSignalPattern = pattern) }
+                val narrative = narrativeDeferred.await()
+                updateState { copy(bioContext = bio, crossSignalPattern = pattern, weeklyBioNarrative = narrative) }
 
                 calculateTodayPulse()
                 calculateMoodDistribution()

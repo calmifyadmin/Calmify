@@ -137,6 +137,7 @@ internal fun HomeContent(
     val socialAvatarUrl by viewModel.socialAvatarUrl.collectAsState()
     val bioContext by viewModel.bioContext.collectAsState()
     val crossSignalPattern by viewModel.crossSignalPattern.collectAsState()
+    val weeklyBioNarrative by viewModel.weeklyBioNarrative.collectAsState()
     val subscriptionRepository: SubscriptionRepository = koinInject()
     val isPro by remember(subscriptionRepository) {
         subscriptionRepository.observeSubscription().map {
@@ -381,6 +382,19 @@ internal fun HomeContent(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .staggeredEntrance(index = 8, baseDelayMs = 80)
+                                    )
+                                }
+                            }
+
+                            // 10. Bio · Weekly narrative (Phase 8.2, PRO-only).
+                            // Local templated narrative; AI replaces in 8.3/8.4 — atom contract stays stable.
+                            weeklyBioNarrative?.let { narrative ->
+                                item(key = "bio_weekly_narrative") {
+                                    ExpressiveWeeklyNarrative(
+                                        narrative = narrative,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .staggeredEntrance(index = 9, baseDelayMs = 80)
                                     )
                                 }
                             }

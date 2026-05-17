@@ -1495,6 +1495,20 @@ object Strings {
     }
 
     /**
+     * AI narrative card (Phase 8.2). Local template now; Gemini-backed in 8.3/8.4.
+     * The atom contract is stable — only the data source swaps.
+     */
+    object BioNarrative {
+        val cardTitle: StringResource get() = Res.string.bio_narrative_card_title
+        val freshness: StringResource get() = Res.string.bio_narrative_freshness
+        val higher: StringResource get() = Res.string.bio_narrative_higher
+        val lower: StringResource get() = Res.string.bio_narrative_lower
+        val steady: StringResource get() = Res.string.bio_narrative_steady
+        val sourceHrv: StringResource get() = Res.string.bio_narrative_source_hrv
+        val sourceBaseline: StringResource get() = Res.string.bio_narrative_source_baseline
+    }
+
+    /**
      * Cross-signal correlation card (Phase 5.4, Card 4). PRO-only, currently
      * surfaces in Home below Community until an Insight pattern feed exists.
      */

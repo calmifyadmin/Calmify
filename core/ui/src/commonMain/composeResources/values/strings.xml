@@ -1777,4 +1777,13 @@
     <string name="bio_xs_bars_a11y">Meditation sessions per week and average HRV per week, over the last %1$d weeks</string>
     <string name="bio_xs_dismiss_a11y">Dismiss this pattern</string>
 
+    <!-- Bio-Signal Narrative card (Phase 8.2) — PRO weekly insight surface (local template; AI replaces in 8.3/8.4). -->
+    <string name="bio_narrative_card_title">This week, in your body</string>
+    <string name="bio_narrative_freshness">based on the last %1$d days · refreshed today</string>
+    <string name="bio_narrative_higher">Your HRV averaged about %1$d ms this week — roughly %2$d%% above your typical %3$d ms. It often shows up after a stretch of better sleep or lighter days. The pattern is not a verdict — just an observation worth holding next to whatever else you noticed this week.</string>
+    <string name="bio_narrative_lower">Your HRV averaged about %1$d ms this week — roughly %2$d%% below your typical %3$d ms. Bodies dip for many reasons (stress, travel, a virus brewing, less sleep). The pattern is not a diagnosis — if you\'re noticing the dip elsewhere, it might be a useful nudge to be a little gentler.</string>
+    <string name="bio_narrative_steady">Your HRV held close to your usual this week — about %1$d ms against your typical %3$d ms. Steady weeks are easy to overlook, but they\'re often the foundation everything else rests on.</string>
+    <string name="bio_narrative_source_hrv">HRV</string>
+    <string name="bio_narrative_source_baseline">Your 30-day baseline</string>
+
 </resources>
