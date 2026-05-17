@@ -53,6 +53,7 @@ fun SettingsScreen(
     onNavigateToAvatarDebug: () -> Unit = {},
     onNavigateToBioContext: () -> Unit = {},
     onNavigateToBioOnboarding: () -> Unit = {},
+    onNavigateToBioSettings: () -> Unit = {},
     onLogout: () -> Unit,
     currentLanguageCode: String = "",
     onLanguageSelected: (String) -> Unit = {},
@@ -155,19 +156,16 @@ fun SettingsScreen(
                     onClick = onNavigateToEnvironment,
                 )
 
-                // Bio-Signal Section (Phase 4 polish 2026-05-12)
+                // Bio-Signal Section (Phase 9.1.3 — consolidated single entry).
+                // Master panel BioSettings deep-links internally to BioContext +
+                // BioOnboarding, so the user sees one well-organized control
+                // surface instead of two scattered entries.
                 SettingsSectionHeader(title = stringResource(Res.string.settings_bio_section))
                 SettingsNavigationItem(
-                    title = stringResource(Res.string.settings_bio_connect_title),
-                    subtitle = stringResource(Res.string.settings_bio_connect_subtitle),
+                    title = stringResource(Res.string.settings_bio_master_title),
+                    subtitle = stringResource(Res.string.settings_bio_master_subtitle),
                     icon = Icons.Outlined.MonitorHeart,
-                    onClick = onNavigateToBioOnboarding,
-                )
-                SettingsNavigationItem(
-                    title = stringResource(Res.string.settings_bio_data_title),
-                    subtitle = stringResource(Res.string.settings_bio_data_subtitle),
-                    icon = Icons.Outlined.HealthAndSafety,
-                    onClick = onNavigateToBioContext,
+                    onClick = onNavigateToBioSettings,
                 )
 
                 // Language Section

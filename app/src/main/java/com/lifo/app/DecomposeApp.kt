@@ -423,6 +423,7 @@ fun DecomposeApp(
                             onNavigateToAvatarDebug = { rootComponent.navigateToAvatarDebug() },
                             onNavigateToBioContext = { rootComponent.navigateToBioContext() },
                             onNavigateToBioOnboarding = { rootComponent.navigateToBioOnboarding() },
+                            onNavigateToBioSettings = { rootComponent.navigateToBioSettings() },
                             onLogout = { rootComponent.navigateToAuth() }
                         )
                     }

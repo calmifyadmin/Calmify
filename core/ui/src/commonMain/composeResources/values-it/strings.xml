@@ -1860,6 +1860,10 @@
     <string name="settings_bio_connect_title">Connetti un wearable</string>
     <string name="settings_bio_connect_subtitle">Collega il tuo dispositivo via Health Connect — solo lettura</string>
 
+    <!-- Phase 9.1.3 — entry consolidata che apre BioSettings master panel -->
+    <string name="settings_bio_master_title">Bio-segnali</string>
+    <string name="settings_bio_master_subtitle">Controllo granulare · sorgenti · privacy · GDPR</string>
+
     <!-- Bio-Signal Confidence atoms (Phase 5) -->
     <string name="bio_conf_chip_a11y">affidabilità %1$s</string>
     <string name="bio_conf_footer_template">Da %1$s · affidabilità %2$s</string>
