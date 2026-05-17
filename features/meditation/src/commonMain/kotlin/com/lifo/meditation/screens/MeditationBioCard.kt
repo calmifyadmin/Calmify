@@ -33,6 +33,7 @@ import com.lifo.ui.components.biosignal.HrChartPoint
 import com.lifo.ui.i18n.Strings
 import com.lifo.ui.theme.CalmifyRadius
 import com.lifo.ui.theme.CalmifySpacing
+import com.lifo.util.analytics.BioProGateSurface
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -154,6 +155,7 @@ internal fun MeditationBioCard(
                 BioProLock(
                     copy = hrvGateCopy,
                     onUpgrade = onUpgrade,
+                    surfaceForAnalytics = BioProGateSurface.MEDITATION_OUTRO_HRV,
                 )
             }
 

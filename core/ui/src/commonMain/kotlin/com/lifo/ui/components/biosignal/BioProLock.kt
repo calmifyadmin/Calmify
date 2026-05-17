@@ -15,6 +15,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,7 +35,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifo.ui.i18n.Strings
 import com.lifo.ui.theme.CalmifyRadius
+import com.lifo.util.analytics.AnalyticsEvents
+import com.lifo.util.analytics.AnalyticsTracker
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.koinInject
 
 /**
  * Non-hostile PRO gate — Phase 5.3 reusable atom.
@@ -56,11 +60,40 @@ fun BioProLock(
     copy: String,
     onUpgrade: () -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * Stable surface identifier for telemetry — see
+     * [com.lifo.util.analytics.BioProGateSurface]. Pass `null` to disable
+     * analytics on this instance (e.g. previews, tests).
+     */
+    surfaceForAnalytics: String? = null,
 ) {
     val accent = MaterialTheme.colorScheme.primary
     val proLabel = stringResource(Strings.BioProLock.proChip)
     val aggregateA11y = stringResource(Strings.BioProLock.a11yTemplate, copy)
     val upgradeAction = stringResource(Strings.BioProLock.actionUpgrade)
+
+    // Phase 8.1 — telemetry. Impression fires once per Composition (the lock
+    // landed in the composition tree, meaning a FREE user saw it). Click fires
+    // wrapped around the host's onUpgrade.
+    val analytics: AnalyticsTracker? = if (surfaceForAnalytics != null) koinInject() else null
+    if (analytics != null && surfaceForAnalytics != null) {
+        LaunchedEffect(surfaceForAnalytics) {
+            analytics.logEvent(
+                AnalyticsEvents.BIO_PRO_GATE_IMPRESSION,
+                mapOf("surface" to surfaceForAnalytics),
+            )
+        }
+    }
+    val onUpgradeTracked: () -> Unit = {
+        if (analytics != null && surfaceForAnalytics != null) {
+            analytics.logEvent(
+                AnalyticsEvents.BIO_PRO_GATE_CLICK,
+                mapOf("surface" to surfaceForAnalytics),
+            )
+        }
+        onUpgrade()
+    }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -70,13 +103,13 @@ fun BioProLock(
                 color = accent.copy(alpha = 0.36f),
                 cornerRadius = CalmifyRadius.md,
             )
-            .clickable(role = Role.Button, onClickLabel = upgradeAction, onClick = onUpgrade)
+            .clickable(role = Role.Button, onClickLabel = upgradeAction, onClick = onUpgradeTracked)
             .padding(12.dp)
             // Phase 7.1 — one curated TalkBack readout for the whole gate.
             .clearAndSetSemantics {
                 contentDescription = aggregateA11y
                 role = Role.Button
-                onClick(label = upgradeAction) { onUpgrade(); true }
+                onClick(label = upgradeAction) { onUpgradeTracked(); true }
             },
     ) {
         Row(

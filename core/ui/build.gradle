@@ -55,6 +55,9 @@ kotlin {
             // Core module
             implementation project(':core:util')
 
+            // Koin Compose (for koinInject() in commonMain composables — e.g. BioProLock telemetry)
+            implementation libs.koin.compose
+
             // Advanced graphics
             implementation libs.haze
             implementation libs.haze.materials
