@@ -754,6 +754,14 @@ fun DecomposeApp(
                             navigateBack = { rootComponent.navigateBack() },
                         )
                     }
+                    is RootComponent.Child.BioSettings -> {
+                        com.lifo.biocontext.BioSettingsRouteContent(
+                            navigateBack = { rootComponent.navigateBack() },
+                            navigateToBioContext = { rootComponent.navigateToBioContext() },
+                            navigateToBioOnboarding = { rootComponent.navigateToBioOnboarding() },
+                            navigateToSubscription = { rootComponent.navigateToSubscription() },
+                        )
+                    }
 
                     is RootComponent.Child.Environment -> {
                         com.lifo.settings.navigation.EnvironmentRouteContent(

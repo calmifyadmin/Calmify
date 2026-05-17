@@ -1926,4 +1926,69 @@
     <string name="bio_narrative_steady">La tua HRV è rimasta vicina alla tua media questa settimana — circa %1$d ms rispetto al tuo tipico di %3$d ms. Le settimane stabili passano spesso inosservate, ma sono frequentemente la base su cui poggia tutto il resto.</string>
     <string name="bio_narrative_source_hrv">HRV</string>
     <string name="bio_narrative_source_baseline">Baseline 30 giorni</string>
+
+    <!-- Bio-Signal Phase 9.1.3 — BioSettingsScreen -->
+    <string name="bio_set_topbar">Bio-segnali</string>
+    <string name="bio_set_help_a11y">Aiuto</string>
+
+    <string name="bio_set_master_title">Integrazione bio-segnali</string>
+    <string name="bio_set_master_sub">I dati del corpo si intrecciano in silenzio nella tua giornata</string>
+    <string name="bio_set_status_connected">Connesso · %1$s via %2$s</string>
+    <string name="bio_set_status_connected_no_source">Connesso</string>
+    <string name="bio_set_status_not_connected">Non connesso</string>
+    <string name="bio_set_status_meta">Ultimo sync %1$s fa · %2$d campioni oggi</string>
+    <string name="bio_set_reactivate_body">I bio-segnali sono spenti. Nulla viene letto o memorizzato. I tuoi dati esistenti sono preservati finché non scegli di eliminarli.</string>
+    <string name="bio_set_reactivate_cta">Riattiva</string>
+
+    <string name="bio_set_section_permissions">Cosa leggiamo</string>
+    <string name="bio_set_permissions_help">Ogni segnale è opt-in. Spegnerne uno ferma immediatamente nuove letture — e puoi eliminare quello che c\'è già.</string>
+    <string name="bio_set_delete_collected">Elimina dati raccolti</string>
+    <string name="bio_set_perm_why_hr">A riposo + durante la meditazione. Alimenta la narrativa \"il corpo ha seguito\".</string>
+    <string name="bio_set_perm_why_hrv">Segnale sottile del sistema nervoso. Alimenta l\'insight di correlazione PRO.</string>
+    <string name="bio_set_perm_why_sleep">Durata e fasi. Si intreccia con la narrativa del mattino.</string>
+    <string name="bio_set_perm_why_steps">Contesto di attività leggera. Mai mostrato come obiettivo.</string>
+    <string name="bio_set_perm_why_resting_hr">Baseline di tendenza. Aiuta a distinguere \"giornata storta\" da \"davvero insolito\".</string>
+    <string name="bio_set_perm_why_spo2">Opzionale. Spento di default — letto solo quando lo richiedi esplicitamente.</string>
+    <string name="bio_set_perm_why_activity">Allenamenti e momenti di movimento. Solo contesto — mai un target.</string>
+
+    <string name="bio_set_section_sources">Da dove arriva</string>
+    <string name="bio_set_sources_help">Dispositivi e app da cui Calmify legge. Ognuno mantiene i propri permessi nell\'hub salute del tuo OS.</string>
+    <string name="bio_set_source_options_a11y">Opzioni sorgente</string>
+    <string name="bio_set_add_source_title">Aggiungi un\'altra sorgente</string>
+    <string name="bio_set_add_source_sub">Health Connect</string>
+
+    <string name="bio_set_section_privacy">Privacy e dati</string>
+    <string name="bio_set_privacy_help">I tuoi dati corporei sono tuoi. Guarda cosa abbiamo, portali altrove, o rimuovili del tutto — senza chiedere permesso.</string>
+    <string name="bio_set_nav_inventory_title">Cosa abbiamo, da dove arriva</string>
+    <string name="bio_set_nav_inventory_sub">Log per-segnale di ogni lettura e della sua fonte</string>
+    <string name="bio_set_nav_export_title">Esporta tutto</string>
+    <string name="bio_set_nav_export_sub">Archivio JSON portabile · GDPR Art. 20</string>
+    <string name="bio_set_nav_delete_title">Elimina tutti i dati bio</string>
+    <string name="bio_set_nav_delete_sub">Permanente · GDPR Art. 17 · non si può annullare</string>
+    <string name="bio_set_tradeoff_title">Carica i campioni grezzi su Calmify</string>
+    <string name="bio_set_tradeoff_sub">Richiesto solo per insight PRO avanzati</string>
+    <string name="bio_set_tradeoff_expand">Vedi il tradeoff privacy ↔ qualità</string>
+    <string name="bio_set_tradeoff_body">Di default Calmify calcola le narrative sul tuo telefono e memorizza solo piccoli riassunti giornalieri. Attivare invia i campioni grezzi HRV e battito (cifrati) ai nostri server così le correlazioni multi-settimana girano server-side. Puoi disattivare e cancellare la copia cloud in qualsiasi momento da \"Elimina tutti i dati bio\". Le narrative on-device continuano a funzionare comunque.</string>
+
+    <string name="bio_set_section_surfaces">Dove appare</string>
+    <string name="bio_set_surfaces_help">Ogni superficie è attiva di default — e ognuna può essere zittita senza toccare le altre.</string>
+    <string name="bio_set_surface_journal_title">Banner narrativo nel Journal</string>
+    <string name="bio_set_surface_journal_sub">Una singola riga osservazionale sopra il composer.</string>
+    <string name="bio_set_surface_meditation_title">Card "il corpo ha seguito" dopo la meditazione</string>
+    <string name="bio_set_surface_meditation_sub">Mini chart HR col ritmo della sessione.</string>
+    <string name="bio_set_surface_home_title">Chip bio in Home Today</string>
+    <string name="bio_set_surface_home_sub">La narrativa del mattino con mini-chip sotto.</string>
+    <string name="bio_set_surface_insight_title">Pattern cross-signal in Insight</string>
+    <string name="bio_set_surface_insight_sub">Correlazioni settimanali PRO tra bio e pratica.</string>
+
+    <string name="bio_set_tier_free">Free</string>
+    <string name="bio_set_tier_pro">Pro</string>
+    <string name="bio_set_pro_title">Hai tutto quello che ti serve.</string>
+    <string name="bio_set_pro_desc">Visualizzazione, sovranità e GDPR completo sono inclusi in Free — e sempre lo saranno. Pro è per insight AI e correlazioni multi-settimana, non per possedere i tuoi dati.</string>
+    <string name="bio_set_pro_perk1">Pattern cross-signal a 6 settimane</string>
+    <string name="bio_set_pro_perk2">Narrative AI personalizzate, contesto più lungo</string>
+    <string name="bio_set_pro_perk3">Dettaglio HRV nella card post-meditazione</string>
+    <string name="bio_set_pro_cta">Vedi cosa c\'è in Pro</string>
+
+    <string name="bio_set_footnote">Le modifiche si salvano automaticamente. Calmify non legge mai dati corporei al di fuori dei segnali che hai attivato sopra.</string>
 </resources>

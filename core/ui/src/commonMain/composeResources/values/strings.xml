@@ -1938,4 +1938,72 @@
     <string name="bio_narrative_source_hrv">HRV</string>
     <string name="bio_narrative_source_baseline">Your 30-day baseline</string>
 
+    <!-- ====================================================================
+         Bio-Signal Phase 9.1.3 — BioSettingsScreen (master control panel).
+         ==================================================================== -->
+
+    <string name="bio_set_topbar">Bio-signals</string>
+    <string name="bio_set_help_a11y">Help</string>
+
+    <string name="bio_set_master_title">Bio-signal integration</string>
+    <string name="bio_set_master_sub">Body data threads quietly into your day</string>
+    <string name="bio_set_status_connected">Connected · %1$s via %2$s</string>
+    <string name="bio_set_status_connected_no_source">Connected</string>
+    <string name="bio_set_status_not_connected">Not connected</string>
+    <string name="bio_set_status_meta">Last sync %1$s ago · %2$d samples today</string>
+    <string name="bio_set_reactivate_body">Bio-signal is off. Nothing is being read or stored. Your existing data is preserved until you choose to delete it.</string>
+    <string name="bio_set_reactivate_cta">Reactivate</string>
+
+    <string name="bio_set_section_permissions">What we read</string>
+    <string name="bio_set_permissions_help">Each signal is opt-in. Turning one off stops new readings immediately — and you can delete what\'s already there.</string>
+    <string name="bio_set_delete_collected">Delete collected data</string>
+    <string name="bio_set_perm_why_hr">Resting + during meditation. Powers the body-followed narrative.</string>
+    <string name="bio_set_perm_why_hrv">Subtle nervous-system signal. Powers PRO correlation insight.</string>
+    <string name="bio_set_perm_why_sleep">Duration and stages. Threads into the morning narrative.</string>
+    <string name="bio_set_perm_why_steps">Light activity context. Never shown as a goal.</string>
+    <string name="bio_set_perm_why_resting_hr">Trend baseline. Helps distinguish "off day" from "actually unusual".</string>
+    <string name="bio_set_perm_why_spo2">Optional. Off by default — read only when you explicitly request it.</string>
+    <string name="bio_set_perm_why_activity">Workouts and movement bouts. Context only — never a target.</string>
+
+    <string name="bio_set_section_sources">Where it comes from</string>
+    <string name="bio_set_sources_help">Devices and apps Calmify is reading from. Each one keeps its own permissions in your OS health hub.</string>
+    <string name="bio_set_source_options_a11y">Source options</string>
+    <string name="bio_set_add_source_title">Add another source</string>
+    <string name="bio_set_add_source_sub">Health Connect</string>
+
+    <string name="bio_set_section_privacy">Privacy &amp; data</string>
+    <string name="bio_set_privacy_help">Your body data is yours. Look at what we have, take it elsewhere, or remove it entirely — without asking permission.</string>
+    <string name="bio_set_nav_inventory_title">What we have, where it came from</string>
+    <string name="bio_set_nav_inventory_sub">Per-signal log of every reading and its source</string>
+    <string name="bio_set_nav_export_title">Export everything</string>
+    <string name="bio_set_nav_export_sub">Portable JSON archive · GDPR Art. 20</string>
+    <string name="bio_set_nav_delete_title">Delete all bio data</string>
+    <string name="bio_set_nav_delete_sub">Permanent · GDPR Art. 17 · cannot be undone</string>
+    <string name="bio_set_tradeoff_title">Upload raw samples to Calmify</string>
+    <string name="bio_set_tradeoff_sub">Required only for advanced PRO insights</string>
+    <string name="bio_set_tradeoff_expand">See the privacy ↔ quality tradeoff</string>
+    <string name="bio_set_tradeoff_body">By default Calmify computes narratives on your phone and only stores small daily summaries. Turning this on sends raw HRV and heart-rate samples (encrypted) to our servers so multi-week correlations can run server-side. You can turn this off and wipe the cloud copy at any time from "Delete all bio data". On-device narratives keep working either way.</string>
+
+    <string name="bio_set_section_surfaces">Where it shows up</string>
+    <string name="bio_set_surfaces_help">Each surface is on by default — and each can be quieted without touching the others.</string>
+    <string name="bio_set_surface_journal_title">Narrative banner in Journal</string>
+    <string name="bio_set_surface_journal_sub">A single observational line above the composer.</string>
+    <string name="bio_set_surface_meditation_title">Body-followed card after meditation</string>
+    <string name="bio_set_surface_meditation_sub">Mini HR chart with the session\'s pacing.</string>
+    <string name="bio_set_surface_home_title">Bio chips in Home Today</string>
+    <string name="bio_set_surface_home_sub">The morning narrative with mini-chips below.</string>
+    <string name="bio_set_surface_insight_title">Cross-signal patterns in Insight</string>
+    <string name="bio_set_surface_insight_sub">PRO-only weekly correlations between bio and practice.</string>
+
+    <string name="bio_set_tier_free">Free</string>
+    <string name="bio_set_tier_pro">Pro</string>
+    <string name="bio_set_pro_title">You have everything you need.</string>
+    <string name="bio_set_pro_desc">Viewing, sovereignty and full GDPR are included in Free — and always will be. Pro is for AI insight and multi-week correlations, not for owning your data.</string>
+    <string name="bio_set_pro_perk1">Six-week cross-signal patterns</string>
+    <string name="bio_set_pro_perk2">Personalised AI narratives, longer context</string>
+    <string name="bio_set_pro_perk3">HRV detail in the post-meditation card</string>
+    <string name="bio_set_pro_cta">See what\'s in Pro</string>
+
+    <string name="bio_set_footnote">Changes save automatically. Calmify never reads body data outside the signals you\'ve turned on above.</string>
+
 </resources>

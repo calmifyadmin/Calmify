@@ -1677,4 +1677,80 @@ object Strings {
         val barsA11y: StringResource get() = Res.string.bio_xs_bars_a11y
         val dismissA11y: StringResource get() = Res.string.bio_xs_dismiss_a11y
     }
+
+    /**
+     * BioSettingsScreen (Phase 9.1.3) — master control panel. Lives at
+     * Settings → "Bio-segnali". 6 sections matching the mockup.
+     */
+    object BioSettings {
+        val topbar: StringResource get() = Res.string.bio_set_topbar
+        val helpA11y: StringResource get() = Res.string.bio_set_help_a11y
+
+        // 1. Master toggle
+        val masterTitle: StringResource get() = Res.string.bio_set_master_title
+        val masterSub: StringResource get() = Res.string.bio_set_master_sub
+        val statusConnected: StringResource get() = Res.string.bio_set_status_connected
+        val statusConnectedNoSource: StringResource get() = Res.string.bio_set_status_connected_no_source
+        val statusNotConnected: StringResource get() = Res.string.bio_set_status_not_connected
+        val statusMeta: StringResource get() = Res.string.bio_set_status_meta
+        val reactivateBody: StringResource get() = Res.string.bio_set_reactivate_body
+        val reactivateCta: StringResource get() = Res.string.bio_set_reactivate_cta
+
+        // 2. Permissions
+        val sectionPermissions: StringResource get() = Res.string.bio_set_section_permissions
+        val permissionsHelp: StringResource get() = Res.string.bio_set_permissions_help
+        val deleteCollected: StringResource get() = Res.string.bio_set_delete_collected
+        val permWhyHr: StringResource get() = Res.string.bio_set_perm_why_hr
+        val permWhyHrv: StringResource get() = Res.string.bio_set_perm_why_hrv
+        val permWhySleep: StringResource get() = Res.string.bio_set_perm_why_sleep
+        val permWhySteps: StringResource get() = Res.string.bio_set_perm_why_steps
+        val permWhyRestingHr: StringResource get() = Res.string.bio_set_perm_why_resting_hr
+        val permWhySpo2: StringResource get() = Res.string.bio_set_perm_why_spo2
+        val permWhyActivity: StringResource get() = Res.string.bio_set_perm_why_activity
+
+        // 3. Sources
+        val sectionSources: StringResource get() = Res.string.bio_set_section_sources
+        val sourcesHelp: StringResource get() = Res.string.bio_set_sources_help
+        val sourceOptionsA11y: StringResource get() = Res.string.bio_set_source_options_a11y
+        val addSourceTitle: StringResource get() = Res.string.bio_set_add_source_title
+        val addSourceSub: StringResource get() = Res.string.bio_set_add_source_sub
+
+        // 4. Privacy & data
+        val sectionPrivacy: StringResource get() = Res.string.bio_set_section_privacy
+        val privacyHelp: StringResource get() = Res.string.bio_set_privacy_help
+        val navInventoryTitle: StringResource get() = Res.string.bio_set_nav_inventory_title
+        val navInventorySub: StringResource get() = Res.string.bio_set_nav_inventory_sub
+        val navExportTitle: StringResource get() = Res.string.bio_set_nav_export_title
+        val navExportSub: StringResource get() = Res.string.bio_set_nav_export_sub
+        val navDeleteTitle: StringResource get() = Res.string.bio_set_nav_delete_title
+        val navDeleteSub: StringResource get() = Res.string.bio_set_nav_delete_sub
+        val tradeoffTitle: StringResource get() = Res.string.bio_set_tradeoff_title
+        val tradeoffSub: StringResource get() = Res.string.bio_set_tradeoff_sub
+        val tradeoffExpand: StringResource get() = Res.string.bio_set_tradeoff_expand
+        val tradeoffBody: StringResource get() = Res.string.bio_set_tradeoff_body
+
+        // 5. Surfaces
+        val sectionSurfaces: StringResource get() = Res.string.bio_set_section_surfaces
+        val surfacesHelp: StringResource get() = Res.string.bio_set_surfaces_help
+        val surfaceJournalTitle: StringResource get() = Res.string.bio_set_surface_journal_title
+        val surfaceJournalSub: StringResource get() = Res.string.bio_set_surface_journal_sub
+        val surfaceMeditationTitle: StringResource get() = Res.string.bio_set_surface_meditation_title
+        val surfaceMeditationSub: StringResource get() = Res.string.bio_set_surface_meditation_sub
+        val surfaceHomeTitle: StringResource get() = Res.string.bio_set_surface_home_title
+        val surfaceHomeSub: StringResource get() = Res.string.bio_set_surface_home_sub
+        val surfaceInsightTitle: StringResource get() = Res.string.bio_set_surface_insight_title
+        val surfaceInsightSub: StringResource get() = Res.string.bio_set_surface_insight_sub
+
+        // 6. PRO card
+        val tierFree: StringResource get() = Res.string.bio_set_tier_free
+        val tierPro: StringResource get() = Res.string.bio_set_tier_pro
+        val proTitle: StringResource get() = Res.string.bio_set_pro_title
+        val proDesc: StringResource get() = Res.string.bio_set_pro_desc
+        val proPerk1: StringResource get() = Res.string.bio_set_pro_perk1
+        val proPerk2: StringResource get() = Res.string.bio_set_pro_perk2
+        val proPerk3: StringResource get() = Res.string.bio_set_pro_perk3
+        val proCta: StringResource get() = Res.string.bio_set_pro_cta
+
+        val footnote: StringResource get() = Res.string.bio_set_footnote
+    }
 }

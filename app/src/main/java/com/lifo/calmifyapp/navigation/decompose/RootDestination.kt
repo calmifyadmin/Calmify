@@ -56,6 +56,8 @@ sealed interface RootDestination {
     // === Bio-Signal Integration (Phase 2.UI + 3, 2026-05-11) ===
     @Serializable data object BioContext : RootDestination
     @Serializable data object BioOnboarding : RootDestination
+    /** Phase 9.1.3 — master Bio-Signal settings panel. */
+    @Serializable data object BioSettings : RootDestination
     // === Holistic Growth (Sprint 1+2) ===
     @Serializable data object Habits : RootDestination
     @Serializable data object Meditation : RootDestination

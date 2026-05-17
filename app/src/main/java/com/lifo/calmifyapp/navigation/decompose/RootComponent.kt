@@ -110,6 +110,8 @@ class RootComponent(
         // Bio-Signal Integration (Phase 2.UI + 3, 2026-05-11)
         is RootDestination.BioContext -> Child.BioContext(context)
         is RootDestination.BioOnboarding -> Child.BioOnboarding(context)
+        // Bio-Signal master Settings (Phase 9.1.3)
+        is RootDestination.BioSettings -> Child.BioSettings(context)
         // Holistic Growth (Sprint 1+2)
         is RootDestination.Habits -> Child.Habits(context)
         is RootDestination.Meditation -> Child.Meditation(context)
@@ -376,6 +378,10 @@ class RootComponent(
     }
 
     @OptIn(DelicateDecomposeApi::class)
+    fun navigateToBioSettings() {
+        navigation.push(RootDestination.BioSettings)
+    }
+
     fun navigateToBioOnboarding() {
         navigation.push(RootDestination.BioOnboarding)
     }
@@ -498,6 +504,7 @@ class RootComponent(
         // Bio-Signal Integration (Phase 2.UI + 3, 2026-05-11)
         data class BioContext(override val componentContext: ComponentContext) : Child
         data class BioOnboarding(override val componentContext: ComponentContext) : Child
+        data class BioSettings(override val componentContext: ComponentContext) : Child
         // Holistic Growth (Sprint 1+2)
         data class Habits(override val componentContext: ComponentContext) : Child
         data class Meditation(override val componentContext: ComponentContext) : Child
