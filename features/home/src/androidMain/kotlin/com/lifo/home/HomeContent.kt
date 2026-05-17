@@ -139,11 +139,15 @@ internal fun HomeContent(
     val crossSignalPattern by viewModel.crossSignalPattern.collectAsState()
     val weeklyBioNarrative by viewModel.weeklyBioNarrative.collectAsState()
     val subscriptionRepository: SubscriptionRepository = koinInject()
-    val isPro by remember(subscriptionRepository) {
+    val bioPreview: com.lifo.util.preview.BioPreviewProvider = koinInject()
+    val isProRaw by remember(subscriptionRepository) {
         subscriptionRepository.observeSubscription().map {
             it.tier == SubscriptionRepository.SubscriptionTier.PRO
         }
     }.collectAsState(initial = false)
+    // Phase 9.2.4 — preview mode bypasses the PRO gate so the user can SEE
+    // every card design without requiring a real PRO subscription.
+    val isPro = isProRaw || bioPreview.enabled
     val onRefresh: () -> Unit = {
         isRefreshing = true
         coroutineScope.launch {

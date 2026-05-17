@@ -4,6 +4,8 @@ import com.lifo.util.model.BioSignal
 import com.lifo.util.model.BioSignalDataType
 import com.lifo.util.model.BioSignalSource
 import com.lifo.util.model.ConfidenceLevel
+import com.lifo.util.preview.BioPreviewProvider
+import com.lifo.util.preview.PreviewConfidence
 import com.lifo.util.repository.BioSignalRepository
 import kotlinx.datetime.Clock
 import kotlin.time.Duration.Companion.hours
@@ -31,6 +33,7 @@ import kotlin.time.Duration.Companion.hours
  */
 class GetSleepNudgeUseCase(
     private val repository: BioSignalRepository,
+    private val preview: BioPreviewProvider,
 ) {
     suspend operator fun invoke(): SleepNudge? {
         val now = Clock.System.now()
@@ -40,7 +43,7 @@ class GetSleepNudgeUseCase(
             .getRawSamples(BioSignalDataType.SLEEP, windowFrom, now)
             .filterIsInstance<BioSignal.SleepSession>()
             .maxByOrNull { it.endTimestamp.toEpochMilliseconds() }
-            ?: return null
+            ?: return previewNudgeOrNull()
 
         val durationMinutes = (lastSleep.durationSeconds / 60L).toInt()
         if (durationMinutes <= 0) return null
@@ -64,6 +67,20 @@ class GetSleepNudgeUseCase(
             )
             else -> null
         }
+    }
+
+    /**
+     * Phase 9.2.4 — preview fallback so fresh-install users see the banner.
+     * Returns SolidRest (the friendlier of the two variants) with LOW
+     * confidence so the BioConfidenceFooter tells the user it's illustrative.
+     */
+    private fun previewNudgeOrNull(): SleepNudge? {
+        if (!preview.enabled) return null
+        return SleepNudge.SolidRest(
+            durationMinutes = 7 * 60 + 38,   // 7h 38m
+            confidence = PreviewConfidence,
+            source = preview.previewSource,
+        )
     }
 
     companion object {

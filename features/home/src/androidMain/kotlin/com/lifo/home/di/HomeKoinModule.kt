@@ -31,12 +31,13 @@ val homeKoinModule = module {
     factory { GetActivityImpactUseCase() }
     factory { GetGrowthProgressUseCase() }
     factory { GetWellbeingTrendUseCase() }
-    factory { GetHomeBioContextUseCase(get()) }
-    factory { GetCrossSignalPatternUseCase(get(), get(), get()) }
+    factory { GetHomeBioContextUseCase(get(), get()) }
+    factory { GetCrossSignalPatternUseCase(get(), get(), get(), get()) }
     factory {
         GetWeeklyBioNarrativeUseCase(
             repository = get(),
             networkClient = get(),
+            preview = get(),
             localeProvider = { java.util.Locale.getDefault().language },
         )
     }

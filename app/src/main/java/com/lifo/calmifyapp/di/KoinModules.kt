@@ -111,6 +111,14 @@ object BackendConfig {
 
     /** SocialGraph — follow/block + public profile (Phase 5) */
     const val SOCIAL_GRAPH_REST = true
+
+    /** Bio-Signal preview mode (Phase 9.2.4 — 2026-05-17). When ON, bio cards
+     *  whose underlying use case can't compute a real result will render
+     *  illustrative preview data (confidence: LOW, source: "Preview wearable")
+     *  so the user can SEE the design work without waiting for 7+ days of
+     *  Health Connect data. Honest-by-confidence — every preview surface tells
+     *  the user it's illustrative. Should be flipped OFF for Play Store release. */
+    const val BIO_PREVIEW = true
 }
 
 // Database module: SQLDelight database, queries, connectivity
@@ -223,6 +231,13 @@ val restOverrideModule = module {
         single<com.lifo.util.repository.BioNarrativeNetworkClient> {
             com.lifo.network.repository.KtorBioNarrativeNetworkClient(get())
         }
+    }
+    // Phase 9.2.4 — preview provider. Real bio use cases consult this as a
+    // fallback when their inputs can't yield a real result; user sees the
+    // design work immediately. Toggle in BackendConfig.BIO_PREVIEW.
+    single<com.lifo.util.preview.BioPreviewProvider> {
+        if (BackendConfig.BIO_PREVIEW) com.lifo.util.preview.DefaultBioPreviewProvider()
+        else com.lifo.util.preview.NoopBioPreviewProvider()
     }
 
     // Stripe subscription: runtime-gated by Remote Config `premium_enabled`.

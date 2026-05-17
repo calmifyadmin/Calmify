@@ -5,6 +5,8 @@ import com.lifo.util.model.BioSignal
 import com.lifo.util.model.BioSignalDataType
 import com.lifo.util.model.BioSignalSource
 import com.lifo.util.model.ConfidenceLevel
+import com.lifo.util.preview.BioPreviewProvider
+import com.lifo.util.preview.PreviewConfidence
 import com.lifo.util.repository.BioNarrativeNetworkClient
 import com.lifo.util.repository.BioSignalRepository
 import kotlinx.datetime.Clock
@@ -35,11 +37,12 @@ import kotlin.time.Duration.Companion.days
 class GetWeeklyBioNarrativeUseCase(
     private val repository: BioSignalRepository,
     private val networkClient: BioNarrativeNetworkClient,
+    private val preview: BioPreviewProvider,
     private val localeProvider: () -> String = { "en" },
 ) {
     suspend operator fun invoke(): WeeklyBioNarrative? {
-        val baseline = repository.getBaseline(BioSignalDataType.HRV) ?: return null
-        if (baseline.p50 <= 0.0) return null
+        val baseline = repository.getBaseline(BioSignalDataType.HRV) ?: return previewNarrativeOrNull()
+        if (baseline.p50 <= 0.0) return previewNarrativeOrNull()
 
         val now = Clock.System.now()
         val weekAgo = now.minus(7.days)
@@ -47,7 +50,7 @@ class GetWeeklyBioNarrativeUseCase(
             .getRawSamples(BioSignalDataType.HRV, weekAgo, now)
             .filterIsInstance<BioSignal.HrvSample>()
 
-        if (samples.size < MIN_WEEK_SAMPLES) return null
+        if (samples.size < MIN_WEEK_SAMPLES) return previewNarrativeOrNull()
 
         // Per-day average so heavy days don't dominate
         val dailyAverages = samples
@@ -55,7 +58,7 @@ class GetWeeklyBioNarrativeUseCase(
             .values
             .map { day -> day.map { it.rmssdMillis }.average() }
 
-        if (dailyAverages.size < MIN_DAYS_COVERED) return null
+        if (dailyAverages.size < MIN_DAYS_COVERED) return previewNarrativeOrNull()
 
         val weekAvgMs = dailyAverages.average()
         val baselineMedianMs = baseline.p50
@@ -67,7 +70,7 @@ class GetWeeklyBioNarrativeUseCase(
             deltaPercent <= -MEANINGFUL_DELTA_PERCENT -> NarrativeFlavor.LOWER
             absDelta in STEADY_BAND_MIN..STEADY_BAND_MAX &&
                 dailyAverages.size >= STEADY_MIN_DAYS -> NarrativeFlavor.STEADY
-            else -> return null
+            else -> return previewNarrativeOrNull()
         }
 
         // Confidence floor across the rendered week's samples (onestà radicale).
@@ -144,6 +147,25 @@ class GetWeeklyBioNarrativeUseCase(
         ConfidenceLevel.LOW -> 0
         ConfidenceLevel.MEDIUM -> 1
         ConfidenceLevel.HIGH -> 2
+    }
+
+    /**
+     * Phase 9.2.4 — preview fallback so fresh-install PRO users see the
+     * weekly narrative card. STEADY flavor with illustrative values, LOW
+     * confidence honors the data-confidence rule.
+     */
+    private fun previewNarrativeOrNull(): WeeklyBioNarrative? {
+        if (!preview.enabled) return null
+        return WeeklyBioNarrative(
+            flavor = NarrativeFlavor.STEADY,
+            weekAvgMs = 41,
+            baselineMedianMs = 42,
+            deltaPercent = -2,
+            daysCovered = 6,
+            confidence = PreviewConfidence,
+            source = preview.previewSource,
+            aiNarrative = null,
+        )
     }
 
     companion object {

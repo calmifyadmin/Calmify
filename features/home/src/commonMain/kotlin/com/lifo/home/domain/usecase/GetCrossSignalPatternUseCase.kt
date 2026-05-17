@@ -5,6 +5,8 @@ import com.lifo.util.model.BioSignal
 import com.lifo.util.model.BioSignalDataType
 import com.lifo.util.model.BioSignalSource
 import com.lifo.util.model.ConfidenceLevel
+import com.lifo.util.preview.BioPreviewProvider
+import com.lifo.util.preview.PreviewConfidence
 import com.lifo.util.repository.BioSignalRepository
 import com.lifo.util.repository.MeditationRepository
 import kotlinx.coroutines.flow.first
@@ -36,9 +38,10 @@ class GetCrossSignalPatternUseCase(
     private val authProvider: AuthProvider,
     private val meditationRepository: MeditationRepository,
     private val bioRepository: BioSignalRepository,
+    private val preview: BioPreviewProvider,
 ) {
     suspend operator fun invoke(): CrossSignalPattern? {
-        val userId = authProvider.currentUserId ?: return null
+        val userId = authProvider.currentUserId ?: return previewPatternOrNull()
 
         val tz = TimeZone.currentSystemDefault()
         val now = Clock.System.now()
@@ -57,7 +60,7 @@ class GetCrossSignalPatternUseCase(
             .getRawSamples(BioSignalDataType.HRV, windowStartInstant, now)
             .filterIsInstance<BioSignal.HrvSample>()
 
-        if (hrvSamples.isEmpty()) return null
+        if (hrvSamples.isEmpty()) return previewPatternOrNull()
 
         // ── Bucket both by week index 0..(WINDOW_WEEKS-1) ───────────────────
         val sessionsByWeek = IntArray(WINDOW_WEEKS)
@@ -82,7 +85,7 @@ class GetCrossSignalPatternUseCase(
         }
 
         val populatedWeeks = weeklyHrvAvg.count { it != null }
-        if (populatedWeeks < MIN_POPULATED_WEEKS) return null
+        if (populatedWeeks < MIN_POPULATED_WEEKS) return previewPatternOrNull()
 
         // ── Phase 6.4 — personalize "high-meditation" threshold ─────────────
         // Old: hardcoded ≥3 sessions/week. New: > the user's own weekly median.
@@ -102,13 +105,13 @@ class GetCrossSignalPatternUseCase(
         val lowIndices = (0 until WINDOW_WEEKS).filter {
             sessionsByWeek[it] < highThreshold && weeklyHrvAvg[it] != null
         }
-        if (highIndices.size < MIN_BUCKET_WEEKS || lowIndices.size < MIN_BUCKET_WEEKS) return null
+        if (highIndices.size < MIN_BUCKET_WEEKS || lowIndices.size < MIN_BUCKET_WEEKS) return previewPatternOrNull()
 
         val highAvg = highIndices.mapNotNull { weeklyHrvAvg[it] }.average()
         val lowAvg = lowIndices.mapNotNull { weeklyHrvAvg[it] }.average()
-        if (lowAvg <= 0.0) return null
+        if (lowAvg <= 0.0) return previewPatternOrNull()
         val liftPercent = ((highAvg - lowAvg) / lowAvg * 100.0).toInt()
-        if (liftPercent < MEANINGFUL_LIFT_PERCENT) return null
+        if (liftPercent < MEANINGFUL_LIFT_PERCENT) return previewPatternOrNull()
 
         val overallHrvAvg = weeklyHrvAvg.filterNotNull().average()
         val sessionAvg = sessionsByWeek.average()
@@ -160,6 +163,32 @@ class GetCrossSignalPatternUseCase(
         ConfidenceLevel.LOW -> 0
         ConfidenceLevel.MEDIUM -> 1
         ConfidenceLevel.HIGH -> 2
+    }
+
+    /**
+     * Phase 9.2.4 — preview fallback so fresh-install users see the PRO
+     * cross-signal pattern card. Mirrors the mockup's "Meditation × HRV"
+     * narrative shape with illustrative values + LOW confidence.
+     */
+    private fun previewPatternOrNull(): CrossSignalPattern? {
+        if (!preview.enabled) return null
+        return CrossSignalPattern(
+            windowWeeks = 6,
+            sessionsPerWeekAvg = 3.7,
+            hrvAvgMillis = 41.0,
+            liftPercent = 15,
+            highMeditationThreshold = 3,
+            medBars = listOf(
+                BarPoint(2f, false), BarPoint(4f, true), BarPoint(2f, false),
+                BarPoint(5f, true), BarPoint(4f, true), BarPoint(5f, true),
+            ),
+            hrvBars = listOf(
+                BarPoint(36f, false), BarPoint(45f, true), BarPoint(38f, false),
+                BarPoint(46f, true), BarPoint(43f, true), BarPoint(44f, true),
+            ),
+            confidence = PreviewConfidence,
+            source = preview.previewSource,
+        )
     }
 
     companion object {

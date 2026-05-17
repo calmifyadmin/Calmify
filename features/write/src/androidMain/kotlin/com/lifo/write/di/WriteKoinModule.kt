@@ -22,7 +22,7 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val writeKoinModule = module {
-    factory { GetSleepNudgeUseCase(get()) }
+    factory { GetSleepNudgeUseCase(get(), get()) }
 
     viewModel { WriteViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { GratitudeViewModel(get(), get()) }

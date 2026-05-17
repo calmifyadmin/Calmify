@@ -5,6 +5,8 @@ import com.lifo.util.model.BioSignal
 import com.lifo.util.model.BioSignalDataType
 import com.lifo.util.model.BioSignalSource
 import com.lifo.util.model.ConfidenceLevel
+import com.lifo.util.preview.BioPreviewProvider
+import com.lifo.util.preview.PreviewConfidence
 import com.lifo.util.repository.BioSignalRepository
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
@@ -24,6 +26,7 @@ import kotlin.time.Duration.Companion.hours
  */
 class GetHomeBioContextUseCase(
     private val repository: BioSignalRepository,
+    private val preview: BioPreviewProvider,
 ) {
     suspend operator fun invoke(): HomeBioContext? {
         val now = Clock.System.now()
@@ -36,7 +39,14 @@ class GetHomeBioContextUseCase(
         val stepSamples = repository.getRawSamples(BioSignalDataType.STEPS, windowFrom, now)
 
         if (sleepSamples.isEmpty() && hrSamples.isEmpty() && restingHrSamples.isEmpty() && stepSamples.isEmpty()) {
-            return null
+            // Phase 9.2.4 — preview fallback so fresh-install users see the card.
+            return if (preview.enabled) HomeBioContext(
+                sleepDurationMinutes = 7 * 60 + 24,   // 7h 24m
+                heartRateBpm = 64,
+                stepsToday = 3127,
+                confidenceFloor = PreviewConfidence,
+                primarySource = preview.previewSource,
+            ) else null
         }
 
         val lastSleep = sleepSamples
