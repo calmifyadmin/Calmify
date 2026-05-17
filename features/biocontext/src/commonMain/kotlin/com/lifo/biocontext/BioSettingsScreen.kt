@@ -202,6 +202,13 @@ fun BioSettingsScreen(
                     )
                     Spacer(Modifier.height(8.dp))
                     NavRow(
+                        icon = Icons.Outlined.AutoAwesome,
+                        title = stringResource(Strings.BioSettings.navPatternFeedTitle),
+                        sub = stringResource(Strings.BioSettings.navPatternFeedSub),
+                        onClick = { onIntent(BioSettingsContract.Intent.OpenPatternFeed) },
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    NavRow(
                         icon = Icons.Outlined.Download,
                         title = stringResource(Strings.BioSettings.navExportTitle),
                         sub = stringResource(Strings.BioSettings.navExportSub),

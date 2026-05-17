@@ -49,6 +49,7 @@ class BioSettingsViewModel(
             is BioSettingsContract.Intent.SetCloudUpload -> setCloudUpload(intent.enabled)
             is BioSettingsContract.Intent.SetSurfaceEnabled -> setSurfaceEnabled(intent.surface, intent.enabled)
             BioSettingsContract.Intent.OpenSubscription -> sendEffect(BioSettingsContract.Effect.NavigateToSubscription)
+            BioSettingsContract.Intent.OpenPatternFeed -> sendEffect(BioSettingsContract.Effect.NavigateToPatternFeed)
         }
     }
 

@@ -1720,6 +1720,8 @@ object Strings {
         val privacyHelp: StringResource get() = Res.string.bio_set_privacy_help
         val navInventoryTitle: StringResource get() = Res.string.bio_set_nav_inventory_title
         val navInventorySub: StringResource get() = Res.string.bio_set_nav_inventory_sub
+        val navPatternFeedTitle: StringResource get() = Res.string.bio_set_nav_pattern_feed_title
+        val navPatternFeedSub: StringResource get() = Res.string.bio_set_nav_pattern_feed_sub
         val navExportTitle: StringResource get() = Res.string.bio_set_nav_export_title
         val navExportSub: StringResource get() = Res.string.bio_set_nav_export_sub
         val navDeleteTitle: StringResource get() = Res.string.bio_set_nav_delete_title
@@ -1795,6 +1797,46 @@ object Strings {
         val emptyTitle: StringResource get() = Res.string.bio_tl_empty_title
         val emptyBody: StringResource get() = Res.string.bio_tl_empty_body
         val chartA11y: StringResource get() = Res.string.bio_tl_chart_a11y
+    }
+
+    /**
+     * Bio Pattern Feed (Phase 9.2.2) — aggregate surface that shows all the
+     * cross-signal correlations the app has detected (sleep×mood, HRV trend,
+     * sleep drift). Each pattern self-gates: it appears only when the data
+     * crosses the meaningfulness floor.
+     */
+    object BioPatternFeed {
+        val topbarTitle: StringResource get() = Res.string.bio_pf_topbar_title
+        val lede: StringResource get() = Res.string.bio_pf_lede
+        val emptyTitle: StringResource get() = Res.string.bio_pf_empty_title
+        val emptyBody: StringResource get() = Res.string.bio_pf_empty_body
+        val patternLabel: StringResource get() = Res.string.bio_pf_pattern_label
+        val trendLabel: StringResource get() = Res.string.bio_pf_trend_label
+        val trendRowNow: StringResource get() = Res.string.bio_pf_trend_row_now
+        val trendRowPast: StringResource get() = Res.string.bio_pf_trend_row_past
+        val hrvUnit: StringResource get() = Res.string.bio_pf_hrv_unit
+        val sleepUnit: StringResource get() = Res.string.bio_pf_sleep_unit
+
+        val sleepMoodTitle: StringResource get() = Res.string.bio_pf_sleep_mood_title
+        val sleepMoodMeta: StringResource get() = Res.string.bio_pf_sleep_mood_meta
+        val sleepMoodNarrative: StringResource get() = Res.string.bio_pf_sleep_mood_narrative
+        val sleepMoodRowGoodLabel: StringResource get() = Res.string.bio_pf_sleep_mood_row_good_label
+        val sleepMoodRowGoodSub: StringResource get() = Res.string.bio_pf_sleep_mood_row_good_sub
+        val sleepMoodRowPoorLabel: StringResource get() = Res.string.bio_pf_sleep_mood_row_poor_label
+        val sleepMoodRowPoorSub: StringResource get() = Res.string.bio_pf_sleep_mood_row_poor_sub
+        val sleepMoodDelta: StringResource get() = Res.string.bio_pf_sleep_mood_delta
+        val sleepMoodBarsA11y: StringResource get() = Res.string.bio_pf_sleep_mood_bars_a11y
+
+        val hrvTrendTitle: StringResource get() = Res.string.bio_pf_hrv_trend_title
+        val hrvTrendMeta: StringResource get() = Res.string.bio_pf_hrv_trend_meta
+        val hrvTrendNarrative: StringResource get() = Res.string.bio_pf_hrv_trend_narrative
+        val hrvTrendBarsA11y: StringResource get() = Res.string.bio_pf_hrv_trend_bars_a11y
+
+        val sleepDriftTitle: StringResource get() = Res.string.bio_pf_sleep_drift_title
+        val sleepDriftMeta: StringResource get() = Res.string.bio_pf_sleep_drift_meta
+        val sleepDriftUp: StringResource get() = Res.string.bio_pf_sleep_drift_up
+        val sleepDriftDown: StringResource get() = Res.string.bio_pf_sleep_drift_down
+        val sleepDriftBarsA11y: StringResource get() = Res.string.bio_pf_sleep_drift_bars_a11y
     }
 
     /** Predictive baseline drift card (Phase 9.2.5). */

@@ -65,11 +65,15 @@ object BioSettingsContract {
 
         /** PRO card CTA — nav to subscription. */
         data object OpenSubscription : Intent
+
+        /** Phase 9.2.2 — nav to BioPatternFeedScreen (aggregate correlations). */
+        data object OpenPatternFeed : Intent
     }
 
     sealed interface Effect : MviContract.Effect {
         data object NavigateToBioContext : Effect
         data object NavigateToBioOnboarding : Effect
+        data object NavigateToPatternFeed : Effect
         data object NavigateToSubscription : Effect
         data class ShareExport(val jsonPayload: String) : Effect
         data class Toast(val messageKey: String) : Effect

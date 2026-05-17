@@ -762,11 +762,17 @@ fun DecomposeApp(
                             navigateToBioContext = { rootComponent.navigateToBioContext() },
                             navigateToBioOnboarding = { rootComponent.navigateToBioOnboarding() },
                             navigateToSubscription = { rootComponent.navigateToSubscription() },
+                            navigateToPatternFeed = { rootComponent.navigateToBioPatternFeed() },
                         )
                     }
                     is RootComponent.Child.BioTimeline -> {
                         com.lifo.biocontext.BioTimelineRouteContent(
                             signal = instance.signal,
+                            navigateBack = { rootComponent.navigateBack() },
+                        )
+                    }
+                    is RootComponent.Child.BioPatternFeed -> {
+                        com.lifo.biocontext.BioPatternFeedRouteContent(
                             navigateBack = { rootComponent.navigateBack() },
                         )
                     }

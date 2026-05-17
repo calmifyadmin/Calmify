@@ -32,6 +32,7 @@ fun BioSettingsRouteContent(
     navigateToBioContext: () -> Unit,
     navigateToBioOnboarding: () -> Unit,
     navigateToSubscription: () -> Unit,
+    navigateToPatternFeed: () -> Unit = {},
 ) {
     val viewModel: BioSettingsViewModel = koinViewModel(key = "biosettings_vm")
     val state by viewModel.state.collectAsState()
@@ -43,6 +44,7 @@ fun BioSettingsRouteContent(
                 BioSettingsContract.Effect.NavigateToBioContext -> navigateToBioContext()
                 BioSettingsContract.Effect.NavigateToBioOnboarding -> navigateToBioOnboarding()
                 BioSettingsContract.Effect.NavigateToSubscription -> navigateToSubscription()
+                BioSettingsContract.Effect.NavigateToPatternFeed -> navigateToPatternFeed()
                 is BioSettingsContract.Effect.ShareExport -> {
                     val cacheDir = File(context.cacheDir, "bio-export").apply { mkdirs() }
                     val file = File(cacheDir, "calmify-bio-${System.currentTimeMillis()}.json")

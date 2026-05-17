@@ -2041,4 +2041,39 @@
     <string name="bio_tl_empty_body">Quando il tuo wearable invierà qualche campione in più, il grafico si riempirà.</string>
     <string name="bio_tl_chart_a11y">Andamento di %1$s. Intervallo da %2$s a %3$s. Le linee verticali indicano note del diario e sessioni di meditazione.</string>
 
+    <!-- Bio-Signal Phase 9.2.2 — Pattern Feed -->
+    <string name="bio_pf_topbar_title">Pattern</string>
+    <string name="bio_pf_lede">Osservazioni cross-signal rilevate nei tuoi dati. Solo osservazione — mai causalità.</string>
+    <string name="bio_pf_empty_title">Nessun pattern per ora</string>
+    <string name="bio_pf_empty_body">I pattern emergono quando abbastanza giorni si allineano. Continua a tracciare — appariranno qui quando ci sarà qualcosa di onesto da dire.</string>
+    <string name="bio_pf_pattern_label">PATTERN</string>
+    <string name="bio_pf_trend_label">ANDAMENTO</string>
+    <string name="bio_pf_trend_row_now">Ora</string>
+    <string name="bio_pf_trend_row_past">%1$d giorni fa</string>
+    <string name="bio_pf_hrv_unit">ms mediana</string>
+    <string name="bio_pf_sleep_unit">sonno medio</string>
+
+    <string name="bio_pf_sleep_mood_title">Sonno × Umore</string>
+    <string name="bio_pf_sleep_mood_meta">Ultimi %1$d giorni</string>
+    <string name="bio_pf_sleep_mood_narrative">Quando hai dormito ≥ %1$dh, il tuo umore del giorno dopo è stato circa il %2$d%% più alto rispetto alle notti più corte.</string>
+    <string name="bio_pf_sleep_mood_row_good_label">Notti buone</string>
+    <string name="bio_pf_sleep_mood_row_good_sub">umore medio</string>
+    <string name="bio_pf_sleep_mood_row_poor_label">Altre notti</string>
+    <string name="bio_pf_sleep_mood_row_poor_sub">umore medio</string>
+    <string name="bio_pf_sleep_mood_delta">+%1$d%%</string>
+    <string name="bio_pf_sleep_mood_bars_a11y">Confronto sonno e umore. Le notti buone hanno umore %1$d%% più alto.</string>
+
+    <string name="bio_pf_hrv_trend_title">Andamento HRV</string>
+    <string name="bio_pf_hrv_trend_meta">Oggi vs %1$d giorni fa</string>
+    <string name="bio_pf_hrv_trend_narrative">La tua HRV mediana è cambiata del %1$s%% rispetto a %2$d giorni fa.</string>
+    <string name="bio_pf_hrv_trend_bars_a11y">Andamento HRV. Mediana attuale %1$d millisecondi rispetto a passata di %2$d millisecondi.</string>
+
+    <string name="bio_pf_sleep_drift_title">Deriva del sonno</string>
+    <string name="bio_pf_sleep_drift_meta">Oggi vs %1$d giorni fa</string>
+    <string name="bio_pf_sleep_drift_up">Stai dormendo circa il %1$d%% in più rispetto a %2$d giorni fa.</string>
+    <string name="bio_pf_sleep_drift_down">Stai dormendo circa il %1$d%% in meno rispetto a %2$d giorni fa.</string>
+    <string name="bio_pf_sleep_drift_bars_a11y">Andamento durata del sonno. Mediana attuale %1$s rispetto a passata %2$s.</string>
+    <string name="bio_set_nav_pattern_feed_title">Pattern</string>
+    <string name="bio_set_nav_pattern_feed_sub">Correlazioni cross-signal rilevate dall'app</string>
+
 </resources>

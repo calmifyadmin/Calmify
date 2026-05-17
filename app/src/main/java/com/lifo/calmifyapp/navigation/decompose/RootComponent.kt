@@ -114,6 +114,8 @@ class RootComponent(
         is RootDestination.BioSettings -> Child.BioSettings(context)
         // Bio-Signal Timeline drill-down (Phase 9.2.1)
         is RootDestination.BioTimeline -> Child.BioTimeline(context, destination.signal)
+        // Bio-Signal Pattern Feed (Phase 9.2.2)
+        is RootDestination.BioPatternFeed -> Child.BioPatternFeed(context)
         // Holistic Growth (Sprint 1+2)
         is RootDestination.Habits -> Child.Habits(context)
         is RootDestination.Meditation -> Child.Meditation(context)
@@ -394,6 +396,11 @@ class RootComponent(
     }
 
     @OptIn(DelicateDecomposeApi::class)
+    fun navigateToBioPatternFeed() {
+        navigation.push(RootDestination.BioPatternFeed)
+    }
+
+    @OptIn(DelicateDecomposeApi::class)
     fun navigateToEnvironment() {
         navigation.push(RootDestination.Environment)
     }
@@ -513,6 +520,7 @@ class RootComponent(
         data class BioOnboarding(override val componentContext: ComponentContext) : Child
         data class BioSettings(override val componentContext: ComponentContext) : Child
         data class BioTimeline(override val componentContext: ComponentContext, val signal: String) : Child
+        data class BioPatternFeed(override val componentContext: ComponentContext) : Child
         // Holistic Growth (Sprint 1+2)
         data class Habits(override val componentContext: ComponentContext) : Child
         data class Meditation(override val componentContext: ComponentContext) : Child
