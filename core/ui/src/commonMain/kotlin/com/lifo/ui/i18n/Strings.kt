@@ -1356,6 +1356,95 @@ object Strings {
         // Privacy statement
         val statementTitle: StringResource get() = Res.string.bio_statement_title
         val statementNoSellAds: StringResource get() = Res.string.bio_statement_no_sell_ads
+
+        // ── Phase 9.1.1 — full 1:1 rewrite of BioContextScreen ──────────────
+
+        // Header hero
+        val heroTitle: StringResource get() = Res.string.bio_ctx_hero_title
+        val heroLede: StringResource get() = Res.string.bio_ctx_hero_lede
+        val promiseTitle: StringResource get() = Res.string.bio_ctx_promise_title
+        val promiseBody: StringResource get() = Res.string.bio_ctx_promise_body
+        val promiseLink: StringResource get() = Res.string.bio_ctx_promise_link
+
+        // Section eyebrows (numbered 1..6)
+        val sectionConnections: StringResource get() = Res.string.bio_ctx_section_connections
+        val sectionInventory: StringResource get() = Res.string.bio_ctx_section_inventory
+        val sectionSent: StringResource get() = Res.string.bio_ctx_section_sent
+        val sectionConfidence: StringResource get() = Res.string.bio_ctx_section_confidence
+        val sectionRights: StringResource get() = Res.string.bio_ctx_section_rights
+        val sectionPromises: StringResource get() = Res.string.bio_ctx_section_promises
+
+        // Connections empty
+        val connectionsEmptyTitle: StringResource get() = Res.string.bio_ctx_connections_empty_title
+        val connectionsEmptyBody: StringResource get() = Res.string.bio_ctx_connections_empty_body
+
+        // Inventory
+        val inventorySub: StringResource get() = Res.string.bio_ctx_inventory_sub
+
+        // Window tabs (visible label + sub-label used in cell footer)
+        val windowSevenDays: StringResource get() = Res.string.bio_ctx_window_7d
+        val windowThirtyDays: StringResource get() = Res.string.bio_ctx_window_30d
+        val windowAllTime: StringResource get() = Res.string.bio_ctx_window_all
+        val windowSevenDaysSub: StringResource get() = Res.string.bio_ctx_window_7d_sub
+        val windowThirtyDaysSub: StringResource get() = Res.string.bio_ctx_window_30d_sub
+        val windowAllTimeSub: StringResource get() = Res.string.bio_ctx_window_all_sub
+
+        // Unit labels for inventory cells
+        val unitSamples: StringResource get() = Res.string.bio_ctx_unit_samples
+        val unitSessions: StringResource get() = Res.string.bio_ctx_unit_sessions
+        val unitDays: StringResource get() = Res.string.bio_ctx_unit_days
+
+        // Sent to server card
+        val sentEyebrow: StringResource get() = Res.string.bio_ctx_sent_eyebrow
+        val sentNarrative: StringResource get() = Res.string.bio_ctx_sent_narrative
+        val sentFooter: StringResource get() = Res.string.bio_ctx_sent_footer
+
+        // Confidence per source
+        val confidenceTitle: StringResource get() = Res.string.bio_ctx_confidence_title
+        val confidenceSub: StringResource get() = Res.string.bio_ctx_confidence_sub
+        val confidenceEmpty: StringResource get() = Res.string.bio_ctx_confidence_empty
+
+        // Rights (GDPR)
+        val rightsTitle: StringResource get() = Res.string.bio_ctx_rights_title
+        val rightsSub: StringResource get() = Res.string.bio_ctx_rights_sub
+        val actionExportArt20: StringResource get() = Res.string.bio_ctx_action_export_art20
+        val actionDisconnect: StringResource get() = Res.string.bio_ctx_action_disconnect
+        val actionDeleteArt17: StringResource get() = Res.string.bio_ctx_action_delete_art17
+        val rightsFineprint: StringResource get() = Res.string.bio_ctx_rights_fineprint
+
+        // Promises (4 no's)
+        val promisesTitle: StringResource get() = Res.string.bio_ctx_promises_title
+        val promisesSub: StringResource get() = Res.string.bio_ctx_promises_sub
+        val promise1Strong: StringResource get() = Res.string.bio_ctx_promise1_strong
+        val promise1Rest: StringResource get() = Res.string.bio_ctx_promise1_rest
+        val promise2Strong: StringResource get() = Res.string.bio_ctx_promise2_strong
+        val promise2Rest: StringResource get() = Res.string.bio_ctx_promise2_rest
+        val promise3Strong: StringResource get() = Res.string.bio_ctx_promise3_strong
+        val promise3Rest: StringResource get() = Res.string.bio_ctx_promise3_rest
+        val promise4Strong: StringResource get() = Res.string.bio_ctx_promise4_strong
+        val promise4Rest: StringResource get() = Res.string.bio_ctx_promise4_rest
+        val promisesFineprint: StringResource get() = Res.string.bio_ctx_promises_fineprint
+
+        // Sticky action bar
+        val actionExportShort: StringResource get() = Res.string.bio_ctx_action_export_short
+        val actionHowShort: StringResource get() = Res.string.bio_ctx_action_how_short
+
+        // Delete sheet (type-to-confirm)
+        val deleteSheetTitle: StringResource get() = Res.string.bio_ctx_delete_sheet_title
+        val deleteSheetBody: StringResource get() = Res.string.bio_ctx_delete_sheet_body
+        val deleteSheetPrompt: StringResource get() = Res.string.bio_ctx_delete_sheet_prompt
+        val deleteSheetConfirmCta: StringResource get() = Res.string.bio_ctx_delete_sheet_confirm_cta
+        val deleteSheetMismatch: StringResource get() = Res.string.bio_ctx_delete_sheet_mismatch
+        val deleteConfirmWord: StringResource get() = Res.string.bio_ctx_delete_confirm_word
+
+        // How sheet
+        val howSheetTitle: StringResource get() = Res.string.bio_ctx_how_sheet_title
+        val howSheetBody1: StringResource get() = Res.string.bio_ctx_how_sheet_body1
+        val howSheetBody2: StringResource get() = Res.string.bio_ctx_how_sheet_body2
+        val howSheetCta: StringResource get() = Res.string.bio_ctx_how_sheet_cta
+
+        // Centered fineprint
+        val fineprintWellness: StringResource get() = Res.string.bio_ctx_fineprint_wellness
     }
 
     /**

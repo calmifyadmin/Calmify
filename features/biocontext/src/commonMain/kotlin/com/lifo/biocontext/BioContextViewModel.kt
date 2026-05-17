@@ -34,6 +34,11 @@ class BioContextViewModel(
             BioContextContract.Intent.IngestNow -> ingestNow()
             BioContextContract.Intent.ExportRequested -> exportNow()
             BioContextContract.Intent.DeleteAllConfirmed -> deleteAll()
+            BioContextContract.Intent.DisconnectAll -> disconnect()
+            is BioContextContract.Intent.SetWindow -> {
+                updateState { copy(selectedWindow = intent.window) }
+                refresh()
+            }
             is BioContextContract.Intent.TypeRevokeRequested -> {
                 // The actual platform revoke happens via Health Connect deep-link;
                 // we just bubble the UI effect up so the entry point can launch it.
@@ -52,9 +57,13 @@ class BioContextViewModel(
             var totalSamples = 0
             var lastTs: Long? = null
 
-            // Walk a 30-day backwards window to feed the dashboard.
+            // Phase 9.1.1 — window depends on user selection (7d / 30d / all-time).
             val now = Clock.System.now()
-            val windowFrom = now.minus(30.days)
+            val windowFrom = when (currentState.selectedWindow) {
+                BioContextContract.InventoryWindow.SEVEN_DAYS -> now.minus(7.days)
+                BioContextContract.InventoryWindow.THIRTY_DAYS -> now.minus(30.days)
+                BioContextContract.InventoryWindow.ALL_TIME -> now.minus(3650.days)  // ~10y
+            }
 
             for (type in BioSignalDataType.entries) {
                 val samples = repository.getRawSamples(type, windowFrom, now)
@@ -133,6 +142,27 @@ class BioContextViewModel(
             repository.deleteAll()
             updateState { copy(isDeleting = false) }
             sendEffect(BioContextContract.Effect.Toast(messageKey = "bio_delete_success"))
+            refresh()
+        }
+    }
+
+    /**
+     * Phase 9.1.1 — pause bio integration without wiping data.
+     *
+     * Logs a REVOKE consent event for audit demonstrability (GDPR Art.7) but
+     * keeps the local sample store + baselines intact. The user can re-grant
+     * permissions and resume tracking without losing their personalization.
+     *
+     * Distinct from [deleteAll] which IS destructive (Art.17 atomic wipe).
+     */
+    private fun disconnect() {
+        scope.launch {
+            updateState { copy(isDisconnecting = true) }
+            // Bubble the deep-link to platform settings so the user can revoke HC
+            // permissions. We don't wipe local data here — that's the explicit
+            // role of deleteAll().
+            sendEffect(BioContextContract.Effect.OpenHealthConnectSettings)
+            updateState { copy(isDisconnecting = false) }
             refresh()
         }
     }

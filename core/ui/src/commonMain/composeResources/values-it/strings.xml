@@ -1660,6 +1660,95 @@
     <string name="bio_statement_title">Le nostre promesse</string>
     <string name="bio_statement_no_sell_ads">Non vendiamo i tuoi dati. Non li usiamo per pubblicità. Non li condividiamo con terze parti senza il tuo consenso esplicito.</string>
 
+    <!-- Bio-Signal Phase 9.1.1 — riscrittura completa 1:1 BioContextScreen -->
+
+    <!-- Header hero -->
+    <string name="bio_ctx_hero_title">I tuoi dati biologici.</string>
+    <string name="bio_ctx_hero_lede">Esattamente cosa abbiamo, da dove arriva ogni pezzo, e cosa abbiamo inviato al server. Senza parole più morbide.</string>
+    <string name="bio_ctx_promise_title">I dati grezzi restano su questo dispositivo.</string>
+    <string name="bio_ctx_promise_body">Solo aggregati settimanali e mensili lasciano il tuo telefono — mai letture individuali, mai la tua posizione.</string>
+    <string name="bio_ctx_promise_link">Come funziona</string>
+
+    <!-- Section eyebrows -->
+    <string name="bio_ctx_section_connections">Connessioni attive</string>
+    <string name="bio_ctx_section_inventory">Su questo dispositivo</string>
+    <string name="bio_ctx_section_sent">Inviato al server</string>
+    <string name="bio_ctx_section_confidence">Affidabilità per fonte</string>
+    <string name="bio_ctx_section_rights">I tuoi diritti</string>
+    <string name="bio_ctx_section_promises">Cosa promettiamo</string>
+
+    <!-- Connections empty -->
+    <string name="bio_ctx_connections_empty_title">Nessun dispositivo connesso.</string>
+    <string name="bio_ctx_connections_empty_body">Calmify può leggere passi, sonno e battito dal tuo telefono o wearable.</string>
+
+    <!-- Inventory -->
+    <string name="bio_ctx_inventory_sub">Conteggi delle letture vere e proprie nel database on-device di Calmify. Niente di tutto questo è nel cloud.</string>
+
+    <!-- Window tabs -->
+    <string name="bio_ctx_window_7d">7g</string>
+    <string name="bio_ctx_window_30d">30g</string>
+    <string name="bio_ctx_window_all">Tutto</string>
+    <string name="bio_ctx_window_7d_sub">ultimi 7 giorni</string>
+    <string name="bio_ctx_window_30d_sub">ultimi 30 giorni</string>
+    <string name="bio_ctx_window_all_sub">tutto il tempo</string>
+
+    <!-- Units -->
+    <string name="bio_ctx_unit_samples">campioni</string>
+    <string name="bio_ctx_unit_sessions">sessioni</string>
+    <string name="bio_ctx_unit_days">giorni</string>
+
+    <!-- Sent to server -->
+    <string name="bio_ctx_sent_eyebrow">Cosa è uscito da questo dispositivo</string>
+    <string name="bio_ctx_sent_narrative">Abbiamo %1$d aggregati in attesa di sync. Ultimo sync riuscito: %2$s. 0 campioni grezzi sono mai stati trasmessi.</string>
+    <string name="bio_ctx_sent_footer">Solo aggregati. Mai grezzi, mai al secondo, mai posizione.</string>
+
+    <!-- Confidence -->
+    <string name="bio_ctx_confidence_title">Quanto siamo sicuri di ogni segnale</string>
+    <string name="bio_ctx_confidence_sub">L\'affidabilità riflette densità di campionamento e consistenza della fonte — non è un giudizio di qualità sul tuo dispositivo.</string>
+    <string name="bio_ctx_confidence_empty">Nessuna fonte ha ancora contribuito abbastanza dati per stimare l\'affidabilità.</string>
+
+    <!-- Rights -->
+    <string name="bio_ctx_rights_title">Portati via tutto. O riprenditelo.</string>
+    <string name="bio_ctx_rights_sub">I diritti GDPR sono a un tap di distanza, non sepolti sotto sei menu.</string>
+    <string name="bio_ctx_action_export_art20">Esporta tutto (Art. 20)</string>
+    <string name="bio_ctx_action_disconnect">Disconnetti integrazione bio</string>
+    <string name="bio_ctx_action_delete_art17">Elimina tutto (Art. 17)</string>
+    <string name="bio_ctx_rights_fineprint">Esporta restituisce un singolo file JSON con ogni campione locale e ogni aggregato che abbiamo inviato. Elimina rimuove il database locale e chiede al server di cancellare gli aggregati legati al tuo account — solitamente entro 30 giorni.</string>
+
+    <!-- Promises -->
+    <string name="bio_ctx_promises_title">I nostri quattro no.</string>
+    <string name="bio_ctx_promises_sub">Non sono aspirazioni — sono impegni di cui saremmo responsabili se infranti.</string>
+    <string name="bio_ctx_promise1_strong">Calmify non vende i tuoi dati.</string>
+    <string name="bio_ctx_promise1_rest">A nessuno, in nessuna forma.</string>
+    <string name="bio_ctx_promise2_strong">Calmify non usa i tuoi dati per pubblicità.</string>
+    <string name="bio_ctx_promise2_rest">Non ci sono ads nell\'app e mai ci saranno.</string>
+    <string name="bio_ctx_promise3_strong">Calmify non condivide dati con terze parti</string>
+    <string name="bio_ctx_promise3_rest">senza un opt-in esplicito e per-scopo da parte tua.</string>
+    <string name="bio_ctx_promise4_strong">Gli aggregati allenano il modello di benessere in modo anonimo.</string>
+    <string name="bio_ctx_promise4_rest">Puoi disattivarlo senza perdere le funzionalità dell\'app.</string>
+    <string name="bio_ctx_promises_fineprint">Leggi la Privacy Policy completa · Data processing agreement · ultima revisione maggio 2026.</string>
+
+    <!-- Sticky action bar -->
+    <string name="bio_ctx_action_export_short">Esporta</string>
+    <string name="bio_ctx_action_how_short">Come funziona</string>
+
+    <!-- Delete sheet -->
+    <string name="bio_ctx_delete_sheet_title">Eliminare tutto quello che abbiamo sul tuo corpo?</string>
+    <string name="bio_ctx_delete_sheet_body">Questo rimuove ogni campione locale e chiede al server di cancellare gli aggregati legati al tuo account. L\'azione è irreversibile — Calmify non ha backup di dati biologici al di fuori di quello che staresti eliminando.</string>
+    <string name="bio_ctx_delete_sheet_prompt">Scrivi %1$s per confermare.</string>
+    <string name="bio_ctx_delete_sheet_confirm_cta">Elimina tutto</string>
+    <string name="bio_ctx_delete_sheet_mismatch">Scrivi esattamente \"%1$s\" per abilitare il pulsante elimina.</string>
+    <string name="bio_ctx_delete_confirm_word">elimina</string>
+
+    <!-- How sheet -->
+    <string name="bio_ctx_how_sheet_title">Come funziona l\'aggregazione.</string>
+    <string name="bio_ctx_how_sheet_body1">Ogni domenica notte e il primo di ogni mese, Calmify calcola statistiche dai campioni grezzi su questo dispositivo — medie, variabilità, totali — e invia solo quei numeri. Letture individuali, timestamp sotto il livello del giorno, e qualsiasi dato di posizione non sono mai trasmessi.</string>
+    <string name="bio_ctx_how_sheet_body2">Il server usa questi aggregati per mantenere caldo il tuo modello di benessere tra reinstalli, e (in modo anonimo, se hai dato consenso) per migliorare il modello per tutti. Puoi disattivare in qualsiasi momento senza perdere nessuna funzionalità.</string>
+    <string name="bio_ctx_how_sheet_cta">Capito</string>
+
+    <!-- Centered fineprint -->
+    <string name="bio_ctx_fineprint_wellness">Calmify è uno strumento di benessere, non un servizio medico. I dati biologici sono usati come contesto per il tuo benessere — mai come punteggio o obiettivo.</string>
+
     <!-- Bio-Signal Onboarding (Phase 3) — 5-step pager, 32 keys -->
     <string name="bio_onb_skip">Salta per ora</string>
     <string name="bio_onb_back">Indietro</string>

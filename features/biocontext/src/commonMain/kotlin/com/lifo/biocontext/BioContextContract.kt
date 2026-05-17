@@ -28,9 +28,22 @@ object BioContextContract {
         /** GDPR Art.17 — user confirmed delete-all in the confirmation dialog. */
         data object DeleteAllConfirmed : Intent
 
+        /**
+         * Phase 9.1.1 — pause bio integration without deleting data.
+         * Logs a REVOKE consent event but keeps the local store intact so
+         * the user can rejoin later without losing their baseline / history.
+         */
+        data object DisconnectAll : Intent
+
+        /** Phase 9.1.1 — change the inventory time window (7d / 30d / all-time). */
+        data class SetWindow(val window: InventoryWindow) : Intent
+
         /** User toggled per-type integration in Settings → Bio-signals — refresh inventory. */
         data class TypeRevokeRequested(val type: BioSignalDataType) : Intent
     }
+
+    /** Phase 9.1.1 — time window for the inventory grid. */
+    enum class InventoryWindow { SEVEN_DAYS, THIRTY_DAYS, ALL_TIME }
 
     sealed interface Effect : MviContract.Effect {
         /** UI should open the OS share sheet with the given JSON payload. */
@@ -69,6 +82,7 @@ object BioContextContract {
         val isRefreshing: Boolean = false,
         val isIngesting: Boolean = false,
         val isDeleting: Boolean = false,
+        val isDisconnecting: Boolean = false,
         val providerStatus: ProviderStatus = ProviderStatus.NotInstalled,
         val typeInventory: List<TypeInventory> = emptyList(),
         val connectedSources: List<ConnectedSource> = emptyList(),
@@ -76,6 +90,8 @@ object BioContextContract {
         val totalSamplesLocal: Int = 0,
         val totalAggregatesLocal: Int = 0,
         val totalAggregatesPending: Int = 0,   // is_dirty=1 awaiting Phase 4 server push
+        /** Phase 9.1.1 — inventory time window for the screen. Defaults to 7-day rolling. */
+        val selectedWindow: InventoryWindow = InventoryWindow.SEVEN_DAYS,
         val errorMessage: String? = null,
     ) : MviContract.State {
         val isReady: Boolean get() = providerStatus is ProviderStatus.Ready
